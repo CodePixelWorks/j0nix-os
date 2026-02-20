@@ -84,7 +84,7 @@ flowchart TD
   E --> F{settings.greetd.greeter}
   F -->|tuigreet| G[tuigreet command]
   F -->|regreet| H[regreet with cage/hyprland]
-  F -->|darkmaterialshell| I[dank-material-shell greeter module]
+  F -->|dms-greeter| I[dank-material-shell greeter module]
 ```
 
 ## Runtime Login Sequences
@@ -132,7 +132,7 @@ sequenceDiagram
     GR->>HY: start Hyprland
   else greeter = regreet
     GR->>HY: start-hyprland (or cage+regreet path)
-  else greeter = darkmaterialshell
+  else greeter = dms-greeter
     GR->>HY: DMS greeter compositor path
   end
   HY->>HM: Load user home-manager config
