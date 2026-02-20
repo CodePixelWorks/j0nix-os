@@ -6,18 +6,11 @@
       baseDir = ./.;
 
       vscodeOverlay = inputs.nix-vscode-extensions.overlays.default;
-      xorgCompatOverlay = final: prev: {
-        # Compatibility shims for inputs still referencing deprecated aliases.
-        system = prev.stdenv.hostPlatform.system;
-        xorg = prev.xorg // {
-          libxcb = prev.libxcb;
-        };
-      };
       rawSettings = import (baseDir + "/settings.nix") { inherit inputs; };
 
       pkgs = import nixpkgs {
         system = rawSettings.system;
-        overlays = [ vscodeOverlay xorgCompatOverlay ];
+        overlays = [ vscodeOverlay ];
         config.allowUnfree = true;
       };
 
@@ -134,7 +127,7 @@
           modules = [
             inputs.stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
-            ({ ... }: { nixpkgs.overlays = [ vscodeOverlay xorgCompatOverlay ]; })
+            ({ ... }: { nixpkgs.overlays = [ vscodeOverlay ]; })
             ({ ... }: {
               home-manager = {
                 useGlobalPkgs = true;
@@ -164,7 +157,7 @@
           home-manager.lib.homeManagerConfiguration {
             pkgs = import nixpkgs {
               system = settings.system;
-              overlays = [ vscodeOverlay xorgCompatOverlay ];
+              overlays = [ vscodeOverlay ];
               config.allowUnfree = true;
             };
             modules = (mkHomeModules userSettings) ++ hmSharedModulesStandalone;
