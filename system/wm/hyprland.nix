@@ -9,10 +9,15 @@ let
   useSddm = selectedDisplayManager == "sddm";
   useGdm = selectedDisplayManager == "gdm";
 
-  selectedGreetdGreeter = settings.greetd.greeter or "tuigreet";
+  selectedGreetdGreeterRaw = settings.greetd.greeter or "tuigreet";
+  selectedGreetdGreeter =
+    if selectedGreetdGreeterRaw == "darkmaterialshell" then
+      "dms-greeter"
+    else
+      selectedGreetdGreeterRaw;
   regreetCompositor = settings.greetd.regreetCompositor or "hyprland";
 
-  useDankMaterialShell = useGreetd && selectedGreetdGreeter == "darkmaterialshell";
+  useDankMaterialShell = useGreetd && selectedGreetdGreeter == "dms-greeter";
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
   regreetPackage = if pkgs ? regreet then pkgs.regreet else pkgs.greetd.regreet;
   regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
@@ -62,7 +67,7 @@ in {
         user = "greeter";
         command = regreetCommand;
       })
-      (lib.mkIf (selectedGreetdGreeter == "darkmaterialshell") {
+      (lib.mkIf (selectedGreetdGreeter == "dms-greeter") {
         user = "greeter";
       })
     ];
@@ -76,8 +81,8 @@ in {
       message = "settings.displayManager must be one of: greetd, sddm, gdm";
     }
     {
-      assertion = (!useGreetd) || builtins.elem selectedGreetdGreeter [ "tuigreet" "regreet" "darkmaterialshell" ];
-      message = "settings.greetd.greeter must be one of: tuigreet, regreet, darkmaterialshell";
+      assertion = (!useGreetd) || builtins.elem selectedGreetdGreeter [ "tuigreet" "regreet" "dms-greeter" ];
+      message = "settings.greetd.greeter must be one of: tuigreet, regreet, dms-greeter (legacy alias: darkmaterialshell)";
     }
     {
       assertion = (!useGreetd) || builtins.elem regreetCompositor [ "cage" "hyprland" ];
