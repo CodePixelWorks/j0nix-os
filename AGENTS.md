@@ -107,6 +107,8 @@ Controlled by `settings.gaming.*`:
 Controlled by `settings.dev.*`:
 - Docker and build settings
 - AI CLI toggles (`codex`, `gemini`)
+- Git identity + host overrides (`git.*`)
+- SSH agent/keyring/match settings (`ssh.*`)
 
 ### Sysctl
 Controlled by:
