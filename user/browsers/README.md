@@ -5,4 +5,5 @@ Browser modules are selected via `settings.browsers` or `userSettings.<name>.bro
 ## Current Modules
 
 - `qutebrowser.nix`
+- `chromium.nix`
 - `zen-browser.nix`
