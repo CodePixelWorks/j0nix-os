@@ -96,6 +96,7 @@ Associated helper tools:
 ### DMS
 Controlled by `settings.dms.*`:
 - `mode` (`integrated` or `separate`)
+- `startup.mode` (`systemd` or `exec-once`)
 - `install.flakeRef`, `install.dgopRef`, `install.cliVersion` (used in `separate` mode)
 
 ### Gaming
