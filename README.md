@@ -1,0 +1,332 @@
+<div align="center">
+
+# j0nix-os
+
+**Independent, modular NixOS setup for gaming & development.**
+
+<a href="#"><img src="https://img.shields.io/badge/NixOS-unstable-blue?logo=nixos&style=flat-square" /></a>
+<a href="LICENSE"><img src="https://img.shields.io/github/license/j0nix/j0nix-os?style=flat-square" /></a>
+<a href="#"><img src="https://img.shields.io/badge/Hyprland-first-purple?style=flat-square" /></a>
+
+</div>
+
+<p align="center">
+  <a href="#overview">Overview</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-architecture">Architecture</a> •
+  <a href="#-configuration">Configuration</a> •
+  <a href="#-secret-management">Secrets</a> •
+  <a href="#-documentation">Docs</a>
+</p>
+
+---
+
+j0nix-os is a battle-tested daily-driver NixOS configuration that separates **what your machine does** (settings) from **which hardware it runs on** (profiles). Multi-user, multi-WM, and secret-safe — rebuild the same setup on a new machine by changing one file.
+
+> [!IMPORTANT]
+> This is the **public mirror** of j0nix-os. Secrets and machine-specific data have been stripped for public reference.
+>
+> The private source is maintained separately and synced continuously.
+
+---
+
+## 📋 Overview
+
+j0nix-os gives you:
+
+- **Multi-User** — per-user editors, shells, dev tools, and window-manager shells from a single settings file
+- **Multi-WM** — Hyprland-first with native support for GNOME, Niri, and MangoWc
+- **Secret-Safe** — SOPS-nix integration with per-user and per-host encrypted secrets
+- **Gaming Ready** — Steam, performance kernels, Sunshine streaming, controller drivers, launchers
+- **Dev Ready** — Docker, BuildKit, AI CLI agents, configurable Git identities per host
+- **Declarative Monitors** — typed monitor configuration via `nix/system/lib/monitor.nix`
+- **Hyprland Shells** — [Caelestia](https://github.com/caelestia-dots/shell), [Dark Material Shell](https://github.com/AvengeMedia/DarkMaterialShell), Noctalia, and AGS — switchable per user
+
+## 📸 Screenshots
+
+|  |  |  |
+|:---:|:---:|:---:|
+| <img src="screenshots/dekstop-caelestia-shell-dev-terminal-with-sysinfo.png" width="400" alt="Dev terminal with system info" /><br><sub>Dev terminal with system info</sub> | <img src="screenshots/desktop-caelestia-shell-application-starter.png" width="400" alt="Application starter / app grid" /><br><sub>Application starter / app grid</sub> | <img src="screenshots/desktop-caelestia-shell-bambulab-app.png" width="400" alt="Bambu Lab 3D printer slicer in focus" /><br><sub>Bambu Lab 3D printer slicer in focus</sub> |
+| <img src="screenshots/desktop-caelestia-shell-gaming-nte.png" width="400" alt="Gaming session (NTE)" /><br><sub>Gaming session (NTE)</sub> | <img src="screenshots/desktop-caelestia-shell-open-all.png" width="400" alt="Post-login desktop with open overview" /><br><sub>Post-login desktop with open overview</sub> |  |
+
+---
+
+## 🚀 Quick Start
+
+> [!IMPORTANT]
+> You need a NixOS installation with flakes enabled.
+
+### 1. Clone
+
+```bash
+git clone https://github.com/j0nix/j0nix-os.git ~/j0nix-os
+cd ~/j0nix-os
+```
+
+### 2. Copy settings template
+
+```bash
+cp settings.nix.example settings.nix
+cp profiles/desktop/details.nix.example profiles/desktop/details.nix
+cp .sops.yaml.example .sops.yaml
+```
+
+> [!NOTE]
+> `settings.nix`, `details.nix`, `hardware-configuration.nix`, and `.sops.yaml` are tracked in the private source repo so the flake can build immediately after cloning. In the public mirror, use the shipped `.example` templates where available and generate `hardware-configuration.nix` locally before evaluating the flake.
+
+### 3. Edit your hardware and identity
+
+```bash
+# 1. Generate hardware config from your live system
+sudo nixos-generate-config --show-hardware-config > profiles/desktop/hardware-configuration.nix
+
+# 2. Edit settings.nix — timezone, users, shell, editors, gaming toggles
+$EDITOR settings.nix
+
+# 3. Edit details.nix — monitor layout, output rules
+$EDITOR profiles/desktop/details.nix
+
+# 4. Set up SOPS recipients (age keys)
+$EDITOR .sops.yaml
+```
+
+### 4. Build & switch
+
+```bash
+# Validate (fast, no build)
+nix flake check --no-build
+
+# Build and activate
+sudo nixos-rebuild switch --flake .#<your-hostname>
+```
+
+---
+
+## 🏗️ Architecture
+
+### Two-layer config separation
+
+```
+┌─────────────────────────────────────┐
+│  settings.nix                       │
+│  Cross-platform toggles & defaults  │
+│  locale, audio, gaming, dev, users  │
+├─────────────────────────────────────┤
+│  profiles/desktop/                  │
+│  Host-specific hardware data        │
+│  monitors, resume UUIDs, drivers    │
+└─────────────────────────────────────┘
+```
+
+| Layer | Belongs here | Does NOT belong here |
+|-------|-------------|---------------------|
+| `settings.nix` | `locale`, `audio.backend`, `gaming.steam`, `userSettings.<name>.wmShell` | Resume device UUIDs, kernel module blacklists, GPU package overrides |
+| `profiles/desktop/` | Monitor configs, resume UUIDs, `nvidiaPackages.beta`, `it87` fan controller, `kvmfr` blacklist | Generic feature toggles, cross-platform defaults |
+
+> [!WARNING]
+> Moving host-specific data into `settings.nix` destroys the host boundary and makes your config non-portable. Hardware IDs stay in profiles.
+
+### Profile directory structure
+
+```
+profiles/desktop/
+├── configuration.nix          # System entrypoint (imports hardware + modules)
+├── home.nix                   # Home-manager entrypoint
+├── hardware-configuration.nix # Filesystems, boot loader, networking (host-specific)
+├── details.nix                # Monitors, layouts, output rules (host-specific)
+├── secrets.nix                # SOPS secret declarations
+└── modules/
+    ├── boot.nix
+    ├── kernel.nix
+    ├── gaming.nix
+    ├── drivers.nix
+    └── ...
+```
+
+---
+
+## ⚙️ Configuration
+
+### Settings contract (`settings.nix`)
+
+Key categories available:
+
+| Category | Key prefix | Description |
+|----------|-----------|-------------|
+| Locale | `timezone`, `locale`, `keyboard` | Berlin baseline, multi-layout XKB |
+| Audio | `audio.backend`, `audio.bluetooth.*` | PipeWire or PulseAudio, HiFi codecs |
+| Network | `network.tailscale.enable` | Tailscale mesh VPN |
+| Dev | `settings.dev.docker`, `settings.dev.codex` | Docker, AI CLI toggles |
+| Gaming | `j0nix.desktop.gaming.*` | Steam, Proton, performance, controllers, launchers |
+| Sysctl | `settings.sysctlProfiles.*` | Gaming, dev, network tuning profiles |
+| WM Shell | `settings.userSettings.<name>.wmShell` | `ags` (experimental), [`caelestia-shell`](https://github.com/caelestia-dots/shell) (**prod-tested**), [`dank-material-shell`](https://github.com/AvengeMedia/DarkMaterialShell) (experimental), `noctalia-shell` (experimental), `none` |
+
+See `settings.nix.example` for a fully commented reference covering every category.
+
+### Monitor configuration (`details.nix`)
+
+Monitor configs use the typed `monitorLib` API from `nix/system/lib/monitor.nix`:
+
+```nix
+{ ... }:
+{
+  monitorList = [
+    { name = "DP-1"; resolution = "2560x1440@240"; position = "0x0"; scale = 1.0; }
+    { name = "HDMI-A-1"; resolution = "1920x1080@60"; position = "2560x0"; scale = 1.0; }
+  ];
+}
+```
+
+Functions available: `renderMonitorRule`, `parseMonitorRule`, `normalizeMonitor`, `renderResolution`, `monitorList`, `resolutionList`.
+
+### Changing WM shell per user
+
+```nix
+settings.userSettings.Jonas = {
+  # legacy alias also supported: hyprlandShell
+  wmShell = "noctalia-shell";  # prod-tested: "caelestia-shell" | experimental: "ags", "dank-material-shell", "noctalia-shell" | "none"
+};
+```
+
+---
+
+## 🔐 Secret Management
+
+j0nix-os uses [SOPS-nix](https://github.com/Mic92/sops-nix) for declarative encrypted secrets.
+
+### Setup
+
+```bash
+# 1. Generate an age key
+mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+
+# 2. Add the public key to .sops.yaml
+cp .sops.yaml.example .sops.yaml
+# Edit: replace placeholders with your actual age public keys
+
+# 3. Create encrypted secrets
+mkdir -p secrets/users secrets/hosts
+sops secrets/users/Jonas.yaml    # put secrets inside, save to encrypt
+sops secrets/hosts/desktop.yaml  # host-wide secrets
+```
+
+### Per-user secrets
+
+Each user can have their own `secrets/users/<name>.yaml` with SSH keys, Git tokens, or application credentials. Declare them in the user's settings block via `secrets`.
+
+---
+
+## 🔧 Common Commands
+
+```bash
+# Fast validation (no build)
+nix flake check --no-build
+
+# Show all outputs
+nix flake show
+
+# Build and switch current host
+sudo nixos-rebuild switch --flake .#Jonas-PC
+
+# Build only (no switch)
+sudo nixos-rebuild build --flake .#Jonas-PC
+
+# Update all flake inputs
+nix flake update
+
+# Update single input
+nix flake lock --update-input nixpkgs
+
+# Trace errors
+sudo nixos-rebuild build --flake .#Jonas-PC --show-trace
+```
+
+---
+
+## 📚 Documentation
+
+| Doc | Topic |
+|-----|-------|
+| [AGENTS.md](AGENTS.md) | Agent coding rules, commit policy, architecture decisions |
+| [docs/architecture.md](docs/architecture.md) | Deep dive into module composition and config flow |
+| [docs/wm/quickshell/dark-material-shell.md](docs/wm/quickshell/dark-material-shell.md) | Dark Material Shell setup and management |
+| [docs/startup-flow.md](docs/startup-flow.md) | How WM startup works (display manager → shell → apps) |
+| [docs/qmlgreet.md](docs/qmlgreet.md) | QMLGreet greeter configuration and theming |
+| [docs/keybinds.md](docs/keybinds.md) | Current keybind reference (caelestia-shell default) |
+| [docs/caelestia.md](docs/caelestia.md) | Caelestia shell keybind stability runbook |
+
+---
+
+## 📁 Repository Structure
+
+```
+.
+├── flake.nix              # Entrypoint — imports settings, wires profiles + home-manager
+├── settings.nix           # Your machine config (cross-platform toggles)
+├── settings.nix.example   # Fully commented reference template
+├── profiles/
+│   └── desktop/           # Host profile (hardware, monitors, drivers)
+│       ├── configuration.nix
+│       ├── details.nix
+│       ├── hardware-configuration.nix
+│       └── modules/       # Thin-pipe modules importing from system/
+├── nix/system/
+│   ├── lib/               # Reusable helpers (monitor.nix, mk-user-settings.nix)
+│   ├── wm/                # Display manager, WM modules (Hyprland, GNOME, Niri)
+│   ├── gaming/            # Steam, Sunshine, performance, controllers
+│   ├── dev/               # Docker, nix-ld, Codex
+│   ├── drivers/           # GPU drivers (NVIDIA, AMD, Intel)
+│   └── ...
+├── nix/user/                  # Home-manager modules per category
+│   ├── wm/hyprland/       # Hyprland shells (ags, caelestia, dank-material, noctalia)
+│   ├── editors/           # VSCode, Neovim
+│   ├── dev/               # AI CLI, GPG, SSH
+│   └── gaming/            # Launchers, tools
+├── nix/roles/            # Role bundles (gaming, developer, streaming, etc.)
+├── themes/                # Theme definitions (Catppuccin)
+├── docs/                  # Architecture and setup docs
+├── scripts/               # Export, publish, maintenance scripts
+└── secrets/               # Encrypted secrets (SOPS)
+```
+
+---
+
+## 🌐 Public Mirror
+
+This is the **public mirror** of j0nix-os. Secrets and machine-specific data have been stripped for public reference.
+
+The private source is maintained separately and synced continuously. Contributions are welcome — open an issue or PR.
+
+While the full setup instructions below are shown for context, the secret-dependent files (`settings.nix`, `.sops.yaml`, host/user secrets) are not present in the mirror. Use `settings.nix.example` as your starting point.
+
+---
+
+## 🤝 Contributing
+
+This is a personal system configuration. Contributions and ideas are welcome — the goal is stability for daily-driver use. Open an issue before large changes.
+
+### 🛠️ Open Tasks
+
+These are known gaps where help or exploration is appreciated:
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 1 | **Unified QT/GTK/KDE theming** | Custom GTK + mostly matching KDE theme | Needs a clean, declarative, cross-toolkit approach — evaluate Stylix vs. improved custom implementation |
+| 2 | **Fusion 360 on Proton** | Not working | Autodesk Fusion 360 functional under Proton/Wine — likely needs winetricks, bottle tweaks, or a dedicated Nix derivation |
+| 3 | **Hibernate / Standby** | Not functional | Suspend-to-disk (hibernate) and reliable standby — needs resume device, swap, and kernel param alignment with the profile boundary |
+
+If you want to pick one up, comment on an issue or open a new one.
+
+### Conventions
+
+- Conventional Commits (feat(desktop):, fix(hyprland):, docs(agents):)
+- One commit per logical scope
+- Validate with nix flake check --no-build before committing
+- Settings = cross-platform generics; Profiles = host-specific hardware
+
+---
+
+## 📄 License
+
+[MIT](LICENSE)
