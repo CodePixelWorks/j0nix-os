@@ -2,13 +2,16 @@
 let
   profileDetails = settings.profileDetails or { hyprlandMonitors = [ ]; };
   selectedShell = settings.hyprlandShell or "ags";
+  dmsSettings = settings.dms or { };
+  dmsStartup = dmsSettings.startup or { };
+  dmsStartupMode = dmsStartup.mode or "systemd";
   hyprlandDebug = ((settings.hyprland or { }).debug or { });
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
 
   # `exec-once` is used for both direct Hyprland sessions and UWSM-managed sessions.
   shellStartupCommand =
     if selectedShell == "dank-material-shell" then
-      "dms-start"
+      if dmsStartupMode == "exec-once" then "dms-start" else null
     else if selectedShell == "noctalia-shell" then
       "noctalia-start"
     else
@@ -33,10 +36,9 @@ in {
 
       exec-once = [
         "swww-daemon &"
-        shellStartupCommand
         "[workspace 2 silent] firefox"
         "[workspace 3 silent] kitty btop"
-      ];
+      ] ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ];
 
       input = {
         kb_layout = settings.keyboardLayout or "de";
@@ -77,6 +79,10 @@ in {
     {
       assertion = !(installRawQuickshell && selectedShell == "dank-material-shell");
       message = "settings.hyprland.debug.installRawQuickshell conflicts with hyprlandShell=dank-material-shell (quickshell package collision).";
+    }
+    {
+      assertion = builtins.elem dmsStartupMode [ "systemd" "exec-once" ];
+      message = "settings.dms.startup.mode must be one of: systemd, exec-once";
     }
   ];
 }
