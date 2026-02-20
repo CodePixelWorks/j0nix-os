@@ -21,17 +21,17 @@ let
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
   regreetPackage = if pkgs ? regreet then pkgs.regreet else pkgs.greetd.regreet;
   regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
-  hyprlandSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/hyprland.desktop" ''
+  hyprlandSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/${hyprlandSessionName}.desktop" ''
     [Desktop Entry]
-    Name=Hyprland
+    Name=${if useUWSM then "Hyprland (UWSM)" else "Hyprland"}
     Comment=Hyprland Wayland compositor
     TryExec=${if useUWSM then lib.getExe pkgs.uwsm else lib.getExe pkgs.hyprland}
-    Exec=${if useUWSM then "${lib.getExe pkgs.uwsm} start hyprland-uwsm.desktop" else "Hyprland"}
+    Exec=${if useUWSM then "${lib.getExe pkgs.uwsm} start hyprland-uwsm.desktop" else lib.getExe pkgs.hyprland}
     Type=Application
-    DesktopNames=Hyprland
+    DesktopNames=${if useUWSM then "Hyprland-UWSM" else "Hyprland"}
   '').overrideAttrs (old: {
     passthru = (old.passthru or { }) // {
-      providedSessions = [ "hyprland" ];
+      providedSessions = [ hyprlandSessionName ];
     };
   });
 
@@ -40,8 +40,6 @@ let
 
   greetdEnvironments =
     [ "${hyprlandSessionName}.desktop" ]
-    ++ lib.optional useUWSM "hyprland.desktop"
-    ++ lib.optional (!useUWSM) "hyprland-uwsm.desktop"
     ++ lib.optional (builtins.elem "gnome" settings.wms) "gnome.desktop";
 
   regreetCommand =
