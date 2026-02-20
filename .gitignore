@@ -1,0 +1,27 @@
+# Nix build outputs
+result
+result-*
+
+# Flake / eval artifacts
+*.drv
+
+# Home Manager backup files
+*.backup
+
+# Direnv
+.direnv/
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs / temp
+*.log
+tmp/
