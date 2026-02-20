@@ -25,6 +25,7 @@ let
     [Desktop Entry]
     Name=Hyprland
     Comment=Hyprland Wayland compositor
+    TryExec=${if useUWSM then lib.getExe pkgs.uwsm else lib.getExe pkgs.hyprland}
     Exec=${if useUWSM then "${lib.getExe pkgs.uwsm} start hyprland-uwsm.desktop" else "Hyprland"}
     Type=Application
     DesktopNames=Hyprland
