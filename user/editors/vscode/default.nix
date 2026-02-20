@@ -1,32 +1,35 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, settings, ... }:
 let
   mkExt = set: path: lib.attrByPath path null set;
   pick = ext: lib.optional (ext != null) ext;
 
   marketplace = pkgs.nix-vscode-extensions.vscode-marketplace or {};
+
+  vscodeCfg = settings.vscode or { };
+  extensionCfg = vscodeCfg.extensions or { };
+  openVSXIds = extensionCfg.openVSX or [ ];
+  marketplaceIds = extensionCfg.marketplace or [ ];
+
+  mkExtFromId = set: extId:
+    let
+      parts = lib.splitString "." extId;
+    in
+      if builtins.length parts < 2 then
+        null
+      else
+        mkExt set [
+          (builtins.elemAt parts 0)
+          (lib.concatStringsSep "." (lib.drop 1 parts))
+        ];
+
+  resolveExts = set: ids: lib.concatMap (id: pick (mkExtFromId set id)) ids;
 in {
   programs.vscode = {
     enable = true;
     profiles.default = {
       extensions =
-        pick (mkExt pkgs.vscode-extensions [ "vscodevim" "vim" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "bbenoist" "nix" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "jnoortheen" "nix-ide" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "arrterian" "nix-env-selector" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "ms-python" "python" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "ms-python" "vscode-pylance" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "rust-lang" "rust-analyzer" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "golang" "go" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "redhat" "vscode-yaml" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "ms-azuretools" "vscode-docker" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "ms-vscode-remote" "remote-ssh" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "ms-vscode-remote" "remote-containers" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "ms-vscode" "cpptools-extension-pack" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "tamasfe" "even-better-toml" ])
-        ++ pick (mkExt pkgs.vscode-extensions [ "esbenp" "prettier-vscode" ])
-        ++ pick (mkExt marketplace [ "eamodio" "gitlens" ])
-        ++ pick (mkExt marketplace [ "github" "copilot" ])
-        ++ pick (mkExt marketplace [ "github" "copilot-chat" ]);
+        resolveExts pkgs.vscode-extensions openVSXIds
+        ++ resolveExts marketplace marketplaceIds;
 
       userSettings = {
         "editor.fontLigatures" = true;
