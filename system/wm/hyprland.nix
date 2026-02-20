@@ -21,6 +21,14 @@ let
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
   regreetPackage = if pkgs ? regreet then pkgs.regreet else pkgs.greetd.regreet;
   regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
+  hyprlandSessionPackage = pkgs.writeTextDir "share/wayland-sessions/hyprland.desktop" ''
+    [Desktop Entry]
+    Name=Hyprland
+    Comment=Hyprland Wayland compositor
+    Exec=${if useUWSM then "${lib.getExe pkgs.uwsm} start hyprland-uwsm.desktop" else "Hyprland"}
+    Type=Application
+    DesktopNames=Hyprland
+  '';
 
   cursorTheme = "Bibata-Modern-Classic";
   cursorSize = 24;
@@ -52,6 +60,7 @@ in {
   services.xserver.displayManager.gdm.enable = lib.mkIf useGdm true;
 
   services.displayManager.defaultSession = lib.mkIf useSddm hyprlandSessionName;
+  services.displayManager.sessionPackages = [ hyprlandSessionPackage ];
 
   services.greetd = lib.mkIf useGreetd {
     enable = true;
