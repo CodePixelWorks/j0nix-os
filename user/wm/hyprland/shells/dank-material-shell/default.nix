@@ -23,6 +23,9 @@ let
 
   dms = (args.settings or { }).dms or { };
   dmsMode = dms.mode or "integrated";
+  dmsStartup = dms.startup or { };
+  dmsStartupMode = dmsStartup.mode or "systemd";
+  dmsUseSystemd = dmsStartupMode == "systemd";
   integratedMode = dmsMode == "integrated";
   separateMode = dmsMode == "separate";
   dmsInstall = dms.install or { };
@@ -223,7 +226,7 @@ in {
   } // lib.optionalAttrs (integratedMode && hasHomeModule) {
     dank-material-shell = {
       enable = lib.mkDefault true;
-      systemd.enable = lib.mkDefault true;
+      systemd.enable = lib.mkDefault dmsUseSystemd;
     };
   };
 
@@ -242,6 +245,10 @@ in {
     {
       assertion = builtins.elem dmsMode [ "integrated" "separate" ];
       message = "settings.dms.mode must be one of: integrated, separate";
+    }
+    {
+      assertion = builtins.elem dmsStartupMode [ "systemd" "exec-once" ];
+      message = "settings.dms.startup.mode must be one of: systemd, exec-once";
     }
     {
       assertion = (!integratedMode) || hasHomeModule || hasPackage;
