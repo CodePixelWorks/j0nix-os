@@ -143,7 +143,7 @@ Controlled by:
 ### Add a new user
 1. Add username to `settings.users`.
 2. Add `settings.userSettings.<name>` block.
-3. Set `shell`, `wms`, `defaultSession`, and optionally `hyprlandShell`.
+3. Set `shell` and `defaultWMS` (`hyprland` | `gnome` | `mangowc`).
 4. Rebuild and set user password.
 
 ### Switch Hyprland shell per user
