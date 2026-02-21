@@ -20,6 +20,13 @@ let
     workspaceCount;
   workspaceSwitchBinds = map (pair: "$mainMod, ${pair.key}, workspace, ${pair.workspace}") workspaceKeyPairs;
   workspaceMoveBinds = map (pair: "$mainMod SHIFT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
+  coreBinds = [
+    "$mainMod, q, killactive,"
+    "$mainMod, t, togglefloating,"
+    "$mainMod, f, fullscreen, 0"
+    "$mainMod, return, exec, kitty"
+    "$mainMod SHIFT, q, exit,"
+  ];
   hyprlandDebug = ((settings.hyprland or { }).debug or { });
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
 
@@ -87,7 +94,8 @@ in {
       };
 
       bind =
-        workspaceSwitchBinds
+        coreBinds
+        ++ workspaceSwitchBinds
         ++ workspaceMoveBinds;
     };
 
