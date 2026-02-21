@@ -17,3 +17,9 @@ Managed by `settings.gaming.*`.
 
 - Toggle with `settings.gaming.launchers.rockstar`
 - Helper command: `rockstar-steam-setup`
+
+## Steam Helpers
+
+- `game-session-gamemode`
+- `game-session-mangohud`
+- `game-session-gamescope-hdr`
