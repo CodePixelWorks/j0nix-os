@@ -13,5 +13,6 @@ Main desktop profile for `j0nix-os`.
 
 - `settings.users`, `settings.userSettings.*`
 - `settings.audio.*`
+- `settings.storage.*`
 - `settings.locale`, `settings.timezone`
 - `settings.wms`
