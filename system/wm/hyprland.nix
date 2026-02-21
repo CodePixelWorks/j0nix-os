@@ -18,16 +18,21 @@ let
   regreetCompositor = settings.greetd.regreetCompositor or "hyprland";
 
   useDankMaterialShell = useGreetd && selectedGreetdGreeter == "dms-greeter";
+  hasDmsPackage =
+    (inputs.dank-material-shell ? packages)
+    && (builtins.hasAttr pkgs.stdenv.hostPlatform.system inputs.dank-material-shell.packages)
+    && (inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system} ? default);
+  dmsPackage =
+    if hasDmsPackage then
+      inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default
+    else
+      null;
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
   regreetPackage = if pkgs ? regreet then pkgs.regreet else pkgs.greetd.regreet;
   regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
   dmsGreeterHyprConfigPath = "/etc/greetd/hypr.conf";
-  dmsGreeterCompositorCmd =
-    if useUWSM then
-      "${lib.getExe pkgs.uwsm} start hyprland.desktop"
-    else
-      "hyprland -C ${dmsGreeterHyprConfigPath}";
-  dmsGreeterCommand = "/run/current-system/sw/bin/dms-greeter --command ${lib.escapeShellArg dmsGreeterCompositorCmd}";
+  dmsGreeterCommand =
+    "${if hasDmsPackage then lib.getExe' dmsPackage "dms-greeter" else "/run/current-system/sw/bin/dms-greeter"} --command hyprland -C ${dmsGreeterHyprConfigPath}";
   hyprlandUwsmSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/hyprland-uwsm.desktop" ''
     [Desktop Entry]
     Name=Hyprland (UWSM)
@@ -120,6 +125,10 @@ in {
       assertion = (!useGreetd) || builtins.elem regreetCompositor [ "cage" "hyprland" ];
       message = "settings.greetd.regreetCompositor must be one of: cage, hyprland";
     }
+    {
+      assertion = (!useDankMaterialShell) || hasDmsPackage;
+      message = "greetd.greeter=dms-greeter requires inputs.dank-material-shell.packages.<system>.default to be available";
+    }
   ];
 
   environment.systemPackages = with pkgs; [
@@ -127,7 +136,7 @@ in {
     bibata-cursors
     btop
     blackDonWallpapers
-  ];
+  ] ++ lib.optional (useDankMaterialShell && hasDmsPackage) dmsPackage;
 
   environment.sessionVariables = {
     XCURSOR_THEME = cursorTheme;
@@ -158,7 +167,7 @@ in {
     mode = "0444";
   };
 
-  environment.etc."greetd/hypr.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "dms-greeter" && !useUWSM) {
+  environment.etc."greetd/hypr.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "dms-greeter") {
     text = ''
       env = DMS_RUN_GREETER,1
 
