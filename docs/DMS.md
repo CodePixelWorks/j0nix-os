@@ -19,10 +19,8 @@ dms.wallpaper = {
 };
 ```
 
-These values are mapped to:
-- `programs.dank-material-shell.default.session.wallpaperPath`
-- `programs.dank-material-shell.default.session.wallpaperFillMode`
-- `programs.dank-material-shell.default.session.monitorWallpapers`
+These values are written once to:
+- `~/.local/state/DankMaterialShell/session.json`
 
 This keeps `~/.local/state/DankMaterialShell/session.json` user-editable:
 - defaults are applied only when the file does not exist
@@ -51,4 +49,4 @@ dms.workspaces = {
 ```
 
 - `count`: creates Hyprland binds for `SUPER+1..0` and `SUPER+SHIFT+1..0`
-- `showOccupiedOnly`: mapped to DMS `default.settings.showOccupiedWorkspacesOnly`
+- `showOccupiedOnly`: seeded once in `~/.config/DankMaterialShell/settings.json`
