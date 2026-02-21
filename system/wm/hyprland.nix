@@ -21,6 +21,19 @@ let
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
   regreetPackage = if pkgs ? regreet then pkgs.regreet else pkgs.greetd.regreet;
   regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
+  hyprlandUwsmSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/hyprland-uwsm.desktop" ''
+    [Desktop Entry]
+    Name=Hyprland (UWSM)
+    Comment=Hyprland via UWSM
+    TryExec=${lib.getExe pkgs.uwsm}
+    Exec=${lib.getExe pkgs.uwsm} start hyprland.desktop
+    Type=Application
+    DesktopNames=Hyprland
+  '').overrideAttrs (old: {
+    passthru = (old.passthru or { }) // {
+      providedSessions = [ "hyprland-uwsm" ];
+    };
+  });
   blackDonWallpapers = pkgs.stdenvNoCC.mkDerivation {
     pname = "black-don-wallpapers";
     version = "1.0.0";
@@ -62,6 +75,7 @@ in {
   services.xserver.displayManager.gdm.enable = lib.mkIf useGdm true;
 
   services.displayManager.defaultSession = lib.mkIf useSddm hyprlandSessionName;
+  services.displayManager.sessionPackages = lib.optional (useGreetd && selectedGreetdGreeter == "dms-greeter" && useUWSM) hyprlandUwsmSessionPackage;
 
   services.greetd = lib.mkIf useGreetd {
     enable = true;
