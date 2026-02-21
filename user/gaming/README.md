@@ -23,3 +23,10 @@ Managed by `settings.gaming.*`.
 - `game-session-gamemode`
 - `game-session-mangohud`
 - `game-session-gamescope-hdr`
+
+## Proton-CachyOS
+
+- Provider toggle: `settings.gaming.proton.provider = "cachyos"`
+- Install/update tool: `proton-cachyos-install`
+- Ensure tool exists: `proton-cachyos-ensure`
+- Non-Steam with UMU + Proton-CachyOS: `game-session-umu-cachyos <game-exe-or-command>`

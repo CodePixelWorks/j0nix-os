@@ -10,6 +10,7 @@ let
   gamescopeEnabled = perfCfg.gamescope or true;
 
   protonCfg = gaming.proton or { };
+  protonProvider = protonCfg.provider or "ge";
   protonGeEnabled = protonCfg.ge or true;
 in
 lib.mkIf (enabled && steamEnabled) {
@@ -17,7 +18,8 @@ lib.mkIf (enabled && steamEnabled) {
     enable = true;
     remotePlay.openFirewall = steamCfg.remotePlayFirewall or false;
     dedicatedServer.openFirewall = steamCfg.dedicatedServerFirewall or false;
-    extraCompatPackages = lib.optionals protonGeEnabled [ pkgs.proton-ge-bin ];
+    extraCompatPackages =
+      lib.optionals (protonProvider == "ge" || protonGeEnabled) [ pkgs.proton-ge-bin ];
     gamescopeSession.enable = gamescopeEnabled;
 
     # Extra runtime libs improve compatibility for some Proton/Steam games.
@@ -46,5 +48,12 @@ lib.mkIf (enabled && steamEnabled) {
 
   environment.systemPackages = lib.optionals steamRunEnabled [
     pkgs.steam-run
+  ];
+
+  assertions = [
+    {
+      assertion = builtins.elem protonProvider [ "cachyos" "ge" ];
+      message = "settings.gaming.proton.provider must be one of: cachyos, ge";
+    }
   ];
 }
