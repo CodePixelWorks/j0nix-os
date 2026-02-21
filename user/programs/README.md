@@ -5,6 +5,7 @@ Common user program configs shared across shells/WMs.
 ## Files
 
 - `default.nix`: aggregation entrypoint
+- `betterdiscord/default.nix`
 - `fastfetch/default.nix`
 - `wlogout/default.nix`
 
