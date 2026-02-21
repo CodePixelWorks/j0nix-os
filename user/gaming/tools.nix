@@ -6,6 +6,8 @@ let
   launchers = gaming.launchers or { };
   controllers = gaming.controllers or { };
   rockstarEnabled = launchers.rockstar or false;
+  gamescopeEnabled = perf.gamescope or true;
+  gamescopeHdrEnabled = perf.gamescopeHdr or true;
 in
 lib.mkIf enabled {
   home.packages =
@@ -27,6 +29,13 @@ lib.mkIf enabled {
         exec mangohud gamemoderun "$@"
       '')
       pkgs.goverlay
+    ]
+    ++ lib.optionals (gamescopeEnabled && gamescopeHdrEnabled) [
+      # Steam launch options example:
+      #   game-session-gamescope-hdr %command%
+      (pkgs.writeShellScriptBin "game-session-gamescope-hdr" ''
+        exec gamescope --hdr-enabled --expose-wayland -- gamemoderun "$@"
+      '')
     ]
     ++ lib.optionals rockstarEnabled [
       (pkgs.writeShellScriptBin "rockstar-steam-setup" ''
