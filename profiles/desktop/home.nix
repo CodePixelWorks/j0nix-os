@@ -28,7 +28,6 @@ in
 
     obs-studio
     qbittorrent
-    vesktop
     telegram-desktop
     drawio
     krita
