@@ -33,9 +33,11 @@ let
   dmsDgopRef = dmsInstall.dgopRef or "github:AvengeMedia/dgop";
   dmsCliVersion = dmsInstall.cliVersion or "0.2.3";
   dmsWallpaper = dms.wallpaper or { };
+  dmsWorkspaces = dms.workspaces or { };
   wallpaperPath = dmsWallpaper.wallpaperPath or "/run/current-system/sw/share/wallpapers/nix-wallpaper-stripes-logo.png";
   wallpaperFillMode = dmsWallpaper.wallpaperFillMode or "PreserveAspectCrop";
   monitorWallpapers = dmsWallpaper.monitorWallpapers or { };
+  showOccupiedWorkspacesOnly = dmsWorkspaces.showOccupiedOnly or false;
 
   dmsConfigSource =
     if integratedMode && hasPackage then
@@ -253,9 +255,14 @@ in {
         restartIfChanged = lib.mkDefault true;
       };
 
-      # Seed defaults only once so users can still edit session.json at runtime.
-      default.session = lib.mkIf (wallpaperPath != null) {
-        inherit wallpaperPath wallpaperFillMode monitorWallpapers;
+      # Seed defaults only once so users can still edit runtime JSON files.
+      default = {
+        session = lib.mkIf (wallpaperPath != null) {
+          inherit wallpaperPath wallpaperFillMode monitorWallpapers;
+        };
+        settings = {
+          showOccupiedWorkspacesOnly = lib.mkDefault showOccupiedWorkspacesOnly;
+        };
       };
     };
   };
