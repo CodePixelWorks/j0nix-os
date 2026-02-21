@@ -38,3 +38,17 @@ dms.startup.mode = "systemd"; # or "exec-once"
 
 - `systemd`: enables `programs.dank-material-shell.systemd.enable`
 - `exec-once`: starts via Hyprland `exec-once` path
+
+## Workspaces
+
+Use `settings.dms.workspaces` in `settings.nix`:
+
+```nix
+dms.workspaces = {
+  count = 10; # 1..10
+  showOccupiedOnly = false;
+};
+```
+
+- `count`: creates Hyprland binds for `SUPER+1..0` and `SUPER+SHIFT+1..0`
+- `showOccupiedOnly`: mapped to DMS `default.settings.showOccupiedWorkspacesOnly`

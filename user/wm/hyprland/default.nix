@@ -5,6 +5,21 @@ let
   dmsSettings = settings.dms or { };
   dmsStartup = dmsSettings.startup or { };
   dmsStartupMode = dmsStartup.mode or "systemd";
+  dmsWorkspaceSettings = dmsSettings.workspaces or { };
+  workspaceCountRaw = dmsWorkspaceSettings.count or 10;
+  workspaceCount = lib.min 10 (lib.max 1 workspaceCountRaw);
+  workspaceKeyPairs = builtins.genList
+    (i:
+      let
+        ws = i + 1;
+      in
+      {
+        workspace = toString ws;
+        key = if ws == 10 then "0" else toString ws;
+      })
+    workspaceCount;
+  workspaceSwitchBinds = map (pair: "$mainMod, ${pair.key}, workspace, ${pair.workspace}") workspaceKeyPairs;
+  workspaceMoveBinds = map (pair: "$mainMod SHIFT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
   hyprlandDebug = ((settings.hyprland or { }).debug or { });
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
 
@@ -32,6 +47,7 @@ in {
     systemd.enable = false;
 
     settings = {
+      "$mainMod" = "SUPER";
       monitor = (profileDetails.hyprlandMonitors or [ ]) ++ [ ",preferred,auto,1" ];
 
       exec-once = [
@@ -69,6 +85,10 @@ in {
         disable_hyprland_logo = true;
         disable_splash_rendering = true;
       };
+
+      bind =
+        workspaceSwitchBinds
+        ++ workspaceMoveBinds;
     };
 
   };
@@ -83,6 +103,10 @@ in {
     {
       assertion = builtins.elem dmsStartupMode [ "systemd" "exec-once" ];
       message = "settings.dms.startup.mode must be one of: systemd, exec-once";
+    }
+    {
+      assertion = workspaceCountRaw >= 1 && workspaceCountRaw <= 10;
+      message = "settings.dms.workspaces.count must be between 1 and 10";
     }
   ];
 }
