@@ -40,16 +40,37 @@
 
       mkUserSettings = username:
         let
-          merged = baseSettings // (userOverrides.${username} or { }) // {
+          userOverride = userOverrides.${username} or { };
+          merged = baseSettings // userOverride // {
             inherit username;
             dotfilesDir = "/home/${username}/nixos-dotfiles";
           };
           themeDetails = import (baseDir + "/themes/${merged.theme}.nix") { inherit pkgs; };
+          defaultWMFromLegacy =
+            if userOverride ? wms && (builtins.length userOverride.wms) > 0 then
+              builtins.head userOverride.wms
+            else
+              null;
+          resolvedDefaultWMS =
+            if userOverride ? defaultWMS then
+              userOverride.defaultWMS
+            else if defaultWMFromLegacy != null then
+              defaultWMFromLegacy
+            else
+              "hyprland";
+          resolvedDefaultSession =
+            if resolvedDefaultWMS == "hyprland" then
+              (if ((merged.hyprland or { }).useUWSM or true) then "hyprland-uwsm" else "hyprland")
+            else
+              resolvedDefaultWMS;
         in
         merged // {
           profileDetails = import (baseDir + "/profiles/${merged.profile}/details.nix") { };
           inherit themeDetails;
           hyprlandShell = merged.hyprlandShell or (themeDetails.shell or "dank-material-shell");
+          defaultWMS = resolvedDefaultWMS;
+          defaultSession = resolvedDefaultSession;
+          _userOverride = userOverride;
         };
 
       mkEditorModule = editor:
@@ -84,7 +105,7 @@
           hyprlandShellModule = baseDir + "/user/wm/hyprland/shells/${userSettings.hyprlandShell}";
           hyprlandShellExists = builtins.pathExists hyprlandShellModule;
 
-          wmModules = lib.filter (m: m != null) (map mkWmModule userSettings.wms);
+          wmModules = lib.filter (m: m != null) [ (mkWmModule userSettings.defaultWMS) ];
           editorModules = lib.filter (m: m != null) (map mkEditorModule userSettings.editors);
           browserModules = lib.filter (m: m != null) (map mkBrowserModule userSettings.browsers);
           devModule = baseDir + "/user/dev/default.nix";
@@ -96,7 +117,28 @@
           (baseDir + "/user/session-default.nix")
           (baseDir + "/user/programs/default.nix")
           ({ lib, ... }: {
-            assertions = lib.optional (builtins.elem "hyprland" userSettings.wms) {
+            assertions = [
+              {
+                assertion = builtins.elem userSettings.defaultWMS [ "hyprland" "gnome" "mangowc" ];
+                message = "userSettings.<name>.defaultWMS must be one of: hyprland, gnome, mangowc";
+              }
+              {
+                assertion = builtins.elem userSettings.defaultWMS settings.wms;
+                message = "userSettings.<name>.defaultWMS must also be present in global settings.wms";
+              }
+              {
+                assertion = !(userSettings._userOverride ? wms);
+                message = "Per-user wm list is deprecated. Use userSettings.<name>.defaultWMS only.";
+              }
+              {
+                assertion = !(userSettings._userOverride ? hyprlandShell);
+                message = "Per-user hyprlandShell is deprecated. Configure settings.hyprlandShell globally.";
+              }
+              {
+                assertion = !(userSettings._userOverride ? defaultSession);
+                message = "Per-user defaultSession is deprecated. Use userSettings.<name>.defaultWMS and global settings.hyprland.useUWSM.";
+              }
+            ] ++ lib.optional (userSettings.defaultWMS == "hyprland") {
               assertion = hyprlandShellExists;
               message = "Unknown hyprlandShell '${userSettings.hyprlandShell}'. Valid examples: ags, dank-material-shell, noctalia-shell.";
             };
@@ -106,11 +148,9 @@
         ++ editorModules
         ++ browserModules
         ++ lib.optional (devEnabled && builtins.pathExists devModule) devModule
-        ++ lib.optional (builtins.elem "hyprland" userSettings.wms && hyprlandShellExists)
+        ++ lib.optional (userSettings.defaultWMS == "hyprland" && hyprlandShellExists)
           hyprlandShellModule;
-
-      systemWms = lib.unique (builtins.concatLists (map (username: (mkUserSettings username).wms) hmUsers));
-      systemSettings = settings // { wms = systemWms; };
+      systemSettings = settings;
 
       mkHmUserModule = username:
         let userSettings = mkUserSettings username;
