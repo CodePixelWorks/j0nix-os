@@ -28,6 +28,9 @@ let
   storage = settings.storage or { };
   autoMountWindows = storage.autoMountWindows or true;
   noPasswordMounts = storage.noPasswordMounts or true;
+  network = settings.network or { };
+  tailscaleCfg = network.tailscale or { };
+  tailscaleEnabled = tailscaleCfg.enable or false;
 in {
   imports = [
     ./hardware-configuration.nix
@@ -69,6 +72,7 @@ in {
 
   networking.hostName = settings.hostname;
   networking.networkmanager.enable = true;
+  services.tailscale.enable = tailscaleEnabled;
 
   time.timeZone = settings.timezone;
   services.chrony.enable = true;
@@ -162,7 +166,9 @@ in {
     lsof
     lm_sensors
     vulkan-tools
-  ]) ++ lib.optionals (usePulseAudio && hasPulseAudioBtModules && enableHiFiCodecs) [
+  ]) ++ lib.optionals tailscaleEnabled [
+    pkgs.tailscale
+  ] ++ lib.optionals (usePulseAudio && hasPulseAudioBtModules && enableHiFiCodecs) [
     pkgs."pulseaudio-modules-bt"
   ];
 
