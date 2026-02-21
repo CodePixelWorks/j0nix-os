@@ -23,6 +23,7 @@ Per-user launchers and helpers belong in `user/gaming/`.
 ## Steam Note
 
 - `settings.gaming.steam.steamRun` installs `steam-run`.
+- `settings.gaming.proton.provider` selects preferred compat provider (`cachyos` or `ge`).
 
 ## Steam Optional Launch Wrappers
 
