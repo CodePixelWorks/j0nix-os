@@ -21,6 +21,8 @@ let
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
   regreetPackage = if pkgs ? regreet then pkgs.regreet else pkgs.greetd.regreet;
   regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
+  dmsGreeterHyprConfigPath = "/etc/greetd/hypr.conf";
+  dmsGreeterCommand = "dms-greeter --command hyprland -C ${dmsGreeterHyprConfigPath}";
   hyprlandUwsmSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/hyprland-uwsm.desktop" ''
     [Desktop Entry]
     Name=Hyprland (UWSM)
@@ -93,6 +95,7 @@ in {
       })
       (lib.mkIf (selectedGreetdGreeter == "dms-greeter") {
         user = "greeter";
+        command = dmsGreeterCommand;
       })
     ];
   };
@@ -146,6 +149,17 @@ in {
 
       env = XCURSOR_THEME,${cursorTheme}
       env = XCURSOR_SIZE,${toString cursorSize}
+    '';
+    mode = "0444";
+  };
+
+  environment.etc."greetd/hypr.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "dms-greeter") {
+    text = ''
+      env = DMS_RUN_GREETER,1
+
+      misc {
+          disable_hyprland_logo = true
+      }
     '';
     mode = "0444";
   };
