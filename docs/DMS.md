@@ -10,7 +10,7 @@ Use `settings.dms.wallpaper` in `settings.nix`:
 
 ```nix
 dms.wallpaper = {
-  wallpaperPath = "/path/to/wallpaper.jpg";
+  wallpaperPath = "/run/current-system/sw/share/wallpapers/nix-wallpaper-stripes-logo.png";
   wallpaperFillMode = "PreserveAspectCrop"; # PreserveAspectCrop | PreserveAspectFit | Stretch
   monitorWallpapers = {
     # "DP-1" = "/path/to/monitor1-wallpaper.jpg";
