@@ -38,6 +38,8 @@ in {
   ] ++ (map (wm: ../../system/wm/${wm}.nix) settings.wms);
 
   boot = {
+    # Keep kernel selection centralized in the desktop profile.
+    # CachyOS variants already include BORE scheduler support.
     kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest-x86_64-v4;
     tmp = {
       useTmpfs = false;
