@@ -14,3 +14,15 @@ System-level gaming stack controlled by `settings.gaming.*`.
 
 Use this folder for machine-wide gaming requirements.
 Per-user launchers and helpers belong in `user/gaming/`.
+
+## Performance Note
+
+- `settings.gaming.performance.gamemodeRenice` controls gamemode CPU priority (`-20..19`, default `-10`).
+
+## Steam Optional Launch Wrappers
+
+From `user/gaming/tools.nix`, these helpers are available for per-game Steam launch options:
+
+- `game-session %command%`
+- `game-session-gamemode %command%`
+- `game-session-mangohud %command%`
