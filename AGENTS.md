@@ -115,6 +115,7 @@ Controlled by:
 - `settings.sysctlProfiles.fileMax`
 - `settings.sysctlProfiles.gaming.*`
 - `settings.sysctlProfiles.dev.*`
+- `settings.sysctlProfiles.network.*`
 - `settings.sysctlProfiles.custom`
 
 ### Audio
@@ -123,6 +124,10 @@ Controlled by:
 - `settings.audio.bluetooth.enableHiFiCodecs`
 - `settings.audio.bluetooth.enableMsbc`
 - `settings.audio.bluetooth.codecs`
+
+### Network
+Controlled by:
+- `settings.network.tailscale.enable`
 
 ## Do's and Don'ts
 
