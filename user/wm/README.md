@@ -11,6 +11,6 @@ User-space WM behavior and home-level WM composition.
 
 ## Control
 
-- `settings.wms`
+- `settings.wms` (global installed WM modules)
 - `settings.hyprlandShell`
-- `settings.userSettings.<name>.hyprlandShell`
+- `settings.userSettings.<name>.defaultWMS`
