@@ -4,6 +4,7 @@ let
   enabled = gaming.enable or true;
   steamCfg = gaming.steam or { };
   steamEnabled = steamCfg.enable or true;
+  steamRunEnabled = steamCfg.steamRun or true;
 
   perfCfg = gaming.performance or { };
   gamescopeEnabled = perfCfg.gamescope or true;
@@ -21,22 +22,29 @@ lib.mkIf (enabled && steamEnabled) {
 
     # Extra runtime libs improve compatibility for some Proton/Steam games.
     package = pkgs.steam.override {
-      extraPkgs =
-        pkgs: with pkgs; [
-          libusb1
-          udev
-          SDL2
-          libxcursor
-          libxi
-          libxinerama
-          libxscrnsaver
-          libxcomposite
-          libxdamage
-          libxrender
-          libxext
-          libkrb5
-          keyutils
-        ];
+      extraPkgs = pkgs': with pkgs'; [
+        libusb1
+        udev
+        SDL2
+        libXcursor
+        libXi
+        libXinerama
+        libXScrnSaver
+        libXcomposite
+        libXdamage
+        libXrender
+        libXext
+        libpng
+        libpulseaudio
+        libvorbis
+        stdenv.cc.cc.lib
+        libkrb5
+        keyutils
+      ];
     };
   };
+
+  environment.systemPackages = lib.optionals steamRunEnabled [
+    pkgs.steam-run
+  ];
 }
