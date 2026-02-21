@@ -1,4 +1,7 @@
-{ lib, pkgs, ... }:
+{ lib, pkgs, settings, ... }:
+let
+  preferredTerminal = settings.preferredTerminal or "kitty";
+in
 {
   # Keep MangoWC tools available in user sessions.
   home.packages = with pkgs; [
@@ -9,14 +12,14 @@
   # MangoWC reads this by default (~/.config/mangowc/config).
   xdg.configFile."mangowc/config".text = ''
     MODKEY = SUPER
-    TERMINAL = kitty
+    TERMINAL = ${preferredTerminal}
     TAGCOUNT = 10
     LAYOUT = 4
 
     super+q = killclient
     super+t = togglefloating
     super+f = togglefullscreen
-    super+Return = spawn kitty
+    super+Return = spawn ${preferredTerminal}
     super+shift+q = quit
 
     super+1 = view 1

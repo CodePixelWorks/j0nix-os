@@ -6,6 +6,7 @@ let
   dmsStartup = dmsSettings.startup or { };
   dmsStartupMode = dmsStartup.mode or "systemd";
   dmsWorkspaceSettings = dmsSettings.workspaces or { };
+  preferredTerminal = settings.preferredTerminal or "kitty";
   workspaceCountRaw = dmsWorkspaceSettings.count or 10;
   workspaceCount = lib.min 10 (lib.max 1 workspaceCountRaw);
   workspaceKeyPairs = builtins.genList
@@ -24,7 +25,7 @@ let
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
     "$mainMod, f, fullscreen, 0"
-    "$mainMod, return, exec, kitty"
+    "$mainMod, return, exec, ${preferredTerminal}"
     "$mainMod SHIFT, q, exit,"
   ];
   hyprlandDebug = ((settings.hyprland or { }).debug or { });
@@ -60,7 +61,7 @@ in {
       exec-once = [
         "swww-daemon &"
         "[workspace 2 silent] firefox"
-        "[workspace 3 silent] kitty btop"
+        "[workspace 3 silent] ${preferredTerminal} btop"
       ] ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ];
 
       input = {
