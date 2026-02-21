@@ -27,7 +27,7 @@ let
       "${lib.getExe pkgs.uwsm} start hyprland.desktop"
     else
       "hyprland -C ${dmsGreeterHyprConfigPath}";
-  dmsGreeterCommand = "dms-greeter --command ${lib.escapeShellArg dmsGreeterCompositorCmd}";
+  dmsGreeterCommand = "/run/current-system/sw/bin/dms-greeter --command ${lib.escapeShellArg dmsGreeterCompositorCmd}";
   hyprlandUwsmSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/hyprland-uwsm.desktop" ''
     [Desktop Entry]
     Name=Hyprland (UWSM)
