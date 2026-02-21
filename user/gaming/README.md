@@ -17,6 +17,7 @@ Managed by `settings.gaming.*`.
 
 - Toggle with `settings.gaming.launchers.rockstar`
 - Helper command: `rockstar-steam-setup`
+- Lutris fallback helper: `rockstar-lutris-setup`
 
 ## Steam Helpers
 
