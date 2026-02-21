@@ -22,7 +22,12 @@ let
   regreetPackage = if pkgs ? regreet then pkgs.regreet else pkgs.greetd.regreet;
   regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
   dmsGreeterHyprConfigPath = "/etc/greetd/hypr.conf";
-  dmsGreeterCommand = "dms-greeter --command hyprland -C ${dmsGreeterHyprConfigPath}";
+  dmsGreeterCompositorCmd =
+    if useUWSM then
+      "${lib.getExe pkgs.uwsm} start hyprland.desktop"
+    else
+      "hyprland -C ${dmsGreeterHyprConfigPath}";
+  dmsGreeterCommand = "dms-greeter --command ${lib.escapeShellArg dmsGreeterCompositorCmd}";
   hyprlandUwsmSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/hyprland-uwsm.desktop" ''
     [Desktop Entry]
     Name=Hyprland (UWSM)
@@ -153,7 +158,7 @@ in {
     mode = "0444";
   };
 
-  environment.etc."greetd/hypr.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "dms-greeter") {
+  environment.etc."greetd/hypr.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "dms-greeter" && !useUWSM) {
     text = ''
       env = DMS_RUN_GREETER,1
 
