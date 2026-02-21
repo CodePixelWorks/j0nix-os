@@ -2,6 +2,9 @@
 let
   users = settings.users or [ settings.username ];
   primaryUser = builtins.head users;
+  userOverrides = settings.userSettings or { };
+  primaryUserSettings = userOverrides.${primaryUser} or { };
+  primaryDefaultWMS = primaryUserSettings.defaultWMS or "hyprland";
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   hyprlandSessionName = if useUWSM then "hyprland-uwsm" else "hyprland";
   selectedDisplayManager = settings.displayManager or "sddm";
@@ -71,6 +74,20 @@ let
     if regreetCompositor == "hyprland"
     then "start-hyprland -- -c ${regreetHyprlandConfigPath}"
     else "${lib.getExe pkgs.cage} -s -mlast -- ${lib.getExe regreetPackage}";
+  tuigreetTargetCmd =
+    if primaryDefaultWMS == "hyprland" then
+      if useUWSM then
+        "${lib.getExe pkgs.uwsm} start hyprland.desktop"
+      else
+        "Hyprland"
+    else if primaryDefaultWMS == "mangowc" then
+      lib.getExe pkgs.mangowc
+    else if primaryDefaultWMS == "gnome" then
+      "gnome-session"
+    else if useUWSM then
+      "${lib.getExe pkgs.uwsm} start hyprland.desktop"
+    else
+      "Hyprland";
 in {
   imports =
     [
@@ -95,10 +112,7 @@ in {
     settings.default_session = lib.mkMerge [
       (lib.mkIf (selectedGreetdGreeter == "tuigreet") {
         user = primaryUser;
-        command =
-          if useUWSM
-          then "${lib.getExe pkgs.tuigreet} --time --cmd '${lib.getExe pkgs.uwsm} start hyprland.desktop'"
-          else "${lib.getExe pkgs.tuigreet} --time --cmd Hyprland";
+        command = "${lib.getExe pkgs.tuigreet} --time --cmd '${tuigreetTargetCmd}'";
       })
       (lib.mkIf (selectedGreetdGreeter == "regreet") {
         user = "greeter";
