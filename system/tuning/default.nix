@@ -1,6 +1,7 @@
 { ... }:
 {
   imports = [
+    ./thermal.nix
     ./sysctl
   ];
 }
