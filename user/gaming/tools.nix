@@ -3,6 +3,15 @@ let
   gaming = settings.gaming or { };
   enabled = gaming.enable or true;
   perf = gaming.performance or { };
+  thermal = settings.thermal or { };
+  thermalGovernor = thermal.cpuGovernor or "schedutil";
+  drivers = settings.drivers or { };
+  nvidia = drivers.nvidia or { };
+  nvidiaEnabled = nvidia.enable or false;
+  sysctlProfiles = settings.sysctlProfiles or { };
+  sysctlGaming = sysctlProfiles.gaming or { };
+  expectedVmMaxMapCount = sysctlGaming.vmMaxMapCount or 2147483642;
+  expectedSwappiness = sysctlGaming.swappiness or 10;
   proton = gaming.proton or { };
   protonProvider = proton.provider or "ge";
   protonCachyos = proton.cachyos or { };
@@ -26,6 +35,157 @@ lib.mkIf enabled {
       '')
       (pkgs.writeShellScriptBin "game-session-gamemode" ''
         exec gamemoderun "$@"
+      '')
+      (pkgs.writeShellScriptBin "game-ready-check" ''
+        set -eu
+
+        ok=0
+        warn=0
+        fail=0
+
+        check_ok() {
+          ok=$((ok + 1))
+          printf '[OK] %s\n' "$1"
+        }
+
+        check_warn() {
+          warn=$((warn + 1))
+          printf '[WARN] %s\n' "$1"
+        }
+
+        check_fail() {
+          fail=$((fail + 1))
+          printf '[FAIL] %s\n' "$1"
+        }
+
+        check_cmd() {
+          cmd="$1"
+          label="$2"
+          if command -v "$cmd" >/dev/null 2>&1; then
+            check_ok "$label"
+          else
+            check_fail "$label (missing command: $cmd)"
+          fi
+        }
+
+        echo "=== Game Ready Check ==="
+        echo "Host: $(${pkgs.coreutils}/bin/hostname)"
+        echo
+
+        # Kernel baseline
+        if ${pkgs.coreutils}/bin/uname -r | ${pkgs.gnugrep}/bin/grep -qi "cachyos"; then
+          check_ok "CachyOS kernel detected"
+        else
+          check_warn "Kernel is not CachyOS (current: $(${pkgs.coreutils}/bin/uname -r))"
+        fi
+
+        # CPU governor
+        governor_file="/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+        if [ -r "$governor_file" ]; then
+          current_governor="$(${pkgs.coreutils}/bin/cat "$governor_file")"
+          if [ "$current_governor" = "${thermalGovernor}" ]; then
+            check_ok "CPU governor is ${thermalGovernor}"
+          else
+            check_warn "CPU governor is $current_governor (expected: ${thermalGovernor})"
+          fi
+        else
+          check_warn "CPU governor file not readable: $governor_file"
+        fi
+
+        # Sysctl tuning
+        vm_max_map_count="$(${pkgs.procps}/bin/sysctl -n vm.max_map_count 2>/dev/null || echo 0)"
+        if [ "$vm_max_map_count" -ge ${toString expectedVmMaxMapCount} ]; then
+          check_ok "vm.max_map_count is $vm_max_map_count"
+        else
+          check_fail "vm.max_map_count is $vm_max_map_count (expected >= ${toString expectedVmMaxMapCount})"
+        fi
+
+        swappiness="$(${pkgs.procps}/bin/sysctl -n vm.swappiness 2>/dev/null || echo 999)"
+        if [ "$swappiness" -le ${toString expectedSwappiness} ]; then
+          check_ok "vm.swappiness is $swappiness"
+        else
+          check_warn "vm.swappiness is $swappiness (expected <= ${toString expectedSwappiness})"
+        fi
+
+        sched_bore_file="/proc/sys/kernel/sched_bore"
+        if [ -r "$sched_bore_file" ]; then
+          sched_bore="$(${pkgs.coreutils}/bin/cat "$sched_bore_file")"
+          if [ "$sched_bore" = "1" ]; then
+            check_ok "BORE scheduler toggle is active (kernel.sched_bore=1)"
+          else
+            check_warn "BORE scheduler toggle is $sched_bore (expected: 1)"
+          fi
+        else
+          check_warn "kernel.sched_bore sysctl not exposed by current kernel"
+        fi
+
+        # Core gaming tooling
+        check_cmd gamemoderun "Gamemode command available"
+        if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet gamemoded.service; then
+          check_ok "gamemoded.service active"
+        else
+          check_warn "gamemoded.service not active"
+        fi
+
+        ${if (perf.gamescope or true) then ''
+        check_cmd gamescope "Gamescope installed"
+        '' else ''
+        check_warn "Gamescope disabled in settings"
+        ''}
+
+        ${if (perf.mangohud or true) then ''
+        check_cmd mangohud "MangoHud installed"
+        '' else ''
+        check_warn "MangoHud disabled in settings"
+        ''}
+
+        check_cmd steam "Steam installed"
+        check_cmd steam-run "steam-run installed"
+
+        # Proton provider checks
+        compat_dir="$HOME/.steam/root/compatibilitytools.d"
+        if [ "${protonProvider}" = "cachyos" ]; then
+          if ${pkgs.findutils}/bin/find "$compat_dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | ${pkgs.gnugrep}/bin/grep -Eqi 'proton.*cachy|cachy.*proton'; then
+            check_ok "Proton-CachyOS found in $compat_dir"
+          else
+            check_warn "Proton-CachyOS not found in $compat_dir (run: proton-cachyos-install)"
+          fi
+        else
+          check_ok "Proton provider set to GE"
+        fi
+
+        # NVIDIA checks
+        ${if nvidiaEnabled then ''
+        if command -v nvidia-smi >/dev/null 2>&1; then
+          if nvidia-smi >/dev/null 2>&1; then
+            check_ok "NVIDIA driver responds (nvidia-smi)"
+          else
+            check_fail "nvidia-smi exists but failed to query driver"
+          fi
+        else
+          check_fail "nvidia-smi missing while NVIDIA is enabled"
+        fi
+
+        modeset_file="/sys/module/nvidia_drm/parameters/modeset"
+        if [ -r "$modeset_file" ]; then
+          modeset="$(${pkgs.coreutils}/bin/cat "$modeset_file")"
+          if [ "$modeset" = "Y" ] || [ "$modeset" = "1" ]; then
+            check_ok "nvidia_drm modeset enabled ($modeset)"
+          else
+            check_warn "nvidia_drm modeset disabled ($modeset)"
+          fi
+        else
+          check_warn "nvidia_drm modeset parameter not readable"
+        fi
+        '' else ''
+        check_warn "NVIDIA checks skipped (drivers.nvidia.enable = false)"
+        ''}
+
+        echo
+        echo "Summary: OK=$ok WARN=$warn FAIL=$fail"
+        if [ "$fail" -gt 0 ]; then
+          exit 1
+        fi
       '')
     ]
     ++ lib.optionals (perf.mangohud or true) [
