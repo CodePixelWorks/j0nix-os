@@ -64,6 +64,7 @@ let
     [ "${hyprlandSessionName}.desktop" ]
     ++ lib.optional useUWSM "hyprland.desktop"
     ++ lib.optional (!useUWSM) "hyprland-uwsm.desktop"
+    ++ lib.optional (builtins.elem "mangowc" settings.wms) "mangowc.desktop"
     ++ lib.optional (builtins.elem "gnome" settings.wms) "gnome.desktop";
 
   regreetCommand =
