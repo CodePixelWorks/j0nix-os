@@ -3,11 +3,14 @@ let
   profiles = settings.sysctlProfiles or { };
   gaming = profiles.gaming or { };
   dev = profiles.dev or { };
+  network = profiles.network or { };
   gamingEnabled = gaming.enable or true;
   devEnabled = dev.enable or true;
+  networkEnabled = network.enable or true;
 
   gamingSysctl = import ./gaming.nix { inherit settings; };
   devSysctl = import ./dev.nix { inherit settings; };
+  networkSysctl = import ./network.nix { inherit settings; };
 
   resolvedFileMax =
     profiles.fileMax
@@ -22,6 +25,7 @@ in {
   boot.kernel.sysctl = lib.mkMerge [
     (lib.mkIf gamingEnabled gamingSysctl)
     (lib.mkIf devEnabled devSysctl)
+    (lib.mkIf networkEnabled networkSysctl)
     {
       # Unified definition avoids duplicate fs.file-max when multiple profiles are enabled.
       "fs.file-max" = lib.mkDefault resolvedFileMax;
@@ -57,6 +61,18 @@ in {
     {
       assertion = (dev.somaxconn or 4096) >= 128;
       message = "settings.sysctlProfiles.dev.somaxconn should be >= 128";
+    }
+    {
+      assertion = builtins.elem (network.defaultQdisc or "fq") [ "fq" "fq_codel" "cake" ];
+      message = "settings.sysctlProfiles.network.defaultQdisc must be one of: fq, fq_codel, cake";
+    }
+    {
+      assertion = builtins.elem (network.tcpCongestionControl or "bbr") [ "bbr" "cubic" "reno" ];
+      message = "settings.sysctlProfiles.network.tcpCongestionControl must be one of: bbr, cubic, reno";
+    }
+    {
+      assertion = (network.rmemMax or 67108864) >= 212992 && (network.wmemMax or 67108864) >= 212992;
+      message = "settings.sysctlProfiles.network.rmemMax and wmemMax must be >= 212992";
     }
   ];
 }
