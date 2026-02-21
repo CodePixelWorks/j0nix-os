@@ -3,6 +3,7 @@ let
   dev = settings.dev or { };
   ai = dev.ai or { };
   enabled = (dev.enable or true) && (ai.enable or true);
+  preferredTerminal = settings.preferredTerminal or "kitty";
 
   codexEnabled = ai.codex or true;
   geminiEnabled = ai.gemini or true;
@@ -40,7 +41,7 @@ lib.mkIf enabled {
     name = "Gemini CLI";
     genericName = "AI Assistant Terminal";
     comment = "Launch Gemini CLI in terminal";
-    exec = "kitty -e gemini-launcher";
+    exec = "${preferredTerminal} -e gemini-launcher";
     terminal = false;
     type = "Application";
     categories = [ "Development" "Utility" ];

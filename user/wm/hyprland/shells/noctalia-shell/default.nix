@@ -3,6 +3,7 @@ let
   hasNoctaliaInput = inputs ? noctalia;
   noctaliaCfg = ((settings.programs or { }).noctalia or { });
   initializeConfig = noctaliaCfg.initializeConfig or true;
+  preferredTerminal = settings.preferredTerminal or "kitty";
 
   hasHomeModule =
     hasNoctaliaInput
@@ -24,7 +25,7 @@ in {
       position = "center";
       sortByMostUsed = true;
       enableClipboardHistory = true;
-      terminalCommand = "kitty";
+      terminalCommand = preferredTerminal;
     };
     bar = {
       position = "top";
