@@ -260,6 +260,10 @@ in {
         enable = lib.mkDefault dmsUseSystemd;
         restartIfChanged = lib.mkDefault true;
       };
+      # Keep VPN integration available in DMS when Tailscale is enabled system-wide.
+      settings = {
+        enableVPN = lib.mkDefault true;
+      };
     };
   };
 
