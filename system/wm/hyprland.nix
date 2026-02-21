@@ -103,6 +103,7 @@ in {
   environment.systemPackages = with pkgs; [
     brightnessctl
     bibata-cursors
+    btop
     blackDonWallpapers
   ];
 
