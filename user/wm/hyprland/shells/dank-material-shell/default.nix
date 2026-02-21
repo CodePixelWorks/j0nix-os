@@ -38,6 +38,12 @@ let
   wallpaperFillMode = dmsWallpaper.wallpaperFillMode or "PreserveAspectCrop";
   monitorWallpapers = dmsWallpaper.monitorWallpapers or { };
   showOccupiedWorkspacesOnly = dmsWorkspaces.showOccupiedOnly or false;
+  seededSession = lib.optionalAttrs (wallpaperPath != null) {
+    inherit wallpaperPath wallpaperFillMode monitorWallpapers;
+  };
+  seededSettings = {
+    showOccupiedWorkspacesOnly = showOccupiedWorkspacesOnly;
+  };
 
   dmsConfigSource =
     if integratedMode && hasPackage then
@@ -254,16 +260,6 @@ in {
         enable = lib.mkDefault dmsUseSystemd;
         restartIfChanged = lib.mkDefault true;
       };
-
-      # Seed defaults only once so users can still edit runtime JSON files.
-      default = {
-        session = lib.mkIf (wallpaperPath != null) {
-          inherit wallpaperPath wallpaperFillMode monitorWallpapers;
-        };
-        settings = {
-          showOccupiedWorkspacesOnly = lib.mkDefault showOccupiedWorkspacesOnly;
-        };
-      };
     };
   };
 
@@ -276,6 +272,28 @@ in {
 
   home.activation.dmsInfo = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD echo "${if integratedMode then "DMS integrated mode enabled. Use dms-start/dms-stop." else "DMS separate mode enabled. Use dms-install once, then dms-start/dms-stop/dms-uninstall."}"
+  '';
+
+  # Seed DMS JSON defaults only once so files stay writable for runtime/UI changes.
+  home.activation.dmsSeedDefaults = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    state_dir="${config.home.homeDirectory}/.local/state/DankMaterialShell"
+    config_dir="${config.home.homeDirectory}/.config/DankMaterialShell"
+    session_file="$state_dir/session.json"
+    settings_file="$config_dir/settings.json"
+
+    if [ ! -e "$session_file" ]; then
+      $DRY_RUN_CMD mkdir -p "$state_dir"
+      $DRY_RUN_CMD cat >"$session_file" <<'EOF'
+${builtins.toJSON seededSession}
+EOF
+    fi
+
+    if [ ! -e "$settings_file" ]; then
+      $DRY_RUN_CMD mkdir -p "$config_dir"
+      $DRY_RUN_CMD cat >"$settings_file" <<'EOF'
+${builtins.toJSON seededSettings}
+EOF
+    fi
   '';
 
   # Keep DMS alive across Home Manager reloads triggered by nixos-rebuild.
