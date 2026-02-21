@@ -182,6 +182,24 @@ in {
         ${procps}/bin/pkill -x dms >/dev/null 2>&1 || true
       '')
 
+      # Lock first, then suspend. Mirrors common DMS "lock before suspend" behavior.
+      (writeShellScriptBin "dms-suspend" ''
+        if command -v dms >/dev/null 2>&1; then
+          dms ipc call lock lock >/dev/null 2>&1 || true
+        fi
+        sleep 0.5
+        ${systemd}/bin/systemctl suspend
+      '')
+
+      (writeShellScriptBin "dms-lock" ''
+        if command -v dms >/dev/null 2>&1; then
+          dms ipc call lock lock
+        else
+          echo "dms binary not found in PATH"
+          exit 1
+        fi
+      '')
+
       material-symbols
       nerd-fonts.fira-code
       nerd-fonts.jetbrains-mono
