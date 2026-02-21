@@ -20,9 +20,13 @@ dms.wallpaper = {
 ```
 
 These values are mapped to:
-- `programs.dank-material-shell.session.wallpaperPath`
-- `programs.dank-material-shell.session.wallpaperFillMode`
-- `programs.dank-material-shell.session.monitorWallpapers`
+- `programs.dank-material-shell.default.session.wallpaperPath`
+- `programs.dank-material-shell.default.session.wallpaperFillMode`
+- `programs.dank-material-shell.default.session.monitorWallpapers`
+
+This keeps `~/.local/state/DankMaterialShell/session.json` user-editable:
+- defaults are applied only when the file does not exist
+- later UI/manual changes are not forced back on activation
 
 ## Startup Mode
 
