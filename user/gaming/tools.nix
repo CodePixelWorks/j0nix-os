@@ -177,6 +177,36 @@ lib.mkIf enabled {
         echo "Optional with MangoHud:"
         echo "  STEAM_COMPAT_DATA_PATH=$prefix_dir game-session-mangohud %command%"
       '')
+      (pkgs.writeShellScriptBin "rockstar-lutris-setup" ''
+        set -eu
+
+        base_dir="$HOME/Games/rockstar-lutris"
+        download_dir="$base_dir/downloads"
+        prefix_dir="$base_dir/prefix"
+        installer="$download_dir/Rockstar-Games-Launcher.exe"
+        installer_url="https://gamedownloads.rockstargames.com/public/installer/Rockstar-Games-Launcher.exe"
+
+        mkdir -p "$download_dir" "$prefix_dir"
+
+        if [ ! -f "$installer" ]; then
+          echo "Downloading Rockstar Games Launcher installer..."
+          ${pkgs.curl}/bin/curl -fL "$installer_url" -o "$installer"
+        fi
+
+        echo
+        echo "Lutris fallback setup:"
+        echo "1) Open Lutris -> + -> Add locally installed game"
+        echo "2) Runner: Wine"
+        echo "3) Game options:"
+        echo "   Executable: $installer"
+        echo "   Wine prefix: $prefix_dir"
+        echo "4) Runner options:"
+        echo "   Wine version: GE-Proton (latest) or Soda"
+        echo "   DXVK: ON, VKD3D: ON, Esync/Fsync: ON"
+        echo
+        echo "After first install run, switch executable to Launcher.exe inside:"
+        echo "  $prefix_dir/drive_c/Program Files*/Rockstar Games/Launcher/"
+      '')
     ]
     ++ lib.optionals (controllers.dualsense or true) [ pkgs.dualsensectl ];
 
