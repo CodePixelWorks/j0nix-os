@@ -21,6 +21,16 @@ let
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
   regreetPackage = if pkgs ? regreet then pkgs.regreet else pkgs.greetd.regreet;
   regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
+  blackDonWallpapers = pkgs.stdenvNoCC.mkDerivation {
+    pname = "black-don-wallpapers";
+    version = "1.0.0";
+    src = ../../wallpapers/black-don;
+    dontBuild = true;
+    installPhase = ''
+      mkdir -p "$out/share/wallpapers/black-don"
+      cp -r "$src"/. "$out/share/wallpapers/black-don/"
+    '';
+  };
 
   cursorTheme = "Bibata-Modern-Classic";
   cursorSize = 24;
@@ -93,6 +103,7 @@ in {
   environment.systemPackages = with pkgs; [
     brightnessctl
     bibata-cursors
+    blackDonWallpapers
   ];
 
   environment.sessionVariables = {
