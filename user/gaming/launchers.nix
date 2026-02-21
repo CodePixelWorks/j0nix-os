@@ -4,6 +4,7 @@ let
   enabled = gaming.enable or true;
   launchers = gaming.launchers or { };
   protonCfg = gaming.proton or { };
+  rockstarEnabled = launchers.rockstar or false;
 in
 lib.mkIf enabled {
   programs.lutris = lib.mkIf (launchers.lutris or true) {
@@ -23,5 +24,6 @@ lib.mkIf enabled {
       if pkgs ? heroic then [ pkgs.heroic ] else [ ]
     )
     ++ lib.optionals (launchers.bottles or true) [ pkgs.bottles ]
-    ++ lib.optionals (launchers.wineGui or false) [ pkgs.wineWowPackages.waylandFull ];
+    ++ lib.optionals (launchers.wineGui or false) [ pkgs.wineWowPackages.waylandFull ]
+    ++ lib.optionals (rockstarEnabled && (pkgs ? protontricks)) [ pkgs.protontricks ];
 }
