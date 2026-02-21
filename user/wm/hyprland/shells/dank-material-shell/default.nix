@@ -253,8 +253,8 @@ in {
         restartIfChanged = lib.mkDefault true;
       };
 
-      # Session config (wallpaper path/fill/per-monitor overrides).
-      session = lib.mkIf (wallpaperPath != null) {
+      # Seed defaults only once so users can still edit session.json at runtime.
+      default.session = lib.mkIf (wallpaperPath != null) {
         inherit wallpaperPath wallpaperFillMode monitorWallpapers;
       };
     };
