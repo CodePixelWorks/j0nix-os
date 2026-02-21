@@ -3,8 +3,6 @@ let
   users = settings.users or [ settings.username ];
   primaryUser = builtins.head users;
   userOverrides = settings.userSettings or { };
-  primaryUserSettings = userOverrides.${primaryUser} or { };
-  primaryDefaultWMS = primaryUserSettings.defaultWMS or "hyprland";
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   hyprlandSessionName = if useUWSM then "hyprland-uwsm" else "hyprland";
   selectedDisplayManager = settings.displayManager or "sddm";
@@ -74,20 +72,35 @@ let
     if regreetCompositor == "hyprland"
     then "start-hyprland -- -c ${regreetHyprlandConfigPath}"
     else "${lib.getExe pkgs.cage} -s -mlast -- ${lib.getExe regreetPackage}";
-  tuigreetTargetCmd =
-    if primaryDefaultWMS == "hyprland" then
+  sessionCommandForWMS = wms:
+    if wms == "hyprland" then
       if useUWSM then
         "${lib.getExe pkgs.uwsm} start hyprland.desktop"
       else
-        "Hyprland"
-    else if primaryDefaultWMS == "mangowc" then
+        "start-hyprland"
+    else if wms == "mangowc" then
       lib.getExe pkgs.mangowc
-    else if primaryDefaultWMS == "gnome" then
+    else if wms == "gnome" then
       "gnome-session"
     else if useUWSM then
       "${lib.getExe pkgs.uwsm} start hyprland.desktop"
     else
-      "Hyprland";
+      "start-hyprland";
+  userCaseBranches = lib.concatStringsSep "\n" (map (username:
+    let
+      userCfg = userOverrides.${username} or { };
+      defaultWMS = userCfg.defaultWMS or "hyprland";
+    in
+    "  ${username}) exec ${sessionCommandForWMS defaultWMS} ;;"
+  ) users);
+  autoWmScript = pkgs.writeShellScriptBin "auto-wm-session" ''
+    target_user="''${1:-''${USER:-${primaryUser}}}"
+
+    case "$target_user" in
+${userCaseBranches}
+      *) exec ${sessionCommandForWMS "hyprland"} ;;
+    esac
+  '';
 in {
   imports =
     [
@@ -112,7 +125,7 @@ in {
     settings.default_session = lib.mkMerge [
       (lib.mkIf (selectedGreetdGreeter == "tuigreet") {
         user = primaryUser;
-        command = "${lib.getExe pkgs.tuigreet} --time --cmd '${tuigreetTargetCmd}'";
+        command = "${lib.getExe pkgs.tuigreet} --time --cmd '${lib.getExe autoWmScript}'";
       })
       (lib.mkIf (selectedGreetdGreeter == "regreet") {
         user = "greeter";
