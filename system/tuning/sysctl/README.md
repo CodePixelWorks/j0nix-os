@@ -13,4 +13,5 @@ Split sysctl model for clean composition.
 - `settings.sysctlProfiles.fileMax`
 - `settings.sysctlProfiles.gaming.*`
 - `settings.sysctlProfiles.dev.*`
+- `settings.sysctlProfiles.network.*`
 - `settings.sysctlProfiles.custom`
