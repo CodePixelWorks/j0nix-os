@@ -1,6 +1,19 @@
 { lib, pkgs, settings, ... }:
 let
   preferredTerminal = settings.preferredTerminal or "kitty";
+  shellStartScript = pkgs.writeShellScript "mangowc-shell-start" ''
+    # Keep MangoWC shell startup idempotent.
+    ${pkgs.procps}/bin/pkill -x waybar >/dev/null 2>&1 || true
+    ${pkgs.procps}/bin/pkill -x nm-applet >/dev/null 2>&1 || true
+
+    ${pkgs.waybar}/bin/waybar >/dev/null 2>&1 &
+    ${pkgs.networkmanagerapplet}/bin/nm-applet --indicator >/dev/null 2>&1 &
+
+    if command -v cliphist >/dev/null 2>&1; then
+      ${pkgs.procps}/bin/pkill -f "cliphist store" >/dev/null 2>&1 || true
+      cliphist store >/dev/null 2>&1 &
+    fi
+  '';
 in
 {
   # MangoWC is a compositor only. Keep basic session tools available.
@@ -8,6 +21,8 @@ in
     wlr-randr
     wtype
     waybar
+    networkmanagerapplet
+    cliphist
   ] ++ lib.optionals (pkgs ? mmsg) [ pkgs.mmsg ];
 
   # MangoWC reads ~/.config/mango/config.conf
@@ -35,6 +50,7 @@ in
     tagrule=id:7,layout_name:grid
     tagrule=id:8,layout_name:grid
     tagrule=id:9,layout_name:grid
+    tagrule=id:10,layout_name:grid
 
     # Core binds
     bind=SUPER,q,killclient,
@@ -84,8 +100,8 @@ in
     Service = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${pkgs.bash}/bin/bash -lc 'pkill -x waybar >/dev/null 2>&1 || true; waybar >/dev/null 2>&1 &'";
-      ExecStop = "${pkgs.procps}/bin/pkill -x waybar >/dev/null 2>&1 || true";
+      ExecStart = shellStartScript;
+      ExecStop = "${pkgs.procps}/bin/pkill -x waybar >/dev/null 2>&1 || true; ${pkgs.procps}/bin/pkill -x nm-applet >/dev/null 2>&1 || true";
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };
