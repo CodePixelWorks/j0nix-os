@@ -52,8 +52,8 @@ let
     src = ../../wallpapers/black-don;
     dontBuild = true;
     installPhase = ''
-      mkdir -p "$out/share/wallpapers/black-don"
-      cp -r "$src"/. "$out/share/wallpapers/black-don/"
+      mkdir -p "$out/share/wallpapers"
+      cp -r "$src"/. "$out/share/wallpapers/"
     '';
   };
 
