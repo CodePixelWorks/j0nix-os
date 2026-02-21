@@ -1,4 +1,8 @@
-{ config, pkgs, settings, ... }:
+{ config, lib, pkgs, settings, ... }:
+let
+  storage = settings.storage or { };
+  autoMountWindows = storage.autoMountWindows or true;
+in
 {
   imports = [
     ../../user/gaming
@@ -42,7 +46,7 @@
     openvpn
     unzip
     android-tools
-  ];
+  ] ++ (with pkgs; if autoMountWindows then [ udiskie ] else [ ]);
 
   xdg.enable = true;
   xdg.userDirs = {
@@ -65,6 +69,21 @@
   home.sessionVariables = {
     EDITOR = settings.preferredEditor;
     BROWSER = settings.preferredBrowser;
+  };
+
+  # User-space automount for additional internal/removable drives via udisks2.
+  systemd.user.services.udiskie = lib.mkIf autoMountWindows {
+    Unit = {
+      Description = "Udiskie automount daemon";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.udiskie}/bin/udiskie --automount --smart-tray";
+      Restart = "on-failure";
+      RestartSec = 2;
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
   };
 
   programs.home-manager.enable = true;
