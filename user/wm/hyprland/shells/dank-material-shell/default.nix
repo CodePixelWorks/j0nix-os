@@ -36,26 +36,12 @@ let
   wallpaperPath = dmsWallpaper.wallpaperPath or "/run/current-system/sw/share/wallpapers/black-don/nix-wallpaper-stripes-logo.png";
   wallpaperFillMode = dmsWallpaper.wallpaperFillMode or "PreserveAspectCrop";
   monitorWallpapers = dmsWallpaper.monitorWallpapers or { };
-  dmsSessionJson = builtins.toJSON {
-    inherit wallpaperPath wallpaperFillMode monitorWallpapers;
-  };
 
   dmsConfigSource =
     if integratedMode && hasPackage then
       "${inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default}/share/quickshell/dms"
     else
       "${config.home.homeDirectory}/.nix-profile/share/quickshell/dms";
-  dmsPreparedConfigSource =
-    if integratedMode && hasPackage then
-      pkgs.runCommandLocal "dms-config-prepared" { } ''
-        mkdir -p "$out"
-        cp -r "${dmsConfigSource}/." "$out/"
-        cat > "$out/session.json" <<'EOF'
-        ${dmsSessionJson}
-        EOF
-      ''
-    else
-      dmsConfigSource;
   dmsBinaryFromPackage =
     if integratedMode && hasPackage then
       "${inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/dms"
@@ -262,7 +248,15 @@ in {
   } // lib.optionalAttrs (integratedMode && hasHomeModule) {
     dank-material-shell = {
       enable = lib.mkDefault true;
-      systemd.enable = lib.mkDefault dmsUseSystemd;
+      systemd = {
+        enable = lib.mkDefault dmsUseSystemd;
+        restartIfChanged = lib.mkDefault true;
+      };
+
+      # Session config (wallpaper path/fill/per-monitor overrides).
+      session = lib.mkIf (wallpaperPath != null) {
+        inherit wallpaperPath wallpaperFillMode monitorWallpapers;
+      };
     };
   };
 
@@ -271,7 +265,7 @@ in {
   xdg.configFile."dms/.keep".text = "";
 
   home.file.".config/quickshell/dms".source =
-    config.lib.file.mkOutOfStoreSymlink dmsPreparedConfigSource;
+    config.lib.file.mkOutOfStoreSymlink dmsConfigSource;
 
   home.activation.dmsInfo = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD echo "${if integratedMode then "DMS integrated mode enabled. Use dms-start/dms-stop." else "DMS separate mode enabled. Use dms-install once, then dms-start/dms-stop/dms-uninstall."}"
