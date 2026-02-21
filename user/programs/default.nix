@@ -1,6 +1,7 @@
 { ... }:
 {
   imports = [
+    ./betterdiscord
     ./fastfetch
     ./wlogout
   ];
