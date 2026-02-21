@@ -24,6 +24,7 @@ Managed by `settings.gaming.*`.
 - `game-session-gamemode`
 - `game-session-mangohud`
 - `game-session-gamescope-hdr`
+- `game-ready-check`
 
 ## Proton-CachyOS
 
