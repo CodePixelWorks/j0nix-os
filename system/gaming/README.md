@@ -18,6 +18,7 @@ Per-user launchers and helpers belong in `user/gaming/`.
 ## Performance Note
 
 - `settings.gaming.performance.gamemodeRenice` controls gamemode CPU priority (`-20..19`, default `-10`).
+- `settings.gaming.performance.autoPerformanceMode` switches power profile to `performance` while gamemode sessions are active.
 - `settings.gaming.performance.gamescopeHdr` enables HDR wrapper tooling for gamescope launch.
 
 ## Steam Note
