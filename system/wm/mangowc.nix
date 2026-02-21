@@ -15,13 +15,26 @@ let
 
   mangoPkg = pkgs.mangowc;
   mangoExe = lib.getExe mangoPkg;
+  mangoStart = lib.getExe (pkgs.writeShellScriptBin "start-mangowc" ''
+    export XDG_SESSION_TYPE=wayland
+    export XDG_CURRENT_DESKTOP=MangoWC
+    export XDG_SESSION_DESKTOP=mangowc
+    export DESKTOP_SESSION=mangowc
+
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl --user start graphical-session.target >/dev/null 2>&1 || true
+      systemctl --user start mangowc-shell.service >/dev/null 2>&1 || true
+    fi
+
+    exec ${mangoExe}
+  '');
 
   mangowcSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/mangowc.desktop" ''
     [Desktop Entry]
     Name=MangoWC
     Comment=Minimal wlroots compositor
-    TryExec=${mangoExe}
-    Exec=${mangoExe}
+    TryExec=${mangoStart}
+    Exec=${mangoStart}
     Type=Application
     DesktopNames=MangoWC
   '').overrideAttrs (old: {
@@ -52,7 +65,7 @@ in {
     settings.default_session = lib.mkMerge [
       (lib.mkIf (selectedGreetdGreeter == "tuigreet") {
         user = settings.username;
-        command = "${lib.getExe pkgs.tuigreet} --time --cmd ${mangoExe}";
+        command = "${lib.getExe pkgs.tuigreet} --time --cmd ${mangoStart}";
       })
       (lib.mkIf (selectedGreetdGreeter == "regreet") {
         user = "greeter";
@@ -74,13 +87,16 @@ in {
 
   environment.systemPackages = [
     mangoPkg
+    pkgs.xdg-desktop-portal-wlr
   ];
 
   xdg.portal = {
     enable = true;
     xdgOpenUsePortal = true;
+    extraPortals = [ pkgs.xdg-desktop-portal-wlr ];
     config = {
-      mangowc.default = [ "gtk" ];
+      common.default = [ "wlr" "gtk" ];
+      mangowc.default = [ "wlr" "gtk" ];
     };
   };
 }
