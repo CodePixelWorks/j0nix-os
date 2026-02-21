@@ -33,7 +33,7 @@ let
   dmsDgopRef = dmsInstall.dgopRef or "github:AvengeMedia/dgop";
   dmsCliVersion = dmsInstall.cliVersion or "0.2.3";
   dmsWallpaper = dms.wallpaper or { };
-  wallpaperPath = dmsWallpaper.wallpaperPath or null;
+  wallpaperPath = dmsWallpaper.wallpaperPath or "/run/current-system/sw/share/wallpapers/nix-wallpaper-stripes-logo.png";
   wallpaperFillMode = dmsWallpaper.wallpaperFillMode or "PreserveAspectCrop";
   monitorWallpapers = dmsWallpaper.monitorWallpapers or { };
 
