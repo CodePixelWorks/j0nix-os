@@ -75,9 +75,11 @@ in
 
     programs.git = lib.mkIf gitEnabled {
       enable = true;
-      userName = gitUserName;
-      userEmail = gitUserEmail;
-      extraConfig = {
+      settings = {
+        user = {
+          name = gitUserName;
+          email = gitUserEmail;
+        };
         init.defaultBranch = gitDefaultBranch;
         pull.rebase = false;
       };
@@ -88,8 +90,13 @@ in
 
     programs.ssh = lib.mkIf sshEnabled {
       enable = true;
-      addKeysToAgent = sshAddKeysToAgent;
-      matchBlocks = builtins.listToAttrs (lib.mapAttrsToList mkSshMatchBlock gitHostProfiles);
+      matchBlocks =
+        (builtins.listToAttrs (lib.mapAttrsToList mkSshMatchBlock gitHostProfiles))
+        // lib.optionalAttrs (sshAddKeysToAgent != null) {
+          "*" = {
+            addKeysToAgent = sshAddKeysToAgent;
+          };
+        };
     };
 
     home.packages = with pkgs; [
