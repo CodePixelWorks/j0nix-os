@@ -25,6 +25,9 @@ let
       "ldac"
     ];
   hasPulseAudioBtModules = builtins.hasAttr "pulseaudio-modules-bt" pkgs;
+  storage = settings.storage or { };
+  autoMountWindows = storage.autoMountWindows or true;
+  noPasswordMounts = storage.noPasswordMounts or true;
 in {
   imports = [
     ./hardware-configuration.nix
@@ -163,7 +166,26 @@ in {
 
   fonts.packages = [ settings.themeDetails.fontPkg ];
   services.gvfs.enable = true;
+  services.udisks2.enable = autoMountWindows;
   services.dbus.implementation = "broker";
+
+  security.polkit.enable = true;
+  security.polkit.extraConfig = lib.mkIf noPasswordMounts ''
+    polkit.addRule(function(action, subject) {
+      var allowed = [
+        "org.freedesktop.udisks2.filesystem-mount",
+        "org.freedesktop.udisks2.filesystem-mount-system",
+        "org.freedesktop.udisks2.filesystem-mount-other-seat",
+        "org.freedesktop.udisks2.filesystem-unmount-others",
+        "org.freedesktop.udisks2.encrypted-unlock",
+        "org.freedesktop.udisks2.eject-media"
+      ];
+
+      if (allowed.indexOf(action.id) >= 0 && subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+      }
+    });
+  '';
 
   virtualisation.libvirtd.enable = true;
 
@@ -179,6 +201,10 @@ in {
     {
       assertion = (!enableHiFiCodecs) || ((builtins.length bluetoothCodecs) > 0);
       message = "settings.audio.bluetooth.codecs must not be empty when enableHiFiCodecs=true";
+    }
+    {
+      assertion = builtins.isBool autoMountWindows && builtins.isBool noPasswordMounts;
+      message = "settings.storage.autoMountWindows and settings.storage.noPasswordMounts must be booleans";
     }
   ];
 
