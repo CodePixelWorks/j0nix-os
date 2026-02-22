@@ -177,6 +177,13 @@ Controlled by:
 - Run `nix flake lock --update-input <name>`.
 - Re-run `nix flake check --no-build`.
 
+### Hyprland 0.53.2+ rule syntax
+- `windowrulev2` is treated as removed/deprecated in practice; prefer `windowrule`.
+- Rule flags now require explicit values (`float 1`, `center 1`, `pin 1`).
+- Use snake_case field names (`no_blur`, `initial_title`).
+- `idleinhibit` rule is removed; use `hypridle` instead.
+- When migrating old dotfiles (e.g. JaKooLit-based), expect strict parser errors instead of warnings.
+
 ## Final Reminder
 
 All production configuration work must happen in `j0nix-os/`.
