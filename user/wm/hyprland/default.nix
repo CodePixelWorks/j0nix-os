@@ -32,6 +32,41 @@ let
   overviewToggleKeyBind =
     lib.optional (selectedShell == "dank-material-shell" && dmsOverviewEnabled && overviewToggleBind != null && overviewToggleBind != "")
       "${overviewToggleBind}, exec, dms-overview-toggle";
+  genericHyprKeybinds = {
+    bind = [
+      "$mainMod, left, movefocus, l"
+      "$mainMod, right, movefocus, r"
+      "$mainMod, up, movefocus, u"
+      "$mainMod, down, movefocus, d"
+      "$mainMod SHIFT, left, movewindow, l"
+      "$mainMod SHIFT, right, movewindow, r"
+      "$mainMod SHIFT, up, movewindow, u"
+      "$mainMod SHIFT, down, movewindow, d"
+      "$mainMod, mouse_down, workspace, -1"
+      "$mainMod, mouse_up, workspace, +1"
+      "$mainMod CTRL, Backslash, centerwindow, 1"
+    ];
+    binde = [
+      "$mainMod, minus, splitratio, -0.1"
+      "$mainMod, equal, splitratio, 0.1"
+      "$mainMod, Page_Up, workspace, -1"
+      "$mainMod, Page_Down, workspace, +1"
+      "$mainMod ALT, Page_Up, movetoworkspace, -1"
+      "$mainMod ALT, Page_Down, movetoworkspace, +1"
+    ];
+    bindm = [
+      "$mainMod, mouse:272, movewindow"
+      "$mainMod, mouse:273, resizewindow"
+    ];
+    bindl = [
+      ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+      ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+    ];
+    bindle = [
+      ", XF86AudioRaiseVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 3%+"
+      ", XF86AudioLowerVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume @DEFAULT_AUDIO_SINK@ 3%-"
+    ];
+  };
   coreBinds = [
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
@@ -39,6 +74,108 @@ let
     "$mainMod, return, exec, ${preferredTerminal}"
     "$mainMod SHIFT, q, exit,"
   ] ++ keyboardToggleBind ++ overviewToggleKeyBind;
+  shellHyprKeybinds =
+    if selectedShell == "caelestia-shell" then
+      {
+        # Caelestia relies on Hyprland "global" dispatch shortcuts for drawer/actions.
+        extraConfig = ''
+          exec = hyprctl dispatch submap global
+          submap = global
+        '';
+        bindi = [
+          "Super, Super_L, global, caelestia:launcher"
+        ];
+        bindin = [
+          "Super, catchall, global, caelestia:launcherInterrupt"
+          "Super, mouse:272, global, caelestia:launcherInterrupt"
+          "Super, mouse:273, global, caelestia:launcherInterrupt"
+          "Super, mouse:274, global, caelestia:launcherInterrupt"
+          "Super, mouse:275, global, caelestia:launcherInterrupt"
+          "Super, mouse:276, global, caelestia:launcherInterrupt"
+          "Super, mouse:277, global, caelestia:launcherInterrupt"
+          "Super, mouse_up, global, caelestia:launcherInterrupt"
+          "Super, mouse_down, global, caelestia:launcherInterrupt"
+        ];
+        bind = [
+          "$mainMod, escape, global, caelestia:session"
+          "$mainMod, space, global, caelestia:showall"
+          "$mainMod SHIFT, l, global, caelestia:lock"
+          "$mainMod, n, global, caelestia:clearNotifs"
+          "$mainMod, v, exec, pkill fuzzel || caelestia clipboard"
+          "$mainMod ALT, v, exec, pkill fuzzel || caelestia clipboard -d"
+          "$mainMod, period, exec, pkill fuzzel || caelestia emoji -p"
+          "$mainMod ALT, r, exec, caelestia record -s"
+          "CTRL ALT, r, exec, caelestia record"
+          "$mainMod SHIFT ALT, r, exec, caelestia record -r"
+          "$mainMod SHIFT, s, global, caelestia:screenshotFreeze"
+          "$mainMod SHIFT ALT, s, global, caelestia:screenshot"
+          "$mainMod, b, exec, app2unit -- ${settings.preferredBrowser or "chromium"}"
+          "$mainMod, e, exec, app2unit -- ${settings.preferredEditor or "nvim"}"
+          "$mainMod ALT, e, exec, app2unit -- nemo"
+          "$mainMod, g, exec, app2unit -- github-desktop"
+          "CTRL ALT, v, exec, app2unit -- pavucontrol"
+          "CTRL ALT, Escape, exec, app2unit -- qps"
+          "$mainMod ALT, s, movetoworkspace, special:special"
+          "$mainMod, s, exec, caelestia toggle specialws"
+          "$mainMod CTRL SHIFT, up, movetoworkspace, special:special"
+          "$mainMod CTRL SHIFT, down, movetoworkspace, e+0"
+          "$mainMod CTRL SHIFT, right, movetoworkspace, +1"
+          "$mainMod CTRL SHIFT, left, movetoworkspace, -1"
+          "$mainMod ALT, mouse_down, movetoworkspace, -1"
+          "$mainMod ALT, mouse_up, movetoworkspace, +1"
+          "$mainMod, slash, exec, caelestia shell controlCenter open"
+          "$mainMod, m, exec, caelestia toggle music"
+          "$mainMod, c, exec, caelestia toggle communication"
+          "$mainMod, y, exec, caelestia toggle todo"
+          "$mainMod, x, exec, caelestia toggle sysmon"
+          "$mainMod SHIFT, c, exec, hyprpicker -a"
+        ];
+        bindl = [
+          ", Print, exec, caelestia screenshot"
+          ", XF86MonBrightnessUp, global, caelestia:brightnessUp"
+          ", XF86MonBrightnessDown, global, caelestia:brightnessDown"
+          "CTRL SUPER, Space, global, caelestia:mediaToggle"
+          ", XF86AudioPlay, global, caelestia:mediaToggle"
+          ", XF86AudioPause, global, caelestia:mediaToggle"
+          "CTRL SUPER, Equal, global, caelestia:mediaNext"
+          ", XF86AudioNext, global, caelestia:mediaNext"
+          "CTRL SUPER, Minus, global, caelestia:mediaPrev"
+          ", XF86AudioPrev, global, caelestia:mediaPrev"
+          ", XF86AudioStop, global, caelestia:mediaStop"
+          ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+          ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+          "$mainMod SHIFT, m, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+          "CTRL SHIFT ALT, v, exec, sleep 0.5s && ydotool type -d 1 \"$(cliphist list | head -1 | cliphist decode)\""
+          "$mainMod ALT, f12, exec, notify-send -u low -i dialog-information-symbolic 'Test notification' \"Here's a really long message to test truncation and wrapping\\nYou can middle click or flick this notification to dismiss it!\" -a 'Shell' -A \"Test1=I got it!\" -A \"Test2=Another action\""
+          "$mainMod SHIFT, BackSpace, exec, caelestia shell -d"
+          "$mainMod SHIFT, BackSpace, global, caelestia:lock"
+        ];
+        bindle = [
+          ", XF86AudioRaiseVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 3%+"
+          ", XF86AudioLowerVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume @DEFAULT_AUDIO_SINK@ 3%-"
+        ];
+        binde = [
+          "$mainMod, Page_Up, workspace, -1"
+          "$mainMod, Page_Down, workspace, +1"
+          "CTRL ALT, Tab, changegroupactive, f"
+          "CTRL SHIFT ALT, Tab, changegroupactive, b"
+          "$mainMod, minus, splitratio, -0.1"
+          "$mainMod, equal, splitratio, 0.1"
+        ];
+        bindr = [
+          "CTRL SUPER SHIFT, R, exec, qs -c caelestia kill"
+          "CTRL SUPER ALT, R, exec, qs -c caelestia kill; sleep .1; caelestia shell -d"
+        ];
+        bindm = [
+          "Super, mouse:272, movewindow"
+          "Super, mouse:273, resizewindow"
+        ];
+      }
+    else
+      {
+        extraConfig = "";
+      };
+  mergedBindsFor = key: (genericHyprKeybinds.${key} or [ ]) ++ (shellHyprKeybinds.${key} or [ ]);
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
 
   # `exec-once` is used for both direct Hyprland sessions and UWSM-managed sessions.
@@ -57,7 +194,8 @@ in {
   wayland.windowManager.hyprland = {
     enable = true;
     systemd.enable = false;
-    extraConfig = lib.optionalString (selectedShell == "dank-material-shell") ''
+    extraConfig =
+      (lib.optionalString (selectedShell == "dank-material-shell") ''
       # DMS writes these files at runtime to sync compositor visuals.
       source = ${hyprDmsDir}/colors.conf
       source = ${hyprDmsDir}/cursor.conf
@@ -66,7 +204,8 @@ in {
       source = ${hyprDmsDir}/binds.conf
       # Backwards compatibility with older DMS layouts.
       source = ${hyprDmsDir}/layout.conf
-    '';
+      '')
+      + (shellHyprKeybinds.extraConfig or "");
 
     settings = {
       "$mainMod" = "SUPER";
@@ -113,9 +252,19 @@ in {
         coreBinds
         ++ workspaceSwitchBinds
         ++ workspaceMoveBinds;
+      bindi = mergedBindsFor "bindi";
+      bindin = mergedBindsFor "bindin";
+      binde = mergedBindsFor "binde";
+      bindl = mergedBindsFor "bindl";
+      bindle = mergedBindsFor "bindle";
+      bindr = mergedBindsFor "bindr";
+      bindm = mergedBindsFor "bindm";
     };
 
   };
+
+  wayland.windowManager.hyprland.settings.bind =
+    lib.mkAfter (mergedBindsFor "bind");
 
   xdg.configFile."hypr/hyprland.conf".force = true;
 
