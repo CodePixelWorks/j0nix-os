@@ -28,6 +28,15 @@ let
   storage = settings.storage or { };
   autoMountWindows = storage.autoMountWindows or true;
   noPasswordMounts = storage.noPasswordMounts or true;
+  gamesDisk = storage.gamesDisk or { };
+  gamesDiskEnabled = gamesDisk.enable or false;
+  gamesDiskMountPoint = gamesDisk.mountPoint or "/mnt/Games";
+  gamesDiskUuid = gamesDisk.uuid or "";
+  gamesDiskFsType = gamesDisk.fsType or "ntfs3";
+  gamesDiskGvfsShow = gamesDisk.gvfsShow or true;
+  gamesDiskGvfsName = gamesDisk.gvfsName or "GAMES";
+  gamesDiskOnDemandAutomount = gamesDisk.onDemandAutomount or false;
+  gamesDiskIdleTimeout = gamesDisk.idleTimeout or "5min";
   network = settings.network or { };
   tailscaleCfg = network.tailscale or { };
   tailscaleEnabled = tailscaleCfg.enable or false;
@@ -198,18 +207,26 @@ in {
   virtualisation.libvirtd.enable = true;
 
   # Keep the Windows games disk consistently available at a stable path.
-  fileSystems."/mnt/GAMES" = {
-    device = "/dev/disk/by-uuid/6A68028468024F6F";
-    fsType = "ntfs3";
-    options = [
-      "rw"
-      "uid=1000"
-      "gid=100"
-      "umask=0022"
-      "nofail"
-      "x-systemd.automount"
-      "x-systemd.idle-timeout=5min"
-    ];
+  fileSystems = lib.optionalAttrs gamesDiskEnabled {
+    "${gamesDiskMountPoint}" = {
+      device = "/dev/disk/by-uuid/${gamesDiskUuid}";
+      fsType = gamesDiskFsType;
+      options = [
+        "rw"
+        "uid=1000"
+        "gid=100"
+        "umask=0022"
+        "nofail"
+      ]
+      ++ lib.optionals gamesDiskGvfsShow [
+        "x-gvfs-show"
+        "x-gvfs-name=${gamesDiskGvfsName}"
+      ]
+      ++ lib.optionals gamesDiskOnDemandAutomount [
+        "x-systemd.automount"
+        "x-systemd.idle-timeout=${gamesDiskIdleTimeout}"
+      ];
+    };
   };
 
   assertions = [
@@ -228,6 +245,18 @@ in {
     {
       assertion = builtins.isBool autoMountWindows && builtins.isBool noPasswordMounts;
       message = "settings.storage.autoMountWindows and settings.storage.noPasswordMounts must be booleans";
+    }
+    {
+      assertion = (!gamesDiskEnabled) || (gamesDiskUuid != "");
+      message = "settings.storage.gamesDisk.uuid must be set when gamesDisk.enable = true";
+    }
+    {
+      assertion = (!gamesDiskEnabled) || lib.hasPrefix "/" gamesDiskMountPoint;
+      message = "settings.storage.gamesDisk.mountPoint must be an absolute path";
+    }
+    {
+      assertion = (!gamesDiskEnabled) || (!gamesDiskGvfsShow) || (gamesDiskGvfsName != "");
+      message = "settings.storage.gamesDisk.gvfsName must not be empty when gvfsShow = true";
     }
   ];
 
