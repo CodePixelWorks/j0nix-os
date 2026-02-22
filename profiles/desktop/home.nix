@@ -56,6 +56,7 @@ in
     obs-studio
     qbittorrent
     telegram-desktop
+    obsidian
     drawio
     bambu-studio
     bottles
@@ -74,11 +75,20 @@ in
     openvpn
     unzip
     android-tools
+    xdg-utils
   ] ++ (with pkgs; if autoMountWindows then [ udiskie ] else [ ])
     ++ lib.optionals (pkgs ? fusion360) [ pkgs.fusion360 ]
     ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) ([ iconThemePackage ] ++ iconThemeFallbackPackages);
 
   xdg.enable = true;
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "x-scheme-handler/http" = [ "chromium.desktop" ];
+      "x-scheme-handler/https" = [ "chromium.desktop" ];
+      "text/html" = [ "chromium.desktop" ];
+    };
+  };
   xdg.userDirs = {
     enable = true;
     createDirectories = true;
