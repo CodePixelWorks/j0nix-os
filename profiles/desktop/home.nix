@@ -9,6 +9,11 @@ let
   iconThemePackage =
     if iconThemePackageKey == "papirus" then
       pkgs.papirus-icon-theme
+    else if iconThemePackageKey == "colloid" then
+      if pkgs ? "colloid-icon-theme" then
+        pkgs."colloid-icon-theme"
+      else
+        null
     else if iconThemePackageKey == "adwaita" then
       pkgs.adwaita-icon-theme
     else if iconThemePackageKey == "breeze" then
@@ -134,7 +139,7 @@ in
   assertions = [
     {
       assertion = (!iconThemeEnabled) || (iconThemePackage != null);
-      message = "settings.iconTheme.package must be one of: papirus, adwaita, breeze";
+      message = "settings.iconTheme.package must be one of: colloid, papirus, adwaita, breeze";
     }
   ];
 }
