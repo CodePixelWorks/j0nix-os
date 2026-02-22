@@ -60,6 +60,7 @@ in
     drawio
     bambu-studio
     bottles
+    simplescreenrecorder
     krita
     gimp
     mpv
