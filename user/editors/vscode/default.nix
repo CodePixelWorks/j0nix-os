@@ -1,4 +1,4 @@
-{ pkgs, lib, settings, ... }:
+{ config, pkgs, lib, settings, ... }:
 let
   mkExt = set: path: lib.attrByPath path null set;
   pick = ext: lib.optional (ext != null) ext;
@@ -9,6 +9,22 @@ let
   extensionCfg = vscodeCfg.extensions or { };
   openVSXIds = extensionCfg.openVSX or [ ];
   marketplaceIds = extensionCfg.marketplace or [ ];
+  seededUserSettings = {
+    "editor.fontLigatures" = true;
+    "editor.formatOnSave" = true;
+    "files.autoSave" = "onFocusChange";
+    "editor.codeActionsOnSave" = {
+      "source.fixAll" = "explicit";
+      "source.organizeImports" = "explicit";
+    };
+    "terminal.integrated.defaultProfile.linux" = "zsh";
+    "docker.languageserver.formatter.ignoreMultilineInstructions" = true;
+    "nix.enableLanguageServer" = true;
+    "nix.serverPath" = "nixd";
+    "rust-analyzer.check.command" = "clippy";
+    "python.analysis.typeCheckingMode" = "basic";
+    "yaml.format.enable" = true;
+  };
 
   mkExtFromId = set: extId:
     let
@@ -30,23 +46,27 @@ in {
       extensions =
         resolveExts pkgs.vscode-extensions openVSXIds
         ++ resolveExts marketplace marketplaceIds;
-
-      userSettings = {
-        "editor.fontLigatures" = true;
-        "editor.formatOnSave" = true;
-        "files.autoSave" = "onFocusChange";
-        "editor.codeActionsOnSave" = {
-          "source.fixAll" = "explicit";
-          "source.organizeImports" = "explicit";
-        };
-        "terminal.integrated.defaultProfile.linux" = "zsh";
-        "docker.languageserver.formatter.ignoreMultilineInstructions" = true;
-        "nix.enableLanguageServer" = true;
-        "nix.serverPath" = "nixd";
-        "rust-analyzer.check.command" = "clippy";
-        "python.analysis.typeCheckingMode" = "basic";
-        "yaml.format.enable" = true;
-      };
     };
   };
+
+  # Seed VSCode settings once so the file stays writable in the UI.
+  home.activation.vscodeSeedUserSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    for settings_file in \
+      "$HOME/.config/Code/User/settings.json" \
+      "$HOME/.config/VSCodium/User/settings.json" \
+      "$HOME/.config/code-server/User/settings.json"
+    do
+      if [ -L "$settings_file" ]; then
+        $DRY_RUN_CMD rm -f "$settings_file"
+      fi
+
+      if [ ! -e "$settings_file" ]; then
+        $DRY_RUN_CMD mkdir -p "$(dirname "$settings_file")"
+        $DRY_RUN_CMD cat >"$settings_file" <<'EOF'
+${builtins.toJSON seededUserSettings}
+EOF
+        $DRY_RUN_CMD chmod 644 "$settings_file"
+      fi
+    done
+  '';
 }
