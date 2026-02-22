@@ -182,7 +182,11 @@ in {
     pkgs."pulseaudio-modules-bt"
   ];
 
-  fonts.packages = [ settings.themeDetails.fontPkg ];
+  fonts.packages = [
+    settings.themeDetails.fontPkg
+    pkgs.noto-fonts-cjk-sans
+    pkgs.noto-fonts-cjk-serif
+  ];
   services.gvfs.enable = true;
   services.udisks2.enable = autoMountWindows;
   services.dbus.implementation = "broker";
