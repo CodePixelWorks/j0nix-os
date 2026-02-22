@@ -10,4 +10,4 @@ Main user-side Hyprland module (`default.nix`) plus shell-specific variants.
 
 ## Shell Selection
 
-Modules under `shells/` are selected by `hyprlandShell` in resolved user settings.
+Modules under `shells/` are selected by global `wmShell` (legacy alias: `hyprlandShell`).
