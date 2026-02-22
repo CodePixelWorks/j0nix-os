@@ -61,6 +61,8 @@ in
     bambu-studio
     bottles
     simplescreenrecorder
+    gpu-screen-recorder
+    gpu-screen-recorder-gtk
     krita
     gimp
     mpv
