@@ -11,8 +11,12 @@ let
         "gnome"
       else if defaultWMS == "mangowc" then
         "mangowc"
+      else if defaultWMS == "niri" then
+        "niri"
       else if builtins.elem "hyprland" (settings.wms or [ ]) then
         (if useUWSM then "hyprland-uwsm" else "hyprland")
+      else if builtins.elem "niri" (settings.wms or [ ]) then
+        "niri"
       else if builtins.elem "gnome" (settings.wms or [ ]) then
         "gnome"
       else
