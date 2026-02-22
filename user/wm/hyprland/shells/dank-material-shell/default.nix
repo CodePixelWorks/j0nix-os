@@ -60,11 +60,27 @@ let
   overviewEnable = overviewSettings.enable or false;
   overviewName = "overview";
   overviewSource = inputs.quickshell-overview;
+  kimageformatsPkg =
+    if (pkgs ? kdePackages) && (pkgs.kdePackages ? kimageformats) then
+      pkgs.kdePackages.kimageformats
+    else if pkgs ? kimageformats then
+      pkgs.kimageformats
+    else
+      null;
+  danksearchPkg =
+    if hasSystemPackages && (inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system} ? danksearch) then
+      inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.danksearch
+    else if pkgs ? danksearch then
+      pkgs.danksearch
+    else
+      null;
 in {
   imports = lib.optional (integratedMode && hasHomeModule) homeModule;
 
   home.packages =
     lib.optional (integratedMode && hasPackage) inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default
+    ++ lib.optionals (kimageformatsPkg != null) [ kimageformatsPkg ]
+    ++ lib.optionals (danksearchPkg != null) [ danksearchPkg ]
     ++ (with pkgs; [
       (writeShellScriptBin "dms-overview-start" ''
         if [ "${if overviewEnable then "1" else "0"}" != "1" ]; then
