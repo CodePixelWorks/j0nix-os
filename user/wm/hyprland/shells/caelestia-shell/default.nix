@@ -49,17 +49,6 @@ in
   imports = lib.optional hasHomeModule inputs.caelestia-shell.homeManagerModules.default;
 
   programs.waybar.enable = lib.mkForce false;
-  programs.caelestia = lib.mkIf hasHomeModule {
-    enable = lib.mkDefault true;
-    systemd = {
-      # Started by wm-shell-start for parity with other shells.
-      enable = lib.mkDefault false;
-    };
-    cli = {
-      # Keep CLI available, but don't force GTK theme rewriting from Caelestia.
-      enable = lib.mkDefault true;
-    };
-  };
 
   home.packages =
     lib.optionals (caelestiaPkg != null) [ caelestiaPkg ]
