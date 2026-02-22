@@ -35,6 +35,9 @@ in
         noctalia-shell)
           exec noctalia-start
           ;;
+        caelestia-shell)
+          exec caelestia-start
+          ;;
         dank-material-shell)
           if [ "${dmsStartupMode}" = "systemd" ] && command -v systemctl >/dev/null 2>&1; then
             for unit in dank-material-shell.service dank-material-shell dms.service; do
@@ -56,8 +59,8 @@ in
 
   assertions = [
     {
-      assertion = builtins.elem selectedShell [ "ags" "dank-material-shell" "noctalia-shell" "none" ];
-      message = "settings.wmShell must be one of: ags, dank-material-shell, noctalia-shell, none";
+      assertion = builtins.elem selectedShell [ "ags" "dank-material-shell" "noctalia-shell" "caelestia-shell" "none" ];
+      message = "settings.wmShell must be one of: ags, dank-material-shell, noctalia-shell, caelestia-shell, none";
     }
   ];
 }
