@@ -57,6 +57,8 @@ in
     qbittorrent
     telegram-desktop
     drawio
+    bambu-studio
+    bottles
     krita
     gimp
     mpv
@@ -73,6 +75,7 @@ in
     unzip
     android-tools
   ] ++ (with pkgs; if autoMountWindows then [ udiskie ] else [ ])
+    ++ lib.optionals (pkgs ? fusion360) [ pkgs.fusion360 ]
     ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) ([ iconThemePackage ] ++ iconThemeFallbackPackages);
 
   xdg.enable = true;
