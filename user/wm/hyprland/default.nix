@@ -2,6 +2,8 @@
 let
   profileDetails = settings.profileDetails or { hyprlandMonitors = [ ]; };
   selectedShell = settings.wmShell or (settings.hyprlandShell or "dank-material-shell");
+  isCaelestiaShell = selectedShell == "caelestia-shell";
+  isDmsShell = selectedShell == "dank-material-shell";
   dmsSettings = settings.dms or { };
   dmsWorkspaceSettings = dmsSettings.workspaces or { };
   hyprDmsDir = "${config.home.homeDirectory}/.config/hypr/dms";
@@ -27,12 +29,13 @@ let
   dmsOverviewSettings = dmsSettings.overview or { };
   dmsOverviewEnabled = dmsOverviewSettings.enable or false;
   dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
-  keyboardToggleBind =
-    lib.optional (layoutToggleBind != null && layoutToggleBind != "") "${layoutToggleBind}, exec, wm-kbd-layout-toggle";
-  overviewToggleKeyBind =
-    lib.optional (selectedShell == "dank-material-shell" && dmsOverviewEnabled && overviewToggleBind != null && overviewToggleBind != "")
+  hasValue = value: value != null && value != "";
+  keyboardLayoutToggleBind =
+    lib.optional (hasValue layoutToggleBind) "${layoutToggleBind}, exec, wm-kbd-layout-toggle";
+  dmsOverviewToggleBind =
+    lib.optional (isDmsShell && dmsOverviewEnabled && hasValue overviewToggleBind)
       "${overviewToggleBind}, exec, dms-overview-toggle";
-  genericHyprKeybinds = {
+  baseHyprKeybinds = {
     bind = [
       "$mainMod, left, movefocus, l"
       "$mainMod, right, movefocus, r"
@@ -73,26 +76,13 @@ let
     "$mainMod, f, fullscreen, 0"
     "$mainMod, return, exec, ${preferredTerminal}"
     "$mainMod SHIFT, q, exit,"
-  ] ++ keyboardToggleBind ++ overviewToggleKeyBind;
+  ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind;
   shellHyprKeybinds =
-    if selectedShell == "caelestia-shell" then
+    if isCaelestiaShell then
       {
-        # Caelestia relies on Hyprland "global" dispatch shortcuts for drawer/actions.
-        extraConfig = ''
-          exec = hyprctl dispatch submap global
-          submap = global
-          bindi = Super, Super_L, global, caelestia:launcher
-          bindin = Super, catchall, global, caelestia:launcherInterrupt
-          bindin = Super, mouse:272, global, caelestia:launcherInterrupt
-          bindin = Super, mouse:273, global, caelestia:launcherInterrupt
-          bindin = Super, mouse:274, global, caelestia:launcherInterrupt
-          bindin = Super, mouse:275, global, caelestia:launcherInterrupt
-          bindin = Super, mouse:276, global, caelestia:launcherInterrupt
-          bindin = Super, mouse:277, global, caelestia:launcherInterrupt
-          bindin = Super, mouse_up, global, caelestia:launcherInterrupt
-          bindin = Super, mouse_down, global, caelestia:launcherInterrupt
-          submap = reset
-        '';
+        # Caelestia exposes many actions via Hyprland "global" dispatch commands.
+        extraConfig = "";
+        bindi = [ ];
         bind = [
           "$mainMod, escape, global, caelestia:session"
           "$mainMod, space, global, caelestia:showall"
@@ -172,7 +162,59 @@ let
       {
         extraConfig = "";
       };
-  mergedBindsFor = key: (genericHyprKeybinds.${key} or [ ]) ++ (shellHyprKeybinds.${key} or [ ]);
+  mergedBindList = key: (baseHyprKeybinds.${key} or [ ]) ++ (shellHyprKeybinds.${key} or [ ]);
+  renderBindLines = key: entries:
+    lib.concatStringsSep "\n" (map (entry: "${key} = ${entry}") entries);
+  # Final merged bind lists used either via HM settings or via the Caelestia raw submap block.
+  effectiveBindLists = {
+    bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ mergedBindList "bind";
+    bindi = mergedBindList "bindi";
+    bindin = mergedBindList "bindin";
+    binde = mergedBindList "binde";
+    bindl = mergedBindList "bindl";
+    bindle = mergedBindList "bindle";
+    bindr = mergedBindList "bindr";
+    bindm = mergedBindList "bindm";
+  };
+  # Caelestia uses a dedicated submap for bare-Super launcher behavior and catchall interrupts.
+  # `catchall` is only valid inside a submap, so we render a raw Hyprland block here.
+  caelestiaSubmapConfig =
+    if isCaelestiaShell then
+      let
+        submapLauncherLines = [
+          "bindi = Super, Super_L, global, caelestia:launcher"
+          "bindin = Super, catchall, global, caelestia:launcherInterrupt"
+          "bindin = Super, mouse:272, global, caelestia:launcherInterrupt"
+          "bindin = Super, mouse:273, global, caelestia:launcherInterrupt"
+          "bindin = Super, mouse:274, global, caelestia:launcherInterrupt"
+          "bindin = Super, mouse:275, global, caelestia:launcherInterrupt"
+          "bindin = Super, mouse:276, global, caelestia:launcherInterrupt"
+          "bindin = Super, mouse:277, global, caelestia:launcherInterrupt"
+          "bindin = Super, mouse_up, global, caelestia:launcherInterrupt"
+          "bindin = Super, mouse_down, global, caelestia:launcherInterrupt"
+        ];
+        renderedLists =
+          lib.concatStringsSep "\n"
+            (lib.filter (s: s != "") [
+              (renderBindLines "bind" effectiveBindLists.bind)
+              (renderBindLines "bindi" effectiveBindLists.bindi)
+              # `bindin` is intentionally not rendered here; launcher interrupt binds are explicit above.
+              (renderBindLines "binde" effectiveBindLists.binde)
+              (renderBindLines "bindl" effectiveBindLists.bindl)
+              (renderBindLines "bindle" effectiveBindLists.bindle)
+              (renderBindLines "bindr" effectiveBindLists.bindr)
+              (renderBindLines "bindm" effectiveBindLists.bindm)
+            ]);
+      in
+      ''
+        exec = hyprctl dispatch submap global
+        submap = global
+        ${lib.concatStringsSep "\n" submapLauncherLines}
+        ${renderedLists}
+        submap = reset
+      ''
+    else
+      "";
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
 
   # `exec-once` is used for both direct Hyprland sessions and UWSM-managed sessions.
@@ -192,7 +234,7 @@ in {
     enable = true;
     systemd.enable = false;
     extraConfig =
-      (lib.optionalString (selectedShell == "dank-material-shell") ''
+      (lib.optionalString isDmsShell ''
       # DMS writes these files at runtime to sync compositor visuals.
       source = ${hyprDmsDir}/colors.conf
       source = ${hyprDmsDir}/cursor.conf
@@ -202,7 +244,8 @@ in {
       # Backwards compatibility with older DMS layouts.
       source = ${hyprDmsDir}/layout.conf
       '')
-      + (shellHyprKeybinds.extraConfig or "");
+      + (shellHyprKeybinds.extraConfig or "")
+      + caelestiaSubmapConfig;
 
     settings = {
       "$mainMod" = "SUPER";
@@ -213,7 +256,7 @@ in {
         "[workspace 2 silent] firefox"
         "[workspace 3 silent] ${preferredTerminal} btop"
       ] ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
-        ++ lib.optionals (selectedShell == "dank-material-shell" && dmsOverviewEnabled && dmsOverviewAutostart) [ "dms-overview-start" ];
+        ++ lib.optionals (isDmsShell && dmsOverviewEnabled && dmsOverviewAutostart) [ "dms-overview-start" ];
 
       input = {
         kb_layout = settings.keyboardLayout or "de";
@@ -246,17 +289,14 @@ in {
       };
 
       bind =
-        coreBinds
-        ++ workspaceSwitchBinds
-        ++ workspaceMoveBinds
-        ++ mergedBindsFor "bind";
-      bindi = mergedBindsFor "bindi";
-      bindin = mergedBindsFor "bindin";
-      binde = mergedBindsFor "binde";
-      bindl = mergedBindsFor "bindl";
-      bindle = mergedBindsFor "bindle";
-      bindr = mergedBindsFor "bindr";
-      bindm = mergedBindsFor "bindm";
+        if isCaelestiaShell then [ ] else effectiveBindLists.bind;
+      bindi = mergedBindList "bindi";
+      bindin = mergedBindList "bindin";
+      binde = if isCaelestiaShell then [ ] else mergedBindList "binde";
+      bindl = if isCaelestiaShell then [ ] else mergedBindList "bindl";
+      bindle = if isCaelestiaShell then [ ] else mergedBindList "bindle";
+      bindr = if isCaelestiaShell then [ ] else mergedBindList "bindr";
+      bindm = if isCaelestiaShell then [ ] else mergedBindList "bindm";
     };
 
   };
@@ -265,7 +305,7 @@ in {
 
   assertions = [
     {
-      assertion = !(installRawQuickshell && selectedShell == "dank-material-shell");
+      assertion = !(installRawQuickshell && isDmsShell);
       message = "settings.hyprland.debug.installRawQuickshell conflicts with hyprlandShell=dank-material-shell (quickshell package collision).";
     }
     {
