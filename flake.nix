@@ -67,7 +67,12 @@
         merged // {
           profileDetails = import (baseDir + "/profiles/${merged.profile}/details.nix") { };
           inherit themeDetails;
-          hyprlandShell = merged.hyprlandShell or (themeDetails.shell or "dank-material-shell");
+          wmShell =
+            merged.wmShell
+            or (merged.hyprlandShell or (themeDetails.shell or "dank-material-shell"));
+          hyprlandShell =
+            merged.wmShell
+            or (merged.hyprlandShell or (themeDetails.shell or "dank-material-shell"));
           defaultWMS = resolvedDefaultWMS;
           defaultSession = resolvedDefaultSession;
           _userOverride = userOverride;
@@ -102,8 +107,10 @@
           shellModule = baseDir + "/user/shells/${userSettings.shell}.nix";
           resolvedShellModule = if builtins.pathExists shellModule then shellModule else baseDir + "/user/shells/zsh.nix";
 
-          hyprlandShellModule = baseDir + "/user/wm/hyprland/shells/${userSettings.hyprlandShell}";
-          hyprlandShellExists = builtins.pathExists hyprlandShellModule;
+          wmShellModule = baseDir + "/user/wm/hyprland/shells/${userSettings.wmShell}";
+          wmShellExists = builtins.pathExists wmShellModule;
+          wmNeedsShell = builtins.elem userSettings.defaultWMS [ "hyprland" "mangowc" "niri" ];
+          wmShellLauncherModule = baseDir + "/user/wm/shell-launcher.nix";
 
           wmModules = lib.filter (m: m != null) [ (mkWmModule userSettings.defaultWMS) ];
           editorModules = lib.filter (m: m != null) (map mkEditorModule userSettings.editors);
@@ -119,8 +126,8 @@
           ({ lib, ... }: {
             assertions = [
               {
-                assertion = builtins.elem userSettings.defaultWMS [ "hyprland" "gnome" "mangowc" ];
-                message = "userSettings.<name>.defaultWMS must be one of: hyprland, gnome, mangowc";
+                assertion = builtins.elem userSettings.defaultWMS [ "hyprland" "gnome" "mangowc" "niri" ];
+                message = "userSettings.<name>.defaultWMS must be one of: hyprland, gnome, mangowc, niri";
               }
               {
                 assertion = builtins.elem userSettings.defaultWMS settings.wms;
@@ -131,6 +138,10 @@
                 message = "Per-user wm list is deprecated. Use userSettings.<name>.defaultWMS only.";
               }
               {
+                assertion = !(userSettings._userOverride ? wmShell);
+                message = "Per-user wmShell is deprecated. Configure settings.wmShell globally.";
+              }
+              {
                 assertion = !(userSettings._userOverride ? hyprlandShell);
                 message = "Per-user hyprlandShell is deprecated. Configure settings.hyprlandShell globally.";
               }
@@ -138,18 +149,18 @@
                 assertion = !(userSettings._userOverride ? defaultSession);
                 message = "Per-user defaultSession is deprecated. Use userSettings.<name>.defaultWMS and global settings.hyprland.useUWSM.";
               }
-            ] ++ lib.optional (userSettings.defaultWMS == "hyprland") {
-              assertion = hyprlandShellExists;
-              message = "Unknown hyprlandShell '${userSettings.hyprlandShell}'. Valid examples: ags, dank-material-shell, noctalia-shell.";
+            ] ++ lib.optional wmNeedsShell {
+              assertion = wmShellExists;
+              message = "Unknown wmShell '${userSettings.wmShell}'. Valid examples: ags, dank-material-shell, noctalia-shell, none.";
             };
           })
         ]
+        ++ lib.optional wmNeedsShell wmShellLauncherModule
         ++ wmModules
         ++ editorModules
         ++ browserModules
         ++ lib.optional (devEnabled && builtins.pathExists devModule) devModule
-        ++ lib.optional (userSettings.defaultWMS == "hyprland" && hyprlandShellExists)
-          hyprlandShellModule;
+        ++ lib.optional (wmNeedsShell && wmShellExists) wmShellModule;
       systemSettings = settings;
 
       mkHmUserModule = username:

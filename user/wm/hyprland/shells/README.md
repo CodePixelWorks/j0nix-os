@@ -1,19 +1,20 @@
 # Hyprland Shell Modules
 
-Selectable shell implementations for Hyprland.
+Selectable shell implementations for Wayland WMs (hyprland, mangowc, niri).
 
 ## Available Shells
 
 - `ags/`
 - `dank-material-shell/`
 - `noctalia-shell/`
+- `none/`
 
 ## Selection Key
 
-Set via:
+Set globally via:
 
-- `settings.hyprlandShell`
-- or `settings.userSettings.<name>.hyprlandShell`
+- `settings.wmShell`
+- legacy alias: `settings.hyprlandShell`
 
 ## DMS Modes
 

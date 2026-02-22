@@ -109,7 +109,7 @@ in {
           noctalia-shell &
         else
           echo "noctalia-shell binary not found in PATH."
-          echo "Noctalia is managed declaratively. Rebuild and verify hyprlandShell=noctalia-shell."
+          echo "Noctalia is managed declaratively. Rebuild and verify wmShell=noctalia-shell."
           exit 1
         fi
       '')
@@ -141,7 +141,7 @@ in {
   assertions = [
     {
       assertion = hasNoctaliaInput;
-      message = "hyprlandShell=noctalia-shell requires flake input 'noctalia' in flake.nix";
+      message = "wmShell=noctalia-shell requires flake input 'noctalia' in flake.nix";
     }
     {
       assertion = hasHomeModule || hasPackage;
