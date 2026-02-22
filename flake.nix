@@ -151,7 +151,7 @@
               }
             ] ++ lib.optional wmNeedsShell {
               assertion = wmShellExists;
-              message = "Unknown wmShell '${userSettings.wmShell}'. Valid examples: ags, dank-material-shell, noctalia-shell, none.";
+              message = "Unknown wmShell '${userSettings.wmShell}'. Valid examples: ags, dank-material-shell, noctalia-shell, caelestia-shell, none.";
             };
           })
         ]
@@ -261,6 +261,11 @@
 
     noctalia = {
       url = "github:noctalia-dev/noctalia-shell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    caelestia-shell = {
+      url = "github:caelestia-dots/shell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
