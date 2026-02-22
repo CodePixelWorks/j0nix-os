@@ -29,30 +29,33 @@ let
   dmsOverviewSettings = dmsSettings.overview or { };
   dmsOverviewEnabled = dmsOverviewSettings.enable or false;
   dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
-  defaultFloatWindowRulesV2 = [
+  defaultFloatWindowRules = [
     # Center anything that is already floating (dialogs, utilities, transient windows).
-    "center,floating:1"
+    "match:float 1, center 1"
 
     # Common utility windows that are almost always better as floating dialogs.
-    "float,class:^(pavucontrol)$"
-    "float,class:^(nm-connection-editor)$"
-    "float,class:^(blueman-manager)$"
-    "float,class:^(org\\.gnome\\.Calculator)$"
-    "float,class:^(zenity)$"
-    "float,class:^(yad)$"
-    "float,class:^(pinentry.*)$"
-    "float,class:^(org\\.gnome\\.FileRoller)$"
-    "float,class:^(qt5ct|qt6ct)$"
-    "float,class:^(xdg-desktop-portal-gtk)$"
-    "float,class:^(org\\.freedesktop\\.impl\\.portal\\.FileChooser)$"
+    "match:class ^(pavucontrol)$, float 1"
+    "match:class ^(nm-connection-editor)$, float 1"
+    "match:class ^(blueman-manager)$, float 1"
+    "match:class ^(org\\.gnome\\.Calculator)$, float 1"
+    "match:class ^(zenity)$, float 1"
+    "match:class ^(yad)$, float 1"
+    "match:class ^(pinentry.*)$, float 1"
+    "match:class ^(polkit-gnome-authentication-agent-1)$, float 1"
+    "match:class ^(org\\.freedesktop\\.secrets)$, float 1"
+    "match:class ^(org\\.gnome\\.FileRoller)$, float 1"
+    "match:class ^(qt5ct|qt6ct)$, float 1"
+    "match:class ^(xdg-desktop-portal-gtk)$, float 1"
+    "match:class ^(org\\.freedesktop\\.impl\\.portal\\.FileChooser)$, float 1"
 
     # Generic dialog-like titles (file choosers, properties, about/preferences dialogs).
-    "float,title:^(Open( File)?|Save( File)?|Select (File|Folder)|Choose (File|Folder)|Properties|Preferences|Settings|About)( .*)?$"
-    "float,title:^(Datei öffnen|Datei speichern|Datei auswählen|Ordner auswählen|Eigenschaften|Einstellungen|Über)( .*)?$"
-    "float,title:^(Save As|Open Folder|Open Files|Choose Application|Authentication Required|Confirm|Confirmation|Warning|Error|Information)( .*)?$"
-    "float,title:^(Speichern unter|Bestätigung|Warnung|Fehler|Information|Authentifizierung erforderlich)( .*)?$"
-    "float,title:^(.*(Preferences|Settings|Properties|Dialog|Picker|Chooser).*)$"
-    "float,title:^(.*(Einstellungen|Eigenschaften|Auswahl|Dialog).*)$"
+    "match:title ^(Open( File)?|Save( File)?|Select (File|Folder)|Choose (File|Folder)|Properties|Preferences|Settings|About)( .*)?$, float 1"
+    "match:title ^(Datei öffnen|Datei speichern|Datei auswählen|Ordner auswählen|Eigenschaften|Einstellungen|Über)( .*)?$, float 1"
+    "match:title ^(Save As|Open Folder|Open Files|Choose Application|Authentication Required|Confirm|Confirmation|Warning|Error|Information)( .*)?$, float 1"
+    "match:title ^(Speichern unter|Bestätigung|Warnung|Fehler|Information|Authentifizierung erforderlich|Anmeldung|Anmelden)( .*)?$, float 1"
+    "match:title ^(Sign In|Sign in|Login|Log in|Authenticate|Authentication)( .*)?$, float 1"
+    "match:title ^(.*(Preferences|Settings|Properties|Dialog|Picker|Chooser).*)$, float 1"
+    "match:title ^(.*(Einstellungen|Eigenschaften|Auswahl|Dialog|Anmeldung|Anmelden).*)$, float 1"
   ];
   hasValue = value: value != null && value != "";
   keyboardLayoutToggleBind =
@@ -313,7 +316,7 @@ in {
         disable_splash_rendering = true;
       };
 
-      windowrulev2 = defaultFloatWindowRulesV2;
+      windowrule = defaultFloatWindowRules;
 
       bind =
         if isCaelestiaShell then [ ] else effectiveBindLists.bind;
