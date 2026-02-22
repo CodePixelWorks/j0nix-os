@@ -65,6 +65,7 @@ in
     gpu-screen-recorder-gtk
     krita
     gimp
+    naps2
     mpv
     libreoffice-fresh
 
