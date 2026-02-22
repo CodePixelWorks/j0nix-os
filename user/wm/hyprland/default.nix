@@ -32,30 +32,32 @@ let
   defaultFloatWindowRules = [
     # Center anything that is already floating (dialogs, utilities, transient windows).
     "match:float 1, center 1"
+    "match:modal 1, float 1, center 1"
+    "match:group 1, float 1, center 1"
 
     # Common utility windows that are almost always better as floating dialogs.
-    "match:class ^(pavucontrol)$, float 1"
-    "match:class ^(nm-connection-editor)$, float 1"
-    "match:class ^(blueman-manager)$, float 1"
-    "match:class ^(org\\.gnome\\.Calculator)$, float 1"
-    "match:class ^(zenity)$, float 1"
-    "match:class ^(yad)$, float 1"
-    "match:class ^(pinentry.*)$, float 1"
-    "match:class ^(polkit-gnome-authentication-agent-1)$, float 1"
-    "match:class ^(org\\.freedesktop\\.secrets)$, float 1"
-    "match:class ^(org\\.gnome\\.FileRoller)$, float 1"
-    "match:class ^(qt5ct|qt6ct)$, float 1"
-    "match:class ^(xdg-desktop-portal-gtk)$, float 1"
-    "match:class ^(org\\.freedesktop\\.impl\\.portal\\.FileChooser)$, float 1"
+    "match:class ^(pavucontrol)$, float 1, center 1"
+    "match:class ^(nm-connection-editor)$, float 1, center 1"
+    "match:class ^(blueman-manager)$, float 1, center 1"
+    "match:class ^(org\\.gnome\\.Calculator)$, float 1, center 1"
+    "match:class ^(zenity)$, float 1, center 1"
+    "match:class ^(yad)$, float 1, center 1"
+    "match:class ^(pinentry.*)$, float 1, center 1"
+    "match:class ^(polkit-gnome-authentication-agent-1)$, float 1, center 1"
+    "match:class ^(org\\.freedesktop\\.secrets)$, float 1, center 1"
+    "match:class ^(org\\.gnome\\.FileRoller)$, float 1, center 1"
+    "match:class ^(qt5ct|qt6ct)$, float 1, center 1"
+    "match:class ^(xdg-desktop-portal-gtk)$, float 1, center 1"
+    "match:class ^(org\\.freedesktop\\.impl\\.portal\\.FileChooser)$, float 1, center 1"
 
     # Generic dialog-like titles (file choosers, properties, about/preferences dialogs).
-    "match:title ^(Open( File)?|Save( File)?|Select (File|Folder)|Choose (File|Folder)|Properties|Preferences|Settings|About)( .*)?$, float 1"
-    "match:title ^(Datei öffnen|Datei speichern|Datei auswählen|Ordner auswählen|Eigenschaften|Einstellungen|Über)( .*)?$, float 1"
-    "match:title ^(Save As|Open Folder|Open Files|Choose Application|Authentication Required|Confirm|Confirmation|Warning|Error|Information)( .*)?$, float 1"
-    "match:title ^(Speichern unter|Bestätigung|Warnung|Fehler|Information|Authentifizierung erforderlich|Anmeldung|Anmelden)( .*)?$, float 1"
-    "match:title ^(Sign In|Sign in|Login|Log in|Authenticate|Authentication)( .*)?$, float 1"
-    "match:title ^(.*(Preferences|Settings|Properties|Dialog|Picker|Chooser).*)$, float 1"
-    "match:title ^(.*(Einstellungen|Eigenschaften|Auswahl|Dialog|Anmeldung|Anmelden).*)$, float 1"
+    "match:title ^(Open( File)?|Save( File)?|Select (File|Folder)|Choose (File|Folder)|Properties|Preferences|Settings|About)( .*)?$, float 1, center 1"
+    "match:title ^(Datei öffnen|Datei speichern|Datei auswählen|Ordner auswählen|Eigenschaften|Einstellungen|Über)( .*)?$, float 1, center 1"
+    "match:title ^(Save As|Open Folder|Open Files|Choose Application|Authentication Required|Confirm|Confirmation|Warning|Error|Information)( .*)?$, float 1, center 1"
+    "match:title ^(Speichern unter|Bestätigung|Warnung|Fehler|Information|Authentifizierung erforderlich|Anmeldung|Anmelden)( .*)?$, float 1, center 1"
+    "match:title ^(Sign In|Sign in|Login|Log in|Authenticate|Authentication)( .*)?$, float 1, center 1"
+    "match:title ^(.*(Preferences|Settings|Properties|Dialog|Picker|Chooser).*)$, float 1, center 1"
+    "match:title ^(.*(Einstellungen|Eigenschaften|Auswahl|Dialog|Anmeldung|Anmelden).*)$, float 1, center 1"
   ];
   hasValue = value: value != null && value != "";
   keyboardLayoutToggleBind =
@@ -101,8 +103,8 @@ let
   coreBinds = [
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
-    "$mainMod, f, fullscreen, 0"
-    "$mainMod SHIFT, f, fullscreen, 1"
+    "$mainMod, f, fullscreen, 0"            # actual fullscreen (shell/waybar hidden)
+    "$mainMod SHIFT, f, fullscreen, 1"      # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
     "$mainMod, return, exec, ${preferredTerminal}"
     "$mainMod SHIFT, q, exit,"
   ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind;
