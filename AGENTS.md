@@ -57,7 +57,7 @@ nix flake lock --update-input nixpkgs
 2. `mkUserSettings` applies per-user overrides from `settings.userSettings`.
 3. System profile from `j0nix-os/profiles/desktop/configuration.nix` is built.
 4. Home Manager modules are composed per user from `j0nix-os/user/*`.
-5. Hyprland shell module is selected per user via `hyprlandShell`.
+5. WM shell layer is selected globally via `wmShell` (legacy alias: `hyprlandShell`).
 
 ### Key Directories
 - `j0nix-os/settings.nix`: central settings, feature toggles, per-user overrides
@@ -72,10 +72,11 @@ nix flake lock --update-input nixpkgs
 - `j0nix-os/user/gaming/`: user gaming tools and launchers
 
 ### Supported Hyprland Shell Modes
-For `userSettings.<name>.hyprlandShell`:
+For `settings.wmShell` (legacy: `settings.hyprlandShell`):
 - `ags`
 - `dank-material-shell`
 - `noctalia-shell`
+- `none`
 
 Debug toggle:
 - `settings.hyprland.debug.installRawQuickshell`
@@ -148,12 +149,12 @@ Controlled by:
 ### Add a new user
 1. Add username to `settings.users`.
 2. Add `settings.userSettings.<name>` block.
-3. Set `shell` and `defaultWMS` (`hyprland` | `gnome` | `mangowc`).
+3. Set `shell` and `defaultWMS` (`hyprland` | `gnome` | `mangowc` | `niri`).
 4. Rebuild and set user password.
 
-### Switch Hyprland shell per user
-1. Update `userSettings.<name>.hyprlandShell`.
-2. Use one of: `ags`, `dank-material-shell`, `noctalia-shell`.
+### Switch WM shell layer
+1. Update `settings.wmShell` (or legacy `settings.hyprlandShell`).
+2. Use one of: `ags`, `dank-material-shell`, `noctalia-shell`, `none`.
 3. Rebuild.
 
 ### Extend dev tooling
@@ -163,8 +164,8 @@ Controlled by:
 
 ## Troubleshooting
 
-### Unknown Hyprland shell assertion
-- Check `userSettings.<name>.hyprlandShell` spelling.
+### Unknown WM shell assertion
+- Check `settings.wmShell` spelling.
 - Ensure matching module exists in `j0nix-os/user/wm/hyprland/shells/`.
 
 ### Docker permission issues
