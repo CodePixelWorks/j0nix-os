@@ -23,15 +23,22 @@ let
   hyprlandCfg = settings.hyprland or { };
   hyprlandDebug = hyprlandCfg.debug or { };
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
+  overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
+  dmsOverviewSettings = dmsSettings.overview or { };
+  dmsOverviewEnabled = dmsOverviewSettings.enable or false;
+  dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
   keyboardToggleBind =
     lib.optional (layoutToggleBind != null && layoutToggleBind != "") "${layoutToggleBind}, exec, wm-kbd-layout-toggle";
+  overviewToggleKeyBind =
+    lib.optional (selectedShell == "dank-material-shell" && dmsOverviewEnabled && overviewToggleBind != null && overviewToggleBind != "")
+      "${overviewToggleBind}, exec, dms-overview-toggle";
   coreBinds = [
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
     "$mainMod, f, fullscreen, 0"
     "$mainMod, return, exec, ${preferredTerminal}"
     "$mainMod SHIFT, q, exit,"
-  ] ++ keyboardToggleBind;
+  ] ++ keyboardToggleBind ++ overviewToggleKeyBind;
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
 
   # `exec-once` is used for both direct Hyprland sessions and UWSM-managed sessions.
@@ -69,7 +76,8 @@ in {
         "swww-daemon &"
         "[workspace 2 silent] firefox"
         "[workspace 3 silent] ${preferredTerminal} btop"
-      ] ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ];
+      ] ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
+        ++ lib.optionals (selectedShell == "dank-material-shell" && dmsOverviewEnabled && dmsOverviewAutostart) [ "dms-overview-start" ];
 
       input = {
         kb_layout = settings.keyboardLayout or "de";
