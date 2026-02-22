@@ -20,14 +20,18 @@ let
     workspaceCount;
   workspaceSwitchBinds = map (pair: "$mainMod, ${pair.key}, workspace, ${pair.workspace}") workspaceKeyPairs;
   workspaceMoveBinds = map (pair: "$mainMod SHIFT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
+  hyprlandCfg = settings.hyprland or { };
+  hyprlandDebug = hyprlandCfg.debug or { };
+  layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
+  keyboardToggleBind =
+    lib.optional (layoutToggleBind != null && layoutToggleBind != "") "${layoutToggleBind}, exec, wm-kbd-layout-toggle";
   coreBinds = [
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
     "$mainMod, f, fullscreen, 0"
     "$mainMod, return, exec, ${preferredTerminal}"
     "$mainMod SHIFT, q, exit,"
-  ];
-  hyprlandDebug = ((settings.hyprland or { }).debug or { });
+  ] ++ keyboardToggleBind;
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
 
   # `exec-once` is used for both direct Hyprland sessions and UWSM-managed sessions.
