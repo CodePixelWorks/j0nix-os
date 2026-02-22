@@ -5,6 +5,7 @@ let
   perfCfg = gaming.performance or { };
   gamemodeRenice = perfCfg.gamemodeRenice or (-10);
   autoPerformanceMode = perfCfg.autoPerformanceMode or true;
+  preventIdleLockDuringGame = perfCfg.preventIdleLockDuringGame or true;
 
   profileSwitcher = pkgs.writeShellScript "gamemode-power-profile-switch" ''
     set -eu
@@ -12,6 +13,7 @@ let
     state_dir="''${XDG_RUNTIME_DIR:-/tmp}/gamemode-power-profile"
     count_file="$state_dir/count"
     prev_file="$state_dir/previous"
+    inhibit_pid_file="$state_dir/idle-inhibit.pid"
     mkdir -p "$state_dir"
 
     get_count() {
@@ -29,6 +31,15 @@ let
       if [ "$count" -eq 0 ]; then
         ${pkgs.power-profiles-daemon}/bin/powerprofilesctl get >"$prev_file" 2>/dev/null || true
         ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set performance >/dev/null 2>&1 || true
+        ${lib.optionalString preventIdleLockDuringGame ''
+        # Prevent idle-based locking/suspend while a gamemode session is active.
+        ${pkgs.systemd}/bin/systemd-inhibit \
+          --what=idle \
+          --who="gamemode" \
+          --why="Active game session" \
+          ${pkgs.coreutils}/bin/sleep infinity >/dev/null 2>&1 &
+        echo $! >"$inhibit_pid_file"
+        ''}
       fi
       echo $((count + 1)) >"$count_file"
       exit 0
@@ -43,6 +54,15 @@ let
         else
           ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set balanced >/dev/null 2>&1 || true
         fi
+        ${lib.optionalString preventIdleLockDuringGame ''
+        if [ -f "$inhibit_pid_file" ]; then
+          inhibit_pid="$(cat "$inhibit_pid_file" 2>/dev/null || true)"
+          if [ -n "''${inhibit_pid:-}" ]; then
+            kill "$inhibit_pid" >/dev/null 2>&1 || true
+          fi
+          rm -f "$inhibit_pid_file"
+        fi
+        ''}
         rm -f "$count_file"
       else
         echo $((count - 1)) >"$count_file"
@@ -89,6 +109,10 @@ lib.mkIf enabled {
     {
       assertion = builtins.isBool autoPerformanceMode;
       message = "settings.gaming.performance.autoPerformanceMode must be a boolean";
+    }
+    {
+      assertion = builtins.isBool preventIdleLockDuringGame;
+      message = "settings.gaming.performance.preventIdleLockDuringGame must be a boolean";
     }
   ];
 }
