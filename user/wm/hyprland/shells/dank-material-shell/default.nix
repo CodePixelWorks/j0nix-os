@@ -56,12 +56,79 @@ let
       "${inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/dms"
     else
       "";
+  overviewSettings = dms.overview or { };
+  overviewEnable = overviewSettings.enable or false;
+  overviewName = "overview";
+  overviewSource = inputs.quickshell-overview;
 in {
   imports = lib.optional (integratedMode && hasHomeModule) homeModule;
 
   home.packages =
     lib.optional (integratedMode && hasPackage) inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default
     ++ (with pkgs; [
+      (writeShellScriptBin "dms-overview-start" ''
+        if [ "${if overviewEnable then "1" else "0"}" != "1" ]; then
+          echo "quickshell-overview is disabled (settings.dms.overview.enable = false)"
+          exit 1
+        fi
+
+        if ${procps}/bin/pgrep -f "quickshell.*-c[[:space:]]*${overviewName}" >/dev/null 2>&1; then
+          exit 0
+        fi
+
+        # Try both quickshell CLIs (nixpkgs ships `qs`; some setups expose `quickshell`).
+        if command -v qs >/dev/null 2>&1; then
+          nohup qs -c ${overviewName} >/dev/null 2>&1 &
+          exit 0
+        fi
+
+        if command -v quickshell >/dev/null 2>&1; then
+          nohup quickshell -c ${overviewName} >/dev/null 2>&1 &
+          exit 0
+        fi
+
+        echo "Neither qs nor quickshell is available in PATH"
+        exit 1
+      '')
+
+      (writeShellScriptBin "dms-overview-toggle" ''
+        if [ "${if overviewEnable then "1" else "0"}" != "1" ]; then
+          echo "quickshell-overview is disabled (settings.dms.overview.enable = false)"
+          exit 1
+        fi
+
+        if command -v qs >/dev/null 2>&1; then
+          qs ipc -c ${overviewName} call overview toggleOverview >/dev/null 2>&1 && exit 0
+          dms-overview-start >/dev/null 2>&1 || exit 1
+          sleep 0.3
+          qs ipc -c ${overviewName} call overview toggleOverview >/dev/null 2>&1 && exit 0
+          echo "Failed to toggle quickshell-overview via qs ipc"
+          exit 1
+        fi
+
+        if command -v quickshell >/dev/null 2>&1; then
+          quickshell ipc -c ${overviewName} call overview toggleOverview >/dev/null 2>&1 && exit 0
+          dms-overview-start >/dev/null 2>&1 || exit 1
+          sleep 0.3
+          quickshell ipc -c ${overviewName} call overview toggleOverview >/dev/null 2>&1 && exit 0
+          echo "Failed to toggle quickshell-overview via quickshell ipc"
+          exit 1
+        fi
+
+        echo "Neither qs nor quickshell is available for overview IPC toggle"
+        exit 1
+      '')
+
+      (writeShellScriptBin "dms-overview-stop" ''
+        if command -v qs >/dev/null 2>&1; then
+          qs kill ${overviewName} >/dev/null 2>&1 && exit 0
+        fi
+        if command -v quickshell >/dev/null 2>&1; then
+          quickshell kill ${overviewName} >/dev/null 2>&1 && exit 0
+        fi
+        ${procps}/bin/pkill -f "quickshell.*-c[[:space:]]*${overviewName}" >/dev/null 2>&1 || true
+      '')
+
       (writeShellScriptBin "dms-start" ''
         state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/j0nix-os"
         startup_log="$state_dir/dms-start.log"
@@ -270,6 +337,9 @@ in {
 
   home.file.".config/quickshell/dms".source =
     config.lib.file.mkOutOfStoreSymlink dmsConfigSource;
+  home.file.".config/quickshell/${overviewName}" = lib.mkIf overviewEnable {
+    source = config.lib.file.mkOutOfStoreSymlink "${overviewSource}";
+  };
 
   home.activation.dmsInfo = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD echo "${if integratedMode then "DMS integrated mode enabled. Use dms-start/dms-stop." else "DMS separate mode enabled. Use dms-install once, then dms-start/dms-stop/dms-uninstall."}"
