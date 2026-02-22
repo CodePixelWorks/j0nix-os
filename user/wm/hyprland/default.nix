@@ -4,6 +4,7 @@ let
   selectedShell = settings.wmShell or (settings.hyprlandShell or "dank-material-shell");
   dmsSettings = settings.dms or { };
   dmsWorkspaceSettings = dmsSettings.workspaces or { };
+  hyprDmsDir = "${config.home.homeDirectory}/.config/hypr/dms";
   preferredTerminal = settings.preferredTerminal or "kitty";
   workspaceCountRaw = dmsWorkspaceSettings.count or 10;
   workspaceCount = lib.min 10 (lib.max 1 workspaceCountRaw);
@@ -47,13 +48,13 @@ in {
     systemd.enable = false;
     extraConfig = lib.optionalString (selectedShell == "dank-material-shell") ''
       # DMS writes these files at runtime to sync compositor visuals.
-      source = ~/.config/hypr/dms/colors.conf
-      source = ~/.config/hypr/dms/cursor.conf
-      source = ~/.config/hypr/dms/outputs.conf
-      source = ~/.config/hypr/dms/windowrules.conf
-      source = ~/.config/hypr/dms/binds.conf
+      source = ${hyprDmsDir}/colors.conf
+      source = ${hyprDmsDir}/cursor.conf
+      source = ${hyprDmsDir}/outputs.conf
+      source = ${hyprDmsDir}/windowrules.conf
+      source = ${hyprDmsDir}/binds.conf
       # Backwards compatibility with older DMS layouts.
-      source = ~/.config/hypr/dms/layout.conf
+      source = ${hyprDmsDir}/layout.conf
     '';
 
     settings = {
