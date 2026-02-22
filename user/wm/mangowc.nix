@@ -1,44 +1,77 @@
-{ lib, pkgs, settings, ... }:
+{ inputs, lib, pkgs, settings, ... }:
 let
   preferredTerminal = settings.preferredTerminal or "kitty";
-  shellStartScript = pkgs.writeShellScript "mangowc-shell-start" ''
-    # Keep MangoWC shell startup idempotent.
-    ${pkgs.procps}/bin/pkill -x waybar >/dev/null 2>&1 || true
-    ${pkgs.procps}/bin/pkill -x nm-applet >/dev/null 2>&1 || true
+  selectedShell = settings.wmShell or (settings.hyprlandShell or "dank-material-shell");
+  useDmsShell = selectedShell == "dank-material-shell";
+  dms = (settings.dms or { });
+  dmsMode = dms.mode or "integrated";
+  integratedMode = dmsMode == "integrated";
 
-    ${pkgs.waybar}/bin/waybar >/dev/null 2>&1 &
-    ${pkgs.networkmanagerapplet}/bin/nm-applet --indicator >/dev/null 2>&1 &
-
-    if command -v cliphist >/dev/null 2>&1; then
-      ${pkgs.procps}/bin/pkill -f "cliphist store" >/dev/null 2>&1 || true
-      cliphist store >/dev/null 2>&1 &
-    fi
-  '';
+  hasSystemPackages =
+    (inputs.dank-material-shell ? packages)
+    && (builtins.hasAttr pkgs.stdenv.hostPlatform.system inputs.dank-material-shell.packages);
+  hasPackage =
+    hasSystemPackages
+    && (inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system} ? default);
 in
 {
-  # MangoWC is a compositor only. Keep basic session tools available.
-  home.packages = with pkgs; [
-    wlr-randr
-    wtype
-    waybar
-    networkmanagerapplet
-    cliphist
-  ] ++ lib.optionals (pkgs ? mmsg) [ pkgs.mmsg ];
+  home.packages =
+    (with pkgs; [
+      wlr-randr
+      wtype
+      wl-clipboard
+      cliphist
+      libnotify
+      coreutils
+      procps
+      qt6.qtwayland
+      libsForQt5.qt5.qtwayland
+    ])
+    ++ lib.optionals (pkgs ? mmsg) [ pkgs.mmsg ];
+
+  programs.waybar.enable = lib.mkForce false;
 
   # MangoWC reads ~/.config/mango/config.conf
-  xdg.configFile."mango/config.conf".text = ''
+  xdg.configFile = {
+    "mango/config.conf".text = ''
     # Keep defaults minimal but usable.
     xkb_rules_layout=${settings.keyboardLayout or "de"}
     repeat_rate=25
     repeat_delay=600
     cursor_size=24
 
-    # Gap/border baseline
+    # Environment
+    env=QT_QPA_PLATFORM,wayland
+    env=ELECTRON_OZONE_PLATFORM_HINT,auto
+    env=QT_QPA_PLATFORMTHEME,gtk3
+
+    # Startup
+    exec-once=wm-shell-start
+    exec-once=wl-paste --type text --watch cliphist store
+
+    # Appearance
+    border_radius=12
+    borderpx=0
+    focused_opacity=1.0
+    unfocused_opacity=0.9
     gappih=5
     gappiv=5
-    gappoh=10
-    gappov=10
-    borderpx=4
+    gappoh=5
+    gappov=5
+    shadows=1
+    shadow_only_floating=1
+    shadows_size=10
+    shadows_blur=15
+
+${lib.optionalString useDmsShell ''
+    # DMS generated files
+    source=~/.config/mango/dms/colors.conf
+    source=~/.config/mango/dms/layout.conf
+    source=~/.config/mango/dms/outputs.conf
+
+    # DMS layer behavior
+    layerrule=noanim:1,layer_name:^dms
+''}
 
     # Default layout: grid on all tags
     tagrule=id:1,layout_name:grid
@@ -77,6 +110,22 @@ in
     bind=SUPER,9,view,9,0
     bind=SUPER,0,view,10,0
 
+${lib.optionalString useDmsShell ''
+    # DMS keybinds
+    bind=SUPER,space,spawn,dms ipc call spotlight toggle
+    bind=SUPER,v,spawn,dms ipc call clipboard toggle
+    bind=SUPER,m,spawn,dms ipc call processlist focusOrToggle
+    bind=SUPER,comma,spawn,dms ipc call settings focusOrToggle
+    bind=SUPER,n,spawn,dms ipc call notifications toggle
+    bind=SUPER,y,spawn,dms ipc call dankdash wallpaper
+    bind=SUPER+ALT,l,spawn,dms ipc call lock lock
+    bind=NONE,XF86AudioRaiseVolume,spawn,dms ipc call audio increment 3
+    bind=NONE,XF86AudioLowerVolume,spawn,dms ipc call audio decrement 3
+    bind=NONE,XF86AudioMute,spawn,dms ipc call audio mute
+    bind=NONE,XF86MonBrightnessUp,spawn,dms ipc call brightness increment 5
+    bind=NONE,XF86MonBrightnessDown,spawn,dms ipc call brightness decrement 5
+''}
+
     # Move focused client to tag
     bind=SUPER+SHIFT,1,tag,1,0
     bind=SUPER+SHIFT,2,tag,2,0
@@ -88,21 +137,31 @@ in
     bind=SUPER+SHIFT,8,tag,8,0
     bind=SUPER+SHIFT,9,tag,9,0
     bind=SUPER+SHIFT,0,tag,10,0
-  '';
 
-  # Simple shell/startup baseline for MangoWC sessions.
-  systemd.user.services.mangowc-shell = {
-    Unit = {
-      Description = "MangoWC session shell startup";
-      PartOf = [ "graphical-session.target" ];
-      After = [ "graphical-session.target" ];
-    };
-    Service = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      ExecStart = shellStartScript;
-      ExecStop = "${pkgs.procps}/bin/pkill -x waybar >/dev/null 2>&1 || true; ${pkgs.procps}/bin/pkill -x nm-applet >/dev/null 2>&1 || true";
-    };
-    Install.WantedBy = [ "graphical-session.target" ];
+    # Window rules
+    windowrule=isnoborder:1,appid:^org\.gnome\.
+    windowrule=isnoborder:1,appid:^org\.wezfurlong\.wezterm$
+    windowrule=isnoborder:1,appid:^Alacritty$
+    windowrule=isnoborder:1,appid:^com\.mitchellh\.ghostty$
+    windowrule=isnoborder:1,appid:^kitty$
+${lib.optionalString useDmsShell ''
+    windowrule=isfloating:1,appid:^org\.quickshell$
+''}
+  '';
+  } // lib.optionalAttrs useDmsShell {
+    "mango/dms/colors.conf".text = "";
+    "mango/dms/layout.conf".text = "";
+    "mango/dms/outputs.conf".text = "";
   };
+
+  assertions = [
+    {
+      assertion = builtins.elem dmsMode [ "integrated" "separate" ];
+      message = "settings.dms.mode must be one of: integrated, separate";
+    }
+    {
+      assertion = (!useDmsShell) || (!integratedMode) || hasPackage;
+      message = "MangoWC + integrated DMS requires inputs.dank-material-shell.packages.<system>.default";
+    }
+  ];
 }
