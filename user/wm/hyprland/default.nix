@@ -81,21 +81,18 @@ let
         extraConfig = ''
           exec = hyprctl dispatch submap global
           submap = global
+          bindi = Super, Super_L, global, caelestia:launcher
+          bindin = Super, catchall, global, caelestia:launcherInterrupt
+          bindin = Super, mouse:272, global, caelestia:launcherInterrupt
+          bindin = Super, mouse:273, global, caelestia:launcherInterrupt
+          bindin = Super, mouse:274, global, caelestia:launcherInterrupt
+          bindin = Super, mouse:275, global, caelestia:launcherInterrupt
+          bindin = Super, mouse:276, global, caelestia:launcherInterrupt
+          bindin = Super, mouse:277, global, caelestia:launcherInterrupt
+          bindin = Super, mouse_up, global, caelestia:launcherInterrupt
+          bindin = Super, mouse_down, global, caelestia:launcherInterrupt
+          submap = reset
         '';
-        bindi = [
-          "Super, Super_L, global, caelestia:launcher"
-        ];
-        bindin = [
-          "Super, catchall, global, caelestia:launcherInterrupt"
-          "Super, mouse:272, global, caelestia:launcherInterrupt"
-          "Super, mouse:273, global, caelestia:launcherInterrupt"
-          "Super, mouse:274, global, caelestia:launcherInterrupt"
-          "Super, mouse:275, global, caelestia:launcherInterrupt"
-          "Super, mouse:276, global, caelestia:launcherInterrupt"
-          "Super, mouse:277, global, caelestia:launcherInterrupt"
-          "Super, mouse_up, global, caelestia:launcherInterrupt"
-          "Super, mouse_down, global, caelestia:launcherInterrupt"
-        ];
         bind = [
           "$mainMod, escape, global, caelestia:session"
           "$mainMod, space, global, caelestia:showall"
@@ -251,7 +248,8 @@ in {
       bind =
         coreBinds
         ++ workspaceSwitchBinds
-        ++ workspaceMoveBinds;
+        ++ workspaceMoveBinds
+        ++ mergedBindsFor "bind";
       bindi = mergedBindsFor "bindi";
       bindin = mergedBindsFor "bindin";
       binde = mergedBindsFor "binde";
@@ -262,9 +260,6 @@ in {
     };
 
   };
-
-  wayland.windowManager.hyprland.settings.bind =
-    lib.mkAfter (mergedBindsFor "bind");
 
   xdg.configFile."hypr/hyprland.conf".force = true;
 
