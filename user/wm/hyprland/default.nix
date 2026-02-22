@@ -102,6 +102,7 @@ let
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
     "$mainMod, f, fullscreen, 0"
+    "$mainMod SHIFT, f, fullscreen, 1"
     "$mainMod, return, exec, ${preferredTerminal}"
     "$mainMod SHIFT, q, exit,"
   ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind;
