@@ -66,6 +66,7 @@ let
     ++ lib.optional useUWSM "hyprland.desktop"
     ++ lib.optional (!useUWSM) "hyprland-uwsm.desktop"
     ++ lib.optional (builtins.elem "mangowc" settings.wms) "mangowc.desktop"
+    ++ lib.optional (builtins.elem "niri" settings.wms) "niri.desktop"
     ++ lib.optional (builtins.elem "gnome" settings.wms) "gnome.desktop";
 
   regreetCommand =
@@ -80,6 +81,8 @@ let
         "start-hyprland"
     else if wms == "mangowc" then
       "start-mangowc"
+    else if wms == "niri" then
+      "start-niri"
     else if wms == "gnome" then
       "gnome-session"
     else if useUWSM then
@@ -168,7 +171,6 @@ in {
 
       if command -v systemctl >/dev/null 2>&1; then
         systemctl --user start graphical-session.target >/dev/null 2>&1 || true
-        systemctl --user start mangowc-shell.service >/dev/null 2>&1 || true
       fi
 
       exec ${lib.getExe pkgs.mangowc}
