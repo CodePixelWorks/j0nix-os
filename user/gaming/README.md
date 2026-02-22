@@ -24,7 +24,14 @@ Managed by `settings.gaming.*`.
 - `game-session-gamemode`
 - `game-session-mangohud`
 - `game-session-gamescope-hdr`
+- `game-session-cyberpunk` (adds `--launcher-skip`)
+- `game-session-cyberpunk-hdr` (HDR + `--launcher-skip`)
 - `game-ready-check`
+
+## Heroic
+
+- Enabled by `settings.gaming.launchers.heroic = true`
+- Package fallback is handled for `heroic` / `heroic-games-launcher`
 
 ## Proton-CachyOS
 
