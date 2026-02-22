@@ -29,6 +29,31 @@ let
   dmsOverviewSettings = dmsSettings.overview or { };
   dmsOverviewEnabled = dmsOverviewSettings.enable or false;
   dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
+  defaultFloatWindowRulesV2 = [
+    # Center anything that is already floating (dialogs, utilities, transient windows).
+    "center,floating:1"
+
+    # Common utility windows that are almost always better as floating dialogs.
+    "float,class:^(pavucontrol)$"
+    "float,class:^(nm-connection-editor)$"
+    "float,class:^(blueman-manager)$"
+    "float,class:^(org\\.gnome\\.Calculator)$"
+    "float,class:^(zenity)$"
+    "float,class:^(yad)$"
+    "float,class:^(pinentry.*)$"
+    "float,class:^(org\\.gnome\\.FileRoller)$"
+    "float,class:^(qt5ct|qt6ct)$"
+    "float,class:^(xdg-desktop-portal-gtk)$"
+    "float,class:^(org\\.freedesktop\\.impl\\.portal\\.FileChooser)$"
+
+    # Generic dialog-like titles (file choosers, properties, about/preferences dialogs).
+    "float,title:^(Open( File)?|Save( File)?|Select (File|Folder)|Choose (File|Folder)|Properties|Preferences|Settings|About)( .*)?$"
+    "float,title:^(Datei öffnen|Datei speichern|Datei auswählen|Ordner auswählen|Eigenschaften|Einstellungen|Über)( .*)?$"
+    "float,title:^(Save As|Open Folder|Open Files|Choose Application|Authentication Required|Confirm|Confirmation|Warning|Error|Information)( .*)?$"
+    "float,title:^(Speichern unter|Bestätigung|Warnung|Fehler|Information|Authentifizierung erforderlich)( .*)?$"
+    "float,title:^(.*(Preferences|Settings|Properties|Dialog|Picker|Chooser).*)$"
+    "float,title:^(.*(Einstellungen|Eigenschaften|Auswahl|Dialog).*)$"
+  ];
   hasValue = value: value != null && value != "";
   keyboardLayoutToggleBind =
     lib.optional (hasValue layoutToggleBind) "${layoutToggleBind}, exec, wm-kbd-layout-toggle";
@@ -287,6 +312,8 @@ in {
         disable_hyprland_logo = true;
         disable_splash_rendering = true;
       };
+
+      windowrulev2 = defaultFloatWindowRulesV2;
 
       bind =
         if isCaelestiaShell then [ ] else effectiveBindLists.bind;

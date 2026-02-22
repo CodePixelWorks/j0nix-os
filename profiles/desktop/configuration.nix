@@ -37,6 +37,7 @@ let
   gamesDiskGvfsName = gamesDisk.gvfsName or "GAMES";
   gamesDiskOnDemandAutomount = gamesDisk.onDemandAutomount or false;
   gamesDiskIdleTimeout = gamesDisk.idleTimeout or "5min";
+  gamesDiskForceDirtyNtfsMount = gamesDisk.forceDirtyNtfsMount or false;
   network = settings.network or { };
   tailscaleCfg = network.tailscale or { };
   tailscaleEnabled = tailscaleCfg.enable or false;
@@ -225,6 +226,10 @@ in {
       ++ lib.optionals gamesDiskOnDemandAutomount [
         "x-systemd.automount"
         "x-systemd.idle-timeout=${gamesDiskIdleTimeout}"
+      ]
+      ++ lib.optionals gamesDiskForceDirtyNtfsMount [
+        # Emergency-only workaround for NTFS dirty volumes. Prefer running chkdsk on Windows.
+        "force"
       ];
     };
   };
@@ -257,6 +262,10 @@ in {
     {
       assertion = (!gamesDiskEnabled) || (!gamesDiskGvfsShow) || (gamesDiskGvfsName != "");
       message = "settings.storage.gamesDisk.gvfsName must not be empty when gvfsShow = true";
+    }
+    {
+      assertion = (!gamesDiskForceDirtyNtfsMount) || builtins.elem gamesDiskFsType [ "ntfs3" "ntfs" ];
+      message = "settings.storage.gamesDisk.forceDirtyNtfsMount is only valid for NTFS filesystems";
     }
   ];
 
