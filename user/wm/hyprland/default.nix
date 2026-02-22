@@ -1,10 +1,8 @@
 { config, lib, pkgs, settings, ... }:
 let
   profileDetails = settings.profileDetails or { hyprlandMonitors = [ ]; };
-  selectedShell = settings.hyprlandShell or "ags";
+  selectedShell = settings.wmShell or (settings.hyprlandShell or "dank-material-shell");
   dmsSettings = settings.dms or { };
-  dmsStartup = dmsSettings.startup or { };
-  dmsStartupMode = dmsStartup.mode or "systemd";
   dmsWorkspaceSettings = dmsSettings.workspaces or { };
   preferredTerminal = settings.preferredTerminal or "kitty";
   workspaceCountRaw = dmsWorkspaceSettings.count or 10;
@@ -32,13 +30,7 @@ let
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
 
   # `exec-once` is used for both direct Hyprland sessions and UWSM-managed sessions.
-  shellStartupCommand =
-    if selectedShell == "dank-material-shell" then
-      if dmsStartupMode == "exec-once" then "dms-start" else null
-    else if selectedShell == "noctalia-shell" then
-      "noctalia-start"
-    else
-      "killall -q ags;sleep .5 && ags";
+  shellStartupCommand = if selectedShell == "none" then null else "wm-shell-start";
 in {
   home.packages = with pkgs; [
     swww
@@ -53,6 +45,16 @@ in {
   wayland.windowManager.hyprland = {
     enable = true;
     systemd.enable = false;
+    extraConfig = lib.optionalString (selectedShell == "dank-material-shell") ''
+      # DMS writes these files at runtime to sync compositor visuals.
+      source = ~/.config/hypr/dms/colors.conf
+      source = ~/.config/hypr/dms/cursor.conf
+      source = ~/.config/hypr/dms/outputs.conf
+      source = ~/.config/hypr/dms/windowrules.conf
+      source = ~/.config/hypr/dms/binds.conf
+      # Backwards compatibility with older DMS layouts.
+      source = ~/.config/hypr/dms/layout.conf
+    '';
 
     settings = {
       "$mainMod" = "SUPER";
@@ -108,10 +110,6 @@ in {
     {
       assertion = !(installRawQuickshell && selectedShell == "dank-material-shell");
       message = "settings.hyprland.debug.installRawQuickshell conflicts with hyprlandShell=dank-material-shell (quickshell package collision).";
-    }
-    {
-      assertion = builtins.elem dmsStartupMode [ "systemd" "exec-once" ];
-      message = "settings.dms.startup.mode must be one of: systemd, exec-once";
     }
     {
       assertion = workspaceCountRaw >= 1 && workspaceCountRaw <= 10;
