@@ -42,6 +42,7 @@ let
     inherit wallpaperPath wallpaperFillMode monitorWallpapers;
   };
   seededSettings = {
+    enableVPN = true;
     showOccupiedWorkspacesOnly = showOccupiedWorkspacesOnly;
   };
 
@@ -122,7 +123,7 @@ in {
             fi
             dms_cmd="$dms_bin run"
           else
-            notify_start_error "dms binary not found in PATH. Rebuild and verify hyprlandShell=dank-material-shell."
+            notify_start_error "dms binary not found in PATH. Rebuild and verify wmShell=dank-material-shell."
             exit 1
           fi
         elif [ "$dms_mode" = "separate" ]; then
@@ -260,10 +261,6 @@ in {
         enable = lib.mkDefault dmsUseSystemd;
         restartIfChanged = lib.mkDefault true;
       };
-      # Keep VPN integration available in DMS when Tailscale is enabled system-wide.
-      settings = {
-        enableVPN = lib.mkDefault true;
-      };
     };
   };
 
@@ -282,8 +279,15 @@ in {
   home.activation.dmsSeedDefaults = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     state_dir="${config.home.homeDirectory}/.local/state/DankMaterialShell"
     config_dir="${config.home.homeDirectory}/.config/DankMaterialShell"
+    hypr_dms_dir="${config.home.homeDirectory}/.config/hypr/dms"
     session_file="$state_dir/session.json"
     settings_file="$config_dir/settings.json"
+    hypr_binds_file="$hypr_dms_dir/binds.conf"
+    hypr_colors_file="$hypr_dms_dir/colors.conf"
+    hypr_cursor_file="$hypr_dms_dir/cursor.conf"
+    hypr_windowrules_file="$hypr_dms_dir/windowrules.conf"
+    hypr_layout_file="$hypr_dms_dir/layout.conf"
+    hypr_outputs_file="$hypr_dms_dir/outputs.conf"
 
     if [ ! -e "$session_file" ]; then
       $DRY_RUN_CMD mkdir -p "$state_dir"
@@ -298,6 +302,21 @@ EOF
 ${builtins.toJSON seededSettings}
 EOF
     fi
+
+    # DMS/Hyprland integration writes these files at runtime. Seed writable files only if missing.
+    $DRY_RUN_CMD mkdir -p "$hypr_dms_dir"
+    [ -L "$hypr_binds_file" ] && $DRY_RUN_CMD rm -f "$hypr_binds_file"
+    [ -L "$hypr_colors_file" ] && $DRY_RUN_CMD rm -f "$hypr_colors_file"
+    [ -L "$hypr_cursor_file" ] && $DRY_RUN_CMD rm -f "$hypr_cursor_file"
+    [ -L "$hypr_windowrules_file" ] && $DRY_RUN_CMD rm -f "$hypr_windowrules_file"
+    [ -L "$hypr_layout_file" ] && $DRY_RUN_CMD rm -f "$hypr_layout_file"
+    [ -L "$hypr_outputs_file" ] && $DRY_RUN_CMD rm -f "$hypr_outputs_file"
+    [ -e "$hypr_binds_file" ] || $DRY_RUN_CMD : >"$hypr_binds_file"
+    [ -e "$hypr_colors_file" ] || $DRY_RUN_CMD : >"$hypr_colors_file"
+    [ -e "$hypr_cursor_file" ] || $DRY_RUN_CMD : >"$hypr_cursor_file"
+    [ -e "$hypr_windowrules_file" ] || $DRY_RUN_CMD : >"$hypr_windowrules_file"
+    [ -e "$hypr_layout_file" ] || $DRY_RUN_CMD : >"$hypr_layout_file"
+    [ -e "$hypr_outputs_file" ] || $DRY_RUN_CMD : >"$hypr_outputs_file"
   '';
 
   # Keep DMS alive across Home Manager reloads triggered by nixos-rebuild.
