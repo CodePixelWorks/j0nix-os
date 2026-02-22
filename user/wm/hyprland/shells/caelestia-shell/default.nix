@@ -1,5 +1,22 @@
 { inputs, lib, pkgs, settings, ... }:
 let
+  iconThemeCfg = settings.iconTheme or { };
+  iconThemeEnabled = iconThemeCfg.enable or true;
+  iconThemeName = iconThemeCfg.name or "Papirus-Dark";
+  iconThemePackageKey = iconThemeCfg.package or "papirus";
+  iconThemePackage =
+    if iconThemePackageKey == "colloid" then
+      if pkgs ? "colloid-icon-theme" then pkgs."colloid-icon-theme" else null
+    else if iconThemePackageKey == "papirus" then
+      pkgs.papirus-icon-theme
+    else if iconThemePackageKey == "adwaita" then
+      pkgs.adwaita-icon-theme
+    else if iconThemePackageKey == "breeze" then
+      if (pkgs ? kdePackages) && (pkgs.kdePackages ? breeze-icons) then pkgs.kdePackages.breeze-icons
+      else if pkgs ? breeze-icons then pkgs.breeze-icons
+      else null
+    else
+      null;
   dmsSettings = settings.dms or { };
   dmsWallpaper = dmsSettings.wallpaper or { };
   configuredWallpaper = dmsWallpaper.wallpaperPath or null;
@@ -36,14 +53,16 @@ let
         terminal = [ preferredTerminal ];
       };
     };
+    services = {
+      smartScheme = true;
+    };
   } // lib.optionalAttrs (configuredWallpaperDir != null && configuredWallpaperDir != "") {
     paths = {
       wallpaperDir = configuredWallpaperDir;
     };
-    services = {
-      smartScheme = true;
-    };
   };
+  seededWallpaperDirValue =
+    if configuredWallpaperDir != null && configuredWallpaperDir != "" then configuredWallpaperDir else "";
 in
 {
   imports = lib.optional hasHomeModule inputs.caelestia-shell.homeManagerModules.default;
@@ -62,6 +81,12 @@ in
         if ${procps}/bin/pgrep -f "quickshell.*-c[[:space:]]*caelestia" >/dev/null 2>&1; then
           exit 0
         fi
+
+        ${lib.optionalString iconThemeEnabled ''
+        export XDG_ICON_THEME="${iconThemeName}"
+        export GTK_ICON_THEME="${iconThemeName}"
+        export QT_ICON_THEME_NAME="${iconThemeName}"
+        ''}
 
         if command -v caelestia >/dev/null 2>&1; then
           caelestia shell -d &
@@ -116,11 +141,14 @@ in
       material-symbols
       nerd-fonts.jetbrains-mono
       nerd-fonts.fira-code
-    ]);
+    ])
+    ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) [ iconThemePackage ];
 
   home.activation.caelestiaConfigInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     cfg_dir="$HOME/.config/caelestia"
     cfg_file="$cfg_dir/shell.json"
+    tmp_file="$cfg_file.codex-tmp"
+    bad_file="$cfg_file.invalid"
 
     $DRY_RUN_CMD mkdir -p "$cfg_dir"
     if [ ! -e "$cfg_file" ] || [ -L "$cfg_file" ]; then
@@ -129,6 +157,31 @@ in
 ${builtins.toJSON seededCaelestiaConfig}
 EOF
       $DRY_RUN_CMD chmod 644 "$cfg_file"
+    elif [ -f "$cfg_file" ]; then
+      # If the user file is broken JSON, keep a backup and recreate a valid minimal config.
+      if ! ${pkgs.jq}/bin/jq -e . "$cfg_file" >/dev/null 2>&1; then
+        $DRY_RUN_CMD mv -f "$cfg_file" "$bad_file" 2>/dev/null || true
+        $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
+${builtins.toJSON seededCaelestiaConfig}
+EOF
+        $DRY_RUN_CMD chmod 644 "$cfg_file"
+      else
+        # Merge required defaults into existing config without overwriting user choices.
+        $DRY_RUN_CMD ${pkgs.jq}/bin/jq \
+          --arg term "${preferredTerminal}" \
+          --arg wallpaperDir "${seededWallpaperDirValue}" \
+          '
+            .general = ((.general // {}) | .apps = ((.apps // {}) | .terminal = (.terminal // [$term])))
+            | .services = ((.services // {}) | .smartScheme = (.smartScheme // true))
+            | if $wallpaperDir != "" then
+                .paths = ((.paths // {}) | .wallpaperDir = (.wallpaperDir // $wallpaperDir))
+              else
+                .
+              end
+          ' "$cfg_file" >"$tmp_file"
+        $DRY_RUN_CMD mv "$tmp_file" "$cfg_file"
+        $DRY_RUN_CMD chmod 644 "$cfg_file"
+      fi
     fi
   '';
 
@@ -148,6 +201,10 @@ EOF
         - homeManagerModules.default
         - packages.${pkgs.stdenv.hostPlatform.system}.with-cli (or default)
       '';
+    }
+    {
+      assertion = (!iconThemeEnabled) || (iconThemePackage != null);
+      message = "settings.iconTheme.package must resolve to a package for Caelestia icon usage";
     }
   ];
 }
