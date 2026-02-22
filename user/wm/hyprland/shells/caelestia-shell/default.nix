@@ -1,5 +1,13 @@
 { inputs, lib, pkgs, settings, ... }:
 let
+  dmsSettings = settings.dms or { };
+  dmsWallpaper = dmsSettings.wallpaper or { };
+  configuredWallpaper = dmsWallpaper.wallpaperPath or null;
+  configuredWallpaperDir =
+    if configuredWallpaper != null && lib.hasInfix "/" configuredWallpaper then
+      lib.removeSuffix "/${builtins.baseNameOf configuredWallpaper}" configuredWallpaper
+    else
+      null;
   hasInput = inputs ? caelestia-shell;
   hasHomeModule =
     hasInput
@@ -22,22 +30,41 @@ let
     else
       null;
   preferredTerminal = settings.preferredTerminal or "kitty";
+  seededCaelestiaConfig = {
+    general = {
+      apps = {
+        terminal = [ preferredTerminal ];
+      };
+    };
+  } // lib.optionalAttrs (configuredWallpaperDir != null && configuredWallpaperDir != "") {
+    paths = {
+      wallpaperDir = configuredWallpaperDir;
+    };
+    services = {
+      smartScheme = true;
+    };
+  };
 in
 {
   imports = lib.optional hasHomeModule inputs.caelestia-shell.homeManagerModules.default;
 
   programs.waybar.enable = lib.mkForce false;
+  programs.caelestia = lib.mkIf hasHomeModule {
+    enable = lib.mkDefault true;
+    systemd = {
+      # Started by wm-shell-start for parity with other shells.
+      enable = lib.mkDefault false;
+    };
+    cli = {
+      # Keep CLI available, but don't force GTK theme rewriting from Caelestia.
+      enable = lib.mkDefault true;
+    };
+  };
 
   home.packages =
     lib.optionals (caelestiaPkg != null) [ caelestiaPkg ]
     ++ (with pkgs; [
       (writeShellScriptBin "caelestia-start" ''
-        if ! command -v caelestia >/dev/null 2>&1; then
-          echo "caelestia binary not found in PATH."
-          echo "Rebuild and verify wmShell=caelestia-shell."
-          exit 1
-        fi
-
         # Keep shell startup idempotent when wm-shell-start is triggered multiple times.
         if command -v qs >/dev/null 2>&1 && qs ipc -c caelestia call shell ping >/dev/null 2>&1; then
           exit 0
@@ -47,12 +74,41 @@ in
           exit 0
         fi
 
-        exec caelestia shell -d
+        if command -v caelestia >/dev/null 2>&1; then
+          caelestia shell -d &
+          shell_pid=$!
+
+          if [ -n "${if configuredWallpaper != null then configuredWallpaper else ""}" ] && [ -f "${if configuredWallpaper != null then configuredWallpaper else ""}" ]; then
+            (
+              i=0
+              while [ "$i" -lt 20 ]; do
+                sleep 0.5
+                caelestia wallpaper -f "${if configuredWallpaper != null then configuredWallpaper else ""}" >/dev/null 2>&1 && exit 0
+                i=$((i + 1))
+              done
+              exit 0
+            ) &
+          fi
+
+          wait "$shell_pid"
+          exit $?
+        fi
+
+        if command -v caelestia-shell >/dev/null 2>&1; then
+          exec caelestia-shell
+        fi
+
+        echo "Neither 'caelestia' nor 'caelestia-shell' is in PATH."
+        echo "Rebuild and verify wmShell=caelestia-shell."
+        exit 1
       '')
 
       (writeShellScriptBin "caelestia-stop" ''
         if command -v caelestia >/dev/null 2>&1; then
           caelestia shell quit >/dev/null 2>&1 && exit 0 || true
+        fi
+        if command -v caelestia-shell >/dev/null 2>&1; then
+          ${procps}/bin/pkill -x caelestia-shell >/dev/null 2>&1 && exit 0 || true
         fi
         if command -v qs >/dev/null 2>&1; then
           qs kill caelestia >/dev/null 2>&1 && exit 0 || true
@@ -65,27 +121,24 @@ in
       wl-clipboard
       cliphist
       matugen
+      hicolor-icon-theme
+      adwaita-icon-theme
+      papirus-icon-theme
       material-symbols
       nerd-fonts.jetbrains-mono
       nerd-fonts.fira-code
     ]);
 
-  # Seed a writable config once so the shell can start with sensible defaults.
-  home.file.".config/caelestia/shell.json.template".text = builtins.toJSON {
-    launcher = {
-      terminal = preferredTerminal;
-    };
-  };
-
   home.activation.caelestiaConfigInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     cfg_dir="$HOME/.config/caelestia"
     cfg_file="$cfg_dir/shell.json"
-    template="$cfg_dir/shell.json.template"
 
     $DRY_RUN_CMD mkdir -p "$cfg_dir"
     if [ ! -e "$cfg_file" ] || [ -L "$cfg_file" ]; then
       $DRY_RUN_CMD rm -f "$cfg_file"
-      $DRY_RUN_CMD cp "$template" "$cfg_file"
+      $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
+${builtins.toJSON seededCaelestiaConfig}
+EOF
       $DRY_RUN_CMD chmod 644 "$cfg_file"
     fi
   '';
