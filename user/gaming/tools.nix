@@ -196,11 +196,22 @@ lib.mkIf enabled {
       '')
       pkgs.goverlay
     ]
+    ++ [
+      # Steam launch options examples (Cyberpunk 2077 appid 1091500):
+      #   game-session-cyberpunk %command%
+      #   game-session-cyberpunk-hdr %command%
+      (pkgs.writeShellScriptBin "game-session-cyberpunk" ''
+        exec gamemoderun "$@" --launcher-skip
+      '')
+    ]
     ++ lib.optionals (gamescopeEnabled && gamescopeHdrEnabled) [
       # Steam launch options example:
       #   game-session-gamescope-hdr %command%
       (pkgs.writeShellScriptBin "game-session-gamescope-hdr" ''
         exec gamescope --hdr-enabled --expose-wayland -- gamemoderun "$@"
+      '')
+      (pkgs.writeShellScriptBin "game-session-cyberpunk-hdr" ''
+        exec gamescope --hdr-enabled --expose-wayland -- gamemoderun "$@" --launcher-skip
       '')
     ]
     ++ lib.optionals (protonProvider == "cachyos") [
