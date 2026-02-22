@@ -197,6 +197,21 @@ in {
 
   virtualisation.libvirtd.enable = true;
 
+  # Keep the Windows games disk consistently available at a stable path.
+  fileSystems."/mnt/GAMES" = {
+    device = "/dev/disk/by-uuid/6A68028468024F6F";
+    fsType = "ntfs3";
+    options = [
+      "rw"
+      "uid=1000"
+      "gid=100"
+      "umask=0022"
+      "nofail"
+      "x-systemd.automount"
+      "x-systemd.idle-timeout=5min"
+    ];
+  };
+
   assertions = [
     {
       assertion = lib.all (shell: builtins.elem shell allowedShells) userShells;
