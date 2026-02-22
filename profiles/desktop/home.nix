@@ -2,6 +2,28 @@
 let
   storage = settings.storage or { };
   autoMountWindows = storage.autoMountWindows or true;
+  iconThemeCfg = settings.iconTheme or { };
+  iconThemeEnabled = iconThemeCfg.enable or true;
+  iconThemeName = iconThemeCfg.name or "Papirus-Dark";
+  iconThemePackageKey = iconThemeCfg.package or "papirus";
+  iconThemePackage =
+    if iconThemePackageKey == "papirus" then
+      pkgs.papirus-icon-theme
+    else if iconThemePackageKey == "adwaita" then
+      pkgs.adwaita-icon-theme
+    else if iconThemePackageKey == "breeze" then
+      if (pkgs ? kdePackages) && (pkgs.kdePackages ? breeze-icons) then
+        pkgs.kdePackages.breeze-icons
+      else if pkgs ? breeze-icons then
+        pkgs.breeze-icons
+      else
+        null
+    else
+      null;
+  iconThemeFallbackPackages = with pkgs; [
+    hicolor-icon-theme
+    adwaita-icon-theme
+  ];
 in
 {
   imports = [
@@ -45,7 +67,8 @@ in
     openvpn
     unzip
     android-tools
-  ] ++ (with pkgs; if autoMountWindows then [ udiskie ] else [ ]);
+  ] ++ (with pkgs; if autoMountWindows then [ udiskie ] else [ ])
+    ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) ([ iconThemePackage ] ++ iconThemeFallbackPackages);
 
   xdg.enable = true;
   xdg.userDirs = {
@@ -68,6 +91,26 @@ in
   home.sessionVariables = {
     EDITOR = settings.preferredEditor;
     BROWSER = settings.preferredBrowser;
+  } // lib.optionalAttrs iconThemeEnabled {
+    XDG_ICON_THEME = iconThemeName;
+    GTK_ICON_THEME = iconThemeName;
+    # Quickshell/Caelestia and other Qt apps use Qt's icon theme lookup, not GTK settings.
+    QT_ICON_THEME_NAME = iconThemeName;
+  };
+
+  gtk = lib.mkIf (iconThemeEnabled && iconThemePackage != null) {
+    enable = true;
+    iconTheme = {
+      name = iconThemeName;
+      package = iconThemePackage;
+    };
+  };
+
+  # GNOME/libadwaita apps (e.g. Nautilus) often read the icon theme from dconf.
+  dconf.settings = lib.mkIf iconThemeEnabled {
+    "org/gnome/desktop/interface" = {
+      icon-theme = iconThemeName;
+    };
   };
 
   # User-space automount for additional internal/removable drives via udisks2.
@@ -87,4 +130,11 @@ in
 
   programs.home-manager.enable = true;
   home.stateVersion = "25.11";
+
+  assertions = [
+    {
+      assertion = (!iconThemeEnabled) || (iconThemePackage != null);
+      message = "settings.iconTheme.package must be one of: papirus, adwaita, breeze";
+    }
+  ];
 }
