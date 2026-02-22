@@ -253,6 +253,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Quickshell overview plugin (Hyprland-focused, runs alongside DMS).
+    quickshell-overview = {
+      url = "github:Shanu-Kumawat/quickshell-overview";
+      flake = false;
+    };
+
     noctalia = {
       url = "github:noctalia-dev/noctalia-shell";
       inputs.nixpkgs.follows = "nixpkgs";
