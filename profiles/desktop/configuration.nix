@@ -112,75 +112,24 @@ in {
   };
   security.rtkit.enable = true;
 
-  services.pipewire.wireplumber.extraConfig = lib.mkMerge [
-    (lib.mkIf (usePipeWire && enableHiFiCodecs) {
-      "51-bluez-codecs" = {
-        "monitor.bluez.properties" = {
-          "bluez5.codecs" = bluetoothCodecs;
-          "bluez5.enable-msbc" = enableMsbc;
-          "bluez5.enable-sbc-xq" = builtins.elem "sbc_xq" bluetoothCodecs;
-          "bluez5.enable-hw-volume" = true;
-          "bluez5.roles" = [
-            "hsp_hs"
-            "hsp_ag"
-            "hfp_hf"
-            "hfp_ag"
-            "a2dp_sink"
-            "a2dp_source"
-          ];
-        };
-      };
-    })
-    (lib.mkIf usePipeWire {
-      # KVM/TV setups can cause unstable sink ordering on reconnect.
-      # Prefer HDMI sinks and de-prioritize USB/Bluetooth so NVIDIA TV audio wins by default.
-      "60-audio-output-priorities" = {
-        "monitor.alsa.rules" = [
-          {
-            matches = [
-              {
-                "node.name" = "~alsa_output\\..*\\.hdmi-.*";
-              }
-            ];
-            actions = {
-              update-props = {
-                "priority.session" = 2200;
-                "priority.driver" = 2200;
-              };
-            };
-          }
-          {
-            matches = [
-              {
-                "node.name" = "~alsa_output\\.usb-.*";
-              }
-            ];
-            actions = {
-              update-props = {
-                "priority.session" = 900;
-                "priority.driver" = 900;
-              };
-            };
-          }
-        ];
-        "monitor.bluez.rules" = [
-          {
-            matches = [
-              {
-                "node.name" = "~bluez_output\\..*";
-              }
-            ];
-            actions = {
-              update-props = {
-                "priority.session" = 800;
-                "priority.driver" = 800;
-              };
-            };
-          }
+  services.pipewire.wireplumber.extraConfig = lib.mkIf (usePipeWire && enableHiFiCodecs) {
+    "51-bluez-codecs" = {
+      "monitor.bluez.properties" = {
+        "bluez5.codecs" = bluetoothCodecs;
+        "bluez5.enable-msbc" = enableMsbc;
+        "bluez5.enable-sbc-xq" = builtins.elem "sbc_xq" bluetoothCodecs;
+        "bluez5.enable-hw-volume" = true;
+        "bluez5.roles" = [
+          "hsp_hs"
+          "hsp_ag"
+          "hfp_hf"
+          "hfp_ag"
+          "a2dp_sink"
+          "a2dp_source"
         ];
       };
-    })
-  ];
+    };
+  };
 
   services.pulseaudio = {
     enable = usePulseAudio;
