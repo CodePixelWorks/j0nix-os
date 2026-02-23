@@ -64,7 +64,7 @@
         ".." = "cd ..";
         "..." = "cd ../..";
         ncg = "nix-collect-garbage --delete-old && sudo nix-collect-garbage -d";
-        rebuild = "sudo nixos-rebuild switch --flake ${settings.dotfilesDir}/j0nix-os#${settings.hostname}";
+        rebuild = "sudo nixos-rebuild switch --flake ${settings.dotfilesDir}#${settings.hostname}";
       };
     };
   };
