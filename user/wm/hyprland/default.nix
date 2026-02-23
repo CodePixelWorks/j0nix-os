@@ -22,6 +22,8 @@ let
     workspaceCount;
   workspaceSwitchBinds = map (pair: "$mainMod, ${pair.key}, workspace, ${pair.workspace}") workspaceKeyPairs;
   workspaceMoveBinds = map (pair: "$mainMod SHIFT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
+  remoteWorkspaceSwitchBinds = map (pair: "CTRL ALT, ${pair.key}, workspace, ${pair.workspace}") workspaceKeyPairs;
+  remoteWorkspaceMoveBinds = map (pair: "CTRL SHIFT ALT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
   hyprlandCfg = settings.hyprland or { };
   hyprlandDebug = hyprlandCfg.debug or { };
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
@@ -65,16 +67,26 @@ let
   dmsOverviewToggleBind =
     lib.optional (isDmsShell && dmsOverviewEnabled && hasValue overviewToggleBind)
       "${overviewToggleBind}, exec, dms-overview-toggle";
+  dmsOverviewRemoteToggleBind =
+    lib.optional (isDmsShell && dmsOverviewEnabled) "CTRL ALT, SPACE, exec, dms-overview-toggle";
   baseHyprKeybinds = {
     bind = [
       "$mainMod, left, movefocus, l"
       "$mainMod, right, movefocus, r"
       "$mainMod, up, movefocus, u"
       "$mainMod, down, movefocus, d"
+      "CTRL ALT, left, movefocus, l"
+      "CTRL ALT, right, movefocus, r"
+      "CTRL ALT, up, movefocus, u"
+      "CTRL ALT, down, movefocus, d"
       "$mainMod SHIFT, left, movewindow, l"
       "$mainMod SHIFT, right, movewindow, r"
       "$mainMod SHIFT, up, movewindow, u"
       "$mainMod SHIFT, down, movewindow, d"
+      "CTRL SHIFT ALT, left, movewindow, l"
+      "CTRL SHIFT ALT, right, movewindow, r"
+      "CTRL SHIFT ALT, up, movewindow, u"
+      "CTRL SHIFT ALT, down, movewindow, d"
       "$mainMod, mouse_down, workspace, -1"
       "$mainMod, mouse_up, workspace, +1"
       "$mainMod CTRL, Backslash, centerwindow, 1"
@@ -94,20 +106,33 @@ let
     bindl = [
       ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
       ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+      "CTRL ALT, m, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+      "CTRL SHIFT ALT, m, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
     ];
     bindle = [
       ", XF86AudioRaiseVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 3%+"
       ", XF86AudioLowerVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume @DEFAULT_AUDIO_SINK@ 3%-"
+      "CTRL ALT, equal, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 3%+"
+      "CTRL ALT, minus, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume @DEFAULT_AUDIO_SINK@ 3%-"
+      "CTRL SHIFT ALT, equal, exec, brightnessctl set +5%"
+      "CTRL SHIFT ALT, minus, exec, brightnessctl set 5%-"
     ];
   };
   coreBinds = [
     "$mainMod, q, killactive,"
+    "CTRL ALT, q, killactive,"
     "$mainMod, t, togglefloating,"
+    "CTRL ALT, t, togglefloating,"
     "$mainMod, f, fullscreen, 0"            # actual fullscreen (shell/waybar hidden)
     "$mainMod SHIFT, f, fullscreen, 1"      # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
+    "CTRL ALT, f, fullscreen, 0"
+    "CTRL SHIFT ALT, f, fullscreen, 1"
     "$mainMod, return, exec, ${preferredTerminal}"
+    "CTRL ALT, return, exec, ${preferredTerminal}"
+    "CTRL ALT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
+    "CTRL ALT, c, centerwindow, 1"
     "$mainMod SHIFT, q, exit,"
-  ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind;
+  ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind ++ dmsOverviewRemoteToggleBind;
   shellHyprKeybinds =
     if isCaelestiaShell then
       {
@@ -117,7 +142,10 @@ let
         bind = [
           "$mainMod, escape, global, caelestia:session"
           "$mainMod, space, global, caelestia:showall"
+          "CTRL ALT, space, global, caelestia:launcher"
+          "CTRL SHIFT ALT, space, global, caelestia:showall"
           "$mainMod SHIFT, l, global, caelestia:lock"
+          "CTRL ALT, BackSpace, global, caelestia:lock"
           "$mainMod, n, global, caelestia:clearNotifs"
           "$mainMod, v, exec, pkill fuzzel || caelestia clipboard"
           "$mainMod ALT, v, exec, pkill fuzzel || caelestia clipboard -d"
@@ -142,6 +170,7 @@ let
           "$mainMod ALT, mouse_down, movetoworkspace, -1"
           "$mainMod ALT, mouse_up, movetoworkspace, +1"
           "$mainMod, slash, exec, caelestia shell controlCenter open"
+          "CTRL ALT, slash, exec, caelestia shell controlCenter open"
           "$mainMod, m, exec, caelestia toggle music"
           "$mainMod, c, exec, caelestia toggle communication"
           "$mainMod, y, exec, caelestia toggle todo"
@@ -198,7 +227,7 @@ let
     lib.concatStringsSep "\n" (map (entry: "${key} = ${entry}") entries);
   # Final merged bind lists used either via HM settings or via the Caelestia raw submap block.
   effectiveBindLists = {
-    bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ mergedBindList "bind";
+    bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ remoteWorkspaceSwitchBinds ++ remoteWorkspaceMoveBinds ++ mergedBindList "bind";
     bindi = mergedBindList "bindi";
     bindin = mergedBindList "bindin";
     binde = mergedBindList "binde";
