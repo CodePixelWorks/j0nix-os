@@ -43,7 +43,7 @@
           userOverride = userOverrides.${username} or { };
           merged = baseSettings // userOverride // {
             inherit username;
-            dotfilesDir = "/home/${username}/nixos-dotfiles";
+            dotfilesDir = "/home/${username}/DEV/j0nix-os";
           };
           themeDetails = import (baseDir + "/themes/${merged.theme}.nix") { inherit pkgs; };
           defaultWMFromLegacy =
