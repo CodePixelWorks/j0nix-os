@@ -75,6 +75,7 @@ in
     python3
     cargo
     rustc
+    ollama
 
     openvpn
     unzip
