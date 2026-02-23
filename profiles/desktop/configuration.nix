@@ -65,6 +65,10 @@ in {
       "snd_hda_intel"
       "snd_hda_codec_hdmi"
     ];
+    # USB Bluetooth adapters/controllers can become unreliable after autosuspend.
+    extraModprobeConfig = ''
+      options btusb enable_autosuspend=0
+    '';
   };
 
   nixpkgs.overlays = [
@@ -138,11 +142,19 @@ in {
   };
 
   hardware.bluetooth.enable = true;
-  hardware.bluetooth.settings = lib.mkIf enableHiFiCodecs {
-    General = {
-      Experimental = true;
-    };
-  };
+  hardware.bluetooth.powerOnBoot = true;
+  hardware.bluetooth.settings = lib.mkMerge [
+    {
+      Policy = {
+        AutoEnable = true;
+      };
+    }
+    (lib.mkIf enableHiFiCodecs {
+      General = {
+        Experimental = true;
+      };
+    })
+  ];
   services.blueman.enable = true;
   services.printing.enable = true;
 
