@@ -61,6 +61,10 @@ let
     "match:title ^(Sign In|Sign in|Login|Log in|Authenticate|Authentication)( .*)?$, float 1, center 1"
     "match:title ^(.*(Preferences|Settings|Properties|Dialog|Picker|Chooser).*)$, float 1, center 1"
     "match:title ^(.*(Einstellungen|Eigenschaften|Auswahl|Dialog|Anmeldung|Anmelden).*)$, float 1, center 1"
+
+    # Bambu Studio XWayland popup dialogs (e.g. filament selection) position themselves;
+    # forcing center breaks the in-window send/print flow.
+    "match:class ^(BambuStudio)$, xwayland 1, float 1, center 0"
   ];
   hasValue = value: value != null && value != "";
   keyboardLayoutToggleBind =
