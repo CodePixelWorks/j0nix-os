@@ -26,6 +26,7 @@ let
   remoteWorkspaceMoveBinds = map (pair: "CTRL SHIFT ALT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
   hyprlandCfg = settings.hyprland or { };
   hyprlandDebug = hyprlandCfg.debug or { };
+  preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
   dmsOverviewSettings = dmsSettings.overview or { };
@@ -157,7 +158,7 @@ let
           "$mainMod SHIFT ALT, s, global, caelestia:screenshot"
           "$mainMod, b, exec, app2unit -- ${settings.preferredBrowser or "chromium"}"
           "$mainMod, e, exec, app2unit -- ${settings.preferredEditor or "nvim"}"
-          "$mainMod ALT, e, exec, app2unit -- nemo"
+          "$mainMod ALT, e, exec, app2unit -- ${preferredFileManager}"
           "$mainMod, g, exec, app2unit -- github-desktop"
           "CTRL ALT, v, exec, app2unit -- pavucontrol"
           "CTRL ALT, Escape, exec, app2unit -- qps"
