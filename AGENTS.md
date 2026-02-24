@@ -43,6 +43,7 @@ Rules:
 - Use Conventional Commits style.
 - Create one commit per completed scope.
 - Do not bundle unrelated changes into one commit.
+- Commit immediately after a completed scope without asking for permission first (unless the user explicitly said not to commit).
 - Commit message must clearly state *what* changed and *why* (short subject + optional body).
 - Prefer non-interactive git commands.
 
@@ -86,6 +87,7 @@ type(scope): short summary
 ### Commit Timing
 
 - Commit right after a scope is implemented and verified.
+- Do not ask "should I commit?" for a finished scope; commit directly and report the commit hash.
 - If validation is interrupted by the user, commit only when the user explicitly asks for it or after stating validation was interrupted.
 - Keep the working tree clean between scopes whenever possible.
 
