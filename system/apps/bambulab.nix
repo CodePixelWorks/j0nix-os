@@ -20,6 +20,8 @@ let
   bambuDesktop = pkgs.makeDesktopItem {
     name = "bambulab-flatpak";
     desktopName = "Bambu Studio (Flatpak)";
+    genericName = "3D Printing Software";
+    comment = "3D printing software";
     # Qt/Wayland Flatpak startup on Hyprland/NVIDIA can show a black pre-window.
     exec = "${pkgs.flatpak}/bin/flatpak run --env=QT_QPA_PLATFORM=xcb ${appId}";
     icon = bambuLauncherIconPath;
