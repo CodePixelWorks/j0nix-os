@@ -21,6 +21,74 @@ Primary goals:
 4. Keep user-facing configuration centralized in `j0nix-os/settings.nix`.
 5. Validate changes with `nix flake check --no-build` before finishing.
 
+## Agent Workflow (Required)
+
+Follow this sequence for production changes in this repo:
+
+1. Inspect the relevant modules and settings contracts before editing.
+2. Make the smallest coherent change for the requested scope.
+3. Validate with `nix flake check --no-build` before finishing (unless the user explicitly interrupts).
+4. Commit each completed change scope immediately (do not accumulate unrelated changes).
+5. Continue with the next scope in a new commit.
+
+Definition of a "scope":
+- One logically complete change that can be described with a single intent.
+- Examples: "add a desktop app", "fix a Hyprland keybind", "adjust Bluetooth stability settings".
+
+## Commit Policy (Required)
+
+Agents must create commits during the task, not only at the end, when a scope is finished.
+
+Rules:
+- Use Conventional Commits style.
+- Create one commit per completed scope.
+- Do not bundle unrelated changes into one commit.
+- Commit message must clearly state *what* changed and *why* (short subject + optional body).
+- Prefer non-interactive git commands.
+
+### Conventional Commit Format
+
+Subject line:
+```text
+type(scope): short summary
+```
+
+Examples:
+- `feat(desktop): add blender and keepassxc`
+- `fix(hyprland): add moonlight-friendly fallback keybinds`
+- `docs(hyprland): document keybind overview`
+- `refactor(settings): point dotfiles path to repo root`
+
+Allowed common `type` values:
+- `feat`
+- `fix`
+- `docs`
+- `refactor`
+- `chore`
+
+### Commit Body (Recommended)
+
+Use a commit body for non-trivial changes. This is the "extra description" and should be added when:
+- multiple files are touched
+- behavior changes
+- there is a migration/compatibility implication
+- the reason is not obvious from the subject
+
+Recommended template:
+```text
+type(scope): short summary
+
+- What changed
+- Why it changed
+- Any caveats or follow-up notes
+```
+
+### Commit Timing
+
+- Commit right after a scope is implemented and verified.
+- If validation is interrupted by the user, commit only when the user explicitly asks for it or after stating validation was interrupted.
+- Keep the working tree clean between scopes whenever possible.
+
 ## Common Commands
 
 ### Evaluate / Build
