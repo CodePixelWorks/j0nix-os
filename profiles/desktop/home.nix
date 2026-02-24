@@ -91,7 +91,6 @@ in
     nextcloud-client
     obsidian
     drawio
-    bambu-studio
     bottles
     simplescreenrecorder
     gpu-screen-recorder
