@@ -1,5 +1,9 @@
 { config, lib, pkgs, settings, ... }:
 let
+  programsCfg = settings.programs or { };
+  bambuCfg = programsCfg.bambulab or { };
+  bambuProvider = bambuCfg.provider or "flatpak";
+  useBambuNixPackage = bambuProvider == "nix";
   storage = settings.storage or { };
   autoMountWindows = storage.autoMountWindows or true;
   configuredFileManagersRaw =
@@ -91,6 +95,7 @@ in
     nextcloud-client
     obsidian
     drawio
+  ] ++ lib.optionals useBambuNixPackage [ bambu-studio ] ++ [
     bottles
     simplescreenrecorder
     gpu-screen-recorder
@@ -193,6 +198,10 @@ in
   home.stateVersion = "25.11";
 
   assertions = [
+    {
+      assertion = builtins.elem bambuProvider [ "flatpak" "nix" ];
+      message = "settings.programs.bambulab.provider must be one of: flatpak, nix";
+    }
     {
       assertion = (!iconThemeEnabled) || (iconThemePackage != null);
       message = "settings.iconTheme.package must be one of: colloid, papirus, adwaita, breeze";
