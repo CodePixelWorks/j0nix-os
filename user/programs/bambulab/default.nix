@@ -1,5 +1,8 @@
-{ pkgs, ... }:
+{ pkgs, lib, settings, ... }:
 let
+  programsCfg = settings.programs or { };
+  bambuCfg = programsCfg.bambulab or { };
+  provider = bambuCfg.provider or "flatpak";
   bambulabFlatpak = pkgs.writeShellApplication {
     name = "bambulab-flatpak";
     runtimeInputs = [ pkgs.flatpak ];
@@ -53,6 +56,6 @@ let
     '';
   };
 in
-{
+lib.mkIf (provider == "flatpak") {
   home.packages = [ bambulabFlatpak ];
 }
