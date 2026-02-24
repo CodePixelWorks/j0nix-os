@@ -129,6 +129,7 @@ let
     "CTRL ALT, f, fullscreen, 0"
     "CTRL SHIFT ALT, f, fullscreen, 1"
     "$mainMod, return, exec, ${preferredTerminal}"
+    "$mainMod, r, exec, wm-shell-restart"
     "CTRL ALT, return, exec, ${preferredTerminal}"
     "CTRL ALT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
     "CTRL ALT, c, centerwindow, 1"
