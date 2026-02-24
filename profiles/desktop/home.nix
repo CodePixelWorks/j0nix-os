@@ -2,6 +2,38 @@
 let
   storage = settings.storage or { };
   autoMountWindows = storage.autoMountWindows or true;
+  configuredFileManagersRaw =
+    settings.fileManagers
+    or (lib.optional ((settings.preferredFileManager or null) != null) settings.preferredFileManager);
+  configuredFileManagers =
+    lib.unique (if configuredFileManagersRaw != [ ] then configuredFileManagersRaw else [ "nautilus" ]);
+  preferredFileManager =
+    settings.preferredFileManager
+    or (if configuredFileManagers != [ ] then builtins.head configuredFileManagers else "nautilus");
+  fileManagerPackage = name:
+    if name == "nautilus" then
+      pkgs.nautilus
+    else if name == "nemo" then
+      pkgs.nemo
+    else if name == "dolphin" then
+      if (pkgs ? kdePackages) && (pkgs.kdePackages ? dolphin) then pkgs.kdePackages.dolphin else null
+    else if name == "thunar" then
+      if (pkgs ? xfce) && (pkgs.xfce ? thunar) then pkgs.xfce.thunar else null
+    else
+      null;
+  fileManagerDesktopId = name:
+    if name == "nautilus" then
+      "org.gnome.Nautilus.desktop"
+    else if name == "nemo" then
+      "nemo.desktop"
+    else if name == "dolphin" then
+      "org.kde.dolphin.desktop"
+    else if name == "thunar" then
+      "thunar.desktop"
+    else
+      null;
+  fileManagerPackages = lib.filter (pkg: pkg != null) (map fileManagerPackage configuredFileManagers);
+  preferredFileManagerDesktopId = fileManagerDesktopId preferredFileManager;
   iconThemeCfg = settings.iconTheme or { };
   iconThemeEnabled = iconThemeCfg.enable or true;
   iconThemeName = iconThemeCfg.name or "Papirus-Dark";
@@ -84,7 +116,8 @@ in
     unzip
     android-tools
     xdg-utils
-  ] ++ (with pkgs; if autoMountWindows then [ udiskie ] else [ ])
+  ] ++ fileManagerPackages
+    ++ (with pkgs; if autoMountWindows then [ udiskie ] else [ ])
     ++ lib.optionals (pkgs ? fusion360) [ pkgs.fusion360 ]
     ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) ([ iconThemePackage ] ++ iconThemeFallbackPackages);
 
@@ -95,6 +128,9 @@ in
       "x-scheme-handler/http" = [ "chromium.desktop" ];
       "x-scheme-handler/https" = [ "chromium.desktop" ];
       "text/html" = [ "chromium.desktop" ];
+    } // lib.optionalAttrs (preferredFileManagerDesktopId != null) {
+      "inode/directory" = [ preferredFileManagerDesktopId ];
+      "x-scheme-handler/file" = [ preferredFileManagerDesktopId ];
     };
   };
   xdg.userDirs = {
@@ -161,6 +197,14 @@ in
     {
       assertion = (!iconThemeEnabled) || (iconThemePackage != null);
       message = "settings.iconTheme.package must be one of: colloid, papirus, adwaita, breeze";
+    }
+    {
+      assertion = builtins.elem preferredFileManager configuredFileManagers;
+      message = "settings.preferredFileManager must also be included in settings.fileManagers";
+    }
+    {
+      assertion = lib.all (name: builtins.elem name [ "nautilus" "nemo" "dolphin" "thunar" ]) configuredFileManagers;
+      message = "settings.fileManagers may only contain: nautilus, nemo, dolphin, thunar";
     }
   ];
 }
