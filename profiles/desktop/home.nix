@@ -64,8 +64,10 @@ in
     gpu-screen-recorder
     gpu-screen-recorder-gtk
     krita
+    blender
     gimp
     naps2
+    keepassxc
     mpv
     libreoffice-fresh
 
