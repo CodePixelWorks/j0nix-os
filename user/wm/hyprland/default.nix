@@ -33,8 +33,8 @@ let
   dmsOverviewEnabled = dmsOverviewSettings.enable or false;
   dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
   defaultFloatWindowRules = [
-    # Center anything that is already floating (dialogs, utilities, transient windows).
-    "match:float 1, center 1"
+    # Do not center every floating window globally: popup/context menus in Flatpak apps
+    # can also be floating and would otherwise jump to screen center.
     "match:modal 1, float 1, center 1"
     "match:group 1, float 1, center 1"
 
