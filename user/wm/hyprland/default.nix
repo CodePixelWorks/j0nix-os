@@ -64,7 +64,7 @@ let
 
     # Bambu Studio XWayland popup dialogs (e.g. filament selection) position themselves;
     # forcing center breaks the in-window send/print flow.
-    "match:class ^(BambuStudio)$, xwayland 1, float 1, center 0"
+    "match:class ^(BambuStudio)$, float 1, center 0"
   ];
   hasValue = value: value != null && value != "";
   keyboardLayoutToggleBind =
