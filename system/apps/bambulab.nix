@@ -13,6 +13,7 @@ let
       cp "$src/BambuStudio.png" "$out/share/icons/hicolor/128x128/apps/bambulab-flatpak.png"
     '';
   };
+  bambuLauncherIconPath = "${bambuFlatpakIcons}/share/icons/hicolor/128x128/apps/bambulab-flatpak.png";
   programsCfg = settings.programs or { };
   bambuCfg = programsCfg.bambulab or { };
   provider = bambuCfg.provider or "flatpak";
@@ -20,7 +21,7 @@ let
     name = "bambulab-flatpak";
     desktopName = "Bambu Studio (Flatpak)";
     exec = "${pkgs.flatpak}/bin/flatpak run ${appId}";
-    icon = "bambulab-flatpak";
+    icon = bambuLauncherIconPath;
     terminal = false;
     categories = [
       "Graphics"
