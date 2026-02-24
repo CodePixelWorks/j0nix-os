@@ -56,6 +56,7 @@ in
     obs-studio
     qbittorrent
     telegram-desktop
+    nextcloud-client
     obsidian
     drawio
     bambu-studio
