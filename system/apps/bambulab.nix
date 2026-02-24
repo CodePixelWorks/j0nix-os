@@ -1,10 +1,22 @@
-{ pkgs, lib, ... }:
+{ pkgs, ... }:
 let
   appId = "com.bambulab.BambuStudio";
   flathubUrl = "https://flathub.org/repo/flathub.flatpakrepo";
+  bambuDesktop = pkgs.makeDesktopItem {
+    name = "bambulab-flatpak";
+    desktopName = "Bambu Studio (Flatpak)";
+    exec = "${pkgs.flatpak}/bin/flatpak run ${appId}";
+    terminal = false;
+    categories = [
+      "Graphics"
+      "Utility"
+    ];
+    startupNotify = true;
+  };
 in
 {
   services.flatpak.enable = true;
+  environment.systemPackages = [ bambuDesktop ];
 
   systemd.services.bambulab-flatpak-install = {
     description = "Ensure Bambu Studio Flatpak is installed from Flathub";
