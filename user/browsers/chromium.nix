@@ -19,8 +19,4 @@ in
     enable = true;
     commandLineArgs = chromiumBaseFlags ++ lib.optionals nvidiaEnabled chromiumNvidiaFlags;
   };
-
-  home.packages = [
-    pkgs.chromium
-  ];
 }
