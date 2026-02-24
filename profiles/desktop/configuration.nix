@@ -44,6 +44,7 @@ let
 in {
   imports = [
     ./hardware-configuration.nix
+    ../../system/apps/bambulab.nix
     ../../system/drivers
     ../../system/dev
     ../../system/tuning
@@ -157,7 +158,6 @@ in {
   ];
   services.blueman.enable = true;
   services.printing.enable = true;
-  services.flatpak.enable = true;
 
   programs.zsh.enable = useZsh;
   programs.fish.enable = useFish;
