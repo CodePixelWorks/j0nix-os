@@ -2,6 +2,17 @@
 let
   appId = "com.bambulab.BambuStudio";
   flathubUrl = "https://flathub.org/repo/flathub.flatpakrepo";
+  bambuFlatpakIcons = pkgs.stdenvNoCC.mkDerivation {
+    pname = "bambulab-flatpak-icons";
+    version = "1.0.0";
+    src = ../../icons/bambulab;
+    dontBuild = true;
+    installPhase = ''
+      mkdir -p "$out/share/icons/hicolor/128x128/apps"
+      cp "$src/BambuStudio.png" "$out/share/icons/hicolor/128x128/apps/BambuStudio.png"
+      cp "$src/BambuStudio.png" "$out/share/icons/hicolor/128x128/apps/bambulab-flatpak.png"
+    '';
+  };
   programsCfg = settings.programs or { };
   bambuCfg = programsCfg.bambulab or { };
   provider = bambuCfg.provider or "flatpak";
@@ -9,6 +20,7 @@ let
     name = "bambulab-flatpak";
     desktopName = "Bambu Studio (Flatpak)";
     exec = "${pkgs.flatpak}/bin/flatpak run ${appId}";
+    icon = "bambulab-flatpak";
     terminal = false;
     categories = [
       "Graphics"
@@ -27,7 +39,10 @@ in
     ];
   } // lib.mkIf (provider == "flatpak") {
     services.flatpak.enable = true;
-    environment.systemPackages = [ bambuDesktop ];
+    environment.systemPackages = [
+      bambuDesktop
+      bambuFlatpakIcons
+    ];
 
     systemd.services.bambulab-flatpak-install = {
       description = "Ensure Bambu Studio Flatpak is installed from Flathub";
