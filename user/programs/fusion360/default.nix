@@ -29,6 +29,14 @@ let
       curl -L "$INSTALLER_URL" -o "$INSTALLER_PATH"
       chmod +x "$INSTALLER_PATH"
 
+      # Patch known upstream shell script regressions (observed in current community script revisions).
+      # 1) Snap check should be optional on systems without snap installed.
+      # 2) Broken function declaration causes a syntax error near line ~742.
+      sed -i \
+        -e 's|if snap list |if command -v snap >/dev/null 2>\&1 \&\& snap list |' \
+        -e 's/^is_snap_firefox_installed {$/is_snap_firefox_installed() {/' \
+        "$INSTALLER_PATH"
+
       ${
         if cleanupLegacyDesktop then
           ''
@@ -42,7 +50,7 @@ let
       # Some setups invoke the installer from a deleted/invalid cwd which breaks Wine.
       cd "$HOME"
 
-      exec "$INSTALLER_PATH" --proton="$PROTON_VERSION" --default "$@"
+      exec bash "$INSTALLER_PATH" --proton="$PROTON_VERSION" --default "$@"
     '';
   };
 in
