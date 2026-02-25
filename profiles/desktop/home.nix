@@ -2,9 +2,7 @@
 let
   programsCfg = settings.programs or { };
   bambuCfg = programsCfg.bambulab or { };
-  bambuProvider = bambuCfg.provider or "flatpak";
-  useBambuNixPackage = bambuProvider == "nix";
-  useBambuAppImagePackage = bambuProvider == "appimage";
+  bambuProvider = bambuCfg.provider or "appimage";
   bambuAppImagePackage = pkgs.callPackage ../../user/programs/bambulab/appimage-package.nix { };
   storage = settings.storage or { };
   autoMountWindows = storage.autoMountWindows or true;
@@ -98,8 +96,7 @@ in
     obsidian
     drawio
   ]
-  ++ lib.optionals useBambuNixPackage [ bambu-studio ]
-  ++ lib.optionals useBambuAppImagePackage [ bambuAppImagePackage ]
+  ++ [ bambuAppImagePackage ]
   ++ [
     bottles
     simplescreenrecorder
@@ -204,8 +201,8 @@ in
 
   assertions = [
     {
-      assertion = builtins.elem bambuProvider [ "flatpak" "nix" "appimage" ];
-      message = "settings.programs.bambulab.provider must be one of: flatpak, nix, appimage";
+      assertion = bambuProvider == "appimage";
+      message = "settings.programs.bambulab.provider is now appimage-only and must be set to \"appimage\"";
     }
     {
       assertion = (!iconThemeEnabled) || (iconThemePackage != null);
