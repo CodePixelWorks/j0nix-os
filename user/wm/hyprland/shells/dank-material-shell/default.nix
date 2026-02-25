@@ -266,7 +266,10 @@ in {
           dms ipc call lock lock >/dev/null 2>&1 || true
         fi
         sleep 0.5
-        ${systemd}/bin/systemctl suspend
+        if command -v system-suspend-safe >/dev/null 2>&1; then
+          exec system-suspend-safe
+        fi
+        ${systemd}/bin/loginctl suspend || ${systemd}/bin/systemctl suspend
       '')
 
       (writeShellScriptBin "dms-lock" ''
