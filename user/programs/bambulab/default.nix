@@ -84,4 +84,17 @@ in
   home.packages =
     [ bambulabLauncher ]
     ++ lib.optionals (provider == "flatpak") [ bambulabFlatpak ];
+
+  xdg.desktopEntries = lib.mkIf (provider != "flatpak") {
+    "com.bambulab.BambuStudio" = {
+      name = "Bambu Studio";
+      genericName = "3D Printing Software";
+      comment = "3D printing software";
+      exec = "bambulab";
+      terminal = false;
+      type = "Application";
+      categories = [ "Graphics" "Utility" ];
+      startupNotify = true;
+    };
+  };
 }
