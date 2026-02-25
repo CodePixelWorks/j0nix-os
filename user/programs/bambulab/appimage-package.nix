@@ -25,4 +25,10 @@ pkgs.appimageTools.wrapType2 rec {
       gst_all_1.gst-plugins-good
       webkitgtk_4_1
     ];
+
+  # We provide a custom Home Manager desktop entry (`Exec=bambulab`, custom icon).
+  # Drop upstream AppImage desktop files to avoid duplicate menu entries.
+  extraInstallCommands = ''
+    rm -f "$out"/share/applications/*.desktop
+  '';
 }
