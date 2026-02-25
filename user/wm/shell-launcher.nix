@@ -55,6 +55,38 @@ in
           ;;
       esac
     '')
+    (writeShellScriptBin "system-suspend-safe" ''
+      # Best-effort lock before suspend to avoid resuming on an unlocked session.
+      if command -v dms >/dev/null 2>&1; then
+        dms ipc call lock lock >/dev/null 2>&1 || true
+      fi
+      if command -v hyprlock >/dev/null 2>&1; then
+        hyprlock >/dev/null 2>&1 &
+        sleep 0.5
+      else
+        loginctl lock-session >/dev/null 2>&1 || true
+        sleep 0.3
+      fi
+
+      loginctl suspend || systemctl suspend
+    '')
+    (writeShellScriptBin "system-hibernate-safe" ''
+      if command -v hyprlock >/dev/null 2>&1; then
+        hyprlock >/dev/null 2>&1 &
+        sleep 0.5
+      else
+        loginctl lock-session >/dev/null 2>&1 || true
+        sleep 0.3
+      fi
+
+      loginctl hibernate || systemctl hibernate
+    '')
+    (writeShellScriptBin "system-reboot-safe" ''
+      loginctl reboot || systemctl reboot
+    '')
+    (writeShellScriptBin "system-poweroff-safe" ''
+      loginctl poweroff || systemctl poweroff
+    '')
     (writeShellScriptBin "wm-shell-stop" ''
       shell="${selectedShell}"
 
