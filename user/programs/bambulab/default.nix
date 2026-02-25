@@ -3,6 +3,29 @@ let
   programsCfg = settings.programs or { };
   bambuCfg = programsCfg.bambulab or { };
   provider = bambuCfg.provider or "flatpak";
+  bambulabLauncher = pkgs.writeShellApplication {
+    name = "bambulab";
+    runtimeInputs = [ pkgs.flatpak ];
+    text = ''
+      set -euo pipefail
+
+      case "${provider}" in
+        flatpak)
+          exec flatpak run com.bambulab.BambuStudio "$@"
+          ;;
+        nix)
+          exec bambu-studio "$@"
+          ;;
+        appimage)
+          exec BambuStudio "$@"
+          ;;
+        *)
+          echo "Unknown Bambu provider: ${provider}" >&2
+          exit 1
+          ;;
+      esac
+    '';
+  };
   bambulabFlatpak = pkgs.writeShellApplication {
     name = "bambulab-flatpak";
     runtimeInputs = [ pkgs.flatpak ];
@@ -56,6 +79,8 @@ let
     '';
   };
 in
-lib.mkIf (provider == "flatpak") {
-  home.packages = [ bambulabFlatpak ];
+{
+  home.packages =
+    [ bambulabLauncher ]
+    ++ lib.optionals (provider == "flatpak") [ bambulabFlatpak ];
 }
