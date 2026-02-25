@@ -37,8 +37,8 @@ in
   config = {
     assertions = [
       {
-        assertion = builtins.elem provider [ "flatpak" "nix" ];
-        message = "settings.programs.bambulab.provider must be one of: flatpak, nix";
+        assertion = builtins.elem provider [ "flatpak" "nix" "appimage" ];
+        message = "settings.programs.bambulab.provider must be one of: flatpak, nix, appimage";
       }
     ];
   } // lib.mkIf (provider == "flatpak") {
