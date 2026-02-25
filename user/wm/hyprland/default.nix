@@ -53,6 +53,12 @@ let
     "match:class ^(xdg-desktop-portal-gtk)$, float 1, center 1"
     "match:class ^(org\\.freedesktop\\.impl\\.portal\\.FileChooser)$, float 1, center 1"
 
+    # Bambu Studio popup dialogs (e.g. filament selection) position themselves;
+    # forcing center breaks the in-window send/print flow. Keep this before generic
+    # title rules in case the parser/runtime applies first-match semantics.
+    "match:class ^(BambuStudio)$, float 1, center 0"
+    "match:title ^(bambu-studio)$, float 1, center 0"
+
     # Generic dialog-like titles (file choosers, properties, about/preferences dialogs).
     "match:title ^(Open( File)?|Save( File)?|Select (File|Folder)|Choose (File|Folder)|Properties|Preferences|Settings|About)( .*)?$, float 1, center 1"
     "match:title ^(Datei öffnen|Datei speichern|Datei auswählen|Ordner auswählen|Eigenschaften|Einstellungen|Über)( .*)?$, float 1, center 1"
@@ -62,9 +68,10 @@ let
     "match:title ^(.*(Preferences|Settings|Properties|Dialog|Picker|Chooser).*)$, float 1, center 1"
     "match:title ^(.*(Einstellungen|Eigenschaften|Auswahl|Dialog|Anmeldung|Anmelden).*)$, float 1, center 1"
 
-    # Bambu Studio XWayland popup dialogs (e.g. filament selection) position themselves;
-    # forcing center breaks the in-window send/print flow.
+    # Duplicate Bambu exceptions after generic rules as well, so they still win if
+    # Hyprland applies last-match semantics for rule actions.
     "match:class ^(BambuStudio)$, float 1, center 0"
+    "match:title ^(bambu-studio)$, float 1, center 0"
   ];
   hasValue = value: value != null && value != "";
   keyboardLayoutToggleBind =
