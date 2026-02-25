@@ -9,6 +9,7 @@ let
     text = ''
       set -euo pipefail
 
+      # shellcheck disable=SC2194
       case "${provider}" in
         flatpak)
           exec flatpak run com.bambulab.BambuStudio "$@"
