@@ -29,25 +29,25 @@ lib.mkIf enabled {
       }
       {
         label = "suspend";
-        action = "sleep 1; systemctl suspend";
+        action = "sleep 1; system-suspend-safe";
         text = "Suspend";
         keybind = "u";
       }
       {
         label = "reboot";
-        action = "sleep 1; systemctl reboot";
+        action = "sleep 1; system-reboot-safe";
         text = "Reboot";
         keybind = "r";
       }
       {
         label = "shutdown";
-        action = "sleep 1; systemctl poweroff";
+        action = "sleep 1; system-poweroff-safe";
         text = "Shutdown";
         keybind = "s";
       }
       {
         label = "hibernate";
-        action = "sleep 1; systemctl hibernate";
+        action = "sleep 1; system-hibernate-safe";
         text = "Hibernate";
         keybind = "h";
       }
