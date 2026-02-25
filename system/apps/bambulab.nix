@@ -35,6 +35,8 @@ let
 in
 {
   config = {
+    services.flatpak.enable = true;
+
     assertions = [
       {
         assertion = builtins.elem provider [ "flatpak" "nix" "appimage" ];
@@ -42,7 +44,6 @@ in
       }
     ];
   } // lib.mkIf (provider == "flatpak") {
-    services.flatpak.enable = true;
     environment.systemPackages = [
       bambuDesktop
       bambuFlatpakIcons
