@@ -14,16 +14,15 @@
     };
 
     printers = lib.mkOption {
-      # Keep this generic; NixOS validates the final shape via hardware.printers.ensurePrinters.
       type = lib.types.listOf lib.types.anything;
       default = [ ];
-      description = "Declarative printers for hardware.printers.ensurePrinters.";
+      description = "Reserved for future printer definitions (currently not applied declaratively).";
     };
 
     defaultPrinter = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "Default printer name for hardware.printers.ensureDefaultPrinter.";
+      description = "Reserved for future default printer selection (currently not applied declaratively).";
     };
   };
 
@@ -37,12 +36,6 @@
           enable = true;
           drivers = cfg.drivers;
         };
-
-        hardware.printers.ensurePrinters = cfg.printers;
-      })
-
-      (lib.mkIf (cfg.enable && cfg.defaultPrinter != null) {
-        hardware.printers.ensureDefaultPrinter = cfg.defaultPrinter;
       })
     ];
 }
