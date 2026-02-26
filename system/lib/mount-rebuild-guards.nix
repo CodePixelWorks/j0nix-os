@@ -14,10 +14,12 @@ let
   mkNoRemountUnit = unitName: {
     name = unitName;
     value = {
-      unitConfig = {
-        X-StopIfChanged = false;
-        X-RestartIfChanged = false;
-      };
+      overrideStrategy = "asDropin";
+      text = ''
+        [Unit]
+        X-StopIfChanged=false
+        X-RestartIfChanged=false
+      '';
     };
   };
 in
