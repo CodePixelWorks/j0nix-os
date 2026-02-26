@@ -6,7 +6,7 @@ let
   acpiLax = cfg.fan.acpiEnforceResourcesLax;
   governor = cfg.cpuGovernor;
   fanBoostEnabled = cfg.fan.maxOnGamingPerformanceMode;
-  fanBoostScript = pkgs.writeShellScriptBin "j0nix-thermal-fan-max" ''
+  fanBoostScript = pkgs.writeShellScriptBin "thermal-fan-max" ''
     set -eu
 
     mode="''${1:-}"
@@ -89,7 +89,7 @@ let
       start) boost_on ;;
       end) boost_off ;;
       *)
-        echo "usage: j0nix-thermal-fan-max <start|end>" >&2
+        echo "usage: thermal-fan-max <start|end>" >&2
         exit 2
         ;;
     esac
