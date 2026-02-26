@@ -1,6 +1,6 @@
-{ lib, settings, ... }:
+{ config, lib, ... }:
 let
-  gaming = settings.gaming or { };
+  gaming = config.j0nix.desktop.gaming or { };
   gamingEnabled = gaming.enable or true;
   streaming = gaming.streaming or { };
   sunshine = streaming.sunshine or { };
@@ -16,7 +16,7 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
   assertions = [
     {
       assertion = builtins.isBool sunshineOpenFirewall;
-      message = "settings.gaming.streaming.sunshine.openFirewall must be a boolean";
+      message = "j0nix.desktop.gaming.streaming.sunshine.openFirewall must be a boolean";
     }
   ];
 }
