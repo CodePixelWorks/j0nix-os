@@ -7,6 +7,9 @@ let
   dmsSettings = settings.dms or { };
   dmsWorkspaceSettings = dmsSettings.workspaces or { };
   hyprDmsDir = "${config.home.homeDirectory}/.config/hypr/dms";
+  useUWSM = (settings.hyprland or { }).useUWSM or true;
+  uwsmAppPrefix = "${lib.getExe pkgs.uwsm} app --";
+  appExec = cmd: if useUWSM then "${uwsmAppPrefix} ${cmd}" else cmd;
   preferredTerminal = settings.preferredTerminal or "kitty";
   preferredTerminalCmd =
     if builtins.elem preferredTerminal [ "gnome-console" "gnome console" ] then "kgx" else preferredTerminal;
@@ -141,9 +144,9 @@ let
     "$mainMod SHIFT, f, fullscreen, 1"      # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
     "CTRL ALT, f, fullscreen, 0"
     "CTRL SHIFT ALT, f, fullscreen, 1"
-    "$mainMod, return, exec, ${preferredTerminalCmd}"
+    "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
     "$mainMod, r, exec, wm-shell-restart"
-    "CTRL ALT, return, exec, ${preferredTerminalCmd}"
+    "CTRL ALT, return, exec, ${appExec preferredTerminalCmd}"
     "CTRL ALT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
     "CTRL ALT, c, centerwindow, 1"
     "$mainMod SHIFT, q, exit,"
@@ -170,12 +173,12 @@ let
           "$mainMod SHIFT ALT, r, exec, caelestia record -r"
           "$mainMod SHIFT, s, global, caelestia:screenshotFreeze"
           "$mainMod SHIFT ALT, s, global, caelestia:screenshot"
-          "$mainMod, b, exec, app2unit -- ${settings.preferredBrowser or "chromium"}"
-          "$mainMod, e, exec, app2unit -- ${settings.preferredEditor or "nvim"}"
-          "$mainMod ALT, e, exec, app2unit -- ${preferredFileManager}"
-          "$mainMod, g, exec, app2unit -- github-desktop"
-          "CTRL ALT, v, exec, app2unit -- pavucontrol"
-          "CTRL ALT, Escape, exec, app2unit -- qps"
+          "$mainMod, b, exec, ${appExec (settings.preferredBrowser or "chromium")}"
+          "$mainMod, e, exec, ${appExec (settings.preferredEditor or "nvim")}"
+          "$mainMod ALT, e, exec, ${appExec preferredFileManager}"
+          "$mainMod, g, exec, ${appExec "github-desktop"}"
+          "CTRL ALT, v, exec, ${appExec "pavucontrol"}"
+          "CTRL ALT, Escape, exec, ${appExec "qps"}"
           "$mainMod ALT, s, movetoworkspace, special:special"
           "$mainMod, s, exec, caelestia toggle specialws"
           "$mainMod CTRL SHIFT, up, movetoworkspace, special:special"
@@ -328,8 +331,8 @@ in {
 
       exec-once = [
         "swww-daemon &"
-        "[workspace 2 silent] firefox"
-        "[workspace 3 silent] ${preferredTerminalCmd} btop"
+        "[workspace 2 silent] ${appExec "firefox"}"
+        "[workspace 3 silent] ${appExec "${preferredTerminalCmd} btop"}"
       ] ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
         ++ lib.optionals (isDmsShell && dmsOverviewEnabled && dmsOverviewAutostart) [ "dms-overview-start" ];
 
