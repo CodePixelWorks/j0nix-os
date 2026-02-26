@@ -42,7 +42,8 @@ lib.mkIf enabled {
     genericName = "AI Assistant Terminal";
     comment = "Launch Gemini CLI in terminal";
     exec = "${preferredTerminal} -e gemini-launcher";
-    icon = "gemini-cli";
+    # Use an absolute store path to avoid launcher/theme lookup misses in shell UIs.
+    icon = "${../../icons/gemini-cli/gemini-cli.svg}";
     terminal = false;
     type = "Application";
     categories = [ "Development" "Utility" ];
