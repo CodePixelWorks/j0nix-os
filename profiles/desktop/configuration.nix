@@ -8,6 +8,7 @@
     ./modules/custom.nix
     ./modules/locale.nix
     ./modules/fonts.nix
+    ./modules/printing.nix
     ./modules/nix.nix
     ./modules/network.nix
     ./modules/kernel.nix
@@ -27,6 +28,7 @@
     ../../system/boot
     ../../system/locale
     ../../system/fonts
+    ../../system/printing
     ../../system/kernel
     ../../system/nix
     ../../system/network
@@ -47,8 +49,6 @@
   services.dbus.implementation = "broker";
 
   services.chrony.enable = true;
-
-  services.printing.enable = true;
 
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [ stdenv.cc.cc ];
