@@ -220,7 +220,7 @@ in
         mkdir -p "$state_dir"
 
         qs_bin="$(command -v qs || true)"
-        fan_cmd="$(command -v j0nix-thermal-fan-max || true)"
+        fan_cmd="$(command -v thermal-fan-max || true)"
 
         sync_once() {
           [ -n "$qs_bin" ] || return 0
