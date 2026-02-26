@@ -6,8 +6,12 @@
     # HP OfficeJet 5220 reachable via local network.
     drivers = [ pkgs.hplip ];
 
-    # Local printer management GUI (CUPS frontend).
-    software = [ pkgs.system-config-printer ];
+    # Local management + HP tooling (hp-setup) + scanner UI.
+    software = with pkgs; [
+      system-config-printer
+      hplip
+      simple-scan
+    ];
 
     # Network printer discovery / hostname resolution via mDNS (Avahi).
     discovery.enable = true;
