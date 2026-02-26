@@ -156,6 +156,14 @@ in
           ;;
       esac
     '')
+    (writeShellScriptBin "wm-shell-recover" ''
+      # Recover from stuck input/layer states before restarting the shell UI.
+      if command -v hyprctl >/dev/null 2>&1; then
+        hyprctl dispatch submap reset >/dev/null 2>&1 || true
+      fi
+      pkill fuzzel >/dev/null 2>&1 || true
+      exec wm-shell-restart
+    '')
   ];
 
   assertions = [
