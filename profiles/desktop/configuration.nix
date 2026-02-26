@@ -19,6 +19,7 @@
     ./modules/virtualisation.nix
     ./modules/thermal.nix
     ./modules/drivers.nix
+    ./modules/support-drivers.nix
     ../../system/apps/bambulab.nix
     ../../system/software
     ../../user-roles/system
@@ -36,6 +37,7 @@
     ../../system/storage
     ../../system/virtualisation
     ../../system/drivers
+    ../../system/support/drivers
     ../../system/dev
     ../../system/tuning
     ../../system/gaming
