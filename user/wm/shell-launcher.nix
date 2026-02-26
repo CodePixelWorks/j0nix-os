@@ -56,30 +56,43 @@ in
       esac
     '')
     (writeShellScriptBin "system-suspend-safe" ''
+      timeout_bin="${pkgs.coreutils}/bin/timeout"
+
       # Best-effort lock before suspend to avoid resuming on an unlocked session.
       if command -v dms >/dev/null 2>&1; then
-        dms ipc call lock lock >/dev/null 2>&1 || true
+        "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
       fi
       if command -v hyprlock >/dev/null 2>&1; then
-        hyprlock >/dev/null 2>&1 &
+        pgrep -x hyprlock >/dev/null 2>&1 || hyprlock >/dev/null 2>&1 &
         sleep 0.5
       else
-        loginctl lock-session >/dev/null 2>&1 || true
+        loginctl lock-session >/dev/null 2>&1 || ${pkgs.systemd}/bin/loginctl lock-session >/dev/null 2>&1 || true
         sleep 0.3
       fi
 
-      loginctl suspend || systemctl suspend
+      loginctl suspend \
+        || ${pkgs.systemd}/bin/loginctl suspend \
+        || systemctl suspend \
+        || ${pkgs.systemd}/bin/systemctl suspend
     '')
     (writeShellScriptBin "system-hibernate-safe" ''
+      timeout_bin="${pkgs.coreutils}/bin/timeout"
+
+      if command -v dms >/dev/null 2>&1; then
+        "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
+      fi
       if command -v hyprlock >/dev/null 2>&1; then
-        hyprlock >/dev/null 2>&1 &
+        pgrep -x hyprlock >/dev/null 2>&1 || hyprlock >/dev/null 2>&1 &
         sleep 0.5
       else
-        loginctl lock-session >/dev/null 2>&1 || true
+        loginctl lock-session >/dev/null 2>&1 || ${pkgs.systemd}/bin/loginctl lock-session >/dev/null 2>&1 || true
         sleep 0.3
       fi
 
-      loginctl hibernate || systemctl hibernate
+      loginctl hibernate \
+        || ${pkgs.systemd}/bin/loginctl hibernate \
+        || systemctl hibernate \
+        || ${pkgs.systemd}/bin/systemctl hibernate
     '')
     (writeShellScriptBin "system-reboot-safe" ''
       loginctl reboot || systemctl reboot
