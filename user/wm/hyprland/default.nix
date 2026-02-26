@@ -8,6 +8,8 @@ let
   dmsWorkspaceSettings = dmsSettings.workspaces or { };
   hyprDmsDir = "${config.home.homeDirectory}/.config/hypr/dms";
   preferredTerminal = settings.preferredTerminal or "kitty";
+  preferredTerminalCmd =
+    if builtins.elem preferredTerminal [ "gnome-console" "gnome console" ] then "kgx" else preferredTerminal;
   workspaceCountRaw = dmsWorkspaceSettings.count or 10;
   workspaceCount = lib.min 10 (lib.max 1 workspaceCountRaw);
   workspaceKeyPairs = builtins.genList
@@ -139,9 +141,9 @@ let
     "$mainMod SHIFT, f, fullscreen, 1"      # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
     "CTRL ALT, f, fullscreen, 0"
     "CTRL SHIFT ALT, f, fullscreen, 1"
-    "$mainMod, return, exec, ${preferredTerminal}"
+    "$mainMod, return, exec, ${preferredTerminalCmd}"
     "$mainMod, r, exec, wm-shell-restart"
-    "CTRL ALT, return, exec, ${preferredTerminal}"
+    "CTRL ALT, return, exec, ${preferredTerminalCmd}"
     "CTRL ALT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
     "CTRL ALT, c, centerwindow, 1"
     "$mainMod SHIFT, q, exit,"
@@ -327,7 +329,7 @@ in {
       exec-once = [
         "swww-daemon &"
         "[workspace 2 silent] firefox"
-        "[workspace 3 silent] ${preferredTerminal} btop"
+        "[workspace 3 silent] ${preferredTerminalCmd} btop"
       ] ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
         ++ lib.optionals (isDmsShell && dmsOverviewEnabled && dmsOverviewAutostart) [ "dms-overview-start" ];
 
