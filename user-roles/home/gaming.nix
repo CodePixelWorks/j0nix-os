@@ -1,10 +1,5 @@
-{ pkgs, ... }:
+{ ... }:
 {
-  j0nix.user.software.packages = with pkgs; [
-    mangohud
-    goverlay
-    protontricks
-    lutris
-    heroic
-  ];
+  # Gaming user apps are currently provided by `user/gaming/*` modules and `settings.gaming.*`.
+  # Keep this role focused on non-duplicated additions as the migration continues.
 }
