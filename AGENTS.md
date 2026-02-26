@@ -211,6 +211,7 @@ Controlled by:
 - Prefer generic list/attr-driven models (e.g. declarative mount lists) over one-off `fooDisk*` variable trees.
 - Use append-style aggregation for extensible config snippets (e.g. `mkAfter` / list aggregation) so modules do not overwrite each other.
 - Keep kernel preset/config modules outside `profiles/` (e.g. under `j0nix-os/system/`), and let profiles select/import them.
+- When modules have software/package requirements, aggregate them into a central install list/module instead of scattering package additions; the aggregation path must deduplicate entries.
 - Prefer explicit assertions for invalid user settings.
 - Preserve backwards compatibility with sensible `or` defaults.
 - Keep README and AGENTS docs aligned with architecture changes.
