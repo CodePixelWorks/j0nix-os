@@ -13,6 +13,12 @@
       description = "CUPS driver packages to install via services.printing.drivers.";
     };
 
+    software = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = [ ];
+      description = "Printer management software to add via the central system package aggregator.";
+    };
+
     printers = lib.mkOption {
       type = lib.types.listOf lib.types.anything;
       default = [ ];
@@ -36,6 +42,8 @@
           enable = true;
           drivers = cfg.drivers;
         };
+
+        j0nix.software.systemPackages = cfg.software;
       })
     ];
 }
