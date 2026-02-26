@@ -52,6 +52,28 @@ let
       apps = {
         terminal = [ preferredTerminal ];
       };
+      idle = {
+        lockBeforeSleep = true;
+        timeouts = [
+          {
+            timeout = 600;
+            idleAction = [ "system-suspend-then-hibernate-safe" ];
+          }
+        ];
+      };
+    };
+    launcher = {
+      actions = [
+        {
+          name = "Sleep";
+          command = [ "system-suspend-then-hibernate-safe" ];
+        }
+      ];
+    };
+    session = {
+      commands = {
+        hibernate = [ "system-hibernate-safe" ];
+      };
     };
     services = {
       smartScheme = true;
@@ -172,6 +194,39 @@ EOF
           --arg wallpaperDir "${seededWallpaperDirValue}" \
           '
             .general = ((.general // {}) | .apps = ((.apps // {}) | .terminal = (.terminal // [$term])))
+            | .general.idle = (.general.idle // {})
+            | .general.idle.lockBeforeSleep = (.general.idle.lockBeforeSleep // true)
+            | if ((.general.idle.timeouts? | type) == "array") then
+                .general.idle.timeouts = (
+                  .general.idle.timeouts
+                  | map(
+                      if (.timeout? == 600 and (.idleAction? == ["systemctl", "suspend-then-hibernate"])) then
+                        .idleAction = ["system-suspend-then-hibernate-safe"]
+                      else
+                        .
+                      end
+                    )
+                )
+              else
+                .
+              end
+            | .launcher = (.launcher // {})
+            | if ((.launcher.actions? | type) == "array") then
+                .launcher.actions = (
+                  .launcher.actions
+                  | map(
+                      if (.name? == "Sleep") then
+                        .command = ["system-suspend-then-hibernate-safe"]
+                      else
+                        .
+                      end
+                    )
+                )
+              else
+                .
+              end
+            | .session = (.session // {})
+            | .session.commands = ((.session.commands // {}) | .hibernate = ["system-hibernate-safe"])
             | .services = ((.services // {}) | .smartScheme = (.smartScheme // true))
             | if $wallpaperDir != "" then
                 .paths = ((.paths // {}) | .wallpaperDir = (.wallpaperDir // $wallpaperDir))
