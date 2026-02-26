@@ -7,24 +7,6 @@ let
   userShells = map shellForUser users;
   useZsh = builtins.elem "zsh" userShells;
   useFish = builtins.elem "fish" userShells;
-  audio = settings.audio or { };
-  audioBackend = audio.backend or "pipewire";
-  usePipeWire = audioBackend == "pipewire";
-  usePulseAudio = audioBackend == "pulseaudio";
-  audioBt = audio.bluetooth or { };
-  enableHiFiCodecs = audioBt.enableHiFiCodecs or true;
-  enableMsbc = audioBt.enableMsbc or true;
-  bluetoothCodecs =
-    audioBt.codecs
-    or [
-      "sbc"
-      "sbc_xq"
-      "aac"
-      "aptx"
-      "aptx_hd"
-      "ldac"
-    ];
-  hasPulseAudioBtModules = builtins.hasAttr "pulseaudio-modules-bt" pkgs;
   network = settings.network or { };
   tailscaleCfg = network.tailscale or { };
   tailscaleEnabled = tailscaleCfg.enable or false;
@@ -33,11 +15,13 @@ in {
     ./hardware-configuration.nix
     ./modules/boot.nix
     ./modules/binfmt.nix
+    ./modules/audio.nix
     ./modules/kernel.nix
     ./modules/security.nix
     ./modules/storage.nix
     ../../system/apps/bambulab.nix
     ../../system/binfmt
+    ../../system/audio
     ../../system/boot
     ../../system/kernel
     ../../system/security
@@ -93,55 +77,6 @@ in {
     useXkbConfig = true;
   };
 
-  services.pipewire = {
-    enable = usePipeWire;
-    pulse.enable = usePipeWire;
-    alsa.enable = usePipeWire;
-    alsa.support32Bit = usePipeWire;
-    wireplumber.enable = usePipeWire;
-  };
-  security.rtkit.enable = true;
-
-  services.pipewire.wireplumber.extraConfig = lib.mkIf (usePipeWire && enableHiFiCodecs) {
-    "51-bluez-codecs" = {
-      "monitor.bluez.properties" = {
-        "bluez5.codecs" = bluetoothCodecs;
-        "bluez5.enable-msbc" = enableMsbc;
-        "bluez5.enable-sbc-xq" = builtins.elem "sbc_xq" bluetoothCodecs;
-        "bluez5.enable-hw-volume" = true;
-        "bluez5.roles" = [
-          "hsp_hs"
-          "hsp_ag"
-          "hfp_hf"
-          "hfp_ag"
-          "a2dp_sink"
-          "a2dp_source"
-        ];
-      };
-    };
-  };
-
-  services.pulseaudio = {
-    enable = usePulseAudio;
-    support32Bit = true;
-    package = lib.mkIf usePulseAudio pkgs.pulseaudioFull;
-  };
-
-  hardware.bluetooth.enable = true;
-  hardware.bluetooth.powerOnBoot = true;
-  hardware.bluetooth.settings = lib.mkMerge [
-    {
-      Policy = {
-        AutoEnable = true;
-      };
-    }
-    (lib.mkIf enableHiFiCodecs {
-      General = {
-        Experimental = true;
-      };
-    })
-  ];
-  services.blueman.enable = true;
   services.printing.enable = true;
 
   programs.zsh.enable = useZsh;
@@ -180,11 +115,7 @@ in {
     lsof
     lm_sensors
     vulkan-tools
-  ]) ++ lib.optionals tailscaleEnabled [
-    pkgs.tailscale
-  ] ++ lib.optionals (usePulseAudio && hasPulseAudioBtModules && enableHiFiCodecs) [
-    pkgs."pulseaudio-modules-bt"
-  ];
+  ]) ++ lib.optionals tailscaleEnabled [ pkgs.tailscale ];
 
   fonts.packages = [
     settings.themeDetails.fontPkg
@@ -197,14 +128,6 @@ in {
     {
       assertion = lib.all (shell: builtins.elem shell allowedShells) userShells;
       message = "All resolved user shells must be one of: zsh, fish (from settings.shell or userSettings.<name>.shell)";
-    }
-    {
-      assertion = builtins.elem audioBackend [ "pipewire" "pulseaudio" ];
-      message = "settings.audio.backend must be one of: pipewire, pulseaudio";
-    }
-    {
-      assertion = (!enableHiFiCodecs) || ((builtins.length bluetoothCodecs) > 0);
-      message = "settings.audio.bluetooth.codecs must not be empty when enableHiFiCodecs=true";
     }
   ];
 
