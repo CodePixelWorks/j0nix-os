@@ -1,7 +1,15 @@
-{ settings, ... }:
+{ lib, settings, ... }:
 let
   audio = settings.audio or { };
   audioBt = audio.bluetooth or { };
+  defaultBluetoothCodecs = [
+    "sbc"
+    "sbc_xq"
+    "aac"
+    "aptx"
+    "aptx_hd"
+    "ldac"
+  ];
 in
 {
   j0nix.desktop.audio = {
@@ -9,14 +17,8 @@ in
     bluetooth = {
       enableHiFiCodecs = audioBt.enableHiFiCodecs or true;
       enableMsbc = audioBt.enableMsbc or true;
-      codecs = audioBt.codecs or [
-        "sbc"
-        "sbc_xq"
-        "aac"
-        "aptx"
-        "aptx_hd"
-        "ldac"
-      ];
+      # Merge user/global codec preferences with desktop defaults and deduplicate.
+      codecs = lib.unique ((audioBt.codecs or [ ]) ++ defaultBluetoothCodecs);
     };
   };
 }
