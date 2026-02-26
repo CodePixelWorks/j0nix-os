@@ -1,32 +1,50 @@
-{ lib, settings, ... }:
+{ config, lib, ... }:
 let
-  drivers = settings.drivers or { };
-  intelEnabled = ((drivers.intel or { }).enable or false);
-  nvidiaEnabled = ((drivers.nvidia or { }).enable or false);
-  nvidiaPrimeEnabled = ((drivers.nvidiaPrime or { }).enable or false);
-  vmGuestServicesEnabled = ((drivers.vmGuestServices or { }).enable or false);
+  cfg = config.j0nix.desktop.drivers;
+  intelEnabled = cfg.intel.enable;
+  nvidiaEnabled = cfg.nvidia.enable;
+  nvidiaPrimeEnabled = cfg.nvidiaPrime.enable;
+  vmGuestServicesEnabled = config.j0nix.desktop.virtualisation.vmGuestServices.enable;
 in {
+  options.j0nix.desktop.drivers = {
+    amdgpu.enable = lib.mkOption { type = lib.types.bool; default = false; };
+    intel.enable = lib.mkOption { type = lib.types.bool; default = false; };
+    nvidia = {
+      enable = lib.mkOption { type = lib.types.bool; default = false; };
+      open = lib.mkOption { type = lib.types.bool; default = false; };
+      package = lib.mkOption {
+        type = lib.types.enum [ "production" "latest" "beta" ];
+        default = "production";
+      };
+    };
+    nvidiaPrime = {
+      enable = lib.mkOption { type = lib.types.bool; default = false; };
+      intelBusID = lib.mkOption { type = lib.types.str; default = "PCI:1:0:0"; };
+      nvidiaBusID = lib.mkOption { type = lib.types.str; default = "PCI:0:2:0"; };
+    };
+    hardwareClockLocalTime.enable = lib.mkOption { type = lib.types.bool; default = false; };
+  };
+
   imports = [
     ./amd-drivers.nix
     ./intel-drivers.nix
     ./nvidia-drivers.nix
     ./nvidia-prime-drivers.nix
     ./local-hardware-clock.nix
-    ./vm-guest-services.nix
   ];
 
-  assertions = [
+  config.assertions = [
     {
       assertion = !(nvidiaPrimeEnabled && !nvidiaEnabled);
-      message = "settings.drivers.nvidiaPrime.enable requires settings.drivers.nvidia.enable = true";
+      message = "j0nix.desktop.drivers.nvidiaPrime.enable requires j0nix.desktop.drivers.nvidia.enable = true";
     }
     {
       assertion = !(nvidiaPrimeEnabled && !intelEnabled);
-      message = "settings.drivers.nvidiaPrime.enable requires settings.drivers.intel.enable = true";
+      message = "j0nix.desktop.drivers.nvidiaPrime.enable requires j0nix.desktop.drivers.intel.enable = true";
     }
     {
       assertion = !(nvidiaEnabled && vmGuestServicesEnabled);
-      message = "settings.drivers.nvidia.enable should not be combined with settings.drivers.vmGuestServices.enable for bare-metal NVIDIA setups";
+      message = "j0nix.desktop.drivers.nvidia.enable should not be combined with j0nix.desktop.virtualisation.vmGuestServices.enable for bare-metal NVIDIA setups";
     }
   ];
 }

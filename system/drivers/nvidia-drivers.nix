@@ -1,8 +1,8 @@
-{ lib, config, pkgs, settings, ... }:
+{ lib, config, pkgs, ... }:
 let
-  cfg = (settings.drivers or { }).nvidia or { };
-  enabled = cfg.enable or false;
-  packageChoice = cfg.package or "production";
+  cfg = config.j0nix.desktop.drivers.nvidia;
+  enabled = cfg.enable;
+  packageChoice = cfg.package;
   nvidiaPackages = config.boot.kernelPackages.nvidiaPackages;
   selectedPackage =
     if packageChoice == "production" && (nvidiaPackages ? production) then nvidiaPackages.production
@@ -36,7 +36,7 @@ lib.mkMerge [
     assertions = [
       {
         assertion = builtins.elem packageChoice [ "production" "latest" "beta" ];
-        message = "settings.drivers.nvidia.package must be one of: production, latest, beta";
+        message = "j0nix.desktop.drivers.nvidia.package must be one of: production, latest, beta";
       }
     ];
   }
