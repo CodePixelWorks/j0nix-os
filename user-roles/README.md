@@ -22,6 +22,7 @@ Recommended modern baseline roles:
 - `remote-work`
 - `video-editing`
 - `3d-creation`
+- `3d-printing`
 
 Roles should append into central aggregators (e.g. `j0nix.software.*`, `j0nix.user.software.*`, `j0nix.desktop.sysctl.extraFragments`) instead of writing directly to final package/sysctl outputs.
 
