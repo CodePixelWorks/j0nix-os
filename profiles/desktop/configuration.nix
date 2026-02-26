@@ -1,4 +1,4 @@
-{ pkgs, lib, settings, inputs, ... }:
+{ pkgs, lib, settings, inputs, utils, ... }:
 let
   users = settings.users or [ settings.username ];
   userOverrides = settings.userSettings or { };
@@ -38,6 +38,15 @@ let
   gamesDiskOnDemandAutomount = gamesDisk.onDemandAutomount or false;
   gamesDiskIdleTimeout = gamesDisk.idleTimeout or "5min";
   gamesDiskForceDirtyNtfsMount = gamesDisk.forceDirtyNtfsMount or false;
+  mkMountRebuildGuards = import ../../system/lib/mount-rebuild-guards.nix { inherit lib utils; };
+  managedExtraMounts =
+    lib.optionals gamesDiskEnabled [
+      {
+        mountPoint = gamesDiskMountPoint;
+        automount = gamesDiskOnDemandAutomount;
+        preventRemount = true;
+      }
+    ];
   network = settings.network or { };
   tailscaleCfg = network.tailscale or { };
   tailscaleEnabled = tailscaleCfg.enable or false;
@@ -283,22 +292,9 @@ in {
     };
   };
 
-  # Prevent nixos-rebuild switch from stopping/restarting the NTFS games disk mount unit on reconfiguration.
-  # This avoids unclean NTFS unmounts while the disk is in active use (e.g. Steam/Lutris files on /mnt/Games).
-  systemd.units = lib.mkIf gamesDiskEnabled (
-    {
-      "mnt-Games.mount" = {
-        stopIfChanged = false;
-        restartIfChanged = false;
-      };
-    }
-    // lib.optionalAttrs gamesDiskOnDemandAutomount {
-      "mnt-Games.automount" = {
-        stopIfChanged = false;
-        restartIfChanged = false;
-      };
-    }
-  );
+  # Prevent rebuild reconfiguration from stopping/restarting selected data-disk mount units while in use.
+  # The source-of-truth mount list lives in this profile (`managedExtraMounts`); guard logic is shared in a helper lib.
+  systemd.units = mkMountRebuildGuards managedExtraMounts;
 
   assertions = [
     {
