@@ -60,6 +60,8 @@ in {
       tmpfsSize = "30%";
     };
     loader.systemd-boot.enable = true;
+    # Prevent unbounded growth of boot entries in the EFI partition.
+    loader.systemd-boot.configurationLimit = 12;
     loader.efi.canTouchEfiVariables = true;
     # Help NVIDIA HDMI/DP audio endpoints appear reliably on some setups/TVs.
     kernelModules = [
@@ -97,6 +99,12 @@ in {
     ];
     trusted-users = [ "root" ] ++ users;
   };
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 14d";
+  };
+  nix.optimise.automatic = true;
 
   networking.hostName = settings.hostname;
   networking.networkmanager.enable = true;
