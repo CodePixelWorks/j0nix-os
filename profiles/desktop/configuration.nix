@@ -32,6 +32,7 @@ in {
   imports = [
     ./hardware-configuration.nix
     ./modules/storage.nix
+    ./modules/udisks.nix
     ../../system/apps/bambulab.nix
     ../../system/storage
     ../../system/drivers
@@ -107,6 +108,7 @@ in {
 
   networking.hostName = settings.hostname;
   networking.networkmanager.enable = true;
+  services.dbus.implementation = "broker";
   services.tailscale.enable = tailscaleEnabled;
 
   time.timeZone = settings.timezone;
