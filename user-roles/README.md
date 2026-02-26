@@ -15,6 +15,7 @@ Users can enable multiple roles via `settings.userSettings.<name>.roles = [ ... 
 
 Recommended modern baseline roles:
 - `developer`
+- `ai-work`
 - `gaming`
 - `office`
 - `remote-work`
