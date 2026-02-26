@@ -22,18 +22,5 @@
       path = "/swapfile";
       sizeMiB = 68 * 1024;
     };
-
-    kernelModules = [
-      # Help NVIDIA HDMI/DP audio endpoints appear reliably on some setups/TVs.
-      "snd_hda_intel"
-      "snd_hda_codec_hdmi"
-    ];
-
-    modprobeOptions = {
-      # USB Bluetooth adapters/controllers can become unreliable after autosuspend.
-      btusb.enable_autosuspend = 0;
-    };
-
-    appimageBinfmt.enable = true;
   };
 }
