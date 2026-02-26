@@ -1,7 +1,6 @@
-{ lib, pkgs, settings, ... }:
+{ config, lib, pkgs, ... }:
 let
-  cfg = (settings.drivers or { }).amdgpu or { };
-  enabled = cfg.enable or false;
+  enabled = config.j0nix.desktop.drivers.amdgpu.enable;
 in
 lib.mkIf enabled {
   services.xserver.videoDrivers = lib.mkDefault [ "amdgpu" ];
