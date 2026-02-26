@@ -166,6 +166,9 @@ in
       procps
       wl-clipboard
       cliphist
+      # Caelestia shell screen recording actions expect these in PATH.
+      gpu-screen-recorder
+      gpu-screen-recorder-gtk
       matugen
       hicolor-icon-theme
       adwaita-icon-theme
