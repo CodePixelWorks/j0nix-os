@@ -169,63 +169,6 @@ in
       pkill fuzzel >/dev/null 2>&1 || true
       exec wm-shell-restart
     '')
-    (writeShellScriptBin "wm-window-maximize-safe" ''
-      set -euo pipefail
-
-      if ! command -v hyprctl >/dev/null 2>&1; then
-        exit 1
-      fi
-
-      active_json="$(hyprctl -j activewindow 2>/dev/null || true)"
-      monitor_json="$(hyprctl -j monitors 2>/dev/null || true)"
-
-      if [ -z "$active_json" ] || [ -z "$monitor_json" ]; then
-        # Fallback to Hyprland's maximize-ish mode if JSON info is unavailable.
-        exec hyprctl dispatch fullscreen 1
-      fi
-
-      fullscreen_mode="$(printf '%s' "$active_json" | ${pkgs.jq}/bin/jq -r '.fullscreen // 0')"
-      is_floating="$(printf '%s' "$active_json" | ${pkgs.jq}/bin/jq -r '.floating // false')"
-
-      # Toggle off Hyprland fullscreen first so geometry operations apply cleanly.
-      if [ "$fullscreen_mode" = "1" ]; then
-        hyprctl dispatch fullscreen 1 >/dev/null 2>&1 || true
-      elif [ "$fullscreen_mode" = "2" ] || [ "$fullscreen_mode" = "3" ]; then
-        hyprctl dispatch fullscreen 0 >/dev/null 2>&1 || true
-      fi
-
-      if [ "$is_floating" != "true" ]; then
-        hyprctl dispatch togglefloating >/dev/null 2>&1 || true
-      fi
-
-      mon="$(printf '%s' "$monitor_json" | ${pkgs.jq}/bin/jq -r 'map(select(.focused == true)) | .[0]')"
-      if [ "$mon" = "null" ] || [ -z "$mon" ]; then
-        exec hyprctl dispatch fullscreen 1
-      fi
-
-      x="$(printf '%s' "$mon" | ${pkgs.jq}/bin/jq -r '.x // 0')"
-      y="$(printf '%s' "$mon" | ${pkgs.jq}/bin/jq -r '.y // 0')"
-      w="$(printf '%s' "$mon" | ${pkgs.jq}/bin/jq -r '.width // 0')"
-      h="$(printf '%s' "$mon" | ${pkgs.jq}/bin/jq -r '.height // 0')"
-      top="$(printf '%s' "$mon" | ${pkgs.jq}/bin/jq -r '.reserved[0] // 0')"
-      bottom="$(printf '%s' "$mon" | ${pkgs.jq}/bin/jq -r '.reserved[1] // 0')"
-      left="$(printf '%s' "$mon" | ${pkgs.jq}/bin/jq -r '.reserved[2] // 0')"
-      right="$(printf '%s' "$mon" | ${pkgs.jq}/bin/jq -r '.reserved[3] // 0')"
-
-      gap=10
-      target_x=$((x + left + gap))
-      target_y=$((y + top + gap))
-      target_w=$((w - left - right - (2 * gap)))
-      target_h=$((h - top - bottom - (2 * gap)))
-
-      if [ "$target_w" -lt 320 ] || [ "$target_h" -lt 240 ]; then
-        exec hyprctl dispatch fullscreen 1
-      fi
-
-      hyprctl dispatch moveactive exact "$target_x" "$target_y" >/dev/null 2>&1 || true
-      hyprctl dispatch resizeactive exact "$target_w" "$target_h" >/dev/null 2>&1 || true
-      hyprctl dispatch centerwindow 1 >/dev/null 2>&1 || true
-    '')
   ];
 
   assertions = [
