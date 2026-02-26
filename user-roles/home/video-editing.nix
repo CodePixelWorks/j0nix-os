@@ -1,7 +1,7 @@
 { pkgs, ... }:
 {
   j0nix.user.software.packages = with pkgs; [
-    kdenlive
+    shotcut
     handbrake
     mkvtoolnix
     ffmpeg-full
