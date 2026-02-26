@@ -10,6 +10,7 @@ let
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   uwsmAppPrefix = "${lib.getExe pkgs.uwsm} app --";
   appExec = cmd: if useUWSM then "${uwsmAppPrefix} ${cmd}" else cmd;
+  launcherAppExec = cmd: if useUWSM then "${uwsmAppPrefix} ${cmd}" else "app2unit -- ${cmd}";
   preferredTerminal = settings.preferredTerminal or "kitty";
   preferredTerminalCmd =
     if builtins.elem preferredTerminal [ "gnome-console" "gnome console" ] then "kgx" else preferredTerminal;
@@ -173,12 +174,12 @@ let
           "$mainMod SHIFT ALT, r, exec, caelestia record -r"
           "$mainMod SHIFT, s, global, caelestia:screenshotFreeze"
           "$mainMod SHIFT ALT, s, global, caelestia:screenshot"
-          "$mainMod, b, exec, ${appExec (settings.preferredBrowser or "chromium")}"
-          "$mainMod, e, exec, ${appExec (settings.preferredEditor or "nvim")}"
-          "$mainMod ALT, e, exec, ${appExec preferredFileManager}"
-          "$mainMod, g, exec, ${appExec "github-desktop"}"
-          "CTRL ALT, v, exec, ${appExec "pavucontrol"}"
-          "CTRL ALT, Escape, exec, ${appExec "qps"}"
+          "$mainMod, b, exec, ${launcherAppExec (settings.preferredBrowser or "chromium")}"
+          "$mainMod, e, exec, ${launcherAppExec (settings.preferredEditor or "nvim")}"
+          "$mainMod ALT, e, exec, ${launcherAppExec preferredFileManager}"
+          "$mainMod, g, exec, ${launcherAppExec "github-desktop"}"
+          "CTRL ALT, v, exec, ${launcherAppExec "pavucontrol"}"
+          "CTRL ALT, Escape, exec, ${launcherAppExec "qps"}"
           "$mainMod ALT, s, movetoworkspace, special:special"
           "$mainMod, s, exec, caelestia toggle specialws"
           "$mainMod CTRL SHIFT, up, movetoworkspace, special:special"
