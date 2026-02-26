@@ -9,6 +9,9 @@
     # Local printer management GUI (CUPS frontend).
     software = [ pkgs.system-config-printer ];
 
+    # Network printer discovery / hostname resolution via mDNS (Avahi).
+    discovery.enable = true;
+
     printers = [
       {
         name = "HP-OfficeJet-5220";
