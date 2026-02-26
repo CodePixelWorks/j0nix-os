@@ -227,6 +227,29 @@ in {
   services.udisks2.enable = autoMountWindows;
   services.dbus.implementation = "broker";
 
+  j0nix.desktop.storage.mounts = [
+    {
+      name = "games";
+      enable = ((storage.gamesDisk or { }).enable or false);
+      mountPoint = ((storage.gamesDisk or { }).mountPoint or "/mnt/Games");
+      device = "/dev/disk/by-uuid/${((storage.gamesDisk or { }).uuid or "")}";
+      fsType = ((storage.gamesDisk or { }).fsType or "ntfs3");
+      options = [
+        "rw"
+        "uid=1000"
+        "gid=100"
+        "umask=0022"
+        "nofail"
+      ];
+      gvfsShow = ((storage.gamesDisk or { }).gvfsShow or true);
+      gvfsName = ((storage.gamesDisk or { }).gvfsName or "GAMES");
+      automount = ((storage.gamesDisk or { }).onDemandAutomount or false);
+      idleTimeout = ((storage.gamesDisk or { }).idleTimeout or "5min");
+      preventRemount = true;
+      forceDirtyNtfsMount = ((storage.gamesDisk or { }).forceDirtyNtfsMount or false);
+    }
+  ];
+
   security.polkit.enable = true;
   security.polkit.extraConfig = lib.mkIf noPasswordMounts ''
     polkit.addRule(function(action, subject) {
