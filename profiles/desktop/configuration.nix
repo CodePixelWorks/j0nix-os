@@ -1,12 +1,6 @@
 { pkgs, lib, settings, inputs, ... }:
 let
   users = settings.users or [ settings.username ];
-  userOverrides = settings.userSettings or { };
-  allowedShells = [ "zsh" "fish" ];
-  shellForUser = username: (userOverrides.${username}.shell or settings.shell);
-  userShells = map shellForUser users;
-  useZsh = builtins.elem "zsh" userShells;
-  useFish = builtins.elem "fish" userShells;
   network = settings.network or { };
   tailscaleCfg = network.tailscale or { };
   tailscaleEnabled = tailscaleCfg.enable or false;
@@ -19,7 +13,9 @@ in {
     ./modules/kernel.nix
     ./modules/security.nix
     ./modules/storage.nix
+    ./modules/accounts.nix
     ../../system/apps/bambulab.nix
+    ../../system/accounts
     ../../system/binfmt
     ../../system/audio
     ../../system/boot
@@ -79,25 +75,6 @@ in {
 
   services.printing.enable = true;
 
-  programs.zsh.enable = useZsh;
-  programs.fish.enable = useFish;
-  services.getty.autologinUser = lib.mkForce null;
-
-  users.users = lib.genAttrs users (username: {
-    isNormalUser = true;
-    shell = pkgs.${shellForUser username};
-    description = username;
-    extraGroups = [
-      "wheel"
-      "networkmanager"
-      "audio"
-      "video"
-      "gamemode"
-    ] ++ lib.optionals (((settings.dev or { }).docker or { }).enable or true) [
-      "docker"
-    ];
-  });
-
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [ stdenv.cc.cc ];
 
@@ -125,10 +102,6 @@ in {
   virtualisation.libvirtd.enable = true;
 
   assertions = [
-    {
-      assertion = lib.all (shell: builtins.elem shell allowedShells) userShells;
-      message = "All resolved user shells must be one of: zsh, fish (from settings.shell or userSettings.<name>.shell)";
-    }
   ];
 
   system.stateVersion = "25.11";
