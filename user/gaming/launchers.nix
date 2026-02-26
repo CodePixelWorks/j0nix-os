@@ -29,6 +29,6 @@ lib.mkIf enabled {
   home.packages =
     lib.optionals ((launchers.heroic or true) && heroicPkg != null) [ heroicPkg ]
     ++ lib.optionals (launchers.bottles or true) [ pkgs.bottles ]
-    ++ lib.optionals (launchers.wineGui or false) [ pkgs.wineWowPackages.waylandFull ]
+    ++ lib.optionals (launchers.wineGui or false) [ pkgs.wineWow64Packages.waylandFull ]
     ++ lib.optionals (rockstarEnabled && (pkgs ? protontricks)) [ pkgs.protontricks ];
 }
