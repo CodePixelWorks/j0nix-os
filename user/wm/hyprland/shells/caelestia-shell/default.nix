@@ -114,6 +114,31 @@ in
           exit 0
         fi
 
+        append_unique_colon_path() {
+          # Keep Quickshell desktop-entry rescans stable by avoiding duplicated search roots.
+          # Duplicate XDG_DATA_DIRS entries cause repeated app replacement churn in Quickshell.
+          local current="$1"
+          local item="$2"
+          local part
+
+          [ -n "$item" ] || { printf '%s' "$current"; return 0; }
+
+          IFS=':'
+          for part in $current; do
+            if [ "$part" = "$item" ]; then
+              printf '%s' "$current"
+              return 0
+            fi
+          done
+          unset IFS
+
+          if [ -n "$current" ]; then
+            printf '%s:%s' "$current" "$item"
+          else
+            printf '%s' "$item"
+          fi
+        }
+
         ${lib.optionalString iconThemeEnabled ''
         export XDG_ICON_THEME="${iconThemeName}"
         export GTK_ICON_THEME="${iconThemeName}"
@@ -122,21 +147,35 @@ in
         ''}
         # Quickshell app icons are resolved through freedesktop icon lookup paths.
         # UWSM/systemd user sessions can miss Home Manager profile paths here.
-        export XDG_DATA_DIRS="${lib.concatStringsSep ":" (
+        # Keep the list deduplicated to avoid repeated desktop-entry replacement churn.
+        xdg_data_dirs=""
+        for d in ${lib.concatStringsSep " " (
           [
-            "$HOME/.nix-profile/share"
-            "/etc/profiles/per-user/$USER/share"
-            "/run/current-system/sw/share"
-            "$HOME/.local/share/flatpak/exports/share"
-            "/var/lib/flatpak/exports/share"
+            ''"$HOME/.nix-profile/share"''
+            ''"/etc/profiles/per-user/$USER/share"''
+            ''"/run/current-system/sw/share"''
+            ''"$HOME/.local/share/flatpak/exports/share"''
+            ''"/var/lib/flatpak/exports/share"''
           ]
-          ++ lib.optionals (iconThemePackage != null) [ "${iconThemePackage}/share" ]
+          ++ lib.optionals (iconThemePackage != null) [ ''"${iconThemePackage}/share"'' ]
           ++ [
-            "${hicolor-icon-theme}/share"
-            "${adwaita-icon-theme}/share"
-            "${papirus-icon-theme}/share"
+            ''"${hicolor-icon-theme}/share"''
+            ''"${adwaita-icon-theme}/share"''
+            ''"${papirus-icon-theme}/share"''
           ]
-        )}:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+        )}; do
+          xdg_data_dirs="$(append_unique_colon_path "$xdg_data_dirs" "$d")"
+        done
+        IFS=':'
+        for d in ''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}; do
+          xdg_data_dirs="$(append_unique_colon_path "$xdg_data_dirs" "$d")"
+        done
+        unset IFS
+        export XDG_DATA_DIRS="$xdg_data_dirs"
+        unset xdg_data_dirs d
+
+        # Prefer the conservative render loop for shell stability on NVIDIA/QtQuick.
+        export QSG_RENDER_LOOP="''${QSG_RENDER_LOOP:-basic}"
         # Caelestia actions (e.g. screen recording) execute from the shell process env.
         # Ensure GPU Screen Recorder binaries are resolvable even if the session PATH is incomplete.
         export PATH="${lib.makeBinPath [ gpu-screen-recorder gpu-screen-recorder-gtk ]}:$PATH"
