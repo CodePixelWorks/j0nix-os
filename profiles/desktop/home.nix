@@ -4,8 +4,8 @@ let
   bambuCfg = programsCfg.bambulab or { };
   bambuProvider = bambuCfg.provider or "appimage";
   bambuAppImagePackage = pkgs.callPackage ../../user/programs/bambulab/appimage-package.nix { };
-  storage = settings.storage or { };
-  autoMountWindows = storage.autoMountWindows or true;
+  # Storage policy moved to the desktop storage profile module; keep user-space udisks automount enabled here.
+  enableUdiskieAutomount = true;
   configuredFileManagersRaw =
     settings.fileManagers
     or (lib.optional ((settings.preferredFileManager or null) != null) settings.preferredFileManager);
@@ -116,14 +116,12 @@ in
     python3
     cargo
     rustc
-    ollama
-
     openvpn
     unzip
     android-tools
     xdg-utils
   ] ++ fileManagerPackages
-    ++ (with pkgs; if autoMountWindows then [ udiskie ] else [ ])
+    ++ (with pkgs; if enableUdiskieAutomount then [ udiskie ] else [ ])
     ++ lib.optionals (pkgs ? fusion360) [ pkgs.fusion360 ]
     ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) ([ iconThemePackage ] ++ iconThemeFallbackPackages);
 
@@ -182,7 +180,7 @@ in
   };
 
   # User-space automount for additional internal/removable drives via udisks2.
-  systemd.user.services.udiskie = lib.mkIf autoMountWindows {
+  systemd.user.services.udiskie = lib.mkIf enableUdiskieAutomount {
     Unit = {
       Description = "Udiskie automount daemon";
       PartOf = [ "graphical-session.target" ];
