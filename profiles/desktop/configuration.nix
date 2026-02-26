@@ -63,6 +63,8 @@ in {
     # Prevent unbounded growth of boot entries in the EFI partition.
     loader.systemd-boot.configurationLimit = 12;
     loader.efi.canTouchEfiVariables = true;
+    # Hibernate via swapfile on / (ext4); resume_offset is added in a follow-up step.
+    resumeDevice = "/dev/disk/by-uuid/28c5e755-f2df-4f57-af8a-36998a4a2f25";
     # Help NVIDIA HDMI/DP audio endpoints appear reliably on some setups/TVs.
     kernelModules = [
       "snd_hda_intel"
@@ -81,6 +83,14 @@ in {
       magicOrExtension = ''\x7fELF....AI\x02'';
     };
   };
+
+  # 68 GiB swapfile to support hibernate / suspend-then-hibernate on a 62 GiB RAM system.
+  swapDevices = [
+    {
+      device = "/swapfile";
+      size = 68 * 1024;
+    }
+  ];
 
   nixpkgs.overlays = [
     inputs.nix-cachyos-kernel.overlays.pinned
