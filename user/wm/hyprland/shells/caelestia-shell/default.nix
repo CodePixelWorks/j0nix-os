@@ -118,7 +118,25 @@ in
         export XDG_ICON_THEME="${iconThemeName}"
         export GTK_ICON_THEME="${iconThemeName}"
         export QT_ICON_THEME_NAME="${iconThemeName}"
+        export QT_QUICK_CONTROLS_ICON_THEME_NAME="${iconThemeName}"
         ''}
+        # Quickshell app icons are resolved through freedesktop icon lookup paths.
+        # UWSM/systemd user sessions can miss Home Manager profile paths here.
+        export XDG_DATA_DIRS="${lib.concatStringsSep ":" (
+          [
+            "$HOME/.nix-profile/share"
+            "/etc/profiles/per-user/$USER/share"
+            "/run/current-system/sw/share"
+            "$HOME/.local/share/flatpak/exports/share"
+            "/var/lib/flatpak/exports/share"
+          ]
+          ++ lib.optionals (iconThemePackage != null) [ "${iconThemePackage}/share" ]
+          ++ [
+            "${hicolor-icon-theme}/share"
+            "${adwaita-icon-theme}/share"
+            "${papirus-icon-theme}/share"
+          ]
+        )}:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
         # Caelestia actions (e.g. screen recording) execute from the shell process env.
         # Ensure GPU Screen Recorder binaries are resolvable even if the session PATH is incomplete.
         export PATH="${lib.makeBinPath [ gpu-screen-recorder gpu-screen-recorder-gtk ]}:$PATH"
