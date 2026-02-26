@@ -6,7 +6,7 @@ let
   controllerEnabled = controllerCfg.enable or true;
 in
 lib.mkIf (enabled && controllerEnabled) {
-  boot.kernelModules =
+  j0nix.desktop.kernel.modules =
     lib.optionals (controllerCfg.nintendo or true) [ "hid_nintendo" ]
     ++ lib.optionals (controllerCfg.xbox or true) [ "xpad" ]
     ++ [
