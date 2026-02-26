@@ -1,118 +1,59 @@
-{ config, lib, utils, ... }:
+{ lib, settings, ... }:
 let
-  cfg = config.j0nix.desktop.storage;
-  mkMountRebuildGuards = import ../../../system/lib/mount-rebuild-guards.nix { inherit lib utils; };
-
-  enabledManagedMounts = lib.filter (m: m.enable) cfg.mounts;
-
-  mkMountOptions = m:
-    m.options
-    ++ lib.optionals m.gvfsShow [
-      "x-gvfs-show"
-      "x-gvfs-name=${m.gvfsName}"
-    ]
-    ++ lib.optionals m.automount [
-      "x-systemd.automount"
-      "x-systemd.idle-timeout=${m.idleTimeout}"
-    ]
-    ++ lib.optionals m.forceDirtyNtfsMount [
-      # Emergency-only workaround for NTFS dirty volumes. Prefer running chkdsk on Windows.
-      "force"
-    ];
+  storage = settings.storage or { };
+  autoMountWindows = storage.autoMountWindows or true;
+  noPasswordMounts = storage.noPasswordMounts or true;
 in
 {
-  options.j0nix.desktop.storage.mounts = lib.mkOption {
-    default = [ ];
-    description = "Declarative extra data mounts managed by the desktop profile.";
-    type = lib.types.listOf (lib.types.submodule ({ ... }: {
-      options = {
-        name = lib.mkOption {
-          type = lib.types.str;
-          default = "mount";
-        };
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-        };
-        mountPoint = lib.mkOption {
-          type = lib.types.str;
-        };
-        device = lib.mkOption {
-          type = lib.types.str;
-        };
-        fsType = lib.mkOption {
-          type = lib.types.str;
-        };
-        options = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
-          default = [ ];
-        };
-        gvfsShow = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-        };
-        gvfsName = lib.mkOption {
-          type = lib.types.str;
-          default = "";
-        };
-        automount = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-        };
-        idleTimeout = lib.mkOption {
-          type = lib.types.str;
-          default = "5min";
-        };
-        preventRemount = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-        };
-        forceDirtyNtfsMount = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-        };
-      };
-    }));
-  };
+  services.gvfs.enable = true;
+  services.udisks2.enable = autoMountWindows;
+  services.dbus.implementation = "broker";
 
-  config = {
-    fileSystems = builtins.listToAttrs (map
-      (m: {
-        name = m.mountPoint;
-        value = {
-          inherit (m) device fsType;
-          options = mkMountOptions m;
-        };
-      })
-      enabledManagedMounts);
+  j0nix.desktop.storage.mounts = [
+    {
+      name = "games";
+      enable = true;
+      mountPoint = "/mnt/Games";
+      device = "/dev/disk/by-uuid/6A68028468024F6F";
+      fsType = "ntfs3";
+      options = [
+        "rw"
+        "uid=1000"
+        "gid=100"
+        "umask=0022"
+        "nofail"
+      ];
+      gvfsShow = true;
+      gvfsName = "GAMES";
+      automount = false;
+      idleTimeout = "5min";
+      preventRemount = true;
+      forceDirtyNtfsMount = false;
+    }
+  ];
 
-    # Source of truth is `j0nix.desktop.storage.mounts`; rebuild guard logic is handled by a shared helper.
-    systemd.units = mkMountRebuildGuards cfg.mounts;
+  security.polkit.enable = true;
+  security.polkit.extraConfig = lib.mkIf noPasswordMounts ''
+    polkit.addRule(function(action, subject) {
+      var allowed = [
+        "org.freedesktop.udisks2.filesystem-mount",
+        "org.freedesktop.udisks2.filesystem-mount-system",
+        "org.freedesktop.udisks2.filesystem-mount-other-seat",
+        "org.freedesktop.udisks2.filesystem-unmount-others",
+        "org.freedesktop.udisks2.encrypted-unlock",
+        "org.freedesktop.udisks2.eject-media"
+      ];
 
-    assertions =
-      map
-        (m: {
-          assertion = m.device != "";
-          message = "storage mount '${m.name}' requires a non-empty device";
-        })
-        enabledManagedMounts
-      ++ map
-        (m: {
-          assertion = lib.hasPrefix "/" m.mountPoint;
-          message = "storage mount '${m.name}' requires an absolute mountPoint";
-        })
-        enabledManagedMounts
-      ++ map
-        (m: {
-          assertion = (!m.gvfsShow) || (m.gvfsName != "");
-          message = "storage mount '${m.name}' requires gvfsName when gvfsShow = true";
-        })
-        enabledManagedMounts
-      ++ map
-        (m: {
-          assertion = (!m.forceDirtyNtfsMount) || builtins.elem m.fsType [ "ntfs3" "ntfs" ];
-          message = "storage mount '${m.name}' uses forceDirtyNtfsMount only for NTFS filesystems";
-        })
-        enabledManagedMounts;
-  };
+      if (allowed.indexOf(action.id) >= 0 && subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+      }
+    });
+  '';
+
+  assertions = [
+    {
+      assertion = builtins.isBool autoMountWindows && builtins.isBool noPasswordMounts;
+      message = "settings.storage.autoMountWindows and settings.storage.noPasswordMounts must be booleans";
+    }
+  ];
 }
