@@ -1,6 +1,6 @@
-{ lib, pkgs, settings, ... }:
+{ config, lib, pkgs, ... }:
 let
-  gaming = settings.gaming or { };
+  gaming = config.j0nix.desktop.gaming or { };
   enabled = gaming.enable or true;
   steamCfg = gaming.steam or { };
   steamEnabled = steamCfg.enable or true;
@@ -53,7 +53,7 @@ lib.mkIf (enabled && steamEnabled) {
   assertions = [
     {
       assertion = builtins.elem protonProvider [ "cachyos" "ge" ];
-      message = "settings.gaming.proton.provider must be one of: cachyos, ge";
+      message = "j0nix.desktop.gaming.proton.provider must be one of: cachyos, ge";
     }
   ];
 }
