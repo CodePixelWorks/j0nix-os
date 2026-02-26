@@ -32,10 +32,12 @@ in {
   imports = [
     ./hardware-configuration.nix
     ./modules/boot.nix
+    ./modules/binfmt.nix
     ./modules/kernel.nix
     ./modules/security.nix
     ./modules/storage.nix
     ../../system/apps/bambulab.nix
+    ../../system/binfmt
     ../../system/boot
     ../../system/kernel
     ../../system/security
@@ -47,8 +49,8 @@ in {
   ] ++ (map (wm: ../../system/wm/${wm}.nix) settings.wms);
 
   boot = {
-    # boot policy (tmp/loader/resume/kernel modules/modprobe/binfmt) is defined via
-    # `j0nix.desktop.boot` in `profiles/desktop/modules/boot.nix` and applied by `system/boot`.
+    # boot policy (tmp/loader/resume/swap) is defined via `j0nix.desktop.boot`
+    # in `profiles/desktop/modules/boot.nix` and applied by `system/boot`.
   };
 
   nixpkgs.config.allowUnfree = true;
