@@ -31,10 +31,12 @@ let
 in {
   imports = [
     ./hardware-configuration.nix
+    ./modules/boot.nix
     ./modules/kernel.nix
     ./modules/security.nix
     ./modules/storage.nix
     ../../system/apps/bambulab.nix
+    ../../system/boot
     ../../system/kernel
     ../../system/security
     ../../system/storage
@@ -45,42 +47,9 @@ in {
   ] ++ (map (wm: ../../system/wm/${wm}.nix) settings.wms);
 
   boot = {
-    tmp = {
-      useTmpfs = false;
-      tmpfsSize = "30%";
-    };
-    loader.systemd-boot.enable = true;
-    # Prevent unbounded growth of boot entries in the EFI partition.
-    loader.systemd-boot.configurationLimit = 12;
-    loader.efi.canTouchEfiVariables = true;
-    # Hibernate via swapfile on / (ext4); resume_offset is added in a follow-up step.
-    resumeDevice = "/dev/disk/by-uuid/28c5e755-f2df-4f57-af8a-36998a4a2f25";
-    # Help NVIDIA HDMI/DP audio endpoints appear reliably on some setups/TVs.
-    kernelModules = [
-      "snd_hda_intel"
-      "snd_hda_codec_hdmi"
-    ];
-    # USB Bluetooth adapters/controllers can become unreliable after autosuspend.
-    extraModprobeConfig = ''
-      options btusb enable_autosuspend=0
-    '';
-    binfmt.registrations.appimage = {
-      wrapInterpreterInShell = false;
-      interpreter = "${pkgs.appimage-run}/bin/appimage-run";
-      recognitionType = "magic";
-      offset = 0;
-      mask = ''\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff'';
-      magicOrExtension = ''\x7fELF....AI\x02'';
-    };
+    # boot policy (tmp/loader/resume/kernel modules/modprobe/binfmt) is defined via
+    # `j0nix.desktop.boot` in `profiles/desktop/modules/boot.nix` and applied by `system/boot`.
   };
-
-  # 68 GiB swapfile to support hibernate / suspend-then-hibernate on a 62 GiB RAM system.
-  swapDevices = [
-    {
-      device = "/swapfile";
-      size = 68 * 1024;
-    }
-  ];
 
   nixpkgs.config.allowUnfree = true;
 
