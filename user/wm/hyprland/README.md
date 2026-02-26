@@ -31,12 +31,15 @@ The module defines a shared base keymap in `user/wm/hyprland/default.nix` and me
 - `SUPER+F`: fullscreen (mode `0`, hides shell/waybar)
 - `SUPER+SHIFT+F`: maximize-like fullscreen (mode `1`, keeps shell/waybar)
 - `SUPER+Return`: open preferred terminal
+- `SUPER+B`: open preferred browser
+- `SUPER+L`: lock screen (`hyprlock` fallback to `loginctl lock-session`)
 - `SUPER+SHIFT+Q`: exit Hyprland session
-- `SUPER+Arrow`: move focus
-- `SUPER+SHIFT+Arrow`: move window
+- `SUPER+Arrow`: move window
+- `CTRL+ALT+Arrow`: move focus (remote-friendly fallback)
+- `SUPER+SHIFT+Arrow`: move window to relative workspace (`-1/+1`, currently follows)
 - `SUPER+1..0`: switch workspace
-- `SUPER+SHIFT+1..0`: move window to workspace
-- `SUPER+CTRL+Backslash`: center active window
+- `SUPER+SHIFT+1..0`: move window to workspace (with following it)
+- `SUPER+CTRL+c`: center active window
 
 ## Remote / Moonlight Fallback Binds
 
@@ -66,6 +69,26 @@ These exist because `SUPER` (Windows key) is often unreliable through Moonlight/
 - `Caelestia`: `CTRL+ALT+/` opens control center
 - `Caelestia`: `CTRL+ALT+BackSpace` locks session
 - `DMS` overview enabled: `CTRL+ALT+Space` toggles DMS overview
+
+## Caelestia App Binds
+
+- `SUPER+E`: open preferred file manager
+- `SUPER+V`: open preferred editor
+- `SUPER+SHIFT+V`: Caelestia clipboard
+- `SUPER+ALT+V`: Caelestia clipboard delete
+
+## Planned Relative Workspace Move Binds (README Plan)
+
+Planned split for arrow-based relative workspace moves (`left/right`, optional `up/down` parity later):
+
+- `SUPER+SHIFT+Left/Right`: `movetoworkspacesilent, -1/+1` (move window without following)
+- `SUPER+CTRL+SHIFT+Left/Right`: `movetoworkspace, -1/+1` (move window and follow)
+
+Notes for implementation:
+
+- This keeps a clear distinction between "stash/move only" and "move + jump".
+- `movetoworkspacesilent` is the intended dispatcher for the non-follow variant.
+- Shell-specific binds (especially Caelestia) must be checked for conflicts before applying the change.
 
 ## Notes
 
