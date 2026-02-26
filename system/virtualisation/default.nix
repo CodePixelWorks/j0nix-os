@@ -3,9 +3,19 @@ let
   cfg = config.j0nix.desktop.virtualisation;
 in
 {
-  options.j0nix.desktop.virtualisation.libvirtd.enable = lib.mkOption {
-    type = lib.types.bool;
-    default = false;
+  imports = [
+    ./vm-guest-services.nix
+  ];
+
+  options.j0nix.desktop.virtualisation = {
+    libvirtd.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+    };
+    vmGuestServices.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+    };
   };
 
   config = {
