@@ -8,6 +8,11 @@
       # Help NVIDIA HDMI/DP audio endpoints appear reliably on some setups/TVs.
       "snd_hda_intel"
       "snd_hda_codec_hdmi"
+      # KVM/QEMU host acceleration and virtio fast paths on AMD systems.
+      "kvm_amd"
+      "vhost"
+      "vhost_net"
+      "vhost_vsock"
     ];
 
     modprobeOptions = {
