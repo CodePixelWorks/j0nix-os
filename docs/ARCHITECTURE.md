@@ -158,7 +158,7 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  A[settings.gaming] --> B[system/gaming/*]
+  A[profiles/desktop/modules/gaming.nix -> j0nix.desktop.gaming] --> B[system/gaming/*]
   A --> C[user/gaming/*]
   D[settings.dev] --> E[system/dev/default.nix]
   D --> F[user/dev/*]
