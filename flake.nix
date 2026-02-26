@@ -102,6 +102,10 @@
           else if builtins.pathExists wmFile then wmFile
           else null;
 
+      mkUserRoleHomeModule = role:
+        let roleModule = baseDir + "/user-roles/home/${role}.nix";
+        in if builtins.pathExists roleModule then roleModule else null;
+
       mkHomeModules = userSettings:
         let
           shellModule = baseDir + "/user/shells/${userSettings.shell}.nix";
@@ -115,11 +119,15 @@
           wmModules = lib.filter (m: m != null) [ (mkWmModule userSettings.defaultWMS) ];
           editorModules = lib.filter (m: m != null) (map mkEditorModule userSettings.editors);
           browserModules = lib.filter (m: m != null) (map mkBrowserModule userSettings.browsers);
+          roleNames = userSettings.roles or [ ];
+          roleHomeModules = lib.filter (m: m != null) (map mkUserRoleHomeModule roleNames);
+          missingRoleNames = lib.filter (role: (mkUserRoleHomeModule role) == null) roleNames;
           devModule = baseDir + "/user/dev/default.nix";
           devEnabled = (userSettings.dev or { }).enable or true;
         in
         [
           (baseDir + "/profiles/${userSettings.profile}/home.nix")
+          (baseDir + "/user/software/default.nix")
           resolvedShellModule
           (baseDir + "/user/session-default.nix")
           (baseDir + "/user/programs/default.nix")
@@ -149,6 +157,10 @@
                 assertion = !(userSettings._userOverride ? defaultSession);
                 message = "Per-user defaultSession is deprecated. Use userSettings.<name>.defaultWMS and global settings.hyprland.useUWSM.";
               }
+              {
+                assertion = missingRoleNames == [ ];
+                message = "Unknown user role(s) for ${userSettings.username}: ${lib.concatStringsSep ", " missingRoleNames}. Expected modules under user-roles/home/<role>.nix";
+              }
             ] ++ lib.optional wmNeedsShell {
               assertion = wmShellExists;
               message = "Unknown wmShell '${userSettings.wmShell}'. Valid examples: ags, dank-material-shell, noctalia-shell, caelestia-shell, none.";
@@ -159,6 +171,7 @@
         ++ wmModules
         ++ editorModules
         ++ browserModules
+        ++ roleHomeModules
         ++ lib.optional (devEnabled && builtins.pathExists devModule) devModule
         ++ lib.optional (wmNeedsShell && wmShellExists) wmShellModule;
       systemSettings = settings;
