@@ -283,6 +283,23 @@ in {
     };
   };
 
+  # Prevent nixos-rebuild switch from stopping/restarting the NTFS games disk mount unit on reconfiguration.
+  # This avoids unclean NTFS unmounts while the disk is in active use (e.g. Steam/Lutris files on /mnt/Games).
+  systemd.units = lib.mkIf gamesDiskEnabled (
+    {
+      "mnt-Games.mount" = {
+        stopIfChanged = false;
+        restartIfChanged = false;
+      };
+    }
+    // lib.optionalAttrs gamesDiskOnDemandAutomount {
+      "mnt-Games.automount" = {
+        stopIfChanged = false;
+        restartIfChanged = false;
+      };
+    }
+  );
+
   assertions = [
     {
       assertion = lib.all (shell: builtins.elem shell allowedShells) userShells;
