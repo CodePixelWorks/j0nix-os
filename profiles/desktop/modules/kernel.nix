@@ -8,6 +8,9 @@
       # Help NVIDIA HDMI/DP audio endpoints appear reliably on some setups/TVs.
       "snd_hda_intel"
       "snd_hda_codec_hdmi"
+      # Expose board/SMBus temperature sensors for lm_sensors on this AMD desktop.
+      "jc42"
+      "lm75"
       # KVM/QEMU host acceleration and virtio fast paths on AMD systems.
       "kvm_amd"
       "vhost"
