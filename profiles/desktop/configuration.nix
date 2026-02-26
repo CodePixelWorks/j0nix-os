@@ -31,9 +31,11 @@ let
 in {
   imports = [
     ./hardware-configuration.nix
+    ./modules/kernel.nix
     ./modules/security.nix
     ./modules/storage.nix
     ../../system/apps/bambulab.nix
+    ../../system/kernel
     ../../system/security
     ../../system/storage
     ../../system/drivers
@@ -43,9 +45,6 @@ in {
   ] ++ (map (wm: ../../system/wm/${wm}.nix) settings.wms);
 
   boot = {
-    # Keep kernel selection centralized in the desktop profile.
-    # CachyOS variants already include BORE scheduler support.
-    kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest-x86_64-v4;
     tmp = {
       useTmpfs = false;
       tmpfsSize = "30%";
@@ -83,9 +82,6 @@ in {
     }
   ];
 
-  nixpkgs.overlays = [
-    inputs.nix-cachyos-kernel.overlays.pinned
-  ];
   nixpkgs.config.allowUnfree = true;
 
   nix.settings = {
