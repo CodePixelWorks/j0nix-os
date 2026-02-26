@@ -50,6 +50,8 @@
           enable = true;
           drivers = cfg.drivers;
         };
+        # HP multi-function devices (like OfficeJet 5220) need sane support for scanning.
+        hardware.sane.enable = true;
 
         j0nix.software.systemPackages = cfg.software;
       })
