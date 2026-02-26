@@ -4,7 +4,7 @@ let
   fusionCfg = programsCfg.fusion360 or { };
   protonCfg = fusionCfg.protonInstaller or { };
   enabled = protonCfg.enable or true;
-  protonVersion = protonCfg.protonVersion or "GE-Proton10-30";
+  protonVersion = protonCfg.protonVersion or "GE-Proton10-32";
   installRoot = protonCfg.installRoot or "$HOME/.autodesk_fusion";
   fusionInstallerUrl =
     protonCfg.fusionInstallerUrl
