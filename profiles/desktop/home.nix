@@ -3,7 +3,6 @@ let
   programsCfg = settings.programs or { };
   bambuCfg = programsCfg.bambulab or { };
   bambuProvider = bambuCfg.provider or "appimage";
-  bambuAppImagePackage = pkgs.callPackage ../../user/programs/bambulab/appimage-package.nix { };
   # Storage policy moved to the desktop storage profile module; keep user-space udisks automount enabled here.
   enableUdiskieAutomount = true;
   configuredFileManagersRaw =
@@ -96,7 +95,6 @@ in
     obsidian
     drawio
   ]
-  ++ [ bambuAppImagePackage ]
   ++ [
     bottles
     simplescreenrecorder
