@@ -17,9 +17,14 @@ Recommended modern baseline roles:
 - `developer`
 - `ai-work`
 - `gaming`
+- `network-performance`
 - `office`
 - `remote-work`
 - `video-editing`
 - `3d-creation`
 
 Roles should append into central aggregators (e.g. `j0nix.software.*`, `j0nix.user.software.*`, `j0nix.desktop.sysctl.extraFragments`) instead of writing directly to final package/sysctl outputs.
+
+Example split:
+- `network-performance` owns shared TCP/sysctl throughput/latency tuning
+- `gaming` and `remote-work` can stay purpose-focused and only add workload-specific deltas
