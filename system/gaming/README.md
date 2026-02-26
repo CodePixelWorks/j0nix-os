@@ -1,6 +1,6 @@
 # System Gaming Modules
 
-System-level gaming stack controlled by `settings.gaming.*`.
+System-level gaming stack controlled by `j0nix.desktop.gaming.*` (typically set in `profiles/desktop/modules/gaming.nix`).
 
 ## Files
 
@@ -17,14 +17,14 @@ Per-user launchers and helpers belong in `user/gaming/`.
 
 ## Performance Note
 
-- `settings.gaming.performance.gamemodeRenice` controls gamemode CPU priority (`-20..19`, default `-10`).
-- `settings.gaming.performance.autoPerformanceMode` switches power profile to `performance` while gamemode sessions are active.
-- `settings.gaming.performance.gamescopeHdr` enables HDR wrapper tooling for gamescope launch.
+- `j0nix.desktop.gaming.performance.gamemodeRenice` controls gamemode CPU priority (`-20..19`, default `-10`).
+- `j0nix.desktop.gaming.performance.autoPerformanceMode` switches power profile to `performance` while gamemode sessions are active.
+- `j0nix.desktop.gaming.performance.gamescopeHdr` enables HDR wrapper tooling for gamescope launch.
 
 ## Steam Note
 
-- `settings.gaming.steam.steamRun` installs `steam-run`.
-- `settings.gaming.proton.provider` selects preferred compat provider (`cachyos` or `ge`).
+- `j0nix.desktop.gaming.steam.steamRun` installs `steam-run`.
+- `j0nix.desktop.gaming.proton.provider` selects preferred compat provider (`cachyos` or `ge`).
 
 ## Steam Optional Launch Wrappers
 
