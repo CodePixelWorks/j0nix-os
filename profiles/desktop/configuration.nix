@@ -17,6 +17,8 @@
     ./modules/thermal.nix
     ./modules/drivers.nix
     ../../system/apps/bambulab.nix
+    ../../system/software
+    ../../user-roles/system
     ../../system/accounts
     ../../system/binfmt
     ../../system/audio
