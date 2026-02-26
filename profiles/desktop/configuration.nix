@@ -1,15 +1,13 @@
 { pkgs, lib, settings, inputs, ... }:
 let
   users = settings.users or [ settings.username ];
-  network = settings.network or { };
-  tailscaleCfg = network.tailscale or { };
-  tailscaleEnabled = tailscaleCfg.enable or false;
 in {
   imports = [
     ./hardware-configuration.nix
     ./modules/boot.nix
     ./modules/binfmt.nix
     ./modules/audio.nix
+    ./modules/network.nix
     ./modules/kernel.nix
     ./modules/security.nix
     ./modules/storage.nix
@@ -20,6 +18,7 @@ in {
     ../../system/audio
     ../../system/boot
     ../../system/kernel
+    ../../system/network
     ../../system/security
     ../../system/storage
     ../../system/drivers
@@ -54,10 +53,7 @@ in {
   };
   nix.optimise.automatic = true;
 
-  networking.hostName = settings.hostname;
-  networking.networkmanager.enable = true;
   services.dbus.implementation = "broker";
-  services.tailscale.enable = tailscaleEnabled;
 
   time.timeZone = settings.timezone;
   services.chrony.enable = true;
@@ -92,7 +88,7 @@ in {
     lsof
     lm_sensors
     vulkan-tools
-  ]) ++ lib.optionals tailscaleEnabled [ pkgs.tailscale ];
+  ]);
 
   fonts.packages = [
     settings.themeDetails.fontPkg
