@@ -1,6 +1,6 @@
-{ lib, pkgs, settings, ... }:
+{ config, lib, pkgs, ... }:
 let
-  gaming = settings.gaming or { };
+  gaming = config.j0nix.desktop.gaming or { };
   enabled = gaming.enable or true;
   perfCfg = gaming.performance or { };
   gamemodeRenice = perfCfg.gamemodeRenice or (-10);
@@ -104,15 +104,15 @@ lib.mkIf enabled {
   assertions = [
     {
       assertion = gamemodeRenice >= -20 && gamemodeRenice <= 19;
-      message = "settings.gaming.performance.gamemodeRenice must be between -20 and 19";
+      message = "j0nix.desktop.gaming.performance.gamemodeRenice must be between -20 and 19";
     }
     {
       assertion = builtins.isBool autoPerformanceMode;
-      message = "settings.gaming.performance.autoPerformanceMode must be a boolean";
+      message = "j0nix.desktop.gaming.performance.autoPerformanceMode must be a boolean";
     }
     {
       assertion = builtins.isBool preventIdleLockDuringGame;
-      message = "settings.gaming.performance.preventIdleLockDuringGame must be a boolean";
+      message = "j0nix.desktop.gaming.performance.preventIdleLockDuringGame must be a boolean";
     }
   ];
 }
