@@ -19,6 +19,14 @@
       description = "Printer management software to add via the central system package aggregator.";
     };
 
+    discovery = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable mDNS/Avahi service discovery for network printers.";
+      };
+    };
+
     printers = lib.mkOption {
       type = lib.types.listOf lib.types.anything;
       default = [ ];
@@ -44,6 +52,14 @@
         };
 
         j0nix.software.systemPackages = cfg.software;
+      })
+
+      (lib.mkIf (cfg.enable && cfg.discovery.enable) {
+        services.avahi = {
+          enable = true;
+          nssmdns4 = true;
+          openFirewall = true;
+        };
       })
     ];
 }
