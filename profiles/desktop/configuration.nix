@@ -12,6 +12,7 @@ in {
     ./modules/security.nix
     ./modules/storage.nix
     ./modules/accounts.nix
+    ./modules/virtualisation.nix
     ../../system/apps/bambulab.nix
     ../../system/accounts
     ../../system/binfmt
@@ -21,6 +22,7 @@ in {
     ../../system/network
     ../../system/security
     ../../system/storage
+    ../../system/virtualisation
     ../../system/drivers
     ../../system/dev
     ../../system/tuning
@@ -95,8 +97,6 @@ in {
     pkgs.noto-fonts-cjk-sans
     pkgs.noto-fonts-cjk-serif
   ];
-  virtualisation.libvirtd.enable = true;
-
   assertions = [
   ];
 
