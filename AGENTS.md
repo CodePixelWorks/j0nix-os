@@ -46,6 +46,7 @@ Rules:
 - Commit immediately after a completed scope without asking for permission first (unless the user explicitly said not to commit).
 - Commit message must clearly state *what* changed and *why* (short subject + optional body).
 - Prefer non-interactive git commands.
+- When using `git commit -m ...` from a shell, avoid unescaped backticks in the commit body/subject (shell command substitution). Prefer single quotes, escaping, or `git commit -F <message-file>`.
 
 ### Conventional Commit Format
 
