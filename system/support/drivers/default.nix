@@ -34,6 +34,9 @@ in
   config = lib.mkMerge [
     (lib.mkIf (it87Cfg.enable && hasIt87KernelPackage) {
       boot.extraModulePackages = [ config.boot.kernelPackages.it87 ];
+      # Explicitly load the out-of-tree module at boot; chip autodetection alone is not enough
+      # if the alias chain does not trigger on a given board.
+      boot.kernelModules = [ "it87" ];
     })
 
     (lib.mkIf (it87Cfg.enable && it87ModprobeOpts != { }) {
