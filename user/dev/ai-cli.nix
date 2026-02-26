@@ -42,9 +42,14 @@ lib.mkIf enabled {
     genericName = "AI Assistant Terminal";
     comment = "Launch Gemini CLI in terminal";
     exec = "${preferredTerminal} -e gemini-launcher";
+    icon = "gemini-cli";
     terminal = false;
     type = "Application";
     categories = [ "Development" "Utility" ];
+  };
+
+  xdg.dataFile."icons/hicolor/scalable/apps/gemini-cli.svg" = lib.mkIf (geminiEnabled && (ai.geminiDesktopEntry or true)) {
+    source = ../../icons/gemini-cli/gemini-cli.svg;
   };
 
   assertions = [
