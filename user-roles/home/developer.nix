@@ -1,4 +1,15 @@
-{ ... }:
+{ pkgs, ... }:
 {
-  # Placeholder Home Manager role module. Append packages/config via `j0nix.user.software.*` and role-specific options.
+  j0nix.user.software.packages = with pkgs; [
+    jq
+    ripgrep
+    fd
+    bat
+    eza
+    lazygit
+    just
+    direnv
+    httpie
+    zellij
+  ];
 }
