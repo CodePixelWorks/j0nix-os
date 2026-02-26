@@ -5,6 +5,8 @@
     ./modules/boot.nix
     ./modules/binfmt.nix
     ./modules/audio.nix
+    ./modules/locale.nix
+    ./modules/fonts.nix
     ./modules/nix.nix
     ./modules/network.nix
     ./modules/kernel.nix
@@ -17,6 +19,8 @@
     ../../system/binfmt
     ../../system/audio
     ../../system/boot
+    ../../system/locale
+    ../../system/fonts
     ../../system/kernel
     ../../system/nix
     ../../system/network
@@ -36,19 +40,7 @@
 
   services.dbus.implementation = "broker";
 
-  time.timeZone = settings.timezone;
   services.chrony.enable = true;
-
-  i18n.defaultLocale = settings.locale;
-  i18n.extraLocaleSettings = {
-    LANG = settings.locale;
-    LC_ALL = settings.locale;
-    LANGUAGE = settings.locale;
-  };
-
-  console = {
-    useXkbConfig = true;
-  };
 
   services.printing.enable = true;
 
@@ -71,11 +63,6 @@
     vulkan-tools
   ]);
 
-  fonts.packages = [
-    settings.themeDetails.fontPkg
-    pkgs.noto-fonts-cjk-sans
-    pkgs.noto-fonts-cjk-serif
-  ];
   assertions = [
   ];
 
