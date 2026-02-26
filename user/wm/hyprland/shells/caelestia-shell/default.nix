@@ -181,6 +181,9 @@ in
         export PATH="${lib.makeBinPath [ gpu-screen-recorder gpu-screen-recorder-gtk ]}:$PATH"
 
         if command -v caelestia >/dev/null 2>&1; then
+          if command -v caelestia-gamemode-fan-sync >/dev/null 2>&1; then
+            caelestia-gamemode-fan-sync start >/dev/null 2>&1 || true
+          fi
           caelestia shell -d &
           shell_pid=$!
 
@@ -209,7 +212,81 @@ in
         exit 1
       '')
 
+      (writeShellScriptBin "caelestia-gamemode-fan-sync" ''
+        set -eu
+
+        state_dir="''${XDG_RUNTIME_DIR:-/tmp}/caelestia-gamemode-fan-sync"
+        pid_file="$state_dir/pid"
+        mkdir -p "$state_dir"
+
+        qs_bin="$(command -v qs || true)"
+        fan_cmd="$(command -v j0nix-thermal-fan-max || true)"
+
+        sync_once() {
+          [ -n "$qs_bin" ] || return 0
+          [ -n "$fan_cmd" ] || return 0
+          enabled="$($qs_bin ipc -c caelestia call gameMode isEnabled 2>/dev/null | ${coreutils}/bin/tr -d '\r\n' || true)"
+          case "$enabled" in
+            true|1|\"true\")
+              "$fan_cmd" start >/dev/null 2>&1 || true
+              ;;
+            false|0|\"false\")
+              "$fan_cmd" end >/dev/null 2>&1 || true
+              ;;
+            *)
+              ;;
+          esac
+        }
+
+        run_loop() {
+          # Apply current state immediately, then follow Caelestia RPC signal changes.
+          sync_once
+          while true; do
+            [ -n "$qs_bin" ] || exit 0
+            if ! "$qs_bin" ipc -c caelestia listen gameMode enabledChanged 2>/dev/null | while IFS= read -r _; do
+              sync_once
+            done; then
+              sleep 1
+              sync_once
+            fi
+            sleep 1
+          done
+        }
+
+        case "''${1:-}" in
+          start)
+            if [ -f "$pid_file" ]; then
+              old_pid="$(${coreutils}/bin/cat "$pid_file" 2>/dev/null || true)"
+              if [ -n "''${old_pid:-}" ] && ${procps}/bin/kill -0 "$old_pid" >/dev/null 2>&1; then
+                exit 0
+              fi
+            fi
+            run_loop &
+            echo $! >"$pid_file"
+            ;;
+          stop)
+            if [ -f "$pid_file" ]; then
+              old_pid="$(${coreutils}/bin/cat "$pid_file" 2>/dev/null || true)"
+              if [ -n "''${old_pid:-}" ]; then
+                ${procps}/bin/kill "$old_pid" >/dev/null 2>&1 || true
+              fi
+              rm -f "$pid_file"
+            fi
+            if [ -n "$fan_cmd" ]; then
+              "$fan_cmd" end >/dev/null 2>&1 || true
+            fi
+            ;;
+          *)
+            echo "usage: caelestia-gamemode-fan-sync <start|stop>" >&2
+            exit 2
+            ;;
+        esac
+      '')
+
       (writeShellScriptBin "caelestia-stop" ''
+        if command -v caelestia-gamemode-fan-sync >/dev/null 2>&1; then
+          caelestia-gamemode-fan-sync stop >/dev/null 2>&1 || true
+        fi
         if command -v caelestia >/dev/null 2>&1; then
           caelestia shell quit >/dev/null 2>&1 && exit 0 || true
         fi
