@@ -94,6 +94,25 @@ in
         || systemctl hibernate \
         || ${pkgs.systemd}/bin/systemctl hibernate
     '')
+    (writeShellScriptBin "system-suspend-then-hibernate-safe" ''
+      timeout_bin="${pkgs.coreutils}/bin/timeout"
+
+      if command -v dms >/dev/null 2>&1; then
+        "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
+      fi
+      if command -v hyprlock >/dev/null 2>&1; then
+        pgrep -x hyprlock >/dev/null 2>&1 || hyprlock >/dev/null 2>&1 &
+        sleep 0.5
+      else
+        loginctl lock-session >/dev/null 2>&1 || ${pkgs.systemd}/bin/loginctl lock-session >/dev/null 2>&1 || true
+        sleep 0.3
+      fi
+
+      loginctl suspend-then-hibernate \
+        || ${pkgs.systemd}/bin/loginctl suspend-then-hibernate \
+        || systemctl suspend-then-hibernate \
+        || ${pkgs.systemd}/bin/systemctl suspend-then-hibernate
+    '')
     (writeShellScriptBin "system-reboot-safe" ''
       loginctl reboot || systemctl reboot
     '')
