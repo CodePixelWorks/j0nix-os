@@ -14,6 +14,7 @@
     ./modules/storage.nix
     ./modules/accounts.nix
     ./modules/virtualisation.nix
+    ./modules/thermal.nix
     ../../system/apps/bambulab.nix
     ../../system/accounts
     ../../system/binfmt
