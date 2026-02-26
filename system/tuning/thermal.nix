@@ -2,7 +2,8 @@
 let
   cfg = config.j0nix.desktop.thermal;
   enabled = cfg.enable;
-  fanModule = cfg.fan.module;
+  fanKernelModule = cfg.fan.kernelModule or (cfg.fan.module or null);
+  fanHwmonName = cfg.fan.hwmonName or null;
   acpiLax = cfg.fan.acpiEnforceResourcesLax;
   governor = cfg.cpuGovernor;
   fanBoostEnabled = cfg.fan.maxOnGamingPerformanceMode;
@@ -13,7 +14,7 @@ let
     state_root="/var/lib/j0nix-fan-boost"
     mkdir -p "$state_root"
 
-    # Favor the configured hwmon driver, but fall back to any writable pwm-capable device.
+    # Favor the configured hwmon device name, but fall back to any writable pwm-capable device.
     collect_hwmons() {
       local first=1
       local hw name
@@ -21,7 +22,7 @@ let
         [ -d "$hw" ] || continue
         [ -e "$hw/pwm1" ] || continue
         name="$(cat "$hw/name" 2>/dev/null || true)"
-        if [ -n "${fanModule}" ] && [ "$name" = "${fanModule}" ]; then
+        if [ -n "${fanHwmonName}" ] && [ "$name" = "${fanHwmonName}" ]; then
           printf '%s\n' "$hw"
           first=0
         fi
@@ -109,6 +110,17 @@ in
       module = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = "nct6775";
+        description = "Deprecated compatibility alias for fan.kernelModule.";
+      };
+      kernelModule = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Kernel module to load for fan/PWM control (e.g. it87, nct6775).";
+      };
+      hwmonName = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Preferred hwmon device name for PWM fan control (e.g. it8718).";
       };
       acpiEnforceResourcesLax = lib.mkOption {
         type = lib.types.bool;
@@ -123,7 +135,7 @@ in
   };
 
   config = lib.mkIf enabled {
-    boot.kernelModules = lib.optional (fanModule != null && fanModule != "") fanModule;
+    boot.kernelModules = lib.optional (fanKernelModule != null && fanKernelModule != "") fanKernelModule;
     boot.kernelParams = lib.optionals acpiLax [ "acpi_enforce_resources=lax" ];
 
     powerManagement.cpuFreqGovernor = governor;
