@@ -1,4 +1,7 @@
-{ ... }:
+{ pkgs, ... }:
 {
-  # Placeholder role module. Append system packages/sysctl fragments via central aggregators.
+  j0nix.software.systemPackages = with pkgs; [
+    wireguard-tools
+    openvpn
+  ];
 }
