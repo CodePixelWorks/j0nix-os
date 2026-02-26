@@ -5,6 +5,7 @@ Selectable shell implementations for Wayland WMs (hyprland, mangowc, niri).
 ## Available Shells
 
 - `ags/`
+- `caelestia-shell/`
 - `dank-material-shell/`
 - `noctalia-shell/`
 - `none/`
