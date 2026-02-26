@@ -173,7 +173,7 @@ Controlled by `settings.dms.*`:
 - `install.flakeRef`, `install.dgopRef`, `install.cliVersion` (used in `separate` mode)
 
 ### Gaming
-Controlled by `settings.gaming.*`:
+Controlled by `j0nix.desktop.gaming.*` (typically set in `profiles/desktop/modules/gaming.nix`):
 - `steam`, `proton`, `performance`, `controllers`, `launchers`, `extras`
 
 ### Dev
