@@ -1,6 +1,6 @@
-{ lib, pkgs, settings, ... }:
+{ config, lib, pkgs, ... }:
 let
-  gaming = settings.gaming or { };
+  gaming = config.j0nix.desktop.gaming or { };
   enabled = gaming.enable or true;
   protonCfg = gaming.proton or { };
   extraCfg = gaming.extras or { };
