@@ -142,9 +142,9 @@ let
     "$mainMod, t, togglefloating,"
     "CTRL ALT, t, togglefloating,"
     "$mainMod, f, fullscreen, 0"            # actual fullscreen (shell/waybar hidden)
-    "$mainMod SHIFT, f, fullscreen, 1"      # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
+    "$mainMod SHIFT, f, exec, wm-window-maximize-safe" # Win+Shift+F: safe maximize with shell/waybar visible
     "CTRL ALT, f, fullscreen, 0"
-    "CTRL SHIFT ALT, f, fullscreen, 1"
+    "CTRL SHIFT ALT, f, exec, wm-window-maximize-safe"
     "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
     "$mainMod, r, exec, wm-shell-recover"
     "CTRL ALT, return, exec, ${appExec preferredTerminalCmd}"
