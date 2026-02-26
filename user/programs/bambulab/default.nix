@@ -8,7 +8,7 @@ let
     name = "Bambu Studio";
     genericName = "3D Printing Software";
     comment = "3D printing software";
-    exec = lib.getExe' bambuAppImagePackage "BambuStudio";
+    exec = lib.getExe' bambuAppImagePackage "bambu-studio";
     icon = "${../../../icons/bambulab/BambuStudio.png}";
     terminal = false;
     type = "Application";
@@ -26,8 +26,5 @@ in
 
   xdg.desktopEntries = {
     "BambuStudio" = bambuDesktopEntry;
-    "com.bambulab.BambuStudio" = bambuDesktopEntry // {
-      noDisplay = true;
-    };
   };
 }
