@@ -128,6 +128,7 @@
         [
           (baseDir + "/profiles/${userSettings.profile}/home.nix")
           (baseDir + "/user/software/default.nix")
+          (baseDir + "/user/custom/default.nix")
           resolvedShellModule
           (baseDir + "/user/session-default.nix")
           (baseDir + "/user/programs/default.nix")
