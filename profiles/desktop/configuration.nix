@@ -5,6 +5,7 @@
     ./modules/boot.nix
     ./modules/binfmt.nix
     ./modules/audio.nix
+    ./modules/custom.nix
     ./modules/locale.nix
     ./modules/fonts.nix
     ./modules/nix.nix
