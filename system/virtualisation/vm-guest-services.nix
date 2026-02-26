@@ -1,7 +1,6 @@
-{ lib, settings, ... }:
+{ config, lib, ... }:
 let
-  cfg = (settings.drivers or { }).vmGuestServices or { };
-  enabled = cfg.enable or false;
+  enabled = config.j0nix.desktop.virtualisation.vmGuestServices.enable;
 in
 lib.mkIf enabled {
   services.qemuGuest.enable = true;
