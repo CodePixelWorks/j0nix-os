@@ -65,6 +65,14 @@ let
     launcher = {
       actions = [
         {
+          name = "Shutdown";
+          command = [ "system-poweroff-safe" ];
+        }
+        {
+          name = "Reboot";
+          command = [ "system-reboot-safe" ];
+        }
+        {
           name = "Sleep";
           command = [ "system-suspend-then-hibernate-safe" ];
         }
@@ -72,7 +80,9 @@ let
     };
     session = {
       commands = {
+        shutdown = [ "system-poweroff-safe" ];
         hibernate = [ "system-hibernate-safe" ];
+        reboot = [ "system-reboot-safe" ];
       };
     };
     services = {
@@ -217,6 +227,10 @@ EOF
                   | map(
                       if (.name? == "Sleep") then
                         .command = ["system-suspend-then-hibernate-safe"]
+                      elif (.name? == "Shutdown") then
+                        .command = ["system-poweroff-safe"]
+                      elif (.name? == "Reboot") then
+                        .command = ["system-reboot-safe"]
                       else
                         .
                       end
@@ -226,7 +240,12 @@ EOF
                 .
               end
             | .session = (.session // {})
-            | .session.commands = ((.session.commands // {}) | .hibernate = ["system-hibernate-safe"])
+            | .session.commands = (
+                (.session.commands // {})
+                | .hibernate = ["system-hibernate-safe"]
+                | .shutdown = ["system-poweroff-safe"]
+                | .reboot = ["system-reboot-safe"]
+              )
             | .services = ((.services // {}) | .smartScheme = (.smartScheme // true))
             | if $wallpaperDir != "" then
                 .paths = ((.paths // {}) | .wallpaperDir = (.wallpaperDir // $wallpaperDir))
