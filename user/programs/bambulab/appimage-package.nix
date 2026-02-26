@@ -2,7 +2,7 @@
 pkgs.appimageTools.wrapType2 rec {
   name = "BambuStudio";
   pname = "bambu-studio";
-  version = "02.04.00.70";
+  version = "02.05.00.67";
   ubuntu_version = "24.04_PR-8834";
 
   src = pkgs.fetchurl {
@@ -15,8 +15,8 @@ pkgs.appimageTools.wrapType2 rec {
     export GIO_MODULE_DIR="${pkgs.glib-networking}/lib/gio/modules/"
   '';
 
-  extraPkgs = appPkgs:
-    with appPkgs; [
+  extraPkgs =
+    appPkgs: with appPkgs; [
       cacert
       glib
       glib-networking
