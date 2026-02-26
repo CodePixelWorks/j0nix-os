@@ -1,8 +1,6 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, ... }:
 let
   cfg = config.j0nix.desktop.boot;
-  modprobe = import ../lib/modprobe.nix { inherit lib; };
-  hasModprobeOptions = cfg.modprobeOptions != { };
 in
 {
   options.j0nix.desktop.boot = {
@@ -56,28 +54,6 @@ in
       };
     };
 
-    kernelModules = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-    };
-
-    modprobeOptions = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.attrsOf (lib.types.oneOf [
-        lib.types.bool
-        lib.types.int
-        lib.types.float
-        lib.types.str
-      ]));
-      default = { };
-      description = "Kernel module options grouped by module name.";
-    };
-
-    appimageBinfmt = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-      };
-    };
   };
 
   config = {
@@ -99,20 +75,6 @@ in
         size = cfg.swapfile.sizeMiB;
       }
     ];
-
-    boot.kernelModules = lib.mkAfter cfg.kernelModules;
-
-    boot.extraModprobeConfig = lib.mkIf hasModprobeOptions (lib.mkAfter (modprobe.fromAttrset cfg.modprobeOptions));
-
-    boot.binfmt.registrations.appimage = lib.mkIf cfg.appimageBinfmt.enable {
-      wrapInterpreterInShell = false;
-      interpreter = "${pkgs.appimage-run}/bin/appimage-run";
-      recognitionType = "magic";
-      offset = 0;
-      mask = ''\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff'';
-      magicOrExtension = ''\x7fELF....AI\x02'';
-    };
-
     assertions = [
       {
         assertion = (!cfg.swapfile.enable) || (cfg.swapfile.sizeMiB > 0);
