@@ -146,7 +146,7 @@ let
     "CTRL ALT, f, fullscreen, 0"
     "CTRL SHIFT ALT, f, fullscreen, 1"
     "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
-    "$mainMod, r, exec, wm-shell-restart"
+    "$mainMod, r, exec, sh -lc 'hyprctl dispatch submap reset >/dev/null 2>&1 || true; pkill fuzzel >/dev/null 2>&1 || true; wm-shell-restart'"
     "CTRL ALT, return, exec, ${appExec preferredTerminalCmd}"
     "CTRL ALT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
     "CTRL ALT, c, centerwindow, 1"
