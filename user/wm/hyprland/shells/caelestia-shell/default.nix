@@ -119,6 +119,9 @@ in
         export GTK_ICON_THEME="${iconThemeName}"
         export QT_ICON_THEME_NAME="${iconThemeName}"
         ''}
+        # Caelestia actions (e.g. screen recording) execute from the shell process env.
+        # Ensure GPU Screen Recorder binaries are resolvable even if the session PATH is incomplete.
+        export PATH="${lib.makeBinPath [ gpu-screen-recorder gpu-screen-recorder-gtk ]}:$PATH"
 
         if command -v caelestia >/dev/null 2>&1; then
           caelestia shell -d &
