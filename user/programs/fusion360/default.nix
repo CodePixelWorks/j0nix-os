@@ -84,33 +84,6 @@ let
         curl -L "$url" -o "$out"
       }
 
-      fusion360::write_launchers() {
-        local apps_dir="$HOME/.local/share/applications"
-        mkdir -p "$apps_dir"
-
-        cat > "$apps_dir/fusion360-proton.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=Autodesk Fusion 360 (Proton)
-GenericName=CAD/CAM Software
-Comment=Run Autodesk Fusion 360 via Proton on Linux
-Exec=fusion360-proton-run
-Terminal=false
-Categories=Graphics;Engineering;
-StartupNotify=true
-EOF
-
-        cat > "$apps_dir/adskidmgr-opener.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=Autodesk Identity Manager URL Opener
-Exec=fusion360-proton-open-idmgr %u
-Terminal=false
-NoDisplay=true
-MimeType=x-scheme-handler/adskidmgr;
-EOF
-      }
-
       fusion360::find_identity_manager() {
         find "$FUSION360_WINEPREFIX" -name AdskIdentityManager.exe 2>/dev/null | head -n 1
       }
@@ -177,10 +150,6 @@ EOF
       WINEPREFIX="$FUSION360_WINEPREFIX" timeout -k 10m 9m wine "$FUSION360_DOWNLOADS/FusionClientInstaller.exe" --quiet >> "$FUSION360_LOGS/fusion-installer-pass1.log" 2>&1 || true
       echo "Starte Fusion-Installer (2/2)..."
       WINEPREFIX="$FUSION360_WINEPREFIX" timeout -k 5m 2m wine "$FUSION360_DOWNLOADS/FusionClientInstaller.exe" --quiet >> "$FUSION360_LOGS/fusion-installer-pass2.log" 2>&1 || true
-
-      fusion360::write_launchers
-      command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
-      command -v xdg-mime >/dev/null 2>&1 && xdg-mime default adskidmgr-opener.desktop x-scheme-handler/adskidmgr >/dev/null 2>&1 || true
 
       echo
       echo "Fertig (best effort)."
@@ -255,6 +224,26 @@ lib.mkIf enabled {
     exec = "fusion360-proton-setup";
     terminal = true;
     categories = [ "Graphics" "Engineering" ];
+  };
+
+  xdg.desktopEntries."fusion360-proton" = {
+    name = "Autodesk Fusion 360 (Proton)";
+    genericName = "CAD/CAM Software";
+    comment = "Run Autodesk Fusion 360 via Proton on Linux";
+    exec = "fusion360-proton-run";
+    terminal = false;
+    type = "Application";
+    categories = [ "Graphics" "Engineering" ];
+    startupNotify = true;
+  };
+
+  xdg.desktopEntries."adskidmgr-opener" = {
+    name = "Autodesk Identity Manager URL Opener";
+    exec = "fusion360-proton-open-idmgr %u";
+    terminal = false;
+    noDisplay = true;
+    type = "Application";
+    mimeType = [ "x-scheme-handler/adskidmgr" ];
   };
 
   xdg.mimeApps.defaultApplications = {
