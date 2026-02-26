@@ -1,5 +1,14 @@
-{ ... }:
+{ lib, settings, ... }:
+let
+  storage = settings.storage or { };
+  enableUdisks2 = storage.enableUdisks2 or (storage.autoMountWindows or true);
+  noPasswordMounts = storage.noPasswordMounts or true;
+  polkitRules = import ../../../system/lib/polkit-rules.nix { inherit lib; };
+in
 {
+  services.gvfs.enable = true;
+  services.udisks2.enable = enableUdisks2;
+
   j0nix.desktop.storage.mounts = [
     {
       name = "games";
@@ -22,4 +31,7 @@
       forceDirtyNtfsMount = false;
     }
   ];
+
+  j0nix.desktop.security.polkit.extraConfigSnippets =
+    lib.mkIf noPasswordMounts [ polkitRules.mkUdisksWheelMountRule ];
 }

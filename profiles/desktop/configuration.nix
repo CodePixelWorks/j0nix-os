@@ -31,9 +31,10 @@ let
 in {
   imports = [
     ./hardware-configuration.nix
+    ./modules/security.nix
     ./modules/storage.nix
-    ./modules/udisks.nix
     ../../system/apps/bambulab.nix
+    ../../system/security
     ../../system/storage
     ../../system/drivers
     ../../system/dev
