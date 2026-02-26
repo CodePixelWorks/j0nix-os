@@ -11,6 +11,7 @@
     ./modules/nix.nix
     ./modules/network.nix
     ./modules/kernel.nix
+    ./modules/gaming.nix
     ./modules/security.nix
     ./modules/storage.nix
     ./modules/accounts.nix
