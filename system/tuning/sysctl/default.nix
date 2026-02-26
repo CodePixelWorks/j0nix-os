@@ -10,7 +10,7 @@ let
 
   gamingSysctl = import ./gaming.nix { inherit settings; };
   devSysctl = import ./dev.nix { inherit settings; };
-  networkSysctl = import ./network.nix { inherit settings; };
+  networkSysctl = import ./network.nix { inherit lib settings; };
   sysctlCollector = import ../../lib/sysctl-collector.nix { inherit lib; };
 
   resolvedFileMax =
