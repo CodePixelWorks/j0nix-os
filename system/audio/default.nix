@@ -1,0 +1,102 @@
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.j0nix.desktop.audio;
+  audioBackend = cfg.backend;
+  usePipeWire = audioBackend == "pipewire";
+  usePulseAudio = audioBackend == "pulseaudio";
+  enableHiFiCodecs = cfg.bluetooth.enableHiFiCodecs;
+  enableMsbc = cfg.bluetooth.enableMsbc;
+  bluetoothCodecs = cfg.bluetooth.codecs;
+  hasPulseAudioBtModules = builtins.hasAttr "pulseaudio-modules-bt" pkgs;
+in
+{
+  options.j0nix.desktop.audio = {
+    backend = lib.mkOption {
+      type = lib.types.enum [ "pipewire" "pulseaudio" ];
+      default = "pipewire";
+    };
+
+    bluetooth = {
+      enableHiFiCodecs = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+      };
+      enableMsbc = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+      };
+      codecs = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [
+          "sbc"
+          "sbc_xq"
+          "aac"
+          "aptx"
+          "aptx_hd"
+          "ldac"
+        ];
+      };
+    };
+  };
+
+  config = {
+    services.pipewire = {
+      enable = usePipeWire;
+      pulse.enable = usePipeWire;
+      alsa.enable = usePipeWire;
+      alsa.support32Bit = usePipeWire;
+      wireplumber.enable = usePipeWire;
+    };
+
+    security.rtkit.enable = true;
+
+    services.pipewire.wireplumber.extraConfig = lib.mkIf (usePipeWire && enableHiFiCodecs) {
+      "51-bluez-codecs" = {
+        "monitor.bluez.properties" = {
+          "bluez5.codecs" = bluetoothCodecs;
+          "bluez5.enable-msbc" = enableMsbc;
+          "bluez5.enable-sbc-xq" = builtins.elem "sbc_xq" bluetoothCodecs;
+          "bluez5.enable-hw-volume" = true;
+          "bluez5.roles" = [
+            "hsp_hs"
+            "hsp_ag"
+            "hfp_hf"
+            "hfp_ag"
+            "a2dp_sink"
+            "a2dp_source"
+          ];
+        };
+      };
+    };
+
+    services.pulseaudio = {
+      enable = usePulseAudio;
+      support32Bit = true;
+      package = lib.mkIf usePulseAudio pkgs.pulseaudioFull;
+    };
+
+    hardware.bluetooth.enable = true;
+    hardware.bluetooth.powerOnBoot = true;
+    hardware.bluetooth.settings = lib.mkMerge [
+      {
+        Policy.AutoEnable = true;
+      }
+      (lib.mkIf enableHiFiCodecs {
+        General.Experimental = true;
+      })
+    ];
+
+    services.blueman.enable = true;
+
+    environment.systemPackages = lib.optionals (usePulseAudio && hasPulseAudioBtModules && enableHiFiCodecs) [
+      pkgs."pulseaudio-modules-bt"
+    ];
+
+    assertions = [
+      {
+        assertion = (!enableHiFiCodecs) || ((builtins.length bluetoothCodecs) > 0);
+        message = "j0nix.desktop.audio.bluetooth.codecs must not be empty when enableHiFiCodecs = true";
+      }
+    ];
+  };
+}
