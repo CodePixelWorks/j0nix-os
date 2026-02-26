@@ -1,6 +1,6 @@
-{ lib, pkgs, settings, ... }:
+{ config, lib, pkgs, settings, ... }:
 let
-  gaming = settings.gaming or { };
+  gaming = config.j0nix.desktop.gaming or { };
   enabled = gaming.enable or true;
   perf = gaming.performance or { };
   thermal = settings.thermal or { };
@@ -392,15 +392,15 @@ lib.mkIf enabled {
   assertions = [
     {
       assertion = builtins.elem protonProvider [ "cachyos" "ge" ];
-      message = "settings.gaming.proton.provider must be one of: cachyos, ge";
+      message = "j0nix.desktop.gaming.proton.provider must be one of: cachyos, ge";
     }
     {
       assertion = builtins.elem protonCachyosVariant [ "x86_64" "x86_64_v3" "x86_64_v4" ];
-      message = "settings.gaming.proton.cachyos.variant must be one of: x86_64, x86_64_v3, x86_64_v4";
+      message = "j0nix.desktop.gaming.proton.cachyos.variant must be one of: x86_64, x86_64_v3, x86_64_v4";
     }
     {
       assertion = protonCachyosKeepVersions >= 1;
-      message = "settings.gaming.proton.cachyos.keepVersions must be >= 1";
+      message = "j0nix.desktop.gaming.proton.cachyos.keepVersions must be >= 1";
     }
   ];
 }
