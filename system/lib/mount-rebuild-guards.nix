@@ -8,8 +8,8 @@ let
     && m.mountPoint != ""
   ) mounts;
 
-  mountUnitName = mountPoint: "${utils.escapeSystemdPath (lib.removeSuffix \"/\" mountPoint)}.mount";
-  automountUnitName = mountPoint: "${utils.escapeSystemdPath (lib.removeSuffix \"/\" mountPoint)}.automount";
+  mountUnitName = mountPoint: "${utils.escapeSystemdPath (lib.removeSuffix "/" mountPoint)}.mount";
+  automountUnitName = mountPoint: "${utils.escapeSystemdPath (lib.removeSuffix "/" mountPoint)}.automount";
 
   mkNoRemountUnit = unitName: {
     name = unitName;
