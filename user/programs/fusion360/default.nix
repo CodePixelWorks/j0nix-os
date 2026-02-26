@@ -26,7 +26,7 @@ let
       procps
       xdg-utils
       winetricks
-      wineWowPackages.staging
+      wineWow64Packages.staging
     ];
     text = ''
       set -euo pipefail
