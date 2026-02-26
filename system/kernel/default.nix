@@ -39,7 +39,7 @@ in
 
     boot.kernelPackages = preset.mkKernelPackages pkgs;
 
-    boot.kernelModules = lib.mkAfter cfg.modules;
+    boot.kernelModules = lib.mkAfter (lib.unique cfg.modules);
 
     boot.extraModprobeConfig =
       lib.mkIf hasModprobeOptions (lib.mkAfter (modprobe.fromAttrset cfg.modprobeOptions));

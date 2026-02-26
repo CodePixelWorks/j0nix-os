@@ -135,7 +135,7 @@ in
   };
 
   config = lib.mkIf enabled {
-    boot.kernelModules = lib.optional (fanKernelModule != null && fanKernelModule != "") fanKernelModule;
+    j0nix.desktop.kernel.modules = lib.optional (fanKernelModule != null && fanKernelModule != "") fanKernelModule;
     boot.kernelParams = lib.optionals acpiLax [ "acpi_enforce_resources=lax" ];
 
     powerManagement.cpuFreqGovernor = governor;
