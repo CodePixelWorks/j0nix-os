@@ -1,76 +1,118 @@
-{ lib, settings, utils, ... }:
+{ config, lib, utils, ... }:
 let
-  storage = settings.storage or { };
-  gamesDisk = storage.gamesDisk or { };
-  gamesDiskEnabled = gamesDisk.enable or false;
-  gamesDiskMountPoint = gamesDisk.mountPoint or "/mnt/Games";
-  gamesDiskUuid = gamesDisk.uuid or "";
-  gamesDiskFsType = gamesDisk.fsType or "ntfs3";
-  gamesDiskGvfsShow = gamesDisk.gvfsShow or true;
-  gamesDiskGvfsName = gamesDisk.gvfsName or "GAMES";
-  gamesDiskOnDemandAutomount = gamesDisk.onDemandAutomount or false;
-  gamesDiskIdleTimeout = gamesDisk.idleTimeout or "5min";
-  gamesDiskForceDirtyNtfsMount = gamesDisk.forceDirtyNtfsMount or false;
-
+  cfg = config.j0nix.desktop.storage;
   mkMountRebuildGuards = import ../../../system/lib/mount-rebuild-guards.nix { inherit lib utils; };
 
-  # Profile-local source of truth for additional managed data mounts.
-  managedExtraMounts =
-    lib.optionals gamesDiskEnabled [
-      {
-        mountPoint = gamesDiskMountPoint;
-        automount = gamesDiskOnDemandAutomount;
-        preventRemount = true;
-      }
+  enabledManagedMounts = lib.filter (m: m.enable) cfg.mounts;
+
+  mkMountOptions = m:
+    m.options
+    ++ lib.optionals m.gvfsShow [
+      "x-gvfs-show"
+      "x-gvfs-name=${m.gvfsName}"
+    ]
+    ++ lib.optionals m.automount [
+      "x-systemd.automount"
+      "x-systemd.idle-timeout=${m.idleTimeout}"
+    ]
+    ++ lib.optionals m.forceDirtyNtfsMount [
+      # Emergency-only workaround for NTFS dirty volumes. Prefer running chkdsk on Windows.
+      "force"
     ];
 in
 {
-  fileSystems = lib.optionalAttrs gamesDiskEnabled {
-    "${gamesDiskMountPoint}" = {
-      device = "/dev/disk/by-uuid/${gamesDiskUuid}";
-      fsType = gamesDiskFsType;
-      options = [
-        "rw"
-        "uid=1000"
-        "gid=100"
-        "umask=0022"
-        "nofail"
-      ]
-      ++ lib.optionals gamesDiskGvfsShow [
-        "x-gvfs-show"
-        "x-gvfs-name=${gamesDiskGvfsName}"
-      ]
-      ++ lib.optionals gamesDiskOnDemandAutomount [
-        "x-systemd.automount"
-        "x-systemd.idle-timeout=${gamesDiskIdleTimeout}"
-      ]
-      ++ lib.optionals gamesDiskForceDirtyNtfsMount [
-        # Emergency-only workaround for NTFS dirty volumes. Prefer running chkdsk on Windows.
-        "force"
-      ];
-    };
+  options.j0nix.desktop.storage.mounts = lib.mkOption {
+    default = [ ];
+    description = "Declarative extra data mounts managed by the desktop profile.";
+    type = lib.types.listOf (lib.types.submodule ({ ... }: {
+      options = {
+        name = lib.mkOption {
+          type = lib.types.str;
+          default = "mount";
+        };
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+        };
+        mountPoint = lib.mkOption {
+          type = lib.types.str;
+        };
+        device = lib.mkOption {
+          type = lib.types.str;
+        };
+        fsType = lib.mkOption {
+          type = lib.types.str;
+        };
+        options = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+        };
+        gvfsShow = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
+        gvfsName = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+        };
+        automount = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
+        idleTimeout = lib.mkOption {
+          type = lib.types.str;
+          default = "5min";
+        };
+        preventRemount = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
+        forceDirtyNtfsMount = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
+      };
+    }));
   };
 
-  # Prevent rebuild reconfiguration from stopping/restarting selected data-disk mount units while in use.
-  # The source-of-truth mount list lives in this module (`managedExtraMounts`); guard logic is shared in a helper lib.
-  systemd.units = mkMountRebuildGuards managedExtraMounts;
+  config = {
+    fileSystems = builtins.listToAttrs (map
+      (m: {
+        name = m.mountPoint;
+        value = {
+          inherit (m) device fsType;
+          options = mkMountOptions m;
+        };
+      })
+      enabledManagedMounts);
 
-  assertions = [
-    {
-      assertion = (!gamesDiskEnabled) || (gamesDiskUuid != "");
-      message = "settings.storage.gamesDisk.uuid must be set when gamesDisk.enable = true";
-    }
-    {
-      assertion = (!gamesDiskEnabled) || lib.hasPrefix "/" gamesDiskMountPoint;
-      message = "settings.storage.gamesDisk.mountPoint must be an absolute path";
-    }
-    {
-      assertion = (!gamesDiskEnabled) || (!gamesDiskGvfsShow) || (gamesDiskGvfsName != "");
-      message = "settings.storage.gamesDisk.gvfsName must not be empty when gvfsShow = true";
-    }
-    {
-      assertion = (!gamesDiskForceDirtyNtfsMount) || builtins.elem gamesDiskFsType [ "ntfs3" "ntfs" ];
-      message = "settings.storage.gamesDisk.forceDirtyNtfsMount is only valid for NTFS filesystems";
-    }
-  ];
+    # Source of truth is `j0nix.desktop.storage.mounts`; rebuild guard logic is handled by a shared helper.
+    systemd.units = mkMountRebuildGuards cfg.mounts;
+
+    assertions =
+      map
+        (m: {
+          assertion = m.device != "";
+          message = "storage mount '${m.name}' requires a non-empty device";
+        })
+        enabledManagedMounts
+      ++ map
+        (m: {
+          assertion = lib.hasPrefix "/" m.mountPoint;
+          message = "storage mount '${m.name}' requires an absolute mountPoint";
+        })
+        enabledManagedMounts
+      ++ map
+        (m: {
+          assertion = (!m.gvfsShow) || (m.gvfsName != "");
+          message = "storage mount '${m.name}' requires gvfsName when gvfsShow = true";
+        })
+        enabledManagedMounts
+      ++ map
+        (m: {
+          assertion = (!m.forceDirtyNtfsMount) || builtins.elem m.fsType [ "ntfs3" "ntfs" ];
+          message = "storage mount '${m.name}' uses forceDirtyNtfsMount only for NTFS filesystems";
+        })
+        enabledManagedMounts;
+  };
 }

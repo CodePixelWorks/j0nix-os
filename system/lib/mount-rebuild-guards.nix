@@ -14,8 +14,10 @@ let
   mkNoRemountUnit = unitName: {
     name = unitName;
     value = {
-      stopIfChanged = false;
-      restartIfChanged = false;
+      unitConfig = {
+        X-StopIfChanged = false;
+        X-RestartIfChanged = false;
+      };
     };
   };
 in
