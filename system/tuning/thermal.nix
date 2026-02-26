@@ -141,6 +141,7 @@ in
     powerManagement.cpuFreqGovernor = governor;
 
     environment.systemPackages = with pkgs; [
+      dmidecode
       lm_sensors
     ] ++ lib.optionals fanBoostEnabled [ fanBoostScript ];
 
