@@ -91,8 +91,8 @@ let
     bind = [
       "$mainMod, left, movewindow, l"
       "$mainMod, right, movewindow, r"
-      "$mainMod, up, movefocus, u"
-      "$mainMod, down, movefocus, d"
+      "$mainMod, up, movewindow, u"
+      "$mainMod, down, movewindow, d"
       "CTRL ALT, left, movefocus, l"
       "CTRL ALT, right, movefocus, r"
       "CTRL ALT, up, movefocus, u"
