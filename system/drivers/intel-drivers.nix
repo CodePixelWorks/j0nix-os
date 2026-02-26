@@ -1,7 +1,6 @@
-{ lib, pkgs, settings, ... }:
+{ config, lib, pkgs, ... }:
 let
-  cfg = (settings.drivers or { }).intel or { };
-  enabled = cfg.enable or false;
+  enabled = config.j0nix.desktop.drivers.intel.enable;
 in
 lib.mkIf enabled {
   hardware.graphics.extraPackages = with pkgs; [
