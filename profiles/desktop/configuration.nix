@@ -1,12 +1,11 @@
 { pkgs, lib, settings, inputs, ... }:
-let
-  users = settings.users or [ settings.username ];
-in {
+{
   imports = [
     ./hardware-configuration.nix
     ./modules/boot.nix
     ./modules/binfmt.nix
     ./modules/audio.nix
+    ./modules/nix.nix
     ./modules/network.nix
     ./modules/kernel.nix
     ./modules/security.nix
@@ -19,6 +18,7 @@ in {
     ../../system/audio
     ../../system/boot
     ../../system/kernel
+    ../../system/nix
     ../../system/network
     ../../system/security
     ../../system/storage
@@ -33,27 +33,6 @@ in {
     # boot policy (tmp/loader/resume/swap) is defined via `j0nix.desktop.boot`
     # in `profiles/desktop/modules/boot.nix` and applied by `system/boot`.
   };
-
-  nixpkgs.config.allowUnfree = true;
-
-  nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
-    substituters = [
-      "https://attic.xuyh0120.win/lantian"
-      "https://hyprland.cachix.org"
-    ];
-    trusted-public-keys = [
-      "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
-      "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
-    ];
-    trusted-users = [ "root" ] ++ users;
-  };
-  nix.gc = {
-    automatic = true;
-    dates = "weekly";
-    options = "--delete-older-than 14d";
-  };
-  nix.optimise.automatic = true;
 
   services.dbus.implementation = "broker";
 
