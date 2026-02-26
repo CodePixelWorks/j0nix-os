@@ -6,6 +6,9 @@
     # HP OfficeJet 5220 reachable via local network.
     drivers = [ pkgs.hplip ];
 
+    # Local printer management GUI (CUPS frontend).
+    software = [ pkgs.system-config-printer ];
+
     printers = [
       {
         name = "HP-OfficeJet-5220";
