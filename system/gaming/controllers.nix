@@ -9,7 +9,16 @@ lib.mkIf (enabled && controllerEnabled) {
   boot.kernelModules =
     lib.optionals (controllerCfg.nintendo or true) [ "hid_nintendo" ]
     ++ lib.optionals (controllerCfg.xbox or true) [ "xpad" ]
-    ++ [ "uinput" ];
+    ++ [
+      # Virtual input devices used by remappers/tools.
+      "uinput"
+      # Legacy joystick API (/dev/input/js*) for older tools and games.
+      "joydev"
+      # Force-feedback helper used by some controllers/drivers.
+      "ff_memless"
+      # Native Sony/DualSense support on modern kernels.
+      "hid_playstation"
+    ];
 
   boot.kernelParams = lib.optionals (controllerCfg.nintendo or true) [
     "usbhid.quirks=0x057e:0x2009:0x80000000"
