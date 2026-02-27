@@ -1,22 +1,19 @@
 { inputs, pkgs, lib, settings, ... }:
 let
+  dm = import ../lib/display-manager.nix { inherit lib; };
+  greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
   users = settings.users or [ settings.username ];
   primaryUser = builtins.head users;
   userOverrides = settings.userSettings or { };
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   hyprlandSessionName = if useUWSM then "hyprland-uwsm" else "hyprland";
-  selectedDisplayManager = settings.displayManager or "sddm";
+  selectedDisplayManager = dm.resolveDisplayManager settings;
   useGreetd = selectedDisplayManager == "greetd";
   useSddm = selectedDisplayManager == "sddm";
   useGdm = selectedDisplayManager == "gdm";
 
-  selectedGreetdGreeterRaw = settings.greetd.greeter or "tuigreet";
-  selectedGreetdGreeter =
-    if selectedGreetdGreeterRaw == "darkmaterialshell" then
-      "dms-greeter"
-    else
-      selectedGreetdGreeterRaw;
-  regreetCompositor = settings.greetd.regreetCompositor or "hyprland";
+  selectedGreetdGreeter = dm.resolveGreetdGreeter settings;
+  regreetCompositor = dm.resolveRegreetCompositor settings;
 
   useDankMaterialShell = useGreetd && selectedGreetdGreeter == "dms-greeter";
   hasDmsPackage =
@@ -29,7 +26,6 @@ let
     else
       null;
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
-  regreetPackage = if pkgs ? regreet then pkgs.regreet else pkgs.greetd.regreet;
   regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
   dmsGreeterHyprConfigPath = "/etc/greetd/hypr.conf";
   dmsGreeterCommand =
@@ -72,7 +68,7 @@ let
   regreetCommand =
     if regreetCompositor == "hyprland"
     then "start-hyprland -- -c ${regreetHyprlandConfigPath}"
-    else "${lib.getExe pkgs.cage} -s -mlast -- ${lib.getExe regreetPackage}";
+    else null;
   sessionCommandForWMS = wms:
     if wms == "hyprland" then
       if useUWSM then
@@ -127,16 +123,21 @@ in {
     enable = true;
     settings.default_session = lib.mkMerge [
       (lib.mkIf (selectedGreetdGreeter == "tuigreet") {
-        user = primaryUser;
-        command = "${lib.getExe pkgs.tuigreet} --time --cmd '${lib.getExe autoWmScript}'";
+        inherit (greetdVariants.tuigreet {
+          user = primaryUser;
+          sessionCommand = lib.getExe autoWmScript;
+        }) user command;
       })
       (lib.mkIf (selectedGreetdGreeter == "regreet") {
-        user = "greeter";
-        command = regreetCommand;
+        inherit (greetdVariants.regreet {
+          compositor = regreetCompositor;
+          hyprlandCommand = regreetCommand;
+        }) user command;
       })
       (lib.mkIf (selectedGreetdGreeter == "dms-greeter") {
-        user = "greeter";
-        command = dmsGreeterCommand;
+        inherit (greetdVariants.dmsGreeter {
+          command = dmsGreeterCommand;
+        }) user command;
       })
     ];
   };
@@ -145,15 +146,15 @@ in {
 
   assertions = [
     {
-      assertion = builtins.elem selectedDisplayManager [ "greetd" "sddm" "gdm" ];
+      assertion = builtins.elem selectedDisplayManager dm.validDisplayManagers;
       message = "settings.displayManager must be one of: greetd, sddm, gdm";
     }
     {
-      assertion = (!useGreetd) || builtins.elem selectedGreetdGreeter [ "tuigreet" "regreet" "dms-greeter" ];
+      assertion = (!useGreetd) || builtins.elem selectedGreetdGreeter dm.validGreetdGreeters;
       message = "settings.greetd.greeter must be one of: tuigreet, regreet, dms-greeter (legacy alias: darkmaterialshell)";
     }
     {
-      assertion = (!useGreetd) || builtins.elem regreetCompositor [ "cage" "hyprland" ];
+      assertion = (!useGreetd) || builtins.elem regreetCompositor dm.validRegreetCompositors;
       message = "settings.greetd.regreetCompositor must be one of: cage, hyprland";
     }
     {
