@@ -54,6 +54,24 @@ in
       };
     };
 
+    splash = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable Plymouth graphical boot splash.";
+      };
+      theme = lib.mkOption {
+        type = lib.types.str;
+        default = "bgrt";
+        description = "Plymouth theme name.";
+      };
+      quietBoot = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Reduce boot verbosity when splash is enabled.";
+      };
+    };
+
   };
 
   config = {
@@ -75,6 +93,26 @@ in
         size = cfg.swapfile.sizeMiB;
       }
     ];
+
+    boot.plymouth = lib.mkIf cfg.splash.enable {
+      enable = true;
+      theme = cfg.splash.theme;
+    };
+
+    boot.consoleLogLevel = lib.mkIf (cfg.splash.enable && cfg.splash.quietBoot) 3;
+    boot.initrd.verbose = lib.mkIf (cfg.splash.enable && cfg.splash.quietBoot) false;
+    boot.kernelParams = lib.mkAfter (
+      lib.optionals (cfg.splash.enable && cfg.splash.quietBoot) [
+        "quiet"
+        "splash"
+        "loglevel=3"
+        "rd.udev.log_level=3"
+        "udev.log_priority=3"
+        "systemd.show_status=false"
+        "vt.global_cursor_default=0"
+      ]
+    );
+
     assertions = [
       {
         assertion = (!cfg.swapfile.enable) || (cfg.swapfile.sizeMiB > 0);
