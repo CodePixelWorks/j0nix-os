@@ -9,6 +9,7 @@
     ./modules/locale.nix
     ./modules/fonts.nix
     ./modules/printing.nix
+    ./modules/scanning.nix
     ./modules/nix.nix
     ./modules/network.nix
     ./modules/kernel.nix
@@ -30,6 +31,7 @@
     ../../system/locale
     ../../system/fonts
     ../../system/printing
+    ../../system/scanning
     ../../system/kernel
     ../../system/nix
     ../../system/network
