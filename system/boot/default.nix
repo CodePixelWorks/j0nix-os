@@ -65,6 +65,11 @@ in
         default = "bgrt";
         description = "Plymouth theme name.";
       };
+      themePackages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [ ];
+        description = "Additional plymouth theme packages to install for custom splash themes.";
+      };
       quietBoot = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -97,6 +102,7 @@ in
     boot.plymouth = lib.mkIf cfg.splash.enable {
       enable = true;
       theme = cfg.splash.theme;
+      themePackages = cfg.splash.themePackages;
     };
 
     boot.consoleLogLevel = lib.mkIf (cfg.splash.enable && cfg.splash.quietBoot) 3;
