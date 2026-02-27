@@ -27,7 +27,7 @@ in
     };
 
     splash = {
-      enable = true;
+      enable = false;
       theme = if hasAdiPlymouthThemes then "cuts" else "bgrt";
       themePackages = lib.optionals hasAdiPlymouthThemes [ pkgs.adi1090x-plymouth-themes ];
       quietBoot = true;
