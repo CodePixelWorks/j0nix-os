@@ -115,6 +115,7 @@
           wmShellExists = builtins.pathExists wmShellModule;
           wmNeedsShell = builtins.elem userSettings.defaultWMS [ "hyprland" "mangowc" "niri" ];
           wmShellLauncherModule = baseDir + "/user/wm/shell-launcher.nix";
+          wmShellCommonModule = baseDir + "/user/wm/hyprland/shells/common/default.nix";
 
           wmModules = lib.filter (m: m != null) [ (mkWmModule userSettings.defaultWMS) ];
           editorModules = lib.filter (m: m != null) (map mkEditorModule userSettings.editors);
@@ -168,6 +169,7 @@
             };
           })
         ]
+        ++ lib.optional wmNeedsShell wmShellCommonModule
         ++ lib.optional wmNeedsShell wmShellLauncherModule
         ++ wmModules
         ++ editorModules
