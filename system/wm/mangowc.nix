@@ -1,17 +1,13 @@
 { lib, pkgs, settings, ... }:
 let
-  selectedDisplayManager = settings.displayManager or "sddm";
+  dm = import ../lib/display-manager.nix { inherit lib; };
+  greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
+  selectedDisplayManager = dm.resolveDisplayManager settings;
   useGreetd = selectedDisplayManager == "greetd";
   useSddm = selectedDisplayManager == "sddm";
   useHyprlandModule = builtins.elem "hyprland" (settings.wms or [ ]);
 
-  selectedGreetdGreeterRaw = (settings.greetd or { }).greeter or "tuigreet";
-  selectedGreetdGreeter =
-    if selectedGreetdGreeterRaw == "darkmaterialshell" then
-      "dms-greeter"
-    else
-      selectedGreetdGreeterRaw;
-  regreetPackage = if pkgs ? regreet then pkgs.regreet else pkgs.greetd.regreet;
+  selectedGreetdGreeter = dm.resolveGreetdGreeter settings;
 
   mangoPkg = pkgs.mangowc;
   mangoExe = lib.getExe mangoPkg;
@@ -63,16 +59,20 @@ in {
     enable = true;
     settings.default_session = lib.mkMerge [
       (lib.mkIf (selectedGreetdGreeter == "tuigreet") {
-        user = settings.username;
-        command = "${lib.getExe pkgs.tuigreet} --time --cmd ${mangoStart}";
+        inherit (greetdVariants.tuigreet {
+          user = settings.username;
+          sessionCommand = mangoStart;
+        }) user command;
       })
       (lib.mkIf (selectedGreetdGreeter == "regreet") {
-        user = "greeter";
-        command = "${lib.getExe pkgs.cage} -s -mlast -- ${lib.getExe regreetPackage}";
+        inherit (greetdVariants.regreet {
+          compositor = "cage";
+        }) user command;
       })
       (lib.mkIf (selectedGreetdGreeter == "dms-greeter") {
-        user = "greeter";
-        command = dmsGreeterMangoCommand;
+        inherit (greetdVariants.dmsGreeter {
+          command = dmsGreeterMangoCommand;
+        }) user command;
       })
     ];
   };
@@ -98,4 +98,11 @@ in {
       mangowc.default = [ "wlr" "gtk" ];
     };
   };
+
+  assertions = [
+    {
+      assertion = (!(!useHyprlandModule && useGreetd)) || builtins.elem selectedGreetdGreeter dm.validGreetdGreeters;
+      message = "settings.greetd.greeter must be one of: tuigreet, regreet, dms-greeter (legacy alias: darkmaterialshell)";
+    }
+  ];
 }
