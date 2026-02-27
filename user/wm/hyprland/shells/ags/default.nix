@@ -6,7 +6,7 @@ in {
 
   programs.waybar.enable = lib.mkForce false;
 
-  home.packages = with pkgs; [
+  j0nix.user.software.packages = lib.mkAfter (with pkgs; [
     ags
     bun
     dart-sass
@@ -14,5 +14,5 @@ in {
     gtk3
     networkmanager
     pavucontrol
-  ];
+  ]);
 }
