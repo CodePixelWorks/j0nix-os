@@ -36,6 +36,26 @@ in
       description = "Install a visible Wi-Fi Manager launcher entry with icon.";
     };
 
+    wifi = {
+      powersave = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable Wi-Fi power saving (can reduce throughput/latency).";
+      };
+
+      backend = lib.mkOption {
+        type = lib.types.nullOr (lib.types.enum [ "iwd" "wpa_supplicant" ]);
+        default = null;
+        description = "Override NetworkManager Wi-Fi backend (iwd or wpa_supplicant).";
+      };
+
+      secretsAgent = lib.mkOption {
+        type = lib.types.enum [ "nm-applet" "none" ];
+        default = "nm-applet";
+        description = "Secrets agent to supply Wi-Fi credentials to NetworkManager.";
+      };
+    };
+
     tailscale = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -52,6 +72,14 @@ in
     networking.hostName = cfg.hostName;
     networking.networkmanager.enable = cfg.networkmanager.enable;
     services.tailscale.enable = cfg.tailscale.enable;
+
+    networking.networkmanager.wifi = {
+      powersave = cfg.wifi.powersave;
+      backend = lib.mkIf (cfg.wifi.backend != null) cfg.wifi.backend;
+    };
+
+    programs.nm-applet.enable =
+      cfg.networkmanager.enable && cfg.wifi.secretsAgent == "nm-applet";
 
     j0nix.software.systemPackages =
       lib.optionals cfg.networkmanager.enable [
