@@ -87,10 +87,10 @@ let
   keyboardLayoutToggleBind =
     lib.optional (hasValue layoutToggleBind) "${layoutToggleBind}, exec, wm-kbd-layout-toggle";
   dmsOverviewToggleBind =
-    lib.optional (isDmsShell && dmsOverviewEnabled && hasValue overviewToggleBind)
-      "${overviewToggleBind}, exec, dms-overview-toggle";
+    lib.optional (dmsOverviewEnabled && hasValue overviewToggleBind)
+      "${overviewToggleBind}, exec, wm-overview-toggle";
   dmsOverviewRemoteToggleBind =
-    lib.optional (isDmsShell && dmsOverviewEnabled) "CTRL ALT, SPACE, exec, dms-overview-toggle";
+    lib.optional dmsOverviewEnabled "CTRL ALT, SPACE, exec, wm-overview-toggle";
   baseHyprKeybinds = {
     bind = [
       "$mainMod, left, movewindow, l"
@@ -339,7 +339,7 @@ in {
         "[workspace 2 silent] ${appExec "firefox"}"
         "[workspace 3 silent] ${appExec "${preferredTerminalCmd} btop"}"
       ] ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
-        ++ lib.optionals (isDmsShell && dmsOverviewEnabled && dmsOverviewAutostart) [ "dms-overview-start" ];
+        ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "wm-overview-start" ];
 
       input = {
         kb_layout = settings.keyboardLayout or "de";
