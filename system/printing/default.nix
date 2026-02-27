@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 {
   options.j0nix.desktop.printing = {
     enable = lib.mkOption {
@@ -51,7 +51,10 @@
           drivers = cfg.drivers;
         };
         # HP multi-function devices (like OfficeJet 5220) need sane support for scanning.
-        hardware.sane.enable = true;
+        hardware.sane = {
+          enable = true;
+          extraBackends = [ pkgs.hplipWithPlugin ];
+        };
 
         j0nix.software.systemPackages = cfg.software;
       })
