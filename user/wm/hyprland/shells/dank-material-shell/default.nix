@@ -120,19 +120,19 @@ in {
         fi
 
         if command -v qs >/dev/null 2>&1; then
-          qs ipc -c ${overviewName} call overview toggleOverview >/dev/null 2>&1 && exit 0
+          qs ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
           dms-overview-start >/dev/null 2>&1 || exit 1
           sleep 0.3
-          qs ipc -c ${overviewName} call overview toggleOverview >/dev/null 2>&1 && exit 0
+          qs ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
           echo "Failed to toggle quickshell-overview via qs ipc"
           exit 1
         fi
 
         if command -v quickshell >/dev/null 2>&1; then
-          quickshell ipc -c ${overviewName} call overview toggleOverview >/dev/null 2>&1 && exit 0
+          quickshell ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
           dms-overview-start >/dev/null 2>&1 || exit 1
           sleep 0.3
-          quickshell ipc -c ${overviewName} call overview toggleOverview >/dev/null 2>&1 && exit 0
+          quickshell ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
           echo "Failed to toggle quickshell-overview via quickshell ipc"
           exit 1
         fi
