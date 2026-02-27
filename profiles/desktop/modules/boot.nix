@@ -35,6 +35,7 @@ in
       themePackages =
         lib.optionals (splashEnabled && hasAdiPlymouthThemes) [ pkgs.adi1090x-plymouth-themes ];
       quietBoot = splashCfg.quietBoot or true;
+      highResolution = splashCfg.highResolution or true;
     };
   };
 }
