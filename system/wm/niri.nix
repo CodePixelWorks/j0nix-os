@@ -6,6 +6,7 @@ let
   useGreetd = selectedDisplayManager == "greetd";
   useSddm = selectedDisplayManager == "sddm";
   useHyprlandModule = builtins.elem "hyprland" (settings.wms or [ ]);
+  manageOwnDisplayManager = !useHyprlandModule;
 
   niriStartScript = pkgs.writeShellScriptBin "start-niri" ''
     export XDG_SESSION_TYPE=wayland
@@ -34,17 +35,17 @@ in
     ./common/wayland.nix
   ];
 
-  services.displayManager.sddm = lib.mkIf (!useHyprlandModule && useSddm) {
+  services.displayManager.sddm = lib.mkIf (manageOwnDisplayManager && useSddm) {
     enable = true;
     wayland.enable = true;
     theme = "sddm-astronaut-theme";
     extraPackages = [ pkgs.sddm-astronaut ];
   };
 
-  services.displayManager.defaultSession = lib.mkIf (!useHyprlandModule && useSddm) "niri";
+  services.displayManager.defaultSession = lib.mkIf (manageOwnDisplayManager && useSddm) "niri";
   services.displayManager.sessionPackages = [ niriSessionPackage ];
 
-  services.greetd = lib.mkIf (!useHyprlandModule && useGreetd) {
+  services.greetd = lib.mkIf (manageOwnDisplayManager && useGreetd) {
     enable = true;
     settings.default_session = greetdVariants.tuigreet {
       user = settings.username;
