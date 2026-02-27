@@ -75,6 +75,11 @@ in
         default = true;
         description = "Reduce boot verbosity when splash is enabled.";
       };
+      highResolution = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Request highest available firmware console resolution for a sharper splash.";
+      };
     };
 
   };
@@ -89,6 +94,8 @@ in
     };
 
     boot.loader.efi.canTouchEfiVariables = cfg.loader.efi.canTouchEfiVariables;
+    boot.loader.systemd-boot.consoleMode =
+      lib.mkIf (cfg.splash.enable && cfg.splash.highResolution) "max";
 
     boot.resumeDevice = lib.mkIf (cfg.resumeDevice != null) cfg.resumeDevice;
 
