@@ -14,6 +14,7 @@ in
     wifi = {
       powersave = network.wifi.powersave or false;
       backend = network.wifi.backend or null;
+      scanRandMacAddress = network.wifi.scanRandMacAddress or false;
       secretsAgent = network.wifi.secretsAgent or "nm-applet";
     };
     tailscale = {
