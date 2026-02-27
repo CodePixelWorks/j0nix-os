@@ -76,9 +76,8 @@ in
       enabledManagedMounts);
 
     # Source of truth is `j0nix.desktop.storage.mounts`; rebuild guard logic is handled by a shared helper.
-    systemd.units =
-      (mkMountRebuildGuards cfg.mounts)
-      // builtins.listToAttrs (map mkLazyUnmountService lazyUnmountMounts);
+    systemd.units = mkMountRebuildGuards cfg.mounts;
+    systemd.services = builtins.listToAttrs (map mkLazyUnmountService lazyUnmountMounts);
 
     assertions =
       map (m: {
