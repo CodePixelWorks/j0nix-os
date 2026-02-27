@@ -6,11 +6,16 @@
       baseDir = ./.;
 
       vscodeOverlay = inputs.nix-vscode-extensions.overlays.default;
+      localFixesOverlay = final: prev: {
+        lager = prev.lager.overrideAttrs (old: {
+          cmakeFlags = (old.cmakeFlags or [ ]) ++ [ "-DBoost_NO_BOOST_CMAKE=ON" ];
+        });
+      };
       rawSettings = import (baseDir + "/settings.nix") { inherit inputs; };
 
       pkgs = import nixpkgs {
         system = rawSettings.system;
-        overlays = [ vscodeOverlay ];
+        overlays = [ vscodeOverlay localFixesOverlay ];
         config.allowUnfree = true;
       };
 
@@ -194,7 +199,7 @@
           modules = [
             inputs.stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
-            ({ ... }: { nixpkgs.overlays = [ vscodeOverlay ]; })
+            ({ ... }: { nixpkgs.overlays = [ vscodeOverlay localFixesOverlay ]; })
             ({ ... }: {
               home-manager = {
                 useGlobalPkgs = true;
@@ -224,7 +229,7 @@
           home-manager.lib.homeManagerConfiguration {
             pkgs = import nixpkgs {
               system = settings.system;
-              overlays = [ vscodeOverlay ];
+              overlays = [ vscodeOverlay localFixesOverlay ];
               config.allowUnfree = true;
             };
             modules = (mkHomeModules userSettings) ++ hmSharedModulesStandalone;
