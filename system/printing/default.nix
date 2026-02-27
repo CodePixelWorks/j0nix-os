@@ -27,20 +27,6 @@
       };
     };
 
-    sane = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Enable SANE scanner support when printing is enabled.";
-      };
-
-      extraBackends = lib.mkOption {
-        type = lib.types.listOf lib.types.package;
-        default = [ ];
-        description = "Additional SANE backend packages (for example hplipWithPlugin).";
-      };
-    };
-
     printers = lib.mkOption {
       type = lib.types.listOf lib.types.anything;
       default = [ ];
@@ -66,13 +52,6 @@
         };
 
         j0nix.software.systemPackages = cfg.software;
-      })
-
-      (lib.mkIf (cfg.enable && cfg.sane.enable) {
-        hardware.sane = {
-          enable = true;
-          extraBackends = cfg.sane.extraBackends;
-        };
       })
 
       (lib.mkIf (cfg.enable && cfg.discovery.enable) {
