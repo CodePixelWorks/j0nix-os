@@ -10,6 +10,8 @@ Display manager and system WM integration.
 - `gnome.nix`: GNOME integration
 - `kde.nix`: KDE integration
 - `common/wayland.nix`: shared Wayland/X11 foundation packages/options
+- `display-manager/greetd/variants.nix`: shared greetd greeter constructors
+- `../lib/display-manager.nix`: shared display-manager contract resolution and valid values
 
 ## Control Keys
 
