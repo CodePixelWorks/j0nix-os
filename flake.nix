@@ -17,6 +17,8 @@
           buildInputs = (old.buildInputs or [ ]) ++ [ prev.boost.out ];
           postPatch = (old.postPatch or "") + ''
             substituteInPlace cmake/dependencies/Boost_Sunshine.cmake \
+              --replace-fail $'        system\n' ""
+            substituteInPlace cmake/dependencies/Boost_Sunshine.cmake \
               --replace-fail 'find_package(Boost CONFIG ''${BOOST_VERSION} EXACT COMPONENTS ''${BOOST_COMPONENTS})' \
                              $'set(Boost_NO_BOOST_CMAKE ON)\nfind_package(Boost 1.56 REQUIRED COMPONENTS ''${BOOST_COMPONENTS})'
           '';
