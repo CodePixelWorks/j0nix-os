@@ -1,5 +1,6 @@
 { inputs, lib, pkgs, settings, ... }:
 let
+  listMerge = import ../../../../../system/lib/list-merge.nix { inherit lib; };
   hasNoctaliaInput = inputs ? noctalia;
   noctaliaCfg = ((settings.programs or { }).noctalia or { });
   initializeConfig = noctaliaCfg.initializeConfig or true;
@@ -15,6 +16,32 @@ let
     && (inputs.noctalia ? packages)
     && (builtins.hasAttr pkgs.stdenv.hostPlatform.system inputs.noctalia.packages)
     && (inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system} ? default);
+  shellRuntimePackages = with pkgs; [
+    matugen
+  ];
+  shellScriptPackages = with pkgs; [
+    (writeShellScriptBin "noctalia-start" ''
+      echo "Starting Noctalia Shell..."
+      killall -q noctalia-shell 2>/dev/null || true
+      sleep 0.5
+
+      if command -v noctalia-shell >/dev/null 2>&1; then
+        noctalia-shell &
+      else
+        echo "noctalia-shell binary not found in PATH."
+        echo "Noctalia is managed declaratively. Rebuild and verify wmShell=noctalia-shell."
+        exit 1
+      fi
+    '')
+    (writeShellScriptBin "noctalia-stop" ''
+      echo "Stopping Noctalia Shell..."
+      killall -q noctalia-shell 2>/dev/null || true
+    '')
+  ];
+  shellFontPackages = with pkgs; [
+    nerd-fonts.fira-code
+    nerd-fonts.jetbrains-mono
+  ];
 in {
   imports = lib.optional hasHomeModule inputs.noctalia.homeModules.default;
 
@@ -97,28 +124,13 @@ in {
     setupCompleted = true;
   };
 
-  home.packages =
-    lib.optional hasPackage inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default
-    ++ (with pkgs; [
-      (writeShellScriptBin "noctalia-start" ''
-        echo "Starting Noctalia Shell..."
-        killall -q noctalia-shell 2>/dev/null || true
-        sleep 0.5
+  j0nix.user.shells.quickshell.packages = lib.mkAfter (listMerge.mergeUnique [
+    (lib.optionals hasPackage [ inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default ])
+    shellRuntimePackages
+    shellScriptPackages
+  ]);
 
-        if command -v noctalia-shell >/dev/null 2>&1; then
-          noctalia-shell &
-        else
-          echo "noctalia-shell binary not found in PATH."
-          echo "Noctalia is managed declaratively. Rebuild and verify wmShell=noctalia-shell."
-          exit 1
-        fi
-      '')
-      (writeShellScriptBin "noctalia-stop" ''
-        echo "Stopping Noctalia Shell..."
-        killall -q noctalia-shell 2>/dev/null || true
-      '')
-      pkgs.matugen
-    ]);
+  j0nix.user.shells.fonts.packages = lib.mkAfter shellFontPackages;
 
   home.activation.noctaliaSettingsInit = lib.hm.dag.entryAfter [ "writeBoundary" ] (lib.optionalString initializeConfig ''
     SETTINGS_DIR="$HOME/.config/noctalia"
