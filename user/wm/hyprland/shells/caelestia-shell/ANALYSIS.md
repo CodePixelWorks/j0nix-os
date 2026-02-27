@@ -8,6 +8,9 @@
 
 ## Integration Contract In j0nix-os
 - Module: `user/wm/hyprland/shells/caelestia-shell/default.nix`
+- Channel switch: `settings.programs.caelestia.channel = "stable" | "dev"`
+  - `stable` -> flake input `caelestia-shell`
+  - `dev` -> flake input `caelestia-shell-dev` (tracks `main`)
 - Package wiring: `j0nix.user.shells.quickshell.packages` via shared list-merge helper.
 - Font wiring: `j0nix.user.shells.fonts.packages` (Material Symbols + Nerd fonts).
 - Install aggregator: `j0nix.user.software.packages` (through `shells/common/default.nix`).
