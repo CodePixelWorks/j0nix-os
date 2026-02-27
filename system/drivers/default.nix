@@ -7,6 +7,14 @@ let
   vmGuestServicesEnabled = config.j0nix.desktop.virtualisation.vmGuestServices.enable;
 in {
   options.j0nix.desktop.drivers = {
+    firmware = {
+      enableRedistributable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable redistributable firmware for devices that require it (e.g. Wi-Fi).";
+      };
+    };
+
     amdgpu.enable = lib.mkOption { type = lib.types.bool; default = false; };
     intel.enable = lib.mkOption { type = lib.types.bool; default = false; };
     nvidia = {
@@ -47,4 +55,6 @@ in {
       message = "j0nix.desktop.drivers.nvidia.enable should not be combined with j0nix.desktop.virtualisation.vmGuestServices.enable for bare-metal NVIDIA setups";
     }
   ];
+
+  config.hardware.enableRedistributableFirmware = cfg.firmware.enableRedistributable;
 }
