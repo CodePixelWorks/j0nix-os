@@ -4,11 +4,16 @@ let
   bambuCfg = programsCfg.bambulab or { };
   provider = bambuCfg.provider or "appimage";
   bambuAppImagePackage = pkgs.callPackage ./appimage-package.nix { };
+  bambuExec =
+    if provider == "flatpak" then
+      "flatpak run com.bambulab.BambuStudio"
+    else
+      lib.getExe' bambuAppImagePackage "bambu-studio";
   bambuDesktopEntry = {
     name = "Bambu Studio";
     genericName = "3D Printing Software";
     comment = "3D printing software";
-    exec = lib.getExe' bambuAppImagePackage "bambu-studio";
+    exec = bambuExec;
     icon = "${../../../icons/bambulab/BambuStudio.png}";
     terminal = false;
     type = "Application";
@@ -19,8 +24,8 @@ in
 {
   assertions = [
     {
-      assertion = provider == "appimage";
-      message = "settings.programs.bambulab.provider is now appimage-only and must be set to \"appimage\"";
+      assertion = builtins.elem provider [ "appimage" "flatpak" ];
+      message = "settings.programs.bambulab.provider must be one of: appimage, flatpak";
     }
   ];
 
