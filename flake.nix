@@ -285,6 +285,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    caelestia-shell-dev = {
+      url = "github:caelestia-dots/shell?ref=main";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     hyprland = {
       type = "git";
       url = "https://github.com/hyprwm/Hyprland";
