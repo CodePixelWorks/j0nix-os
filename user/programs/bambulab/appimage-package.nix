@@ -12,7 +12,9 @@ pkgs.appimageTools.wrapType2 rec {
 
   profile = ''
     export SSL_CERT_FILE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-    export GIO_MODULE_DIR="${pkgs.glib-networking}/lib/gio/modules/"
+    # Do not override GIO_MODULE_DIR: replacing it can hide default GLib modules.
+    # Add glib-networking modules on top of defaults instead.
+    export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules"
   '';
 
   extraPkgs =
