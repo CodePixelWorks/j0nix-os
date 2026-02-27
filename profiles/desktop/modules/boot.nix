@@ -1,4 +1,7 @@
-{ ... }:
+{ lib, pkgs, ... }:
+let
+  hasAdiPlymouthThemes = pkgs ? adi1090x-plymouth-themes;
+in
 {
   j0nix.desktop.boot = {
     tmp = {
@@ -25,7 +28,8 @@
 
     splash = {
       enable = true;
-      theme = "bgrt";
+      theme = if hasAdiPlymouthThemes then "colorful_loop" else "bgrt";
+      themePackages = lib.optionals hasAdiPlymouthThemes [ pkgs.adi1090x-plymouth-themes ];
       quietBoot = true;
     };
   };
