@@ -28,6 +28,9 @@
                              'target_link_libraries(simple-web-server INTERFACE Boost::boost)'
             substituteInPlace cmake/compile_definitions/common.cmake \
               --replace-fail '        ''${Boost_LIBRARIES}' $'        ''${Boost_LIBRARIES}\n        ${prev.boost.out}/lib/libboost_log_setup.so\n        ${prev.boost.out}/lib/libboost_thread.so\n        ${prev.boost.out}/lib/libboost_chrono.so\n        ${prev.boost.out}/lib/libboost_atomic.so\n        ${prev.boost.out}/lib/libboost_regex.so\n        ${prev.boost.out}/lib/libboost_date_time.so'
+            substituteInPlace cmake/compile_definitions/common.cmake \
+              --replace-fail '        ${prev.boost.out}/lib/libboost_log_setup.so' \
+                             $'        ${prev.boost.out}/lib/libboost_log.so\n        ${prev.boost.out}/lib/libboost_log_setup.so'
           '';
         });
       };
