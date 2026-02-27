@@ -1,5 +1,8 @@
-{ lib, pkgs, ... }:
+{ lib, pkgs, settings, ... }:
 let
+  bootCfg = settings.boot or { };
+  splashCfg = bootCfg.splash or { };
+  splashEnabled = splashCfg.enable or false;
   hasAdiPlymouthThemes = pkgs ? adi1090x-plymouth-themes;
 in
 {
@@ -12,7 +15,7 @@ in
     loader = {
       systemdBoot = {
         enable = true;
-        configurationLimit = 12;
+        configurationLimit = 3;
       };
       efi.canTouchEfiVariables = true;
     };
@@ -27,10 +30,11 @@ in
     };
 
     splash = {
-      enable = false;
-      theme = if hasAdiPlymouthThemes then "cuts" else "bgrt";
-      themePackages = lib.optionals hasAdiPlymouthThemes [ pkgs.adi1090x-plymouth-themes ];
-      quietBoot = true;
+      enable = splashEnabled;
+      theme = splashCfg.theme or (if hasAdiPlymouthThemes then "cuts" else "bgrt");
+      themePackages =
+        lib.optionals (splashEnabled && hasAdiPlymouthThemes) [ pkgs.adi1090x-plymouth-themes ];
+      quietBoot = splashCfg.quietBoot or true;
     };
   };
 }
