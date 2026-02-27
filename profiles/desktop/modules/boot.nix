@@ -28,7 +28,7 @@ in
 
     splash = {
       enable = true;
-      theme = if hasAdiPlymouthThemes then "colorful_loop" else "bgrt";
+      theme = if hasAdiPlymouthThemes then "cuts" else "bgrt";
       themePackages = lib.optionals hasAdiPlymouthThemes [ pkgs.adi1090x-plymouth-themes ];
       quietBoot = true;
     };
