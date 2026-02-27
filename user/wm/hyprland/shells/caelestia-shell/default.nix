@@ -303,6 +303,18 @@ in
       procps
       wl-clipboard
       cliphist
+      # Caelestia runtime/tooling dependencies.
+      ddcutil
+      app2unit
+      cava
+      fish
+      aubio
+      qt6.qtbase
+      qt6.qtdeclarative
+      stdenv.cc.cc.lib
+      libqalculate
+      cmake
+      ninja
       # Caelestia shell screen recording actions expect these in PATH.
       gpu-screen-recorder
       gpu-screen-recorder-gtk
@@ -311,6 +323,7 @@ in
       adwaita-icon-theme
       papirus-icon-theme
       material-symbols
+      nerd-fonts.caskaydia-cove
       nerd-fonts.jetbrains-mono
       nerd-fonts.fira-code
     ])
