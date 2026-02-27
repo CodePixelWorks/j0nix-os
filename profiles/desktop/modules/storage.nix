@@ -26,6 +26,7 @@ in
       idleTimeout = "5min";
       preventRemount = true;
       forceDirtyNtfsMount = false;
+      lazyUnmountOnShutdown = true;
     }
   ];
 
