@@ -8,9 +8,13 @@ let
   dmsWorkspaceSettings = dmsSettings.workspaces or { };
   hyprDmsDir = "${config.home.homeDirectory}/.config/hypr/dms";
   useUWSM = (settings.hyprland or { }).useUWSM or true;
+  appExecBackend = (settings.hyprland or { }).appExecBackend or "app2unit";
   uwsmAppPrefix = "${lib.getExe pkgs.uwsm} app --";
-  appExec = cmd: if useUWSM then "${uwsmAppPrefix} ${cmd}" else cmd;
-  launcherAppExec = cmd: if useUWSM then "${uwsmAppPrefix} ${cmd}" else "app2unit -- ${cmd}";
+  appExecPrefix =
+    if appExecBackend == "uwsm" then "${uwsmAppPrefix} "
+    else "app2unit -- ";
+  appExec = cmd: "${appExecPrefix}${cmd}";
+  launcherAppExec = appExec;
   preferredTerminal = settings.preferredTerminal or "kitty";
   preferredTerminalCmd =
     if builtins.elem preferredTerminal [ "gnome-console" "gnome console" ] then "kgx" else preferredTerminal;
@@ -392,6 +396,10 @@ in {
     {
       assertion = workspaceCountRaw >= 1 && workspaceCountRaw <= 10;
       message = "settings.dms.workspaces.count must be between 1 and 10";
+    }
+    {
+      assertion = builtins.elem appExecBackend [ "app2unit" "uwsm" ];
+      message = "settings.hyprland.appExecBackend must be one of: app2unit, uwsm";
     }
   ];
 }
