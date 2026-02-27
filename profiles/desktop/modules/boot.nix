@@ -22,5 +22,11 @@
       path = "/swapfile";
       sizeMiB = 68 * 1024;
     };
+
+    splash = {
+      enable = true;
+      theme = "bgrt";
+      quietBoot = true;
+    };
   };
 }
