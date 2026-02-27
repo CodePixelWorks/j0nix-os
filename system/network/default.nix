@@ -49,6 +49,12 @@ in
         description = "Override NetworkManager Wi-Fi backend (iwd or wpa_supplicant).";
       };
 
+      scanRandMacAddress = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Randomize MAC address during scans (can delay association on some APs).";
+      };
+
       secretsAgent = lib.mkOption {
         type = lib.types.enum [ "nm-applet" "none" ];
         default = "nm-applet";
@@ -76,6 +82,7 @@ in
     networking.networkmanager.wifi = {
       powersave = cfg.wifi.powersave;
       backend = lib.mkIf (cfg.wifi.backend != null) cfg.wifi.backend;
+      scanRandMacAddress = cfg.wifi.scanRandMacAddress;
     };
 
     programs.nm-applet.enable =
