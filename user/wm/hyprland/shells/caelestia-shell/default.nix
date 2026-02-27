@@ -19,6 +19,17 @@ let
     else
       null;
   dmsSettings = settings.dms or { };
+  caelestiaSettings = (settings.programs or { }).caelestia or { };
+  caelestiaChannel = caelestiaSettings.channel or "stable";
+  caelestiaInputName = if caelestiaChannel == "dev" then "caelestia-shell-dev" else "caelestia-shell";
+  hasStableInput = inputs ? caelestia-shell;
+  selectedInput =
+    if caelestiaChannel == "dev" then
+      (if inputs ? caelestia-shell-dev then inputs.caelestia-shell-dev else null)
+    else if hasStableInput then
+      inputs.caelestia-shell
+    else
+      null;
   dmsWallpaper = dmsSettings.wallpaper or { };
   configuredWallpaper = dmsWallpaper.wallpaperPath or null;
   configuredWallpaperDir =
@@ -26,18 +37,18 @@ let
       lib.removeSuffix "/${builtins.baseNameOf configuredWallpaper}" configuredWallpaper
     else
       null;
-  hasInput = inputs ? caelestia-shell;
+  hasInput = selectedInput != null;
   hasHomeModule =
-    hasInput
+    hasStableInput
     && (inputs.caelestia-shell ? homeManagerModules)
     && (inputs.caelestia-shell.homeManagerModules ? default);
   hasSystemPackages =
     hasInput
-    && (inputs.caelestia-shell ? packages)
-    && (builtins.hasAttr pkgs.stdenv.hostPlatform.system inputs.caelestia-shell.packages);
+    && (selectedInput ? packages)
+    && (builtins.hasAttr pkgs.stdenv.hostPlatform.system selectedInput.packages);
   packageSet =
     if hasSystemPackages then
-      inputs.caelestia-shell.packages.${pkgs.stdenv.hostPlatform.system}
+      selectedInput.packages.${pkgs.stdenv.hostPlatform.system}
     else
       { };
   caelestiaPkg =
@@ -428,12 +439,16 @@ EOF
   assertions = [
     {
       assertion = hasInput;
-      message = "wmShell=caelestia-shell requires flake input 'caelestia-shell' in flake.nix";
+      message = "wmShell=caelestia-shell requires flake input '${caelestiaInputName}' in flake.nix";
+    }
+    {
+      assertion = builtins.elem caelestiaChannel [ "stable" "dev" ];
+      message = "settings.programs.caelestia.channel must be one of: stable, dev";
     }
     {
       assertion = hasHomeModule || (caelestiaPkg != null);
       message = ''
-        inputs.caelestia-shell must expose either:
+        inputs.${caelestiaInputName} must expose either:
         - homeManagerModules.default
         - packages.${pkgs.stdenv.hostPlatform.system}.with-cli (or default)
       '';
