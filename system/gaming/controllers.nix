@@ -4,6 +4,7 @@ let
   enabled = gaming.enable or true;
   controllerCfg = gaming.controllers or { };
   controllerEnabled = controllerCfg.enable or true;
+  ratbagEnabled = controllerCfg.ratbag or true;
 in
 lib.mkIf (enabled && controllerEnabled) {
   j0nix.desktop.kernel.modules =
@@ -28,6 +29,8 @@ lib.mkIf (enabled && controllerEnabled) {
     steam-hardware.enable = true;
     xpadneo.enable = controllerCfg.xbox or true;
   };
+
+  services.ratbagd.enable = ratbagEnabled;
 
   services.udev.extraRules = lib.mkAfter ''
     # Nintendo Switch Pro Controller over USB
@@ -57,5 +60,8 @@ lib.mkIf (enabled && controllerEnabled) {
     jstest-gtk
     evtest
     antimicrox
+  ] ++ lib.optionals ratbagEnabled [
+    libratbag
+    piper
   ];
 }
