@@ -1,6 +1,8 @@
 { lib, pkgs, settings, ... }:
 let
-  selectedDisplayManager = settings.displayManager or "sddm";
+  dm = import ../lib/display-manager.nix { inherit lib; };
+  greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
+  selectedDisplayManager = dm.resolveDisplayManager settings;
   useGreetd = selectedDisplayManager == "greetd";
   useSddm = selectedDisplayManager == "sddm";
   useHyprlandModule = builtins.elem "hyprland" (settings.wms or [ ]);
@@ -44,9 +46,9 @@ in
 
   services.greetd = lib.mkIf (!useHyprlandModule && useGreetd) {
     enable = true;
-    settings.default_session = {
+    settings.default_session = greetdVariants.tuigreet {
       user = settings.username;
-      command = "${lib.getExe pkgs.tuigreet} --time --cmd ${lib.getExe niriStartScript}";
+      sessionCommand = lib.getExe niriStartScript;
     };
   };
 
