@@ -21,8 +21,8 @@
     modprobeOptions = {
       # USB Bluetooth adapters/controllers can become unreliable after autosuspend.
       btusb.enable_autosuspend = 0;
-      # Improve Intel Wi-Fi 6 association by disabling aggressive power saving.
-      iwlwifi.power_save = 2;
+      # Keep Intel Wi-Fi power saving disabled for better connection stability.
+      iwlwifi.power_save = 0;
     };
   };
 }
