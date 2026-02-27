@@ -10,6 +10,11 @@ Selectable shell implementations for Wayland WMs (hyprland, mangowc, niri).
 - `noctalia-shell/`
 - `none/`
 
+Each shell keeps an `ANALYSIS.md` with:
+- upstream source/pin snapshot from `flake.lock`
+- current j0nix integration contract
+- dependency/runtime assumptions
+
 ## Selection Key
 
 Set globally via:
