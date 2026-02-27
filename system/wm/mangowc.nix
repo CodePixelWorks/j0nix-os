@@ -6,6 +6,7 @@ let
   useGreetd = selectedDisplayManager == "greetd";
   useSddm = selectedDisplayManager == "sddm";
   useHyprlandModule = builtins.elem "hyprland" (settings.wms or [ ]);
+  manageOwnDisplayManager = !useHyprlandModule;
 
   selectedGreetdGreeter = dm.resolveGreetdGreeter settings;
 
@@ -45,17 +46,17 @@ in {
     ./common/wayland.nix
   ];
 
-  services.displayManager.sddm = lib.mkIf (!useHyprlandModule && useSddm) {
+  services.displayManager.sddm = lib.mkIf (manageOwnDisplayManager && useSddm) {
     enable = true;
     wayland.enable = true;
     theme = "sddm-astronaut-theme";
     extraPackages = [ pkgs.sddm-astronaut ];
   };
 
-  services.displayManager.defaultSession = lib.mkIf (!useHyprlandModule && useSddm) "mangowc";
+  services.displayManager.defaultSession = lib.mkIf (manageOwnDisplayManager && useSddm) "mangowc";
   services.displayManager.sessionPackages = [ mangowcSessionPackage ];
 
-  services.greetd = lib.mkIf (!useHyprlandModule && useGreetd) {
+  services.greetd = lib.mkIf (manageOwnDisplayManager && useGreetd) {
     enable = true;
     settings.default_session = lib.mkMerge [
       (lib.mkIf (selectedGreetdGreeter == "tuigreet") {
@@ -77,7 +78,7 @@ in {
     ];
   };
 
-  environment.etc."greetd/mango.conf" = lib.mkIf (!useHyprlandModule && useGreetd && selectedGreetdGreeter == "dms-greeter") {
+  environment.etc."greetd/mango.conf" = lib.mkIf (manageOwnDisplayManager && useGreetd && selectedGreetdGreeter == "dms-greeter") {
     text = ''
       env = DMS_RUN_GREETER,1
     '';
@@ -101,7 +102,7 @@ in {
 
   assertions = [
     {
-      assertion = (!(!useHyprlandModule && useGreetd)) || builtins.elem selectedGreetdGreeter dm.validGreetdGreeters;
+      assertion = (!(manageOwnDisplayManager && useGreetd)) || builtins.elem selectedGreetdGreeter dm.validGreetdGreeters;
       message = "settings.greetd.greeter must be one of: tuigreet, regreet, dms-greeter (legacy alias: darkmaterialshell)";
     }
   ];
