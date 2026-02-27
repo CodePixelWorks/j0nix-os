@@ -1,9 +1,10 @@
-{ config, lib, utils, ... }:
+{ config, lib, pkgs, utils, ... }:
 let
   cfg = config.j0nix.desktop.storage;
   mkMountRebuildGuards = import ../lib/mount-rebuild-guards.nix { inherit lib utils; };
 
   enabledManagedMounts = lib.filter (m: m.enable) cfg.mounts;
+  lazyUnmountMounts = lib.filter (m: m.enable && (m.lazyUnmountOnShutdown or false)) cfg.mounts;
 
   mkMountOptions = m:
     m.options
@@ -19,6 +20,23 @@ let
       # Emergency-only workaround for NTFS dirty volumes. Prefer running chkdsk on Windows.
       "force"
     ];
+
+  mkLazyUnmountService = m: {
+    name = "j0nix-lazy-unmount-${utils.escapeSystemdPath (lib.removeSuffix "/" m.mountPoint)}";
+    value = {
+      description = "Lazy-unmount ${m.mountPoint} before shutdown";
+      wantedBy = [ "multi-user.target" ];
+      before = [ "umount.target" ];
+      conflicts = [ "umount.target" ];
+      unitConfig.DefaultDependencies = false;
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStop = "${pkgs.util-linux}/bin/umount -l ${lib.escapeShellArg m.mountPoint}";
+        TimeoutStopSec = "30s";
+      };
+    };
+  };
 in
 {
   options.j0nix.desktop.storage.mounts = lib.mkOption {
@@ -41,6 +59,7 @@ in
         idleTimeout = lib.mkOption { type = lib.types.str; default = "5min"; };
         preventRemount = lib.mkOption { type = lib.types.bool; default = false; };
         forceDirtyNtfsMount = lib.mkOption { type = lib.types.bool; default = false; };
+        lazyUnmountOnShutdown = lib.mkOption { type = lib.types.bool; default = false; };
       };
     }));
   };
@@ -57,7 +76,9 @@ in
       enabledManagedMounts);
 
     # Source of truth is `j0nix.desktop.storage.mounts`; rebuild guard logic is handled by a shared helper.
-    systemd.units = mkMountRebuildGuards cfg.mounts;
+    systemd.units =
+      (mkMountRebuildGuards cfg.mounts)
+      // builtins.listToAttrs (map mkLazyUnmountService lazyUnmountMounts);
 
     assertions =
       map (m: {
