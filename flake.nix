@@ -8,7 +8,10 @@
       vscodeOverlay = inputs.nix-vscode-extensions.overlays.default;
       localFixesOverlay = final: prev: {
         lager = prev.lager.overrideAttrs (old: {
-          cmakeFlags = (old.cmakeFlags or [ ]) ++ [ "-DBoost_NO_BOOST_CMAKE=ON" ];
+          cmakeFlags = (old.cmakeFlags or [ ]) ++ [
+            "-DBoost_NO_BOOST_CMAKE=ON"
+            "-Dlager_BUILD_TESTS=OFF"
+          ];
         });
       };
       rawSettings = import (baseDir + "/settings.nix") { inherit inputs; };
