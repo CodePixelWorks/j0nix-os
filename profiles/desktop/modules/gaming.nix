@@ -37,6 +37,7 @@
       xbox = true;
       nintendo = true;
       dualsense = true;
+      ratbag = true;
     };
 
     launchers = {
