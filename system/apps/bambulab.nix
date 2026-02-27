@@ -11,8 +11,8 @@ in
 
     assertions = [
       {
-        assertion = provider == "appimage";
-        message = "settings.programs.bambulab.provider is now appimage-only and must be set to \"appimage\"";
+        assertion = builtins.elem provider [ "appimage" "flatpak" ];
+        message = "settings.programs.bambulab.provider must be one of: appimage, flatpak";
       }
     ];
   };
