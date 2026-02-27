@@ -1,9 +1,14 @@
-{ lib, pkgs, settings, ... }:
+{ config, inputs, lib, pkgs, settings, ... }:
 let
   selectedShell = settings.wmShell or (settings.hyprlandShell or "dank-material-shell");
   dmsSettings = settings.dms or { };
+  overviewSettings = dmsSettings.overview or { };
+  overviewEnable = overviewSettings.enable or false;
+  overviewName = "overview";
+  overviewSource = inputs.quickshell-overview;
   dmsStartup = dmsSettings.startup or { };
   dmsStartupMode = dmsStartup.mode or "systemd";
+  supportsOverview = builtins.elem selectedShell [ "dank-material-shell" "caelestia-shell" "noctalia-shell" ];
 in
 {
   home.packages = with pkgs; [
@@ -54,6 +59,75 @@ in
           exit 1
           ;;
       esac
+    '')
+    (writeShellScriptBin "wm-overview-start" ''
+      if [ "${if overviewEnable then "1" else "0"}" != "1" ]; then
+        echo "quickshell-overview is disabled (settings.dms.overview.enable = false)"
+        exit 1
+      fi
+
+      if [ "${if supportsOverview then "1" else "0"}" != "1" ]; then
+        echo "quickshell-overview is not available for wmShell=${selectedShell}"
+        exit 1
+      fi
+
+      if ${pkgs.procps}/bin/pgrep -f "quickshell.*-c[[:space:]]*${overviewName}" >/dev/null 2>&1; then
+        exit 0
+      fi
+
+      if command -v qs >/dev/null 2>&1; then
+        nohup qs -c ${overviewName} >/dev/null 2>&1 &
+        exit 0
+      fi
+
+      if command -v quickshell >/dev/null 2>&1; then
+        nohup quickshell -c ${overviewName} >/dev/null 2>&1 &
+        exit 0
+      fi
+
+      echo "Neither qs nor quickshell is available in PATH"
+      exit 1
+    '')
+    (writeShellScriptBin "wm-overview-toggle" ''
+      if [ "${if overviewEnable then "1" else "0"}" != "1" ]; then
+        echo "quickshell-overview is disabled (settings.dms.overview.enable = false)"
+        exit 1
+      fi
+
+      if [ "${if supportsOverview then "1" else "0"}" != "1" ]; then
+        echo "quickshell-overview is not available for wmShell=${selectedShell}"
+        exit 1
+      fi
+
+      if command -v qs >/dev/null 2>&1; then
+        qs ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
+        wm-overview-start >/dev/null 2>&1 || exit 1
+        sleep 0.3
+        qs ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
+        echo "Failed to toggle quickshell-overview via qs ipc"
+        exit 1
+      fi
+
+      if command -v quickshell >/dev/null 2>&1; then
+        quickshell ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
+        wm-overview-start >/dev/null 2>&1 || exit 1
+        sleep 0.3
+        quickshell ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
+        echo "Failed to toggle quickshell-overview via quickshell ipc"
+        exit 1
+      fi
+
+      echo "Neither qs nor quickshell is available for overview IPC toggle"
+      exit 1
+    '')
+    (writeShellScriptBin "wm-overview-stop" ''
+      if command -v qs >/dev/null 2>&1; then
+        qs kill ${overviewName} >/dev/null 2>&1 && exit 0
+      fi
+      if command -v quickshell >/dev/null 2>&1; then
+        quickshell kill ${overviewName} >/dev/null 2>&1 && exit 0
+      fi
+      ${pkgs.procps}/bin/pkill -f "quickshell.*-c[[:space:]]*${overviewName}" >/dev/null 2>&1 || true
     '')
     (writeShellScriptBin "system-suspend-safe" ''
       timeout_bin="${pkgs.coreutils}/bin/timeout"
@@ -202,6 +276,10 @@ in
       exec wm-shell-restart
     '')
   ];
+
+  home.file.".config/quickshell/${overviewName}" = lib.mkIf (overviewEnable && supportsOverview) {
+    source = config.lib.file.mkOutOfStoreSymlink "${overviewSource}";
+  };
 
   assertions = [
     {
