@@ -1,5 +1,6 @@
 { config, inputs, lib, pkgs, ... }@args:
 let
+  listMerge = import ../../../../../system/lib/list-merge.nix { inherit lib; };
   hasHomeModuleNew =
     (inputs.dank-material-shell ? homeModules)
     && (inputs.dank-material-shell.homeModules ? default);
@@ -74,14 +75,19 @@ let
       pkgs.danksearch
     else
       null;
+  shellFontPackages = with pkgs; [
+    material-symbols
+    nerd-fonts.fira-code
+    nerd-fonts.jetbrains-mono
+  ];
 in {
   imports = lib.optional (integratedMode && hasHomeModule) homeModule;
 
-  home.packages =
-    lib.optional (integratedMode && hasPackage) inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default
-    ++ lib.optionals (kimageformatsPkg != null) [ kimageformatsPkg ]
-    ++ lib.optionals (danksearchPkg != null) [ danksearchPkg ]
-    ++ (with pkgs; [
+  j0nix.user.shells.quickshell.packages = lib.mkAfter (listMerge.mergeUnique [
+    (lib.optional (integratedMode && hasPackage) inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default)
+    (lib.optionals (kimageformatsPkg != null) [ kimageformatsPkg ])
+    (lib.optionals (danksearchPkg != null) [ danksearchPkg ])
+    ((with pkgs; [
       (writeShellScriptBin "dms-overview-start" ''
         if [ "${if overviewEnable then "1" else "0"}" != "1" ]; then
           echo "quickshell-overview is disabled (settings.dms.overview.enable = false)"
@@ -281,10 +287,6 @@ in {
         fi
       '')
 
-      material-symbols
-      nerd-fonts.fira-code
-      nerd-fonts.jetbrains-mono
-
       wl-clipboard
       wayland
       wayland-utils
@@ -335,7 +337,10 @@ in {
         rm -f "$HOME/.local/bin/dms"
         echo "Done"
       '')
-    ]);
+    ]))
+  ]);
+
+  j0nix.user.shells.fonts.packages = lib.mkAfter shellFontPackages;
 
   programs = {
     # Keep parity with black-don behavior and avoid parallel shell bars.
