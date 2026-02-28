@@ -36,7 +36,8 @@ The module defines a shared base keymap in `user/wm/hyprland/default.nix` and me
 - `SUPER+SHIFT+Q`: exit Hyprland session
 - `SUPER+H/J/K/L`: Vim-style window movement (`left/down/up/right`)
 - `CTRL+ALT+H/J/K/L`: Vim-style focus movement (`left/down/up/right`, remote-friendly fallback)
-- `SUPER+SHIFT+Arrow`: move window to relative workspace (`-1/+1`, currently follows)
+- `SUPER+Left/Right`: switch relative workspace (`-1/+1`)
+- `SUPER+SHIFT+Left/Right`: move window to relative workspace (`-1/+1`, currently follows)
 - `SUPER+1..0`: switch workspace
 - `SUPER+SHIFT+1..0`: move window to workspace (with following it)
 - `SUPER+CTRL+c`: center active window
