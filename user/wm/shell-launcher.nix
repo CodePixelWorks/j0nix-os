@@ -147,6 +147,50 @@ in
       fi
       ${pkgs.procps}/bin/pkill -f "quickshell.*-c[[:space:]]*${overviewName}" >/dev/null 2>&1 || true
     '')
+    (writeShellScriptBin "wm-screenshot-full" ''
+      out_dir="$HOME/Pictures/Screenshots"
+      ts="$(date +%Y-%m-%d_%H-%M-%S)"
+      out_file="$out_dir/screenshot-$ts.png"
+
+      mkdir -p "$out_dir"
+
+      if ! command -v grim >/dev/null 2>&1; then
+        echo "grim is not available in PATH"
+        exit 1
+      fi
+
+      grim "$out_file" || exit 1
+
+      if command -v notify-send >/dev/null 2>&1; then
+        notify-send "Screenshot saved" "$out_file" >/dev/null 2>&1 || true
+      fi
+    '')
+    (writeShellScriptBin "wm-screenshot-area" ''
+      out_dir="$HOME/Pictures/Screenshots"
+      ts="$(date +%Y-%m-%d_%H-%M-%S)"
+      out_file="$out_dir/screenshot-$ts.png"
+
+      mkdir -p "$out_dir"
+
+      if ! command -v grim >/dev/null 2>&1; then
+        echo "grim is not available in PATH"
+        exit 1
+      fi
+
+      if ! command -v slurp >/dev/null 2>&1; then
+        echo "slurp is not available in PATH"
+        exit 1
+      fi
+
+      region="$(slurp)" || exit 1
+      [ -n "$region" ] || exit 1
+
+      grim -g "$region" "$out_file" || exit 1
+
+      if command -v notify-send >/dev/null 2>&1; then
+        notify-send "Screenshot saved" "$out_file" >/dev/null 2>&1 || true
+      fi
+    '')
     (writeShellScriptBin "system-suspend-safe" ''
       timeout_bin="${pkgs.coreutils}/bin/timeout"
 
