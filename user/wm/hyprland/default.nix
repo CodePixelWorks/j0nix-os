@@ -155,7 +155,6 @@ let
     "$mainMod, r, exec, wm-shell-recover"
     "$mainMod SHIFT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
     "CTRL ALT, return, exec, ${appExec preferredTerminalCmd}"
-    "CTRL ALT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
     "CTRL ALT, c, centerwindow, 1"
     "$mainMod SHIFT, q, exit,"
     "CTRL SHIFT, Print, exec, wm-screenshot-area"
