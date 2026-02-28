@@ -283,7 +283,7 @@ let
       export QSG_RENDER_LOOP="''${QSG_RENDER_LOOP:-basic}"
       # Caelestia actions (e.g. screen recording) execute from the shell process env.
       # Ensure GPU Screen Recorder binaries are resolvable even if the session PATH is incomplete.
-      export PATH="${lib.makeBinPath [ gpu-screen-recorder gpu-screen-recorder-gtk ]}:$PATH"
+      export PATH="/run/wrappers/bin:${lib.makeBinPath [ gpu-screen-recorder gpu-screen-recorder-gtk ]}:$PATH"
 
       if command -v caelestia >/dev/null 2>&1; then
         if command -v caelestia-gamemode-fan-sync >/dev/null 2>&1; then
