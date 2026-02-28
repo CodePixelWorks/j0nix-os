@@ -122,6 +122,7 @@ let
       caelestiaThemeSettings.smartScheme
     else
       !explicitThemeRequested;
+  manualThemeApply = explicitThemeRequested && !smartSchemeEnabled;
   themeApplyArgs = lib.concatStringsSep " " (
     lib.optionals (hasValue configuredScheme) [ "-n ${lib.escapeShellArg configuredScheme}" ]
     ++ lib.optionals (hasValue configuredFlavour) [ "-f ${lib.escapeShellArg configuredFlavour}" ]
@@ -157,6 +158,14 @@ let
         {
           name = "Sleep";
           command = [ "system-suspend-then-hibernate-safe" ];
+        }
+        {
+          name = "Auto Theme";
+          command = [ "caelestia-smart-theme" "enable" ];
+        }
+        {
+          name = "Manual Theme";
+          command = [ "caelestia-smart-theme" "disable" ];
         }
       ];
     };
@@ -289,7 +298,7 @@ let
         if command -v caelestia-gamemode-fan-sync >/dev/null 2>&1; then
           caelestia-gamemode-fan-sync start >/dev/null 2>&1 || true
         fi
-        ${lib.optionalString explicitThemeRequested ''
+        ${lib.optionalString (smartSchemeEnabled || manualThemeApply) ''
         if command -v caelestia-apply-theme >/dev/null 2>&1; then
           caelestia-apply-theme >/dev/null 2>&1 || true
         fi
@@ -416,11 +425,53 @@ let
         exit 0
       fi
 
-      ${if explicitThemeRequested then ''
+      ${if smartSchemeEnabled then ''
+      exec caelestia scheme set -n dynamic
+      '' else if manualThemeApply then ''
       exec caelestia scheme set ${themeApplyArgs}
       '' else ''
       exit 0
       ''}
+    '')
+
+    (writeShellScriptBin "caelestia-smart-theme" ''
+      set -eu
+
+      cfg_dir="''${XDG_CONFIG_HOME:-$HOME/.config}/caelestia"
+      cfg_file="$cfg_dir/shell.json"
+      tmp_file="$cfg_file.codex-tmp"
+
+      mkdir -p "$cfg_dir"
+      if [ ! -f "$cfg_file" ]; then
+        cat >"$cfg_file" <<'EOF'
+${builtins.toJSON seededCaelestiaConfig}
+EOF
+      fi
+
+      case "''${1:-toggle}" in
+        enable)
+          ${pkgs.jq}/bin/jq '.services = ((.services // {}) | .smartScheme = true)' "$cfg_file" >"$tmp_file"
+          mv "$tmp_file" "$cfg_file"
+          if command -v caelestia >/dev/null 2>&1; then
+            caelestia scheme set -n dynamic >/dev/null 2>&1 || true
+          fi
+          ;;
+        disable)
+          ${pkgs.jq}/bin/jq '.services = ((.services // {}) | .smartScheme = false)' "$cfg_file" >"$tmp_file"
+          mv "$tmp_file" "$cfg_file"
+          if command -v caelestia >/dev/null 2>&1; then
+            ${if manualThemeApply then ''
+            caelestia scheme set ${themeApplyArgs} >/dev/null 2>&1 || true
+            '' else ''
+            true
+            ''}
+          fi
+          ;;
+        *)
+          echo "usage: caelestia-smart-theme <enable|disable>" >&2
+          exit 2
+          ;;
+      esac
     '')
   ];
 in
@@ -494,10 +545,16 @@ EOF
                         .command = ["system-poweroff-safe"]
                       elif (.name? == "Reboot") then
                         .command = ["system-reboot-safe"]
+                      elif (.name? == "Auto Theme") then
+                        .command = ["caelestia-smart-theme", "enable"]
+                      elif (.name? == "Manual Theme") then
+                        .command = ["caelestia-smart-theme", "disable"]
                       else
                         .
                       end
                     )
+                  | if any(.[]; .name? == "Auto Theme") then . else . + [{ "name": "Auto Theme", "command": ["caelestia-smart-theme", "enable"] }] end
+                  | if any(.[]; .name? == "Manual Theme") then . else . + [{ "name": "Manual Theme", "command": ["caelestia-smart-theme", "disable"] }] end
                 )
               else
                 .
