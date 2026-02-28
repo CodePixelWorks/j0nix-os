@@ -120,6 +120,7 @@ in
       hurl
       wget
       curl
+      openssl
       unzip
       zip
       tree
