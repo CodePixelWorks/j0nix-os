@@ -130,6 +130,7 @@ let
       ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
       "CTRL ALT, m, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
       "CTRL SHIFT ALT, m, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+      "CTRL, Print, exec, wm-screenshot-full"
     ];
     bindle = [
       ", XF86AudioRaiseVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 3%+"
@@ -155,6 +156,7 @@ let
     "CTRL ALT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
     "CTRL ALT, c, centerwindow, 1"
     "$mainMod SHIFT, q, exit,"
+    "CTRL SHIFT, Print, exec, wm-screenshot-area"
   ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind ++ dmsOverviewRemoteToggleBind;
   shellHyprKeybinds =
     if isCaelestiaShell then
