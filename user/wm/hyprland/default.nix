@@ -153,6 +153,8 @@ let
     "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
     "$mainMod, p, exec, wm-screenshot-full"
     "$mainMod, r, exec, wm-shell-recover"
+    "$mainMod CTRL, v, layoutmsg, preselect r"
+    "$mainMod CTRL SHIFT, v, layoutmsg, preselect d"
     "$mainMod SHIFT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
     "CTRL ALT, return, exec, ${appExec preferredTerminalCmd}"
     "CTRL ALT, c, centerwindow, 1"
