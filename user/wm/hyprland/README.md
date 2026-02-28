@@ -50,7 +50,6 @@ These exist because `SUPER` (Windows key) is often unreliable through Moonlight/
 - `CTRL+ALT+F`: fullscreen (mode `0`)
 - `CTRL+SHIFT+ALT+F`: maximize-like fullscreen (mode `1`)
 - `CTRL+ALT+Return`: open preferred terminal
-- `CTRL+ALT+L`: lock screen (`hyprlock` fallback to `loginctl lock-session`)
 - `CTRL+ALT+C`: center active window
 - `CTRL+ALT+H/J/K/L`: move focus
 - `CTRL+SHIFT+ALT+H/J/K/L`: move window
