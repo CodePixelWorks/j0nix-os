@@ -9,6 +9,7 @@ let
   dmsStartup = dmsSettings.startup or { };
   dmsStartupMode = dmsStartup.mode or "systemd";
   supportsOverview = builtins.elem selectedShell [ "dank-material-shell" "caelestia-shell" "noctalia-shell" ];
+  quickshellBin = if pkgs ? quickshell then lib.getExe pkgs.quickshell else null;
 in
 {
   home.packages = with pkgs; [
@@ -80,6 +81,11 @@ in
         exit 0
       fi
 
+      if [ -n "${if quickshellBin != null then quickshellBin else ""}" ] && [ -x "${if quickshellBin != null then quickshellBin else "/nonexistent"}" ]; then
+        nohup ${if quickshellBin != null then quickshellBin else "true"} -c ${overviewName} >/dev/null 2>&1 &
+        exit 0
+      fi
+
       if command -v quickshell >/dev/null 2>&1; then
         nohup quickshell -c ${overviewName} >/dev/null 2>&1 &
         exit 0
@@ -117,12 +123,24 @@ in
         exit 1
       fi
 
+      if [ -n "${if quickshellBin != null then quickshellBin else ""}" ] && [ -x "${if quickshellBin != null then quickshellBin else "/nonexistent"}" ]; then
+        ${if quickshellBin != null then quickshellBin else "true"} ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
+        wm-overview-start >/dev/null 2>&1 || exit 1
+        sleep 0.3
+        ${if quickshellBin != null then quickshellBin else "true"} ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
+        echo "Failed to toggle quickshell-overview via quickshell ipc"
+        exit 1
+      fi
+
       echo "Neither qs nor quickshell is available for overview IPC toggle"
       exit 1
     '')
     (writeShellScriptBin "wm-overview-stop" ''
       if command -v qs >/dev/null 2>&1; then
         qs kill ${overviewName} >/dev/null 2>&1 && exit 0
+      fi
+      if [ -n "${if quickshellBin != null then quickshellBin else ""}" ] && [ -x "${if quickshellBin != null then quickshellBin else "/nonexistent"}" ]; then
+        ${if quickshellBin != null then quickshellBin else "true"} kill ${overviewName} >/dev/null 2>&1 && exit 0
       fi
       if command -v quickshell >/dev/null 2>&1; then
         quickshell kill ${overviewName} >/dev/null 2>&1 && exit 0
