@@ -151,6 +151,7 @@ let
     "CTRL ALT, f, fullscreen, 0"
     "CTRL SHIFT ALT, f, fullscreen, 1"
     "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
+    "$mainMod, p, exec, wm-screenshot-full"
     "$mainMod, r, exec, wm-shell-recover"
     "CTRL ALT, return, exec, ${appExec preferredTerminalCmd}"
     "CTRL ALT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
