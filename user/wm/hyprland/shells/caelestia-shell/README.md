@@ -27,6 +27,8 @@ Notes:
 - `flavour` is the scheme flavour (`mocha`, `latte`, `moon`, `main`, ...), not the Material variant.
 - `variant` is the Material variant (`tonalspot`, `vibrant`, `expressive`, ...).
 - The module applies these defaults through `caelestia scheme set` on shell startup, so `~/.local/state/caelestia/scheme.json` stays valid.
+- Set `smartScheme = true;` to re-enable automatic wallpaper-driven theming. In that mode startup switches the active scheme back to `dynamic`.
+- The launcher also gets `Auto Theme` and `Manual Theme` actions, backed by `caelestia-smart-theme enable|disable`.
 
 ## Referenz: `shell.json` Optionen
 
