@@ -94,3 +94,8 @@ Notes for implementation:
 
 - Some binds are added conditionally based on `settings.wmShell`, `settings.dms.overview.enable`, and related toggles.
 - Additional shell-specific media, screenshot, and workflow binds are defined in the selected shell block inside `user/wm/hyprland/default.nix`.
+- Generic screenshot helpers are always available:
+  - `Win+P`: fullscreen screenshot via `wm-screenshot-full`
+  - `Ctrl+Print`: fullscreen screenshot via `wm-screenshot-full` (intended as the game-safe fallback)
+  - `Ctrl+Shift+Print`: area screenshot via `wm-screenshot-area`
+  - Files are saved to `~/Pictures/Screenshots`
