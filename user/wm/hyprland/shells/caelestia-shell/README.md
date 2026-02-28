@@ -1,11 +1,32 @@
 # Caelestia Shell
 
 This module enables the `caelestia-shell` flake input and seeds `~/.config/caelestia/shell.json`.
+It also patches the bundled `caelestia` CLI package to install the full upstream `schemes/*` data set, because the current upstream Nix package ships templates but omits the actual colour scheme files.
 
 Repo-managed seeding currently only ensures these keys exist (without overwriting user values):
 - `general.apps.terminal`
 - `services.smartScheme`
 - `paths.wallpaperDir` (when a wallpaper path is configured)
+
+## j0nix Theme Wiring
+
+Use `settings.programs.caelestia.theme` to pin a default CLI-managed scheme:
+
+```nix
+programs.caelestia.theme = {
+  scheme = "catppuccin";
+  flavour = "mocha";
+  mode = "dark";
+  variant = "tonalspot";
+  smartScheme = false;
+};
+```
+
+Notes:
+- `scheme` falls back to the global `settings.theme` when unset.
+- `flavour` is the scheme flavour (`mocha`, `latte`, `moon`, `main`, ...), not the Material variant.
+- `variant` is the Material variant (`tonalspot`, `vibrant`, `expressive`, ...).
+- The module applies these defaults through `caelestia scheme set` on shell startup, so `~/.local/state/caelestia/scheme.json` stays valid.
 
 ## Referenz: `shell.json` Optionen
 
