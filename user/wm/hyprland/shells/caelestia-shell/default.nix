@@ -20,8 +20,10 @@ let
       null;
   dmsSettings = settings.dms or { };
   caelestiaSettings = (settings.programs or { }).caelestia or { };
+  caelestiaThemeSettings = caelestiaSettings.theme or { };
   caelestiaChannel = caelestiaSettings.channel or "stable";
   caelestiaInputName = if caelestiaChannel == "dev" then "caelestia-shell-dev" else "caelestia-shell";
+  hasValue = value: value != null && value != "";
   hasStableInput = inputs ? caelestia-shell;
   selectedInput =
     if caelestiaChannel == "dev" then
@@ -51,13 +53,76 @@ let
       selectedInput.packages.${pkgs.stdenv.hostPlatform.system}
     else
       { };
-  caelestiaPkg =
-    if packageSet ? with-cli then
-      packageSet.with-cli
-    else if packageSet ? default then
+  caelestiaShellPkg =
+    if packageSet ? default then
       packageSet.default
+    else if packageSet ? caelestia-shell then
+      packageSet.caelestia-shell
+    else if packageSet ? with-cli then
+      packageSet.with-cli
     else
       null;
+  caelestiaCliInput =
+    if hasInput && (selectedInput ? inputs) && (selectedInput.inputs ? caelestia-cli) then
+      selectedInput.inputs.caelestia-cli
+    else
+      null;
+  hasCliSystemPackages =
+    caelestiaCliInput != null
+    && (caelestiaCliInput ? packages)
+    && (builtins.hasAttr pkgs.stdenv.hostPlatform.system caelestiaCliInput.packages);
+  cliPackageSet =
+    if hasCliSystemPackages then
+      caelestiaCliInput.packages.${pkgs.stdenv.hostPlatform.system}
+    else
+      { };
+  upstreamCaelestiaCliPkg =
+    if cliPackageSet ? default then
+      cliPackageSet.default
+    else if cliPackageSet ? caelestia-cli then
+      cliPackageSet.caelestia-cli
+    else
+      null;
+  caelestiaCliSchemeSourceDir =
+    if caelestiaCliInput != null then
+      "${caelestiaCliInput}/src/caelestia/data/schemes"
+    else
+      null;
+  caelestiaCliPkg =
+    if upstreamCaelestiaCliPkg != null && hasValue caelestiaCliSchemeSourceDir then
+      upstreamCaelestiaCliPkg.overrideAttrs (old: {
+        postInstall = (old.postInstall or "") + ''
+          target="$out/${pkgs.python3.sitePackages}/caelestia/data/schemes"
+          rm -rf "$target"
+          mkdir -p "$(dirname "$target")"
+          cp -r ${caelestiaCliSchemeSourceDir} "$target"
+        '';
+      })
+    else
+      null;
+  configuredScheme = caelestiaThemeSettings.scheme or (settings.theme or null);
+  configuredFlavour = caelestiaThemeSettings.flavour or null;
+  configuredMode = caelestiaThemeSettings.mode or null;
+  configuredVariant = caelestiaThemeSettings.variant or null;
+  explicitThemeRequested =
+    builtins.any hasValue [
+      configuredScheme
+      configuredFlavour
+      configuredMode
+      configuredVariant
+    ];
+  smartSchemeConfigured = caelestiaThemeSettings ? smartScheme;
+  smartSchemeEnabled =
+    if smartSchemeConfigured then
+      caelestiaThemeSettings.smartScheme
+    else
+      !explicitThemeRequested;
+  themeApplyArgs = lib.concatStringsSep " " (
+    lib.optionals (hasValue configuredScheme) [ "-n ${lib.escapeShellArg configuredScheme}" ]
+    ++ lib.optionals (hasValue configuredFlavour) [ "-f ${lib.escapeShellArg configuredFlavour}" ]
+    ++ lib.optionals (hasValue configuredMode) [ "-m ${lib.escapeShellArg configuredMode}" ]
+    ++ lib.optionals (hasValue configuredVariant) [ "-v ${lib.escapeShellArg configuredVariant}" ]
+  );
   preferredTerminal = settings.preferredTerminal or "kitty";
   seededCaelestiaConfig = {
     general = {
@@ -98,7 +163,7 @@ let
       };
     };
     services = {
-      smartScheme = true;
+      smartScheme = smartSchemeEnabled;
     };
   } // lib.optionalAttrs (configuredWallpaperDir != null && configuredWallpaperDir != "") {
     paths = {
@@ -219,6 +284,11 @@ let
         if command -v caelestia-gamemode-fan-sync >/dev/null 2>&1; then
           caelestia-gamemode-fan-sync start >/dev/null 2>&1 || true
         fi
+        ${lib.optionalString explicitThemeRequested ''
+        if command -v caelestia-apply-theme >/dev/null 2>&1; then
+          caelestia-apply-theme >/dev/null 2>&1 || true
+        fi
+        ''}
         caelestia shell -d &
         shell_pid=$!
 
@@ -333,6 +403,20 @@ let
       fi
       ${procps}/bin/pkill -f "quickshell.*-c[[:space:]]*caelestia" >/dev/null 2>&1 || true
     '')
+
+    (writeShellScriptBin "caelestia-apply-theme" ''
+      set -eu
+
+      if ! command -v caelestia >/dev/null 2>&1; then
+        exit 0
+      fi
+
+      ${if explicitThemeRequested then ''
+      exec caelestia scheme set ${themeApplyArgs}
+      '' else ''
+      exit 0
+      ''}
+    '')
   ];
 in
 {
@@ -341,7 +425,8 @@ in
   programs.waybar.enable = lib.mkForce false;
 
   j0nix.user.shells.quickshell.packages = lib.mkAfter (listMerge.mergeUnique [
-    (lib.optionals (caelestiaPkg != null) [ caelestiaPkg ])
+    (lib.optionals (caelestiaShellPkg != null) [ caelestiaShellPkg ])
+    (lib.optionals (caelestiaCliPkg != null) [ caelestiaCliPkg ])
     shellRuntimePackages
     shellScriptPackages
     (lib.optionals (iconThemeEnabled && iconThemePackage != null) [ iconThemePackage ])
@@ -419,7 +504,7 @@ EOF
                 | .shutdown = ["system-poweroff-safe"]
                 | .reboot = ["system-reboot-safe"]
               )
-            | .services = ((.services // {}) | .smartScheme = (.smartScheme // true))
+            | .services = ((.services // {}) | .smartScheme = ${if smartSchemeEnabled then "true" else "false"})
             | if $wallpaperDir != "" then
                 .paths = ((.paths // {}) | .wallpaperDir = (.wallpaperDir // $wallpaperDir))
               else
@@ -446,12 +531,28 @@ EOF
       message = "settings.programs.caelestia.channel must be one of: stable, dev";
     }
     {
-      assertion = hasHomeModule || (caelestiaPkg != null);
+      assertion = hasHomeModule || (caelestiaShellPkg != null);
       message = ''
         inputs.${caelestiaInputName} must expose either:
         - homeManagerModules.default
         - packages.${pkgs.stdenv.hostPlatform.system}.with-cli (or default)
       '';
+    }
+    {
+      assertion = (!hasValue configuredMode) || (builtins.elem configuredMode [ "light" "dark" ]);
+      message = "settings.programs.caelestia.theme.mode must be one of: light, dark";
+    }
+    {
+      assertion = configuredScheme == null || configuredScheme != "";
+      message = "settings.programs.caelestia.theme.scheme must be a non-empty string when set";
+    }
+    {
+      assertion = configuredFlavour == null || configuredFlavour != "";
+      message = "settings.programs.caelestia.theme.flavour must be a non-empty string when set";
+    }
+    {
+      assertion = configuredVariant == null || configuredVariant != "";
+      message = "settings.programs.caelestia.theme.variant must be a non-empty string when set";
     }
     {
       assertion = (!iconThemeEnabled) || (iconThemePackage != null);
