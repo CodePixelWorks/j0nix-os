@@ -91,7 +91,7 @@ let
   caelestiaCliPkg =
     if upstreamCaelestiaCliPkg != null && hasValue caelestiaCliSchemeSourceDir then
       upstreamCaelestiaCliPkg.overrideAttrs (old: {
-        postInstall = (old.postInstall or "") + ''
+        postInstall = (old.postInstall or "") + "\n" + ''
           target="$out/${pkgs.python3.sitePackages}/caelestia/data/schemes"
           rm -rf "$target"
           mkdir -p "$(dirname "$target")"
