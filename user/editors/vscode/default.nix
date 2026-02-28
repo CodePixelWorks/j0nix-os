@@ -1,4 +1,4 @@
-{ config, pkgs, lib, settings, ... }:
+{ config, inputs, pkgs, lib, settings, ... }:
 let
   mkExt = set: path: lib.attrByPath path null set;
   pick = ext: lib.optional (ext != null) ext;
@@ -7,6 +7,7 @@ let
 
   vscodeCfg = settings.vscode or { };
   extensionCfg = vscodeCfg.extensions or { };
+  codex = import ../../../system/lib/codex.nix { inherit inputs lib pkgs settings; };
   openVSXIds = extensionCfg.openVSX or [ ];
   marketplaceIds = extensionCfg.marketplace or [ ];
   seededUserSettings = {
@@ -45,7 +46,8 @@ in {
     profiles.default = {
       extensions =
         resolveExts pkgs.vscode-extensions openVSXIds
-        ++ resolveExts marketplace marketplaceIds;
+        ++ resolveExts marketplace marketplaceIds
+        ++ lib.optionals (codex.enabled && codex.vscodeEnable && codex.vscodeExtension != null) [ codex.vscodeExtension ];
     };
   };
 
@@ -69,4 +71,11 @@ EOF
       fi
     done
   '';
+
+  assertions = [
+    {
+      assertion = (!codex.enabled) || (!codex.vscodeEnable) || codex.vscodeExtension != null;
+      message = "Codex VSCode integration is enabled, but the OpenAI VSCode extension is unavailable in nix-vscode-extensions.";
+    }
+  ];
 }
