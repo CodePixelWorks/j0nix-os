@@ -4,21 +4,15 @@ let
   ai = dev.ai or { };
   enabled = (dev.enable or true) && (ai.enable or true);
   preferredTerminal = settings.preferredTerminal or "kitty";
-
-  codexEnabled = ai.codex or true;
+  codex = import ../../system/lib/codex.nix { inherit inputs lib pkgs settings; };
+  codexEnabled = codex.enabled;
   geminiEnabled = ai.gemini or true;
-
-  hasCodexPackage =
-    (inputs ? codex-cli-nix)
-    && (inputs.codex-cli-nix ? packages)
-    && (builtins.hasAttr pkgs.stdenv.hostPlatform.system inputs.codex-cli-nix.packages)
-    && (inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system} ? default);
 
   hasGeminiPackage = pkgs ? gemini-cli;
 in
 lib.mkIf enabled {
   home.packages =
-    lib.optionals (codexEnabled && hasCodexPackage) [ inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system}.default ]
+    lib.optionals (codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
     ++ lib.optionals (geminiEnabled && hasGeminiPackage) [ pkgs.gemini-cli ]
     ++ lib.optionals geminiEnabled [
       (pkgs.writeShellScriptBin "gemini-launcher" ''
@@ -55,8 +49,12 @@ lib.mkIf enabled {
 
   assertions = [
     {
-      assertion = (!codexEnabled) || hasCodexPackage;
-      message = "settings.dev.ai.codex=true but codex-cli-nix package is unavailable";
+      assertion = codex.validProvider;
+      message = codex.providerMessage;
+    }
+    {
+      assertion = (!codexEnabled) || codex.provider != "compat" || codex.compatAvailable;
+      message = codex.compatMessage;
     }
     {
       assertion = (!geminiEnabled) || hasGeminiPackage;
