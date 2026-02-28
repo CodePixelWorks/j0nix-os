@@ -91,6 +91,11 @@ let
   caelestiaCliPkg =
     if upstreamCaelestiaCliPkg != null && hasValue caelestiaCliSchemeSourceDir then
       upstreamCaelestiaCliPkg.overrideAttrs (old: {
+        patchPhase = (old.patchPhase or "") + "\n" + ''
+          substituteInPlace src/caelestia/utils/material/generator.py \
+            --replace-fail 'from materialyoucolor.dynamiccolor.dynamic_scheme import DynamicScheme' \
+                           'from materialyoucolor.scheme.dynamic_scheme import DynamicScheme'
+        '';
         postInstall = (old.postInstall or "") + "\n" + ''
           target="$out/${pkgs.python3.sitePackages}/caelestia/data/schemes"
           rm -rf "$target"
