@@ -155,7 +155,11 @@ in
   home.sessionVariables = {
     EDITOR = settings.preferredEditor;
     BROWSER = settings.preferredBrowser;
-  } // lib.optionalAttrs iconThemeEnabled {
+  }
+  // lib.optionalAttrs (((settings.programs or { }).ollama or { }).modelsPath != null) {
+    OLLAMA_MODELS = ((settings.programs or { }).ollama or { }).modelsPath;
+  }
+  // lib.optionalAttrs iconThemeEnabled {
     XDG_ICON_THEME = iconThemeName;
     GTK_ICON_THEME = iconThemeName;
     # Quickshell/Caelestia and other Qt apps use Qt's icon theme lookup, not GTK settings.
