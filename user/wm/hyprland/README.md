@@ -31,11 +31,11 @@ The module defines a shared base keymap in `user/wm/hyprland/default.nix` and me
 - `SUPER+F`: fullscreen (mode `0`, hides shell/waybar)
 - `SUPER+SHIFT+F`: maximize-like fullscreen (mode `1`, keeps shell/waybar)
 - `SUPER+Return`: open preferred terminal
+- `SUPER+SHIFT+L`: lock screen (`hyprlock` fallback to `loginctl lock-session`)
 - `SUPER+B`: open preferred browser
-- `SUPER+L`: lock screen (`hyprlock` fallback to `loginctl lock-session`)
 - `SUPER+SHIFT+Q`: exit Hyprland session
-- `SUPER+Arrow`: move window
-- `CTRL+ALT+Arrow`: move focus (remote-friendly fallback)
+- `SUPER+H/J/K/L`: Vim-style window movement (`left/down/up/right`)
+- `CTRL+ALT+H/J/K/L`: Vim-style focus movement (`left/down/up/right`, remote-friendly fallback)
 - `SUPER+SHIFT+Arrow`: move window to relative workspace (`-1/+1`, currently follows)
 - `SUPER+1..0`: switch workspace
 - `SUPER+SHIFT+1..0`: move window to workspace (with following it)
@@ -52,8 +52,8 @@ These exist because `SUPER` (Windows key) is often unreliable through Moonlight/
 - `CTRL+ALT+Return`: open preferred terminal
 - `CTRL+ALT+L`: lock screen (`hyprlock` fallback to `loginctl lock-session`)
 - `CTRL+ALT+C`: center active window
-- `CTRL+ALT+Arrow`: move focus
-- `CTRL+SHIFT+ALT+Arrow`: move window
+- `CTRL+ALT+H/J/K/L`: move focus
+- `CTRL+SHIFT+ALT+H/J/K/L`: move window
 - `CTRL+ALT+1..0`: switch workspace
 - `CTRL+SHIFT+ALT+1..0`: move window to workspace
 - `CTRL+ALT+M`: mute output
