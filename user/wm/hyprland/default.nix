@@ -360,6 +360,9 @@ in {
       };
 
       "decoration:rounding" = 8;
+      "decoration:active_opacity" = 1.0;
+      "decoration:inactive_opacity" = 0.94;
+      "decoration:fullscreen_opacity" = 1.0;
       "decoration:blur:enabled" = true;
       "decoration:blur:size" = 8;
       "decoration:blur:passes" = 2;
