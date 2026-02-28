@@ -4,7 +4,8 @@ let
   enabled = dev.enable or true;
   dockerCfg = dev.docker or { };
   ai = dev.ai or { };
-  codexEnabled = (ai.enable or true) && (ai.codex or true);
+  codex = import ../lib/codex.nix { inherit inputs lib pkgs settings; };
+  codexEnabled = codex.enabled;
   sshCfg = dev.ssh or { };
   sshEnabled = sshCfg.enable or true;
   sshAgent = sshCfg.agent or { };
@@ -30,9 +31,7 @@ lib.mkIf enabled {
     lazydocker
   ] ++ lib.optionals keyringEnable [
     seahorse
-  ] ++ lib.optionals codexEnabled [
-    inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
-  ];
+  ] ++ lib.optionals (codexEnabled && codex.cliPackage != null) [ codex.cliPackage ];
 
   programs.ssh.startAgent = sshEnabled && sshAgentEnable && sshAgentProvider == "openssh";
 
@@ -43,6 +42,14 @@ lib.mkIf enabled {
     keyringEnable || (sshEnabled && sshAgentEnable && sshAgentProvider == "gnome-keyring");
 
   assertions = [
+    {
+      assertion = codex.validProvider;
+      message = codex.providerMessage;
+    }
+    {
+      assertion = (!codexEnabled) || codex.provider != "compat" || codex.compatAvailable;
+      message = codex.compatMessage;
+    }
     {
       assertion = builtins.elem sshAgentProvider [ "openssh" "gnome-keyring" "none" ];
       message = "settings.dev.ssh.agent.provider must be one of: openssh, gnome-keyring, none";
