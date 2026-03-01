@@ -159,6 +159,9 @@ in
   // lib.optionalAttrs (((settings.programs or { }).ollama or { }).modelsPath != null) {
     OLLAMA_MODELS = ((settings.programs or { }).ollama or { }).modelsPath;
   }
+  // lib.optionalAttrs (((settings.programs or { }).ollama or { }).host != null) {
+    OLLAMA_HOST = ((settings.programs or { }).ollama or { }).host;
+  }
   // lib.optionalAttrs iconThemeEnabled {
     XDG_ICON_THEME = iconThemeName;
     GTK_ICON_THEME = iconThemeName;
