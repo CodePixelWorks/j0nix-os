@@ -24,4 +24,5 @@ Main desktop profile for `j0nix-os`.
   - `_netdev`
   - `nofail`
   - `x-systemd.automount`
+- Credentials should be referenced via `secretName`, which resolves to `/run/secrets/<name>` through the SOPS baseline.
 - This means they persist declaratively, but only mount on access and do not block boot when the server is offline.
