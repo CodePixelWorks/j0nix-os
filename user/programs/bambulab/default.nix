@@ -7,17 +7,12 @@ let
   bambuFlatpakWrapper = pkgs.writeShellScriptBin "bambu-studio" ''
     exec flatpak run com.bambulab.BambuStudio "$@"
   '';
-  bambuExec =
-    if provider == "flatpak" then
-      "flatpak run com.bambulab.BambuStudio"
-    else
-      lib.getExe' bambuAppImagePackage "bambu-studio";
   bambuDesktopEntry = {
     name = "Bambu Studio";
     genericName = "3D Printing Software";
     comment = "3D printing software";
-    exec = bambuExec;
-    icon = "${../../../icons/bambulab/BambuStudio.png}";
+    exec = lib.getExe' bambuAppImagePackage "bambu-studio";
+    icon = "${../../../icons/bambulab/BambuStudio.png}"; # Correct: keep the explicit repo icon for the AppImage desktop entry.
     terminal = false;
     type = "Application";
     categories = [ "Graphics" "Utility" ];
@@ -36,7 +31,7 @@ in
     bambuFlatpakWrapper
   ];
 
-  xdg.desktopEntries = {
+  xdg.desktopEntries = lib.mkIf (provider == "appimage") {
     "BambuStudio" = bambuDesktopEntry;
   };
 }
