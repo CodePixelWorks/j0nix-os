@@ -5,6 +5,7 @@ let
 
   enabledManagedMounts = lib.filter (m: m.enable) cfg.mounts;
   lazyUnmountMounts = lib.filter (m: m.enable && (m.lazyUnmountOnShutdown or false)) cfg.mounts;
+  hasCifsMounts = builtins.any (m: m.fsType == "cifs") enabledManagedMounts;
 
   mkMountOptions = m:
     m.options
@@ -65,6 +66,10 @@ in
   };
 
   config = {
+    boot.supportedFilesystems = lib.mkIf hasCifsMounts [ "cifs" ];
+
+    environment.systemPackages = lib.mkIf hasCifsMounts [ pkgs.cifs-utils ];
+
     fileSystems = builtins.listToAttrs (map
       (m: {
         name = m.mountPoint;
@@ -74,6 +79,8 @@ in
         };
       })
       enabledManagedMounts);
+
+    systemd.tmpfiles.rules = map (m: "d ${m.mountPoint} 0755 root root -") enabledManagedMounts;
 
     # Source of truth is `j0nix.desktop.storage.mounts`; rebuild guard logic is handled by a shared helper.
     systemd.units = mkMountRebuildGuards cfg.mounts;
