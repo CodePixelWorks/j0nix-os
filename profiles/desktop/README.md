@@ -16,3 +16,12 @@ Main desktop profile for `j0nix-os`.
 - `settings.storage.*`
 - `settings.locale`, `settings.timezone`
 - `settings.wms`
+
+## Storage
+
+- `settings.storage.sambaShares` defines declarative CIFS/Samba mounts.
+- Shares are mapped into the shared desktop storage model and mounted with:
+  - `_netdev`
+  - `nofail`
+  - `x-systemd.automount`
+- This means they persist declaratively, but only mount on access and do not block boot when the server is offline.
