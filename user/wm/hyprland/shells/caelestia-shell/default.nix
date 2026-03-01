@@ -306,18 +306,6 @@ let
         caelestia shell -d &
         shell_pid=$!
 
-        if [ -n "${if configuredWallpaper != null then configuredWallpaper else ""}" ] && [ -f "${if configuredWallpaper != null then configuredWallpaper else ""}" ]; then
-          (
-            i=0
-            while [ "$i" -lt 20 ]; do
-              sleep 0.5
-              caelestia wallpaper -f "${if configuredWallpaper != null then configuredWallpaper else ""}" >/dev/null 2>&1 && exit 0
-              i=$((i + 1))
-            done
-            exit 0
-          ) &
-        fi
-
         wait "$shell_pid"
         exit $?
       fi
@@ -581,6 +569,18 @@ EOF
 
   home.activation.caelestiaInfo = lib.hm.dag.entryAfter [ "caelestiaConfigInit" ] ''
     $DRY_RUN_CMD echo "Caelestia shell enabled. Use caelestia-start/caelestia-stop."
+  '';
+
+  home.activation.caelestiaWallpaperSeed = lib.hm.dag.entryAfter [ "caelestiaConfigInit" ] ''
+    state_dir="$HOME/.local/state/caelestia/wallpaper"
+    state_file="$state_dir/path.txt"
+
+    if [ -n "${if configuredWallpaper != null then configuredWallpaper else ""}" ] \
+      && [ -f "${if configuredWallpaper != null then configuredWallpaper else ""}" ] \
+      && [ ! -e "$state_file" ]; then
+      $DRY_RUN_CMD mkdir -p "$state_dir"
+      $DRY_RUN_CMD printf '%s\n' "${if configuredWallpaper != null then configuredWallpaper else ""}" >"$state_file"
+    fi
   '';
 
   assertions = [
