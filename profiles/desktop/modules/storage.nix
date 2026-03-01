@@ -1,6 +1,37 @@
-{ lib, ... }:
+{ lib, settings, ... }:
 let
   polkitRules = import ../../../system/lib/polkit-rules.nix { inherit lib; };
+  storageCfg = settings.storage or { };
+  sambaShares = storageCfg.sambaShares or [ ];
+  mkSambaMount = share:
+    let
+      mountName = share.name or "samba-share";
+      gvfsLabel = share.gvfsName or mountName;
+    in
+    {
+      name = mountName;
+      enable = share.enable or true;
+      mountPoint = share.mountPoint;
+      device = "//${share.host}/${share.share}";
+      fsType = "cifs";
+      options = [
+        "nofail"
+        "_netdev"
+        "x-systemd.mount-timeout=${share.mountTimeout or "10s"}"
+      ]
+      ++ lib.optional (share ? credentialsFile && share.credentialsFile != "") "credentials=${share.credentialsFile}"
+      ++ lib.optional (share ? username && share.username != "") "username=${share.username}"
+      ++ lib.optional (share ? domain && share.domain != "") "domain=${share.domain}"
+      ++ lib.optional (share ? vers && share.vers != "") "vers=${share.vers}"
+      ++ (share.options or [ ]);
+      gvfsShow = share.gvfsShow or true;
+      gvfsName = gvfsLabel;
+      automount = share.automount or true;
+      idleTimeout = share.idleTimeout or "15min";
+      preventRemount = share.preventRemount or false;
+      forceDirtyNtfsMount = false;
+      lazyUnmountOnShutdown = false;
+    };
 in
 {
   services.gvfs.enable = true;
@@ -28,7 +59,7 @@ in
       forceDirtyNtfsMount = false;
       lazyUnmountOnShutdown = true;
     }
-  ];
+  ] ++ map mkSambaMount sambaShares;
 
   j0nix.desktop.security.polkit.extraConfigSnippets =
     [ polkitRules.mkUdisksWheelMountRule ];
