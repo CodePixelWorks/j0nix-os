@@ -16,7 +16,9 @@ in
 lib.mkIf enabled {
   services.ollama.enable = true;
 
-  systemd.services.ollama.environment = lib.mkIf (serviceEnv != { }) serviceEnv;
+  systemd.services.ollama.environment =
+    lib.mkIf (serviceEnv != { })
+      (lib.mapAttrs (_: value: lib.mkForce value) serviceEnv);
 
   assertions = [
     {
