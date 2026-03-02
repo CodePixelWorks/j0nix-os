@@ -5,7 +5,7 @@ let
   extra = gaming.extras or { };
 in
 lib.mkIf enabled {
-  home.packages =
+  j0nix.user.software.packages =
     lib.optionals (extra.openSourceGames or false) [
       pkgs.superTuxKart
       pkgs.superTux
