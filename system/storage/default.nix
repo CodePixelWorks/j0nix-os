@@ -68,7 +68,7 @@ in
   config = {
     boot.supportedFilesystems = lib.mkIf hasCifsMounts [ "cifs" ];
 
-    environment.systemPackages = lib.mkIf hasCifsMounts [ pkgs.cifs-utils ];
+    j0nix.software.systemPackages = lib.mkIf hasCifsMounts [ pkgs.cifs-utils ];
 
     fileSystems = builtins.listToAttrs (map
       (m: {

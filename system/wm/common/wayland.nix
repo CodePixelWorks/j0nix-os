@@ -1,6 +1,6 @@
 { pkgs, lib, settings, ... }:
 {
-  environment.systemPackages = [
+  j0nix.software.systemPackages = [
     pkgs.wayland
     pkgs.wayland-utils
     pkgs.wl-clipboard
