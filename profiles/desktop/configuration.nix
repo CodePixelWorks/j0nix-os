@@ -40,7 +40,7 @@
     ../../system/storage
     ../../system/virtualisation
     ../../system/drivers
-    ../../system/support/drivers
+    ../../system/drivers/support.nix
     ../../system/dev
     ../../system/tuning
     ../../system/gaming
