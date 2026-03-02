@@ -6,7 +6,7 @@ let
     && (builtins.hasAttr pkgs.stdenv.hostPlatform.system inputs.zen-browser.packages)
     && (inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system} ? default);
 in {
-  home.packages = lib.optional hasZenPackage inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  j0nix.user.software.packages = lib.optional hasZenPackage inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   assertions = [
     {
