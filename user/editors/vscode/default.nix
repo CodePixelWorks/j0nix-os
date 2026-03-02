@@ -7,7 +7,7 @@ let
 
   vscodeCfg = settings.vscode or { };
   extensionCfg = vscodeCfg.extensions or { };
-  codex = import ../../../system/lib/codex.nix { inherit inputs lib pkgs settings; };
+  codex = import ../../../system/dev/codex.nix { inherit inputs lib pkgs settings; };
   openVSXIds = extensionCfg.openVSX or [ ];
   marketplaceIds = extensionCfg.marketplace or [ ];
   seededUserSettings = {
