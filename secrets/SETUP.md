@@ -11,21 +11,29 @@ The goal is simple:
 - encrypted secret files committed to the repo
 - runtime secret files materialized only when needed
 
-## Key Source Model
+## Key Model
 
-There are two layers:
+This repo now uses a two-tier key model:
 
-- NixOS system secrets
-- Home Manager user secrets
+- one **host key** for system secrets
+- one **user key per user** for user secrets
 
-In this repo, the intended model is:
+Recommended split:
 
-- the NixOS system uses `/var/lib/sops-nix/key.txt`
-- Home Manager user secrets reuse that same key automatically when running under NixOS
+- `secrets/hosts/*.yaml`:
+  encrypted for the host key
+- `secrets/users/<user>.yaml`:
+  encrypted for that user's key
+  and optionally also for the host key
 
-That means you do not need a second separate Age key for user secrets on this machine.
+Why this is the right model:
 
-For standalone Home Manager (without NixOS integration), you must configure an explicit user key file.
+- system services should not depend on user keys
+- user secrets are cryptographically separated per user
+- users can edit their own secret files without sharing one global secret key
+
+Under NixOS, the Home Manager layer can still inherit the system key automatically.
+But for a multi-user, professional setup, you should explicitly set a user key per user.
 
 ## Layout
 
@@ -40,31 +48,27 @@ Use:
 - host files for system services and machine-local credentials
 - user files for SSH keys, API tokens, and user-scoped app secrets
 
-## 1. Ensure The Age Key Exists
+## 1. Create The Host Key
 
-This setup expects the host Age key at:
+The system key should live at:
 
 - `/var/lib/sops-nix/key.txt`
 
-Check for it:
+Create it explicitly:
 
 ```bash
-sudo ls -l /var/lib/sops-nix/key.txt
+sudo install -d -m 700 /var/lib/sops-nix
+sudo age-keygen -o /var/lib/sops-nix/key.txt
+sudo chmod 600 /var/lib/sops-nix/key.txt
 ```
 
-If it does not exist yet, create/apply the current config first:
-
-```bash
-sudo nixos-rebuild switch --flake .#Jonas-PC
-```
-
-Then print the public recipient:
+Print the public recipient:
 
 ```bash
 sudo age-keygen -y /var/lib/sops-nix/key.txt
 ```
 
-You will use that `age1...` value in the SOPS config.
+You will use that `age1...` value for host secret files.
 
 ## Why This Path Is Correct
 
@@ -75,7 +79,31 @@ The pinned `sops-nix` version in this repo uses `/var/lib/sops-nix/key.txt` as t
 
 This repo follows that model.
 
-## 2. Activate SOPS Rules
+## 2. Create A User Key
+
+For your own user secrets, create a separate user key.
+
+Recommended path:
+
+- `/home/jonas/.config/sops/age/keys.txt`
+
+Create it:
+
+```bash
+install -d -m 700 ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+chmod 600 ~/.config/sops/age/keys.txt
+```
+
+Print the public recipient:
+
+```bash
+age-keygen -y ~/.config/sops/age/keys.txt
+```
+
+You will use that second `age1...` value for `secrets/users/jonas.yaml`.
+
+## 3. Activate SOPS Rules
 
 Copy the template:
 
@@ -83,19 +111,35 @@ Copy the template:
 cp secrets/.sops.yaml.example secrets/.sops.yaml
 ```
 
-Edit `secrets/.sops.yaml` and replace the placeholder recipient with your real Age public key.
+Rewrite `secrets/.sops.yaml` so host and user files use different recipients.
 
-Example:
+Recommended example:
 
 ```yaml
 creation_rules:
-  - path_regex: secrets/.*\\.(yaml|yml|json|env|ini|bin)$
+  - path_regex: secrets/hosts/.*\\.(yaml|yml|json|env|ini|bin)$
     key_groups:
       - age:
-          - age1...
+          - age1HOSTKEY...
+
+  - path_regex: secrets/users/jonas\\.(yaml|yml|json|env|ini|bin)$
+    key_groups:
+      - age:
+          - age1JONASKEY...
+          - age1HOSTKEY...
 ```
 
-## 3. Create The Encrypted Secret Files
+Recommended behavior:
+
+- host files: host key only
+- user file: user key first, host key also allowed
+
+That lets:
+
+- `jonas` edit his secrets directly
+- the host still decrypt them during Home Manager activation
+
+## 4. Create The Encrypted Secret Files
 
 Create the expected directories:
 
@@ -115,7 +159,7 @@ Create the host secret file:
 sops secrets/hosts/Jonas-PC.yaml
 ```
 
-## 4. Put User Secrets Into `secrets/users/jonas.yaml`
+## 5. Put User Secrets Into `secrets/users/jonas.yaml`
 
 Example for SSH private keys:
 
@@ -137,7 +181,7 @@ Notes:
 - keep this file encrypted with `sops`
 - do not put these keys into `settings.nix`
 
-## 5. Put Host Secrets Into `secrets/hosts/Jonas-PC.yaml`
+## 6. Put Host Secrets Into `secrets/hosts/Jonas-PC.yaml`
 
 Example for Syncthing and Samba:
 
@@ -158,7 +202,7 @@ Notes:
 - the NixOS Syncthing module reads it via `guiPasswordFile`
 - Samba credentials are intentionally stored in the format expected by CIFS `credentials=...`
 
-## 6. Register The Secrets In `settings.nix`
+## 7. Register The Secrets In `settings.nix`
 
 Add or adapt this block under `secrets = { ... };`:
 
@@ -188,6 +232,10 @@ secrets = {
   };
 
   users.jonas = {
+    age = {
+      keyFile = "/home/jonas/.config/sops/age/keys.txt";
+    };
+
     items = {
       ssh-github-key = {
         key = "ssh/github_key";
@@ -203,15 +251,14 @@ secrets = {
 };
 ```
 
-If you ever run Home Manager standalone on another machine, you can additionally set:
+This makes the intent explicit:
 
-```nix
-secrets.users.jonas.age.keyFile = "/home/jonas/.config/sops/age/keys.txt";
-```
+- system secrets use the host key
+- user secrets use the user key
 
-On this NixOS host, that should usually not be necessary because the user layer inherits the system key automatically.
+The Home Manager layer can inherit the system key, but for a multi-user setup this explicit per-user key is the preferred model.
 
-## 7. Wire Syncthing To The Secret
+## 8. Wire Syncthing To The Secret
 
 In `settings.nix`, configure Syncthing like this:
 
@@ -225,7 +272,7 @@ programs.syncthing = {
 
 This makes the service use the materialized secret file automatically.
 
-## 8. SSH Secret Keys
+## 9. SSH Secret Keys
 
 The repo is already prepared to use:
 
@@ -241,7 +288,7 @@ Behavior:
 
 That means you can migrate safely without breaking SSH immediately.
 
-## 9. Optional: Wire Samba To The Secret
+## 10. Optional: Wire Samba To The Secret
 
 For a Samba share, use the secret name in the share definition:
 
@@ -262,7 +309,7 @@ This resolves to:
 
 - `/run/secrets/samba-media`
 
-## 10. Apply The Configuration
+## 11. Apply The Configuration
 
 Rebuild:
 
@@ -270,7 +317,7 @@ Rebuild:
 sudo nixos-rebuild switch --flake .#Jonas-PC
 ```
 
-## 11. Verify System Secrets
+## 12. Verify System Secrets
 
 Check the generated runtime files:
 
@@ -280,19 +327,19 @@ sudo ls -l /run/secrets/syncthing-gui-password
 sudo ls -l /run/secrets/samba-media
 ```
 
-## 12. Verify User Secrets
+## 13. Verify User Secrets
 
-Check the Home Manager generation and then inspect the resolved SSH config:
+Check that the user key exists, then inspect the resolved SSH config:
 
 ```bash
-systemctl --user status home-manager-jonas
+ls -l ~/.config/sops/age/keys.txt
 ssh -G github.com | rg '^identityfile'
 ssh -G git.j0nixlab.xyz | rg '^identityfile'
 ```
 
 If the user secrets are wired correctly, the `identityfile` output should point to the SOPS-managed secret path instead of `~/.ssh/id_ed25519`.
 
-## 13. Verify Syncthing
+## 14. Verify Syncthing
 
 Check the service:
 
@@ -304,11 +351,13 @@ sudo systemctl status syncthing
 
 Recommended migration order:
 
-1. set up `.sops.yaml`
-2. create the encrypted secret files
-3. register the secrets in `settings.nix`
-4. rebuild
-5. verify SSH and Syncthing
-6. only then remove old plaintext key files if you still have them
+1. create the host key
+2. create the user key
+3. set up `.sops.yaml` with separate host/user rules
+4. create the encrypted secret files
+5. register the secrets in `settings.nix`
+6. rebuild
+7. verify SSH and Syncthing
+8. only then remove old plaintext key files if you still have them
 
 Do not delete existing `~/.ssh` keys until the new secret-backed paths are confirmed to work.
