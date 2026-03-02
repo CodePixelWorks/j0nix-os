@@ -3,6 +3,8 @@ let
   programsCfg = settings.programs or { };
   bambuCfg = programsCfg.bambulab or { };
   bambuProvider = bambuCfg.provider or "appimage";
+  syncthingCfg = programsCfg.syncthing or { };
+  syncthingEnabled = syncthingCfg.enable or true;
   # Storage policy moved to the desktop storage profile module; keep user-space udisks automount enabled here.
   enableUdiskieAutomount = true;
   configuredFileManagersRaw =
@@ -92,7 +94,6 @@ in
     qbittorrent
     telegram-desktop
     nextcloud-client
-    syncthing
     obsidian
     drawio
   ]
@@ -121,6 +122,7 @@ in
     xdg-utils
   ] ++ fileManagerPackages
     ++ (with pkgs; if enableUdiskieAutomount then [ udiskie ] else [ ])
+    ++ lib.optionals syncthingEnabled [ pkgs.syncthing ]
     ++ lib.optionals (pkgs ? fusion360) [ pkgs.fusion360 ]
     ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) ([ iconThemePackage ] ++ iconThemeFallbackPackages);
 
@@ -198,20 +200,6 @@ in
       RestartSec = 2;
     };
     Install.WantedBy = [ "graphical-session.target" ];
-  };
-
-  systemd.user.services.syncthing = {
-    Unit = {
-      Description = "Syncthing user sync daemon";
-      Documentation = [ "man:syncthing(1)" ];
-      After = [ "network.target" ];
-    };
-    Service = {
-      ExecStart = "${pkgs.syncthing}/bin/syncthing --no-browser --no-restart --logflags=0";
-      Restart = "on-failure";
-      RestartSec = 2;
-    };
-    Install.WantedBy = [ "default.target" ];
   };
 
   programs.home-manager.enable = true;

@@ -1,0 +1,44 @@
+{ lib, settings, ... }:
+let
+  syncthingCfg = ((settings.programs or { }).syncthing or { });
+  enabled = syncthingCfg.enable or true;
+  configDir =
+    if (syncthingCfg ? configDir) && syncthingCfg.configDir != null then
+      syncthingCfg.configDir
+    else if (syncthingCfg ? homeDir) && syncthingCfg.homeDir != null then
+      syncthingCfg.homeDir
+    else
+      "/home/${settings.username}/.config/syncthing";
+  dataDir =
+    if (syncthingCfg ? dataDir) && syncthingCfg.dataDir != null then
+      syncthingCfg.dataDir
+    else
+      "/home/${settings.username}";
+  guiAddress = syncthingCfg.guiAddress or "127.0.0.1:8384";
+  openDefaultPorts = syncthingCfg.openDefaultPorts or true;
+in
+lib.mkIf enabled {
+  systemd.services.syncthing.environment.STNODEFAULTFOLDER = "true";
+
+  services.syncthing = {
+    enable = true;
+    user = settings.username;
+    group = "users";
+    inherit configDir dataDir guiAddress openDefaultPorts;
+  };
+
+  assertions = [
+    {
+      assertion = configDir != "";
+      message = "settings.programs.syncthing.configDir must be a non-empty string when set";
+    }
+    {
+      assertion = dataDir != "";
+      message = "settings.programs.syncthing.dataDir must be a non-empty string when set";
+    }
+    {
+      assertion = guiAddress != "";
+      message = "settings.programs.syncthing.guiAddress must be a non-empty string when set";
+    }
+  ];
+}
