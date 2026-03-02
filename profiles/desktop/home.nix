@@ -92,6 +92,7 @@ in
     qbittorrent
     telegram-desktop
     nextcloud-client
+    syncthing
     obsidian
     drawio
   ]
