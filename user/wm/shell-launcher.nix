@@ -12,7 +12,7 @@ let
   quickshellBin = if pkgs ? quickshell then lib.getExe pkgs.quickshell else null;
 in
 {
-  home.packages = with pkgs; [
+  j0nix.user.software.packages = with pkgs; [
     (writeShellScriptBin "wm-kbd-layout-toggle" ''
       # Generic entrypoint for a DMS action button. Runtime switching support is WM-specific.
       if command -v hyprctl >/dev/null 2>&1; then

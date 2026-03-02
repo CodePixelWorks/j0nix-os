@@ -307,7 +307,7 @@ let
   # `exec-once` is used for both direct Hyprland sessions and UWSM-managed sessions.
   shellStartupCommand = if selectedShell == "none" then null else "wm-shell-start";
 in {
-  home.packages = with pkgs; [
+  j0nix.user.software.packages = with pkgs; [
     swww
     wayvnc
     wl-clipboard
