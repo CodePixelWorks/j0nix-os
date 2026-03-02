@@ -25,7 +25,7 @@ let
   gamescopeHdrEnabled = perf.gamescopeHdr or true;
 in
 lib.mkIf enabled {
-  home.packages =
+  j0nix.user.software.packages =
     [
       # Steam launch options examples:
       #   game-session %command%
