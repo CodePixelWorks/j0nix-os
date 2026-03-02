@@ -11,7 +11,7 @@ let
   hasGeminiPackage = pkgs ? gemini-cli;
 in
 lib.mkIf enabled {
-  home.packages =
+  j0nix.user.software.packages =
     lib.optionals (codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
     ++ lib.optionals (geminiEnabled && hasGeminiPackage) [ pkgs.gemini-cli ]
     ++ lib.optionals geminiEnabled [
