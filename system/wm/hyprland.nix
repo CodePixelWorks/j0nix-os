@@ -163,7 +163,7 @@ in {
     }
   ];
 
-  environment.systemPackages = with pkgs; [
+  j0nix.software.systemPackages = with pkgs; [
     (writeShellScriptBin "start-mangowc" ''
       export XDG_SESSION_TYPE=wayland
       export XDG_CURRENT_DESKTOP=MangoWC
