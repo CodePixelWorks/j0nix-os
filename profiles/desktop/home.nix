@@ -75,7 +75,7 @@ in
     homeDirectory = "/home/${settings.username}";
   };
 
-  home.packages = with pkgs; [
+  j0nix.user.software.packages = with pkgs; [
     foot
     kitty
     git

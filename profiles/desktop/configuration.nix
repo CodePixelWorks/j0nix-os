@@ -58,7 +58,7 @@
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [ stdenv.cc.cc ];
 
-  environment.systemPackages = (with pkgs; [
+  j0nix.software.systemPackages = with pkgs; [
     home-manager
     nix-index
     git
@@ -72,7 +72,7 @@
     lsof
     lm_sensors
     vulkan-tools
-  ]);
+  ];
 
   assertions = [
   ];
