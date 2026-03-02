@@ -200,6 +200,20 @@ in
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
+  systemd.user.services.syncthing = {
+    Unit = {
+      Description = "Syncthing user sync daemon";
+      Documentation = [ "man:syncthing(1)" ];
+      After = [ "network.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.syncthing}/bin/syncthing --no-browser --no-restart --logflags=0";
+      Restart = "on-failure";
+      RestartSec = 2;
+    };
+    Install.WantedBy = [ "default.target" ];
+  };
+
   programs.home-manager.enable = true;
   home.stateVersion = "25.11";
 
