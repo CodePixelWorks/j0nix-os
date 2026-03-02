@@ -88,7 +88,7 @@ in
 
     services.blueman.enable = true;
 
-    environment.systemPackages = lib.optionals (usePulseAudio && hasPulseAudioBtModules && enableHiFiCodecs) [
+    j0nix.software.systemPackages = lib.optionals (usePulseAudio && hasPulseAudioBtModules && enableHiFiCodecs) [
       pkgs."pulseaudio-modules-bt"
     ];
 
