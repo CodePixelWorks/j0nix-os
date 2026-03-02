@@ -85,7 +85,7 @@ in {
     mode = "0444";
   };
 
-  environment.systemPackages = [
+  j0nix.software.systemPackages = [
     mangoPkg
     pkgs.xdg-desktop-portal-wlr
   ];

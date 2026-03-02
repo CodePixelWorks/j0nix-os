@@ -46,7 +46,7 @@ lib.mkIf (enabled && steamEnabled) {
     };
   };
 
-  environment.systemPackages = lib.optionals steamRunEnabled [
+  j0nix.software.systemPackages = lib.optionals steamRunEnabled [
     pkgs.steam-run
   ];
 

@@ -93,7 +93,7 @@ lib.mkIf enabled {
     };
   };
 
-  environment.systemPackages =
+  j0nix.software.systemPackages =
     lib.optionals (perfCfg.gamescope or true) [
       pkgs.gamescope
     ]

@@ -6,7 +6,7 @@ let
   extraCfg = gaming.extras or { };
 in
 lib.mkIf enabled {
-  environment.systemPackages =
+  j0nix.software.systemPackages =
     lib.optionals (protonCfg.updater or true) [
       pkgs.protonup-qt
     ]
