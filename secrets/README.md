@@ -17,6 +17,12 @@ Bootstrap:
    - `sops secrets/hosts/Jonas-PC.yaml`
 4. Reference entries from `settings.secrets.system`
 
+For user secrets:
+
+1. Create an encrypted file, for example:
+   - `sops secrets/users/jonas.yaml`
+2. Reference entries from `settings.secrets.users.jonas.items`
+
 Example:
 
 ```nix
@@ -33,3 +39,22 @@ At runtime this becomes available as:
 - `/run/secrets/samba-media`
 
 Use that path from modules (for example Samba `credentials=` files) instead of storing passwords in `settings.nix`.
+
+User example:
+
+```nix
+secrets = {
+  defaultUserSopsFile = ./secrets/users/jonas.yaml;
+  users.jonas.items = {
+    ssh-github-key = {
+      key = "ssh/github_key";
+    };
+  };
+};
+```
+
+User modules consume these via:
+
+- `config.sops.secrets.<name>.path`
+
+This is the intended path for SSH private keys, API tokens, and user-scoped application secrets.
