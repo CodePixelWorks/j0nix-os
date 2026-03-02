@@ -2,6 +2,10 @@
 
 This repository is wired for `sops-nix` and expects encrypted secret files to live here.
 
+For the full step-by-step setup guide, see:
+
+- `secrets/SETUP.md`
+
 Recommended layout:
 
 - `secrets/common.yaml`
@@ -58,3 +62,12 @@ User modules consume these via:
 - `config.sops.secrets.<name>.path`
 
 This is the intended path for SSH private keys, API tokens, and user-scoped application secrets.
+
+Under NixOS, the Home Manager layer automatically reuses the system Age key:
+
+- `sops.age.keyFile = /var/lib/sops-nix/key.txt`
+
+For standalone Home Manager, set an explicit user key source via:
+
+- `settings.secrets.users.<name>.age.keyFile`
+- or `settings.secrets.age.keyFile`
