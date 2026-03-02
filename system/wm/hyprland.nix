@@ -1,6 +1,6 @@
 { inputs, pkgs, lib, settings, ... }:
 let
-  dm = import ../lib/display-manager.nix { inherit lib; };
+  dm = import ./display-manager/contract.nix { inherit lib; };
   greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
   users = settings.users or [ settings.username ];
   primaryUser = builtins.head users;

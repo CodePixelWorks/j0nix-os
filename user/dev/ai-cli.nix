@@ -4,7 +4,7 @@ let
   ai = dev.ai or { };
   enabled = (dev.enable or true) && (ai.enable or true);
   preferredTerminal = settings.preferredTerminal or "kitty";
-  codex = import ../../system/lib/codex.nix { inherit inputs lib pkgs settings; };
+  codex = import ../../system/dev/codex.nix { inherit inputs lib pkgs settings; };
   codexEnabled = codex.enabled;
   geminiEnabled = ai.gemini or true;
 

@@ -1,6 +1,6 @@
 { lib, pkgs, settings, ... }:
 let
-  dm = import ../lib/display-manager.nix { inherit lib; };
+  dm = import ./display-manager/contract.nix { inherit lib; };
   greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
   selectedDisplayManager = dm.resolveDisplayManager settings;
   useGreetd = selectedDisplayManager == "greetd";

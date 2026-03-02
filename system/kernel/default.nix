@@ -1,6 +1,6 @@
 { config, lib, pkgs, inputs, ... }:
 let
-  kernelPresets = import ../lib/kernel-presets.nix { };
+  kernelPresets = import ./presets.nix { };
   modprobe = import ../lib/modprobe.nix { inherit lib; };
   cfg = config.j0nix.desktop.kernel;
   preset = kernelPresets.presets.${cfg.preset};
