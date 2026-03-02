@@ -23,6 +23,7 @@
     ./modules/support-drivers.nix
     ../../system/apps/bambulab.nix
     ../../system/apps/ollama.nix
+    ../../system/apps/syncthing.nix
     ../../system/software
     ../../user-roles/system
     ../../system/accounts
