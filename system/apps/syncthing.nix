@@ -16,6 +16,11 @@ let
       "/home/${settings.username}";
   guiAddress = syncthingCfg.guiAddress or "127.0.0.1:8384";
   openDefaultPorts = syncthingCfg.openDefaultPorts or true;
+  overrideDevices = syncthingCfg.overrideDevices or false;
+  overrideFolders = syncthingCfg.overrideFolders or false;
+  syncOptions = syncthingCfg.options or { };
+  devices = syncthingCfg.devices or { };
+  folders = syncthingCfg.folders or { };
 in
 lib.mkIf enabled {
   systemd.services.syncthing.environment.STNODEFAULTFOLDER = "true";
@@ -24,7 +29,11 @@ lib.mkIf enabled {
     enable = true;
     user = settings.username;
     group = "users";
-    inherit configDir dataDir guiAddress openDefaultPorts;
+    inherit configDir dataDir guiAddress openDefaultPorts overrideDevices overrideFolders;
+    settings = {
+      options = syncOptions;
+      inherit devices folders;
+    };
   };
 
   assertions = [
@@ -39,6 +48,18 @@ lib.mkIf enabled {
     {
       assertion = guiAddress != "";
       message = "settings.programs.syncthing.guiAddress must be a non-empty string when set";
+    }
+    {
+      assertion = builtins.isAttrs syncOptions;
+      message = "settings.programs.syncthing.options must be an attrset";
+    }
+    {
+      assertion = builtins.isAttrs devices;
+      message = "settings.programs.syncthing.devices must be an attrset";
+    }
+    {
+      assertion = builtins.isAttrs folders;
+      message = "settings.programs.syncthing.folders must be an attrset";
     }
   ];
 }
