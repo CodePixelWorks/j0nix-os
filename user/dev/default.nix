@@ -109,7 +109,7 @@ in
         };
     };
 
-    home.packages = with pkgs; [
+    j0nix.user.software.packages = with pkgs; [
       git
       gh
       lazygit
