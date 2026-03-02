@@ -55,7 +55,7 @@ in
 
   programs.niri.enable = true;
 
-  environment.systemPackages = [
+  j0nix.software.systemPackages = [
     niriStartScript
     pkgs.niri
     pkgs.xdg-desktop-portal-gtk
