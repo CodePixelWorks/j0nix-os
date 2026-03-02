@@ -126,6 +126,7 @@ in
       wget
       curl
       age
+      sops
       openssl
       unzip
       zip
