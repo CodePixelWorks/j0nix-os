@@ -1,6 +1,6 @@
 { config, lib, ... }:
 let
-  modprobe = import ../../lib/modprobe.nix { inherit lib; };
+  modprobe = import ../lib/modprobe.nix { inherit lib; };
   cfg = config.j0nix.desktop.support.drivers;
   it87Cfg = cfg.it87;
   hasIt87KernelPackage = config.boot.kernelPackages ? it87;
