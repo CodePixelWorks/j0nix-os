@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
   cfg = config.j0nix.software;
 in
@@ -10,6 +10,11 @@ in
   };
 
   config = {
+    j0nix.software.systemPackages = with pkgs; [
+      age
+      sops
+    ];
+
     environment.systemPackages = lib.mkAfter (lib.unique cfg.systemPackages);
   };
 }
