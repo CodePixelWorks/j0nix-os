@@ -1,6 +1,6 @@
 { config, pkgs, lib, settings, ... }:
 {
-  home.packages = with pkgs; [
+  j0nix.user.software.packages = with pkgs; [
     zsh
   ] ++ lib.optional ((((settings.programs or { }).fastfetch or { }).enable or true)) fastfetch;
 
