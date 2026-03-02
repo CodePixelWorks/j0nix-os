@@ -1,5 +1,5 @@
 { pkgs, ... }:
 {
   programs.qutebrowser.enable = true;
-  home.packages = [ pkgs.qutebrowser ];
+  j0nix.user.software.packages = [ pkgs.qutebrowser ];
 }
