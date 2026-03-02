@@ -10,7 +10,7 @@ let
       "sleep 1; hyprctl dispatch exit";
 in
 lib.mkIf enabled {
-  home.packages = [ pkgs.wlogout ];
+  j0nix.user.software.packages = [ pkgs.wlogout ];
 
   programs.wlogout = {
     enable = true;

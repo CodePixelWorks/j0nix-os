@@ -22,7 +22,7 @@
     '';
   };
 
-  home.packages = with pkgs; [
+  j0nix.user.software.packages = with pkgs; [
     ripgrep
     fd
     tree-sitter
