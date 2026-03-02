@@ -4,7 +4,7 @@ let
   enabled = dev.enable or true;
   dockerCfg = dev.docker or { };
   ai = dev.ai or { };
-  codex = import ../lib/codex.nix { inherit inputs lib pkgs settings; };
+  codex = import ./codex.nix { inherit inputs lib pkgs settings; };
   codexEnabled = codex.enabled;
   sshCfg = dev.ssh or { };
   sshEnabled = sshCfg.enable or true;
