@@ -211,7 +211,7 @@ lib.mkIf enabled {
     }
   ];
 
-  home.packages = [
+  j0nix.user.software.packages = [
     fusion360ProtonSetup
     fusion360ProtonRun
     fusion360ProtonOpenIdMgr
