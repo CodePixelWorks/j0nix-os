@@ -97,10 +97,9 @@ in
       ]
       ++ lib.optionals (cfg.networkmanager.enable && cfg.wifiManagerGui.enable && cfg.wifiManagerGui.desktopEntry.enable) [
         wifiManagerDesktopEntry
+      ]
+      ++ lib.optionals (cfg.tailscale.enable && cfg.tailscale.installCli) [
+        pkgs.tailscale
       ];
-
-    environment.systemPackages = lib.optionals (cfg.tailscale.enable && cfg.tailscale.installCli) [
-      pkgs.tailscale
-    ];
   };
 }
