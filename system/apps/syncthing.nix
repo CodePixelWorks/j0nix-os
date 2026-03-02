@@ -1,4 +1,4 @@
-{ lib, settings, ... }:
+{ config, lib, settings, ... }:
 let
   syncthingCfg = ((settings.programs or { }).syncthing or { });
   enabled = syncthingCfg.enable or true;
@@ -15,6 +15,12 @@ let
     else
       "/home/${settings.username}";
   guiAddress = syncthingCfg.guiAddress or "127.0.0.1:8384";
+  guiPasswordSecretName = syncthingCfg.guiPasswordSecretName or null;
+  guiPasswordFile =
+    if guiPasswordSecretName != null then
+      config.sops.secrets.${guiPasswordSecretName}.path
+    else
+      (syncthingCfg.guiPasswordFile or null);
   openDefaultPorts = syncthingCfg.openDefaultPorts or true;
   overrideDevices = syncthingCfg.overrideDevices or false;
   overrideFolders = syncthingCfg.overrideFolders or false;
@@ -30,6 +36,7 @@ lib.mkIf enabled {
     user = settings.username;
     group = "users";
     inherit configDir dataDir guiAddress openDefaultPorts overrideDevices overrideFolders;
+    inherit guiPasswordFile;
     settings = {
       options = syncOptions;
       inherit devices folders;
@@ -48,6 +55,10 @@ lib.mkIf enabled {
     {
       assertion = guiAddress != "";
       message = "settings.programs.syncthing.guiAddress must be a non-empty string when set";
+    }
+    {
+      assertion = guiPasswordSecretName == null || guiPasswordSecretName != "";
+      message = "settings.programs.syncthing.guiPasswordSecretName must be a non-empty string when set";
     }
     {
       assertion = builtins.isAttrs syncOptions;
