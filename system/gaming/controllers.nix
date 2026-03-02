@@ -55,7 +55,7 @@ lib.mkIf (enabled && controllerEnabled) {
     SUBSYSTEM=="input", ATTRS{name}=="*Gamepad*", MODE="0666", TAG+="uaccess"
   '';
 
-  environment.systemPackages = with pkgs; [
+  j0nix.software.systemPackages = with pkgs; [
     SDL2
     jstest-gtk
     evtest

@@ -25,7 +25,7 @@ lib.mkIf enabled {
     };
   };
 
-  environment.systemPackages = with pkgs; [
+  j0nix.software.systemPackages = with pkgs; [
     docker-compose
     dive
     lazydocker
