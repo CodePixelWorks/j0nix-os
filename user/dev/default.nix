@@ -1,4 +1,4 @@
-{ lib, pkgs, settings, ... }:
+{ config, lib, pkgs, settings, ... }:
 let
   dev = settings.dev or { };
   enabled = dev.enable or true;
@@ -47,6 +47,11 @@ let
     let
       host = profile.host or name;
       sshProfile = profile.ssh or { };
+      resolvedIdentityFile =
+        if (sshProfile ? identitySecretName) && (lib.hasAttrByPath [ sshProfile.identitySecretName ] (config.sops.secrets or { })) then
+          lib.getAttrFromPath [ sshProfile.identitySecretName "path" ] config.sops.secrets
+        else
+          (sshProfile.identityFile or null);
     in
     {
       name = name;
@@ -57,8 +62,8 @@ let
           user = sshProfile.user or "git";
           identitiesOnly = sshProfile.identitiesOnly or false;
         }
-        // lib.optionalAttrs (sshProfile ? identityFile) {
-          identityFile = sshProfile.identityFile;
+        // lib.optionalAttrs (resolvedIdentityFile != null) {
+          identityFile = resolvedIdentityFile;
         };
     };
 in
