@@ -39,7 +39,7 @@ But for a multi-user, professional setup, you should explicitly set a user key p
 
 Recommended structure:
 
-- `secrets/.sops.yaml`
+- `.sops.yaml`
 - `secrets/hosts/Jonas-PC.yaml`
 - `secrets/users/jonas.yaml`
 
@@ -108,10 +108,10 @@ You will use that second `age1...` value for `secrets/users/jonas.yaml`.
 Copy the template:
 
 ```bash
-cp secrets/.sops.yaml.example secrets/.sops.yaml
+cp .sops.yaml.example .sops.yaml
 ```
 
-Rewrite `secrets/.sops.yaml` so host and user files use different recipients.
+Rewrite `.sops.yaml` so host and user files use different recipients.
 
 Recommended example:
 
