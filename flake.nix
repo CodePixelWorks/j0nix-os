@@ -40,21 +40,24 @@
           '';
         });
       };
+      profileName = "desktop";
+      profileDir = baseDir + "/profiles/${profileName}";
+      profileMeta = import (profileDir + "/meta.nix");
       rawSettings = import (baseDir + "/settings.nix") { inherit inputs; };
 
       pkgs = import nixpkgs {
-        system = rawSettings.system;
+        system = profileMeta.system;
         overlays = [ vscodeOverlay localFixesOverlay ];
         config.allowUnfree = true;
       };
 
       settings = rawSettings // {
-        profileDetails = import (baseDir + "/profiles/${rawSettings.profile}/details.nix") { };
+        profileDetails = import (profileDir + "/details.nix") { };
         themeDetails = import (baseDir + "/themes/${rawSettings.theme}.nix") { inherit pkgs; };
       };
 
       lib = nixpkgs.lib;
-      hmUsers = settings.users or [ settings.username ];
+      hmUsers = builtins.attrNames (settings.userSettings or { });
       userOverrides = settings.userSettings or { };
 
       baseSettings = builtins.removeAttrs settings [
@@ -99,7 +102,7 @@
               resolvedDefaultWMS;
         in
         merged // {
-          profileDetails = import (baseDir + "/profiles/${merged.profile}/details.nix") { };
+          profileDetails = import (profileDir + "/details.nix") { };
           inherit themeDetails;
           wmShell =
             merged.wmShell
@@ -161,7 +164,7 @@
           devEnabled = (userSettings.dev or { }).enable or true;
         in
         [
-          (baseDir + "/profiles/${userSettings.profile}/home.nix")
+          (profileDir + "/home.nix")
           (baseDir + "/user/software/default.nix")
           (baseDir + "/user/custom/default.nix")
           (baseDir + "/user/security/secrets.nix")
@@ -218,14 +221,14 @@
         let userSettings = mkUserSettings username;
         in { ... }: {
           _module.args = {
-            inherit inputs;
+            inherit inputs profileMeta;
             settings = userSettings;
           };
           imports = mkHomeModules userSettings;
         };
     in {
       nixosConfigurations = {
-        ${settings.hostname} = nixpkgs.lib.nixosSystem {
+        ${profileMeta.hostname} = nixpkgs.lib.nixosSystem {
           modules = [
             inputs.stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
@@ -235,7 +238,7 @@
                 useGlobalPkgs = true;
                 useUserPackages = true;
                 backupFileExtension = "backup";
-                extraSpecialArgs = { inherit inputs; };
+                extraSpecialArgs = { inherit inputs profileMeta; };
                 sharedModules = hmSharedModulesNixos;
                 users = builtins.listToAttrs (map (username: {
                   name = username;
@@ -243,11 +246,11 @@
                 }) hmUsers);
               };
             })
-            (baseDir + "/profiles/${settings.profile}/configuration.nix")
+            (profileDir + "/configuration.nix")
           ] ++ lib.optional settings.enableSops inputs.sops-nix.nixosModules.sops;
 
           specialArgs = {
-            inherit inputs;
+            inherit inputs profileMeta;
             settings = systemSettings;
           };
         };
@@ -258,13 +261,13 @@
         value = let userSettings = mkUserSettings username; in
           home-manager.lib.homeManagerConfiguration {
             pkgs = import nixpkgs {
-              system = settings.system;
+              system = profileMeta.system;
               overlays = [ vscodeOverlay localFixesOverlay ];
               config.allowUnfree = true;
             };
             modules = (mkHomeModules userSettings) ++ hmSharedModulesStandalone;
             extraSpecialArgs = {
-              inherit inputs;
+              inherit inputs profileMeta;
               settings = userSettings;
             };
           };
