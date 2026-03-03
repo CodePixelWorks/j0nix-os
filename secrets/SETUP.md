@@ -294,6 +294,21 @@ For your preferred naming scheme, use:
 
 - `targetName = "id_ed25519_jonas_pixel_und_code"`
 
+If the private key is passphrase-protected, set the public key explicitly on the mapping:
+
+```nix
+sshKeys.jonas-pixel-und-code = {
+  secretName = "jonas-pixel-und-code";
+  targetName = "id_ed25519_jonas_pixel_und_code";
+  publicKeyFile = ./keys/id_ed25519_jonas_pixel_und_code.pub;
+};
+```
+
+You can also inline it with `publicKey = "ssh-ed25519 AAAA... comment";`.
+
+Without `publicKey` or `publicKeyFile`, Home Manager falls back to `ssh-keygen -y`.
+If that fails, the existing `.pub` file is preserved instead of being overwritten with an empty file.
+
 That means you can migrate safely without breaking SSH immediately.
 
 ## 10. Optional: Wire Samba To The Secret
