@@ -78,7 +78,8 @@
       mkUserSettings = username:
         let
           userOverride = userOverrides.${username} or { };
-          merged = baseSettings // userOverride // {
+          userSecretOverride = userOverride.secrets or { };
+          merged = baseSettings // (builtins.removeAttrs userOverride [ "secrets" ]) // {
             inherit username;
             dotfilesDir = "/home/${username}/DEV/j0nix-os";
           };
@@ -103,6 +104,9 @@
         in
         merged // {
           profileDetails = import (profileDir + "/details.nix") { };
+          secrets = (baseSettings.secrets or { }) // {
+            user = userSecretOverride;
+          };
           inherit themeDetails;
           wmShell =
             merged.wmShell

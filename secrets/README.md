@@ -31,7 +31,7 @@ For user secrets:
 
 1. Create an encrypted file, for example:
    - `sops secrets/users/jonas.yaml`
-2. Reference entries from `settings.secrets.users.jonas.items`
+2. Reference entries from `settings.userSettings.jonas.secrets.items`
 
 Example:
 
@@ -104,7 +104,7 @@ Under NixOS, the Home Manager layer can automatically reuse the system Age key:
 
 For a professional multi-user setup, explicitly set a per-user key source via:
 
-- `settings.secrets.users.<name>.age.keyFile`
+- `settings.userSettings.<name>.secrets.age.keyFile`
 
 The full recommended host-key + per-user-key workflow is documented in:
 
