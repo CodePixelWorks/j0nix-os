@@ -10,7 +10,7 @@ Main user-side Hyprland module (`default.nix`) plus shell-specific variants.
 
 ## Shell Selection
 
-Modules under `shells/` are selected by global `wmShell` (legacy alias: `hyprlandShell`).
+Modules under `shells/` are selected per user via `settings.userSettings.<name>.wmShell` (legacy alias: `hyprlandShell`).
 
 ## Hyprland Rule Syntax Notes (0.53.2+)
 
@@ -94,7 +94,7 @@ Notes for implementation:
 
 ## Notes
 
-- Some binds are added conditionally based on `settings.wmShell`, `settings.dms.overview.enable`, and related toggles.
+- Some binds are added conditionally based on the active per-user `wmShell`, `settings.dms.overview.enable`, and related toggles.
 - Additional shell-specific media, screenshot, and workflow binds are defined in the selected shell block inside `user/wm/hyprland/default.nix`.
 - Generic screenshot helpers are always available:
   - `Win+P`: fullscreen screenshot via `wm-screenshot-full`
