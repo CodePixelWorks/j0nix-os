@@ -346,7 +346,7 @@ in
   assertions = [
     {
       assertion = builtins.elem selectedShell [ "ags" "dank-material-shell" "noctalia-shell" "caelestia-shell" "none" ];
-      message = "settings.wmShell must be one of: ags, dank-material-shell, noctalia-shell, caelestia-shell, none";
+      message = "settings.userSettings.<name>.wmShell must be one of: ags, dank-material-shell, noctalia-shell, caelestia-shell, none";
     }
   ];
 }
