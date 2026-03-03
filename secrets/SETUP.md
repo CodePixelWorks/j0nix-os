@@ -247,6 +247,16 @@ secrets = {
         mode = "0400";
       };
     };
+
+    sshKeys = {
+      github = {
+        secretName = "ssh-github-key";
+      };
+
+      j0nixlab = {
+        secretName = "ssh-j0nixlab-key";
+      };
+    };
   };
 };
 ```
@@ -283,7 +293,9 @@ Those are referenced by the Git host profiles in `settings.nix`.
 
 Behavior:
 
-- if the user secret exists, SSH uses the SOPS-materialized key path
+- Home Manager deploys `~/.ssh/<name>` as a stable symlink to the private key secret
+- Home Manager regenerates `~/.ssh/<name>.pub` from the private key on activation
+- if a deployed SSH key mapping exists, SSH uses that stable `~/.ssh/<name>` path
 - if it does not exist yet, the config falls back to the existing `identityFile`
 
 That means you can migrate safely without breaking SSH immediately.
@@ -338,6 +350,11 @@ ssh -G git.j0nixlab.xyz | rg '^identityfile'
 ```
 
 If the user secrets are wired correctly, the `identityfile` output should point to the SOPS-managed secret path instead of `~/.ssh/id_ed25519`.
+
+If you use the declarative `sshKeys` mapping, it should point to the stable deployed path, for example:
+
+- `~/.ssh/github`
+- `~/.ssh/j0nixlab`
 
 ## 14. Verify Syncthing
 
