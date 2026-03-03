@@ -2,8 +2,7 @@
 let
   enableSops = settings.enableSops or false;
   cfg = settings.secrets or { };
-  usersCfg = cfg.users or { };
-  userCfg = usersCfg.${settings.username} or { };
+  userCfg = cfg.user or { };
   userAgeCfg = userCfg.age or { };
   rawSshKeys = userCfg.sshKeys or { };
   sshKeys = if builtins.isAttrs rawSshKeys then rawSshKeys else { };
@@ -134,19 +133,19 @@ lib.mkIf enableSops {
   assertions = [
     {
       assertion = builtins.isAttrs rawItems;
-      message = "settings.secrets.users.${settings.username}.items must be an attrset of secret definitions";
+      message = "settings.userSettings.<name>.secrets.items must be an attrset of secret definitions";
     }
     {
       assertion = builtins.isAttrs rawSshKeys;
-      message = "settings.secrets.users.${settings.username}.sshKeys must be an attrset of deployable SSH key definitions";
+      message = "settings.userSettings.<name>.secrets.sshKeys must be an attrset of deployable SSH key definitions";
     }
     {
       assertion = missingSopsFileSecrets == [ ];
-      message = "Each settings.secrets.users.${settings.username}.items entry requires either its own sopsFile or settings.secrets.users.${settings.username}.defaultSopsFile/settings.secrets.defaultUserSopsFile.";
+      message = "Each settings.userSettings.<name>.secrets.items entry requires either its own sopsFile or settings.userSettings.<name>.secrets.defaultSopsFile/settings.secrets.defaultUserSopsFile.";
     }
     {
       assertion = missingSshKeySecrets == [ ];
-      message = "Each settings.secrets.users.${settings.username}.sshKeys entry must reference an existing items secret via secretName (or matching attr name).";
+      message = "Each settings.userSettings.<name>.secrets.sshKeys entry must reference an existing items secret via secretName (or matching attr name).";
     }
     {
       assertion =
@@ -157,11 +156,11 @@ lib.mkIf enableSops {
             in
             !((spec ? publicKey) && (spec ? publicKeyFile)))
           (builtins.attrNames sshKeys);
-      message = "Each settings.secrets.users.${settings.username}.sshKeys entry may define at most one of: publicKey, publicKeyFile.";
+      message = "Each settings.userSettings.<name>.secrets.sshKeys entry may define at most one of: publicKey, publicKeyFile.";
     }
     {
       assertion = items == { } || resolvedAgeKeyFile != null;
-      message = "User sops secrets for ${settings.username} require a key source. Under NixOS, Home Manager should inherit osConfig.sops.age.keyFile; for standalone Home Manager set settings.secrets.users.${settings.username}.age.keyFile or settings.secrets.age.keyFile.";
+      message = "User sops secrets for ${settings.username} require a key source. Under NixOS, Home Manager should inherit osConfig.sops.age.keyFile; for standalone Home Manager set settings.userSettings.<name>.secrets.age.keyFile or settings.secrets.age.keyFile.";
     }
   ];
 }
