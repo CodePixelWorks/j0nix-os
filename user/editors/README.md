@@ -1,6 +1,6 @@
 # User Editor Modules
 
-Editor modules are selected via `settings.editors` or `userSettings.<name>.editors`.
+Editor modules are selected via `userSettings.<name>.editors`.
 
 ## Current Modules
 
