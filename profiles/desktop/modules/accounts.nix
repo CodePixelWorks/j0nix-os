@@ -1,6 +1,6 @@
 { lib, settings, ... }:
 let
-  users = settings.users or [ settings.username ];
+  users = builtins.attrNames userOverrides;
   userOverrides = settings.userSettings or { };
 in
 {
