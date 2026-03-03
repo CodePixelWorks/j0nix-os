@@ -1,8 +1,15 @@
 { lib, settings, ... }:
 let
   polkitRules = import ../../../system/lib/polkit-rules.nix { inherit lib; };
-  storageCfg = settings.storage or { };
-  sambaShares = storageCfg.sambaShares or [ ];
+  userOverrides = settings.userSettings or { };
+  sambaShares = lib.concatMap
+    (username:
+      let
+        userCfg = userOverrides.${username} or { };
+        storageCfg = userCfg.storage or { };
+      in
+      storageCfg.sambaShares or [ ])
+    (builtins.attrNames userOverrides);
   hasValue = value: value != null && value != "";
   mkSambaMount = share:
     let
@@ -76,7 +83,7 @@ in
   assertions = map
     (share: {
       assertion = !((hasValue (share.secretName or null)) && (share ? credentialsFile && share.credentialsFile != ""));
-      message = "settings.storage.sambaShares.${share.name or share.mountPoint or "share"} must not set both secretName and credentialsFile.";
+      message = "settings.userSettings.<name>.storage.sambaShares.${share.name or share.mountPoint or "share"} must not set both secretName and credentialsFile.";
     })
     sambaShares;
 }
