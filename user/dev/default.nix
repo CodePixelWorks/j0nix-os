@@ -12,6 +12,25 @@ let
   sshCfg = dev.ssh or { };
   sshEnabled = sshCfg.enable or true;
   sshAddKeysToAgent = sshCfg.addKeysToAgent or "yes";
+  userSecretsCfg = ((settings.secrets or { }).users or { }).${settings.username} or { };
+  deployedSshKeys = userSecretsCfg.sshKeys or { };
+  deployedIdentityPathFor = secretName:
+    let
+      matches =
+        lib.filterAttrs
+          (name: spec:
+            (spec.secretName or name) == secretName)
+          deployedSshKeys;
+    in
+    if matches == { } then
+      null
+    else
+      let
+        keyName = builtins.head (builtins.attrNames matches);
+        spec = matches.${keyName};
+        targetName = spec.targetName or keyName;
+      in
+      "~/.ssh/${targetName}";
 
   mkGitHostInclude = name: profile:
     let
@@ -48,8 +67,16 @@ let
       host = profile.host or name;
       sshProfile = profile.ssh or { };
       resolvedIdentityFile =
-        if (sshProfile ? identitySecretName) && (lib.hasAttrByPath [ sshProfile.identitySecretName ] (config.sops.secrets or { })) then
-          lib.getAttrFromPath [ sshProfile.identitySecretName "path" ] config.sops.secrets
+        if sshProfile ? identitySecretName then
+          let
+            deployedPath = deployedIdentityPathFor sshProfile.identitySecretName;
+          in
+          if deployedPath != null then
+            deployedPath
+          else if lib.hasAttrByPath [ sshProfile.identitySecretName ] (config.sops.secrets or { }) then
+            lib.getAttrFromPath [ sshProfile.identitySecretName "path" ] config.sops.secrets
+          else
+            (sshProfile.identityFile or null)
         else
           (sshProfile.identityFile or null);
     in
@@ -125,8 +152,6 @@ in
       hurl
       wget
       curl
-      age
-      sops
       openssl
       unzip
       zip
