@@ -1,6 +1,6 @@
 { settings, ... }:
 let
-  users = settings.users or [ settings.username ];
+  users = builtins.attrNames (settings.userSettings or { });
 in
 {
   j0nix.desktop.nix = {

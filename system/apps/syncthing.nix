@@ -1,5 +1,6 @@
 { config, lib, settings, ... }:
 let
+  serviceUser = builtins.head (builtins.attrNames (settings.userSettings or { }));
   syncthingCfg = ((settings.programs or { }).syncthing or { });
   enabled = syncthingCfg.enable or true;
   configDir =
@@ -8,12 +9,12 @@ let
     else if (syncthingCfg ? homeDir) && syncthingCfg.homeDir != null then
       syncthingCfg.homeDir
     else
-      "/home/${settings.username}/.config/syncthing";
+      "/home/${serviceUser}/.config/syncthing";
   dataDir =
     if (syncthingCfg ? dataDir) && syncthingCfg.dataDir != null then
       syncthingCfg.dataDir
     else
-      "/home/${settings.username}";
+      "/home/${serviceUser}";
   guiAddress = syncthingCfg.guiAddress or "127.0.0.1:8384";
   guiPasswordSecretName = syncthingCfg.guiPasswordSecretName or null;
   guiPasswordFile =
@@ -33,7 +34,7 @@ lib.mkIf enabled {
 
   services.syncthing = {
     enable = true;
-    user = settings.username;
+    user = serviceUser;
     group = "users";
     inherit configDir dataDir guiAddress openDefaultPorts overrideDevices overrideFolders;
     inherit guiPasswordFile;
