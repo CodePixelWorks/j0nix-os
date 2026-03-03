@@ -43,6 +43,7 @@
       profileName = "desktop";
       profileDir = baseDir + "/profiles/${profileName}";
       profileMeta = import (profileDir + "/meta.nix");
+      profileSecrets = import (profileDir + "/secrets.nix");
       rawSettings = import (baseDir + "/settings.nix") { inherit inputs; };
 
       pkgs = import nixpkgs {
@@ -52,6 +53,7 @@
       };
 
       settings = rawSettings // {
+        secrets = (rawSettings.secrets or { }) // profileSecrets;
         profileDetails = import (profileDir + "/details.nix") { };
         themeDetails = import (baseDir + "/themes/${rawSettings.theme}.nix") { inherit pkgs; };
       };
