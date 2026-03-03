@@ -1,4 +1,4 @@
-{ config, pkgs, lib, settings, ... }:
+{ config, pkgs, lib, profileMeta, settings, ... }:
 {
   j0nix.user.software.packages = with pkgs; [
     zsh
@@ -64,7 +64,7 @@
         ".." = "cd ..";
         "..." = "cd ../..";
         ncg = "nix-collect-garbage --delete-old && sudo nix-collect-garbage -d";
-        rebuild = "sudo nixos-rebuild switch --flake ${settings.dotfilesDir}#${settings.hostname}";
+        rebuild = "sudo nixos-rebuild switch --flake ${settings.dotfilesDir}#${profileMeta.hostname}";
       };
     };
   };
