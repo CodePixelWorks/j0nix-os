@@ -55,9 +55,14 @@ User example:
 ```nix
 secrets = {
   defaultUserSopsFile = ./secrets/users/jonas.yaml;
-  users.jonas.items = {
-    ssh-github-key = {
-      key = "ssh/github_key";
+  users.jonas = {
+    items = {
+      ssh-github-key = {
+        key = "ssh/github_key";
+      };
+    };
+    sshKeys.github = {
+      secretName = "ssh-github-key";
     };
   };
 };
@@ -68,6 +73,11 @@ User modules consume these via:
 - `config.sops.secrets.<name>.path`
 
 This is the intended path for SSH private keys, API tokens, and user-scoped application secrets.
+
+For `sshKeys`, Home Manager deploys:
+
+- `~/.ssh/<name>` as a symlink to the secret-backed private key
+- `~/.ssh/<name>.pub` regenerated from that private key during activation
 
 Under NixOS, the Home Manager layer can automatically reuse the system Age key:
 
