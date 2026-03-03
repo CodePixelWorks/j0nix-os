@@ -81,7 +81,8 @@
         let
           userOverride = userOverrides.${username} or { };
           userSecretOverride = userOverride.secrets or { };
-          merged = baseSettings // (builtins.removeAttrs userOverride [ "secrets" ]) // {
+          userDevOverride = userOverride.dev or { };
+          merged = baseSettings // (builtins.removeAttrs userOverride [ "secrets" "dev" ]) // {
             inherit username;
             dotfilesDir = "/home/${username}/DEV/j0nix-os";
           };
@@ -109,6 +110,7 @@
           secrets = (baseSettings.secrets or { }) // {
             user = userSecretOverride;
           };
+          dev = lib.recursiveUpdate (baseSettings.dev or { }) userDevOverride;
           inherit themeDetails;
           wmShell =
             merged.wmShell
