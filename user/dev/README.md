@@ -9,9 +9,10 @@ User-facing dev tooling modules.
 
 ## Control
 
-Managed by `settings.dev.*`.
+Managed by global `settings.dev.*` plus per-user `settings.userSettings.<name>.dev.*`.
 
 Notable controls:
-- `settings.userSettings.<name>.dev.git.*`: per-user git identity and host-based include rules
-- `settings.userSettings.<name>.dev.git.hostProfiles.<name>.*`: host, per-host `userName`/`userEmail`, and SSH key mapping
-- `settings.dev.ssh.addKeysToAgent`: propagated into SSH client config
+- `settings.userSettings.<name>.dev.git.*`: per-user git identity and per-host git identity overrides
+- `settings.userSettings.<name>.dev.git.hostProfiles.<name>.*`: per-host `userName`/`userEmail` overrides for git includes
+- `settings.userSettings.<name>.dev.ssh.*`: per-user SSH client policy
+- `settings.userSettings.<name>.dev.ssh.hosts.<name>.*`: SSH host definitions, aliases, and identity mapping

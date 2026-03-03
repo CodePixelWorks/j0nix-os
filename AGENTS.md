@@ -180,8 +180,8 @@ Controlled by `j0nix.desktop.gaming.*` (typically set in `profiles/desktop/modul
 Controlled by `settings.dev.*`:
 - Docker and build settings
 - AI CLI toggles (`codex`, `gemini`)
-- Git identity + host overrides (`userSettings.<name>.dev.git.*`)
-- SSH agent/keyring/match settings (`ssh.*`)
+- Git identity + per-host git overrides (`userSettings.<name>.dev.git.*`)
+- SSH client policy and host definitions (`userSettings.<name>.dev.ssh.*`)
 
 ### Sysctl
 Controlled by:
