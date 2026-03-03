@@ -9,5 +9,4 @@ Interactive shell modules selected per user.
 
 ## Selection Key
 
-- `settings.shell`
 - `settings.userSettings.<name>.shell`
