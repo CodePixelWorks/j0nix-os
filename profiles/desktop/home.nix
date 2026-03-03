@@ -3,8 +3,9 @@ let
   programsCfg = settings.programs or { };
   bambuCfg = programsCfg.bambulab or { };
   bambuProvider = bambuCfg.provider or "appimage";
+  ollamaCfg = programsCfg.ollama or { };
   syncthingCfg = programsCfg.syncthing or { };
-  syncthingEnabled = syncthingCfg.enable or true;
+  syncthingEnabled = syncthingCfg.enable or false;
   # Storage policy moved to the desktop storage profile module; keep user-space udisks automount enabled here.
   enableUdiskieAutomount = true;
   configuredFileManagersRaw =
@@ -159,11 +160,11 @@ in
     EDITOR = settings.preferredEditor;
     BROWSER = settings.preferredBrowser;
   }
-  // lib.optionalAttrs (((settings.programs or { }).ollama or { }).modelsPath != null) {
-    OLLAMA_MODELS = ((settings.programs or { }).ollama or { }).modelsPath;
+  // lib.optionalAttrs ((ollamaCfg ? modelsPath) && ollamaCfg.modelsPath != null) {
+    OLLAMA_MODELS = ollamaCfg.modelsPath;
   }
-  // lib.optionalAttrs (((settings.programs or { }).ollama or { }).host != null) {
-    OLLAMA_HOST = ((settings.programs or { }).ollama or { }).host;
+  // lib.optionalAttrs ((ollamaCfg ? host) && ollamaCfg.host != null) {
+    OLLAMA_HOST = ollamaCfg.host;
   }
   // lib.optionalAttrs iconThemeEnabled {
     XDG_ICON_THEME = iconThemeName;
