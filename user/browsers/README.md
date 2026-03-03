@@ -1,6 +1,6 @@
 # User Browser Modules
 
-Browser modules are selected via `settings.browsers` or `userSettings.<name>.browsers`.
+Browser modules are selected via `userSettings.<name>.browsers`.
 
 ## Current Modules
 
