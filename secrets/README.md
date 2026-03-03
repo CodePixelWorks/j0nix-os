@@ -63,7 +63,7 @@ secrets = {
     };
     sshKeys.jonas-pixel-und-code = {
       secretName = "jonas-pixel-und-code";
-      targetName = "id_ed25519_jonas_pixel_und_code";
+      targetName = "id_ed25519_jonas-pixel-und-code";
     };
   };
 };
@@ -94,7 +94,7 @@ Store repo-tracked public keys outside `secrets/`, for example:
 
 If you want an explicit filename scheme, set `targetName`. Example:
 
-- `targetName = "id_ed25519_jonas_pixel_und_code"`
+- `targetName = "id_ed25519_jonas-pixel-und-code"`
 
 Without an `sshKeys` entry, no visible `~/.ssh/<name>` file is created. The secret only exists in the SOPS-managed path.
 
