@@ -14,13 +14,14 @@ Main desktop profile for `j0nix-os`.
 
 - `settings.userSettings.*` (user names are derived from its attribute keys)
 - `settings.audio.*`
-- `settings.storage.*`
+- `settings.userSettings.<name>.storage.*`
 - `settings.locale`, `settings.timezone`
 - `settings.wms`
 
 ## Storage
 
-- `settings.storage.sambaShares` defines declarative CIFS/Samba mounts.
+- `settings.userSettings.<name>.storage.sambaShares` defines per-user declarative CIFS/Samba mounts.
+- The desktop profile aggregates all user-defined Samba shares into the system mount set.
 - Shares are mapped into the shared desktop storage model and mounted with:
   - `_netdev`
   - `nofail`
