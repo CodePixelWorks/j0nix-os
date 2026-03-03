@@ -14,6 +14,34 @@ let
   sshAddKeysToAgent = sshCfg.addKeysToAgent or "yes";
   userSecretsCfg = ((settings.secrets or { }).users or { }).${settings.username} or { };
   deployedSshKeys = userSecretsCfg.sshKeys or { };
+  supportedSshProfileKeys = [
+    "match"
+    "port"
+    "forwardAgent"
+    "forwardX11"
+    "forwardX11Trusted"
+    "identityAgent"
+    "serverAliveInterval"
+    "serverAliveCountMax"
+    "sendEnv"
+    "setEnv"
+    "compression"
+    "checkHostIP"
+    "proxyCommand"
+    "proxyJump"
+    "addKeysToAgent"
+    "hashKnownHosts"
+    "userKnownHostsFile"
+    "controlMaster"
+    "controlPath"
+    "controlPersist"
+    "certificateFile"
+    "addressFamily"
+    "kexAlgorithms"
+    "localForwards"
+    "remoteForwards"
+    "dynamicForwards"
+  ];
   deployedIdentityPathFor = secretName:
     let
       matches =
@@ -62,10 +90,11 @@ let
       }
     ];
 
-  mkSshMatchBlock = name: profile:
+  mkSshMatchBlocks = name: profile:
     let
       host = profile.host or name;
       sshProfile = profile.ssh or { };
+      aliases = sshProfile.aliases or [ ];
       resolvedIdentityFile =
         if sshProfile ? identitySecretName then
           let
@@ -79,20 +108,30 @@ let
             (sshProfile.identityFile or null)
         else
           (sshProfile.identityFile or null);
-    in
-    {
-      name = name;
-      value =
+      commonValue =
         {
-          host = sshProfile.match or host;
           hostname = host;
           user = sshProfile.user or "git";
           identitiesOnly = sshProfile.identitiesOnly or false;
+          extraOptions = sshProfile.options or { };
         }
         // lib.optionalAttrs (resolvedIdentityFile != null) {
           identityFile = resolvedIdentityFile;
+        }
+        // lib.optionalAttrs (sshProfile ? match) {
+          match = sshProfile.match;
+        }
+        // lib.filterAttrs (key: _: builtins.elem key supportedSshProfileKeys) sshProfile;
+      mkBlock = attrName: hostPattern: {
+        name = attrName;
+        value = commonValue // lib.optionalAttrs (!(sshProfile ? match)) {
+          host = hostPattern;
         };
-    };
+      };
+    in
+    [
+      (mkBlock name host)
+    ] ++ map (alias: mkBlock "${name}-alias-${alias}" alias) aliases;
 in
 {
   imports = [
@@ -124,7 +163,7 @@ in
       enable = true;
       enableDefaultConfig = false;
       matchBlocks =
-        (builtins.listToAttrs (lib.mapAttrsToList mkSshMatchBlock gitHostProfiles))
+        (builtins.listToAttrs (lib.concatLists (lib.mapAttrsToList mkSshMatchBlocks gitHostProfiles)))
         // {
           "*" = {
             forwardAgent = false;
