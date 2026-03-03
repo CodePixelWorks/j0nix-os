@@ -11,7 +11,7 @@ Recommended layout:
 - `secrets/common.yaml`
 - `secrets/hosts/Jonas-PC.yaml`
 - `secrets/users/jonas.yaml`
-- `secrets/.sops.yaml`
+- `.sops.yaml`
 
 Recommended key model:
 
@@ -21,7 +21,7 @@ Recommended key model:
 
 Bootstrap:
 
-1. Copy `secrets/.sops.yaml.example` to `secrets/.sops.yaml`
+1. Copy `.sops.yaml.example` to `.sops.yaml`
 2. Replace the placeholder `age1...` recipients with separate host/user Age public keys
 3. Create an encrypted file, for example:
    - `sops secrets/hosts/Jonas-PC.yaml`
