@@ -186,14 +186,6 @@
                 message = "Per-user wm list is deprecated. Use userSettings.<name>.defaultWMS only.";
               }
               {
-                assertion = !(userSettings._userOverride ? wmShell);
-                message = "Per-user wmShell is deprecated. Configure settings.wmShell globally.";
-              }
-              {
-                assertion = !(userSettings._userOverride ? hyprlandShell);
-                message = "Per-user hyprlandShell is deprecated. Configure settings.hyprlandShell globally.";
-              }
-              {
                 assertion = !(userSettings._userOverride ? defaultSession);
                 message = "Per-user defaultSession is deprecated. Use userSettings.<name>.defaultWMS and global settings.hyprland.useUWSM.";
               }
