@@ -216,11 +216,11 @@ in
     }
     {
       assertion = builtins.elem preferredFileManager configuredFileManagers;
-      message = "settings.preferredFileManager must also be included in settings.fileManagers";
+      message = "preferredFileManager must also be included in the effective per-user fileManagers list";
     }
     {
       assertion = lib.all (name: builtins.elem name [ "nautilus" "nemo" "dolphin" "thunar" ]) configuredFileManagers;
-      message = "settings.fileManagers may only contain: nautilus, nemo, dolphin, thunar";
+      message = "The effective per-user fileManagers list may only contain: nautilus, nemo, dolphin, thunar";
     }
   ];
 }
