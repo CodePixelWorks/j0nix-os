@@ -19,8 +19,8 @@ Each shell keeps an `ANALYSIS.md` with:
 
 Set globally via:
 
-- `settings.wmShell`
-- legacy alias: `settings.hyprlandShell`
+- `settings.userSettings.<name>.wmShell`
+- legacy alias: `settings.userSettings.<name>.hyprlandShell`
 
 ## DMS Modes
 

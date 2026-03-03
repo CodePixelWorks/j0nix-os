@@ -14,5 +14,5 @@ User-space WM behavior and home-level WM composition.
 ## Control
 
 - `settings.wms` (global installed WM modules)
-- `settings.wmShell` (legacy alias: `settings.hyprlandShell`)
+- `settings.userSettings.<name>.wmShell` (legacy alias: `hyprlandShell`)
 - `settings.userSettings.<name>.defaultWMS`
