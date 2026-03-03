@@ -246,7 +246,7 @@ secrets = {
     sshKeys = {
       jonas-pixel-und-code = {
         secretName = "jonas-pixel-und-code";
-        targetName = "id_ed25519_jonas_pixel_und_code";
+        targetName = "id_ed25519_jonas-pixel-und-code";
       };
     };
   };
@@ -293,14 +293,15 @@ Behavior:
 For your preferred naming scheme, use:
 
 - `targetName = "id_ed25519_jonas_pixel_und_code"`
+- `targetName = "id_ed25519_jonas-pixel-und-code"`
 
 If the private key is passphrase-protected, set the public key explicitly on the mapping:
 
 ```nix
 sshKeys.jonas-pixel-und-code = {
   secretName = "jonas-pixel-und-code";
-  targetName = "id_ed25519_jonas_pixel_und_code";
-  publicKeyFile = ./public/users/jonas/ssh/id_ed25519_jonas_pixel_und_code.pub;
+  targetName = "id_ed25519_jonas-pixel-und-code";
+  publicKeyFile = ./public/users/jonas/ssh/id_ed25519_jonas-pixel-und-code.pub;
 };
 ```
 
@@ -369,6 +370,7 @@ If the user secrets are wired correctly, the `identityfile` output should point 
 If you use the declarative `sshKeys` mapping, it should point to the stable deployed path, for example:
 
 - `~/.ssh/id_ed25519_jonas_pixel_und_code`
+- `~/.ssh/id_ed25519_jonas-pixel-und-code`
 
 ## 14. Verify Syncthing
 
