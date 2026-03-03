@@ -12,7 +12,7 @@ let
   sshCfg = dev.ssh or { };
   sshEnabled = sshCfg.enable or true;
   sshAddKeysToAgent = sshCfg.addKeysToAgent or "yes";
-  userSecretsCfg = ((settings.secrets or { }).users or { }).${settings.username} or { };
+  userSecretsCfg = ((settings.secrets or { }).user or { });
   deployedSshKeys = userSecretsCfg.sshKeys or { };
   supportedSshProfileKeys = [
     "match"
