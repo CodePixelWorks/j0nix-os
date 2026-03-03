@@ -1,8 +1,14 @@
 { config, lib, settings, ... }:
 let
-  serviceUser = builtins.head (builtins.attrNames (settings.userSettings or { }));
-  syncthingCfg = ((settings.programs or { }).syncthing or { });
-  enabled = syncthingCfg.enable or true;
+  userOverrides = settings.userSettings or { };
+  syncthingUsers = lib.filter
+    (username:
+      let cfg = (((userOverrides.${username} or { }).programs or { }).syncthing or { });
+      in cfg.enable or false)
+    (builtins.attrNames userOverrides);
+  enabled = syncthingUsers != [ ];
+  serviceUser = if enabled then builtins.head syncthingUsers else builtins.head (builtins.attrNames userOverrides);
+  syncthingCfg = if enabled then (((userOverrides.${serviceUser} or { }).programs or { }).syncthing or { }) else { };
   configDir =
     if (syncthingCfg ? configDir) && syncthingCfg.configDir != null then
       syncthingCfg.configDir
@@ -46,32 +52,36 @@ lib.mkIf enabled {
 
   assertions = [
     {
+      assertion = builtins.length syncthingUsers <= 1;
+      message = "At most one user may enable userSettings.<name>.programs.syncthing for the shared system Syncthing service.";
+    }
+    {
       assertion = configDir != "";
-      message = "settings.programs.syncthing.configDir must be a non-empty string when set";
+      message = "settings.userSettings.<name>.programs.syncthing.configDir must be a non-empty string when set";
     }
     {
       assertion = dataDir != "";
-      message = "settings.programs.syncthing.dataDir must be a non-empty string when set";
+      message = "settings.userSettings.<name>.programs.syncthing.dataDir must be a non-empty string when set";
     }
     {
       assertion = guiAddress != "";
-      message = "settings.programs.syncthing.guiAddress must be a non-empty string when set";
+      message = "settings.userSettings.<name>.programs.syncthing.guiAddress must be a non-empty string when set";
     }
     {
       assertion = guiPasswordSecretName == null || guiPasswordSecretName != "";
-      message = "settings.programs.syncthing.guiPasswordSecretName must be a non-empty string when set";
+      message = "settings.userSettings.<name>.programs.syncthing.guiPasswordSecretName must be a non-empty string when set";
     }
     {
       assertion = builtins.isAttrs syncOptions;
-      message = "settings.programs.syncthing.options must be an attrset";
+      message = "settings.userSettings.<name>.programs.syncthing.options must be an attrset";
     }
     {
       assertion = builtins.isAttrs devices;
-      message = "settings.programs.syncthing.devices must be an attrset";
+      message = "settings.userSettings.<name>.programs.syncthing.devices must be an attrset";
     }
     {
       assertion = builtins.isAttrs folders;
-      message = "settings.programs.syncthing.folders must be an attrset";
+      message = "settings.userSettings.<name>.programs.syncthing.folders must be an attrset";
     }
   ];
 }
