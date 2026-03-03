@@ -2,7 +2,7 @@
 let
   dm = import ./display-manager/contract.nix { inherit lib; };
   greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
-  users = settings.users or [ settings.username ];
+  users = builtins.attrNames (settings.userSettings or { });
   primaryUser = builtins.head users;
   userOverrides = settings.userSettings or { };
   useUWSM = (settings.hyprland or { }).useUWSM or true;

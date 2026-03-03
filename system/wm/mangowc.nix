@@ -1,5 +1,6 @@
 { lib, pkgs, settings, ... }:
 let
+  primaryUser = builtins.head (builtins.attrNames (settings.userSettings or { }));
   dm = import ./display-manager/contract.nix { inherit lib; };
   greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
   selectedDisplayManager = dm.resolveDisplayManager settings;
@@ -61,7 +62,7 @@ in {
     settings.default_session = lib.mkMerge [
       (lib.mkIf (selectedGreetdGreeter == "tuigreet") {
         inherit (greetdVariants.tuigreet {
-          user = settings.username;
+          user = primaryUser;
           sessionCommand = mangoStart;
         }) user command;
       })
