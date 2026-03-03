@@ -169,7 +169,7 @@ ssh:
     -----BEGIN OPENSSH PRIVATE KEY-----
     ...
     -----END OPENSSH PRIVATE KEY-----
-  j0nixlab_key: |
+  jonas_pixel_und_code: |
     -----BEGIN OPENSSH PRIVATE KEY-----
     ...
     -----END OPENSSH PRIVATE KEY-----
@@ -237,24 +237,16 @@ secrets = {
     };
 
     items = {
-      ssh-github-key = {
-        key = "ssh/github_key";
-        mode = "0400";
-      };
-
-      ssh-j0nixlab-key = {
-        key = "ssh/j0nixlab_key";
+      jonas-pixel-und-code = {
+        key = "ssh/jonas_pixel_und_code";
         mode = "0400";
       };
     };
 
     sshKeys = {
-      github = {
-        secretName = "ssh-github-key";
-      };
-
-      j0nixlab = {
-        secretName = "ssh-j0nixlab-key";
+      jonas-pixel-und-code = {
+        secretName = "jonas-pixel-und-code";
+        targetName = "id_ed25519_jonas_pixel_und_code";
       };
     };
   };
@@ -287,7 +279,7 @@ This makes the service use the materialized secret file automatically.
 The repo is already prepared to use:
 
 - `ssh-github-key`
-- `ssh-j0nixlab-key`
+- `jonas-pixel-und-code`
 
 Those are referenced by the Git host profiles in `settings.nix`.
 
@@ -297,6 +289,10 @@ Behavior:
 - Home Manager regenerates `~/.ssh/<name>.pub` from the private key on activation
 - if a deployed SSH key mapping exists, SSH uses that stable `~/.ssh/<name>` path
 - if it does not exist yet, the config falls back to the existing `identityFile`
+
+For your preferred naming scheme, use:
+
+- `targetName = "id_ed25519_jonas_pixel_und_code"`
 
 That means you can migrate safely without breaking SSH immediately.
 
@@ -346,15 +342,14 @@ Check that the user key exists, then inspect the resolved SSH config:
 ```bash
 ls -l ~/.config/sops/age/keys.txt
 ssh -G github.com | rg '^identityfile'
-ssh -G git.j0nixlab.xyz | rg '^identityfile'
+ssh -G j0lab.xzy | rg '^identityfile'
 ```
 
 If the user secrets are wired correctly, the `identityfile` output should point to the SOPS-managed secret path instead of `~/.ssh/id_ed25519`.
 
 If you use the declarative `sshKeys` mapping, it should point to the stable deployed path, for example:
 
-- `~/.ssh/github`
-- `~/.ssh/j0nixlab`
+- `~/.ssh/id_ed25519_jonas_pixel_und_code`
 
 ## 14. Verify Syncthing
 
