@@ -72,11 +72,36 @@ let
       targetName = spec.targetName or name;
       privatePath = "${config.home.homeDirectory}/.ssh/${targetName}";
       publicPath = "${privatePath}.pub";
+      publicKeyText = spec.publicKey or null;
+      publicKeyFile = spec.publicKeyFile or null;
+      renderPublicKey =
+        if publicKeyText != null then
+          ''
+            cat > "$tmp_pub" <<'EOF'
+            ${publicKeyText}
+            EOF
+          ''
+        else if publicKeyFile != null then
+          ''
+            cat ${lib.escapeShellArg (toString publicKeyFile)} > "$tmp_pub"
+          ''
+        else
+          ''
+            if ! ${pkgs.openssh}/bin/ssh-keygen -y -f ${lib.escapeShellArg config.sops.secrets.${secretName}.path} > "$tmp_pub"; then
+              echo "warning: could not derive public key for ${targetName}; keeping existing ${publicPath} if present" >&2
+              rm -f "$tmp_pub"
+              tmp_pub=""
+            fi
+          '';
     in
     ''
       ln -sfn ${lib.escapeShellArg config.sops.secrets.${secretName}.path} ${lib.escapeShellArg privatePath}
-      ${pkgs.openssh}/bin/ssh-keygen -y -f ${lib.escapeShellArg config.sops.secrets.${secretName}.path} > ${lib.escapeShellArg publicPath}
-      chmod 644 ${lib.escapeShellArg publicPath}
+      tmp_pub="$(mktemp)"
+      ${renderPublicKey}
+      if [ -n "$tmp_pub" ] && [ -f "$tmp_pub" ]; then
+        mv "$tmp_pub" ${lib.escapeShellArg publicPath}
+        chmod 644 ${lib.escapeShellArg publicPath}
+      fi
     '';
   sshDeploymentScript =
     lib.concatStringsSep "\n" (
@@ -122,6 +147,17 @@ lib.mkIf enableSops {
     {
       assertion = missingSshKeySecrets == [ ];
       message = "Each settings.secrets.users.${settings.username}.sshKeys entry must reference an existing items secret via secretName (or matching attr name).";
+    }
+    {
+      assertion =
+        lib.all
+          (name:
+            let
+              spec = sshKeys.${name};
+            in
+            !((spec ? publicKey) && (spec ? publicKeyFile)))
+          (builtins.attrNames sshKeys);
+      message = "Each settings.secrets.users.${settings.username}.sshKeys entry may define at most one of: publicKey, publicKeyFile.";
     }
     {
       assertion = items == { } || resolvedAgeKeyFile != null;
