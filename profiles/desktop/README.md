@@ -11,7 +11,7 @@ Main desktop profile for `j0nix-os`.
 
 ## Key Settings Hooks
 
-- `settings.users`, `settings.userSettings.*`
+- `settings.userSettings.*` (user names are derived from its attribute keys)
 - `settings.audio.*`
 - `settings.storage.*`
 - `settings.locale`, `settings.timezone`

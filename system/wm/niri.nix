@@ -1,5 +1,6 @@
 { lib, pkgs, settings, ... }:
 let
+  primaryUser = builtins.head (builtins.attrNames (settings.userSettings or { }));
   dm = import ./display-manager/contract.nix { inherit lib; };
   greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
   selectedDisplayManager = dm.resolveDisplayManager settings;
@@ -48,7 +49,7 @@ in
   services.greetd = lib.mkIf (manageOwnDisplayManager && useGreetd) {
     enable = true;
     settings.default_session = greetdVariants.tuigreet {
-      user = settings.username;
+      user = primaryUser;
       sessionCommand = lib.getExe niriStartScript;
     };
   };
