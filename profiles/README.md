@@ -8,6 +8,6 @@ Profiles define top-level system/home composition.
 
 ## How It Is Used
 
-- `flake.nix` reads `settings.profile`
-- then imports `profiles/<profile>/configuration.nix` for NixOS
-- and `profiles/<profile>/home.nix` for Home Manager
+- `flake.nix` reads `profiles/desktop/meta.nix` for machine identity
+- then imports `profiles/desktop/configuration.nix` for NixOS
+- and `profiles/desktop/home.nix` for Home Manager
