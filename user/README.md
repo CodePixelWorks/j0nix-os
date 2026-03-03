@@ -16,4 +16,4 @@ Home Manager modules composed per user.
 ## Control Keys
 
 - `settings.userSettings.<name>.*`
-- `settings.hyprlandShell` and per-user override
+- `settings.userSettings.<name>.wmShell` (legacy alias: `hyprlandShell`)
