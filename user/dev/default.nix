@@ -10,6 +10,7 @@ let
   gitHostProfiles = gitCfg.hostProfiles or { };
 
   sshCfg = dev.ssh or { };
+  sshHosts = sshCfg.hosts or { };
   sshEnabled = sshCfg.enable or true;
   sshAddKeysToAgent = sshCfg.addKeysToAgent or "yes";
   userSecretsCfg = ((settings.secrets or { }).user or { });
@@ -76,7 +77,8 @@ let
 
   mkGitIncludes = name: profile:
     let
-      host = profile.host or name;
+      sshHost = sshHosts.${name} or { };
+      host = profile.host or (sshHost.host or name);
       includePath = "~/.config/git/hosts/${name}.inc";
     in
     [
@@ -90,10 +92,9 @@ let
       }
     ];
 
-  mkSshMatchBlocks = name: profile:
+  mkSshMatchBlocks = name: sshProfile:
     let
-      host = profile.host or name;
-      sshProfile = profile.ssh or { };
+      host = sshProfile.host or name;
       aliases = sshProfile.aliases or [ ];
       resolvedIdentityFile =
         if sshProfile ? identitySecretName then
@@ -163,7 +164,7 @@ in
       enable = true;
       enableDefaultConfig = false;
       matchBlocks =
-        (builtins.listToAttrs (lib.concatLists (lib.mapAttrsToList mkSshMatchBlocks gitHostProfiles)))
+        (builtins.listToAttrs (lib.concatLists (lib.mapAttrsToList mkSshMatchBlocks sshHosts)))
         // {
           "*" = {
             forwardAgent = false;
