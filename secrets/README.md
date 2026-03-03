@@ -83,10 +83,14 @@ For `sshKeys`, Home Manager deploys:
 For passphrase-protected private keys, set one of these on the `sshKeys` entry:
 
 - `publicKey = "ssh-ed25519 AAAA... comment"`
-- `publicKeyFile = ./path/to/key.pub`
+- `publicKeyFile = ./public/users/jonas/ssh/<name>.pub`
 
 If neither is set, Home Manager tries `ssh-keygen -y` as a fallback.
 If that fails, it keeps the existing `.pub` file instead of truncating it.
+
+Store repo-tracked public keys outside `secrets/`, for example:
+
+- `public/users/jonas/ssh/`
 
 If you want an explicit filename scheme, set `targetName`. Example:
 
