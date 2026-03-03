@@ -80,6 +80,14 @@ For `sshKeys`, Home Manager deploys:
 - `~/.ssh/<name>` as a symlink to the secret-backed private key
 - `~/.ssh/<name>.pub` regenerated from that private key during activation
 
+For passphrase-protected private keys, set one of these on the `sshKeys` entry:
+
+- `publicKey = "ssh-ed25519 AAAA... comment"`
+- `publicKeyFile = ./path/to/key.pub`
+
+If neither is set, Home Manager tries `ssh-keygen -y` as a fallback.
+If that fails, it keeps the existing `.pub` file instead of truncating it.
+
 If you want an explicit filename scheme, set `targetName`. Example:
 
 - `targetName = "id_ed25519_jonas_pixel_und_code"`
