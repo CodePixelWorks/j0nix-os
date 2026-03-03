@@ -57,12 +57,13 @@ secrets = {
   defaultUserSopsFile = ./secrets/users/jonas.yaml;
   users.jonas = {
     items = {
-      ssh-github-key = {
-        key = "ssh/github_key";
+      jonas-pixel-und-code = {
+        key = "ssh/jonas_pixel_und_code";
       };
     };
-    sshKeys.github = {
-      secretName = "ssh-github-key";
+    sshKeys.jonas-pixel-und-code = {
+      secretName = "jonas-pixel-und-code";
+      targetName = "id_ed25519_jonas_pixel_und_code";
     };
   };
 };
@@ -78,6 +79,12 @@ For `sshKeys`, Home Manager deploys:
 
 - `~/.ssh/<name>` as a symlink to the secret-backed private key
 - `~/.ssh/<name>.pub` regenerated from that private key during activation
+
+If you want an explicit filename scheme, set `targetName`. Example:
+
+- `targetName = "id_ed25519_jonas_pixel_und_code"`
+
+Without an `sshKeys` entry, no visible `~/.ssh/<name>` file is created. The secret only exists in the SOPS-managed path.
 
 Under NixOS, the Home Manager layer can automatically reuse the system Age key:
 
