@@ -18,6 +18,7 @@ Notable controls:
 - `settings.userSettings.<name>.dev.git.hostProfiles.<name>.*`: per-host `userName`/`userEmail` overrides for git includes
 - `settings.userSettings.<name>.dev.ssh.*`: per-user SSH client policy
 - `settings.userSettings.<name>.dev.ssh.hosts.<name>.*`: SSH host definitions, aliases, and identity mapping
+- The attr name of each `dev.ssh.hosts.<name>` entry is automatically added as a friendly SSH alias when `host` is a concrete hostname/IP (so `hosts.webserver.host = "132.145.254.17"` gives you `ssh webserver` and still matches `132.145.254.17`)
 - `settings.userSettings.<name>.dev.ssh.agent.provider = "gnome-keyring"`: route SSH agent handling through the session keyring
 - `settings.userSettings.<name>.dev.ssh.keyring.enable = true`: prefer askpass/keyring-assisted passphrase prompts in GUI sessions
 - `settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey`: optional SOPS path for automatic key loading into the keyring-backed agent
