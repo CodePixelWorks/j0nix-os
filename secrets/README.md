@@ -79,9 +79,14 @@ For passphrase-protected private keys, set one of these on the `sshKeys` entry:
 
 - `publicKey = "ssh-ed25519 AAAA... comment"`
 - `publicKeyFile = ./public/users/jonas/ssh/<name>.pub`
+- `passphraseKey = "ssh_passphrases/<name>"` to materialize a second secret and allow automatic agent loading
 
 If neither is set, Home Manager tries `ssh-keygen -y` as a fallback.
 If that fails, it keeps the existing `.pub` file instead of truncating it.
+
+If `passphraseKey` is set and the user uses `dev.ssh.agent.provider = "gnome-keyring"`,
+the user session installs `ssh-load-secret-keys` and automatically loads those keys into
+the SSH agent during the graphical session.
 
 Store repo-tracked public keys outside `secrets/`, for example:
 
