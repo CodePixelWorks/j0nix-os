@@ -133,6 +133,7 @@ PY
             };
           })
         (builtins.filter (share: share.autoMount or false) userShares));
+  autoMountShareNames = map (share: share.name or share.share) (builtins.filter (share: share.autoMount or false) userShares);
 in
 {
   config = lib.mkIf (userShares != [ ]) {
@@ -140,6 +141,23 @@ in
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         mkdir -p ${lib.escapeShellArg mountRoot}
       '';
+
+    home.activation.autoMountUserSambaShares =
+      lib.hm.dag.entryAfter [ "writeBoundary" ] (
+        if autoMountShareNames == [ ] then
+          ":"
+        else
+          ''
+            runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+            if [ -S "$runtime_dir/bus" ]; then
+              ${lib.concatStringsSep "\n" (map (shareName: ''
+                ${config.home.profileDirectory}/bin/user-smb-mount-${shareName} || true
+              '') autoMountShareNames)}
+            else
+              echo "warning: user session bus not available; skipping immediate SMB auto-mount during activation" >&2
+            fi
+          ''
+      );
 
     j0nix.user.software.packages = shareCommands;
 
