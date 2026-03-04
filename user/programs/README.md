@@ -14,7 +14,7 @@ Common user program configs shared across shells/WMs.
 Program toggles should be wired through `settings.programs.*`.
 
 `Element` is user-scoped via `settings.userSettings.<name>.programs.element.*` and supports:
-- package selection (`desktop` or `web` if available)
+- the desktop client (`element-desktop`)
 - plain declarative `config` JSON
 - raw `configText`
 - `configFileSecretName` for a secret-backed `~/.config/Element/config.json`
