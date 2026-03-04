@@ -9,6 +9,11 @@ let
     allUsers;
   enabled = syncthingUsers != [ ];
   serviceUser = if enabled then builtins.head syncthingUsers else null;
+  serviceGroup =
+    if serviceUser != null then
+      ((config.users.users.${serviceUser} or { }).group or "users")
+    else
+      null;
   syncthingCfg =
     if serviceUser != null then
       (((userOverrides.${serviceUser} or { }).programs or { }).syncthing or { })
@@ -50,7 +55,7 @@ lib.mkIf enabled {
   services.syncthing = {
     enable = true;
     user = serviceUser;
-    group = "users";
+    group = serviceGroup;
     inherit configDir dataDir guiAddress openDefaultPorts overrideDevices overrideFolders;
     inherit guiPasswordFile;
     settings = {
@@ -71,6 +76,10 @@ lib.mkIf enabled {
     {
       assertion = configDir != "";
       message = "settings.userSettings.<name>.programs.syncthing.configDir must be a non-empty string when set";
+    }
+    {
+      assertion = serviceGroup != null && serviceGroup != "";
+      message = "Syncthing service group must resolve to a non-empty group for the selected service user.";
     }
     {
       assertion = dataDir != "";
