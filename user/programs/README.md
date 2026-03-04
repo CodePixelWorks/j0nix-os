@@ -17,3 +17,4 @@ Program toggles should be wired through `settings.programs.*`.
 - optional autostart
 - optional startup database path
 - optional secret-backed key file deployment (`keyFileSecretName`)
+- autostart via user systemd (`graphical-session.target`), which is reliable on Hyprland
