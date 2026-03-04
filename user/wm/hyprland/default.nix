@@ -78,7 +78,7 @@ let
   keepassSpecialWorkspaceWindowRule =
     lib.optional
       (keepassEnabled && keepassWorkspaceEnable && keepassWorkspaceMode == "special-workspace")
-      "workspace special:${keepassWorkspaceName}, class:^(KeePassXC)$";
+      "match:class ^(KeePassXC)$, workspace special:${keepassWorkspaceName}";
   preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
