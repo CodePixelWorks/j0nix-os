@@ -118,11 +118,20 @@ let
     in
     ''
       set -eu
-      export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+      export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
       mkdir -p ${lib.escapeShellArg mountRoot}
-      mkdir -p ${lib.escapeShellArg mountPath}
+      mount_path=${lib.escapeShellArg mountPath}
+
+      # Recover from stale/broken FUSE mountpoints ("Transport endpoint is not connected").
+      if [ -e "$mount_path" ] && ! ${pkgs.coreutils}/bin/stat "$mount_path" >/dev/null 2>&1; then
+        ${fuseUnmountBin} -uz "$mount_path" >/dev/null 2>&1 || true
+        ${pkgs.util-linux}/bin/umount -l "$mount_path" >/dev/null 2>&1 || true
+        rm -rf "$mount_path" || true
+      fi
+
+      mkdir -p "$mount_path"
       ${rcloneConfigScript share}
-      if mountpoint -q ${lib.escapeShellArg mountPath}; then
+      if ${pkgs.util-linux}/bin/mountpoint -q "$mount_path"; then
         exit 0
       fi
       exec ${mountCommandFor share}
