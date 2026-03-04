@@ -35,6 +35,7 @@ The module defines a shared base keymap in `user/wm/hyprland/default.nix` and me
 - `SUPER+B`: open preferred browser
 - `SUPER+SHIFT+Q`: exit Hyprland session
 - `SUPER+H/J/K/L`: Vim-style window movement (`left/down/up/right`)
+- `SUPER+ALT+H/J/K/L`: resize the active window (`shrink width / grow height / shrink height / grow width`)
 - `SUPER+CTRL+V`: preselect a vertical split for the next tiled window (side-by-side)
 - `SUPER+CTRL+SHIFT+V`: preselect a horizontal split for the next tiled window (stacked)
 - `CTRL+ALT+H/J/K/L`: Vim-style focus movement (`left/down/up/right`, remote-friendly fallback)
