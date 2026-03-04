@@ -33,13 +33,14 @@ let
     let
       secretPath = secretPathFor share;
       secretPathArg = lib.escapeShellArg (if secretPath != null then secretPath else "");
+      runtimeConfigName = "rclone-smb-${shareNameOf share}.conf";
     in
     ''
-      config_path=${lib.escapeShellArg (runtimeConfigPathOf share)}
+      config_path="$XDG_RUNTIME_DIR/${runtimeConfigName}"
       username=${lib.escapeShellArg (share.username or "")}
       password=""
       domain=""
-      if [ -n ${secretPathArg} ]; then
+      if [ -f ${secretPathArg} ]; then
         while IFS='=' read -r key value; do
           case "$key" in
             username) username="$value" ;;
@@ -75,19 +76,22 @@ let
     let
       mountPath = mountPathOf share;
       extraArgs = share.rcloneArgs or [ ];
-      args =
-        [
-          "mount"
-          "--config" (runtimeConfigPathOf share)
-          "share:${share.share}"
-          mountPath
-          "--dir-cache-time" (share.dirCacheTime or "5m")
-          "--vfs-cache-mode" (share.vfsCacheMode or "full")
-          "--volname" (share.gvfsName or mountAliasOf share)
-          "--network-mode"
-        ] ++ extraArgs;
+      extraArgsText =
+        if extraArgs == [ ] then
+          ""
+        else
+          " \\\n        ${lib.concatStringsSep " \\\n        " (map lib.escapeShellArg extraArgs)}";
     in
-    lib.escapeShellArgs ([ rcloneBin ] ++ args);
+    ''
+      ${lib.escapeShellArg rcloneBin} mount \
+        --config "$XDG_RUNTIME_DIR/rclone-smb-${shareNameOf share}.conf" \
+        ${lib.escapeShellArg "share:${share.share}"} \
+        ${lib.escapeShellArg mountPath} \
+        --dir-cache-time ${lib.escapeShellArg (share.dirCacheTime or "5m")} \
+        --vfs-cache-mode ${lib.escapeShellArg (share.vfsCacheMode or "full")} \
+        --volname ${lib.escapeShellArg (share.gvfsName or mountAliasOf share)} \
+        --network-mode${extraArgsText}
+    '';
 
   mountScriptFor = share:
     let
