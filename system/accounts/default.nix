@@ -30,9 +30,9 @@ in
       default = [ "wheel" "networkmanager" "audio" "video" "gamemode" ];
     };
 
-    includeDockerGroup = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
+    dockerUsers = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
     };
 
     autologinUser = lib.mkOption {
@@ -52,7 +52,7 @@ in
       description = username;
       extraGroups =
         cfg.baseExtraGroups
-        ++ lib.optionals cfg.includeDockerGroup [ "docker" ];
+        ++ lib.optionals (builtins.elem username cfg.dockerUsers) [ "docker" ];
     });
 
     assertions = [
