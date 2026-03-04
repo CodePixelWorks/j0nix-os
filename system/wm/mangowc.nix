@@ -1,6 +1,8 @@
 { lib, pkgs, settings, ... }:
 let
-  primaryUser = builtins.head (builtins.attrNames (settings.userSettings or { }));
+  users = builtins.attrNames (settings.userSettings or { });
+  hasUsers = users != [ ];
+  primaryUser = if hasUsers then builtins.head users else "root";
   dm = import ./display-manager/contract.nix { inherit lib; };
   greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
   selectedDisplayManager = dm.resolveDisplayManager settings;
@@ -102,6 +104,10 @@ in {
   };
 
   assertions = [
+    {
+      assertion = hasUsers;
+      message = "system/wm/mangowc.nix requires at least one entry in settings.userSettings.";
+    }
     {
       assertion = (!(manageOwnDisplayManager && useGreetd)) || builtins.elem selectedGreetdGreeter dm.validGreetdGreeters;
       message = "settings.greetd.greeter must be one of: tuigreet, regreet, dms-greeter (legacy alias: darkmaterialshell)";
