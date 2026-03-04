@@ -40,8 +40,8 @@ let
     ''
       config_path="$XDG_RUNTIME_DIR/${runtimeConfigName}"
       username=${lib.escapeShellArg (share.username or "")}
-      password=""
-      domain=""
+      password=${lib.escapeShellArg (share.password or "")}
+      domain=${lib.escapeShellArg (share.domain or "")}
       if [ -f ${secretPathArg} ]; then
         while IFS= read -r line; do
           line=$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
@@ -225,6 +225,15 @@ in
       {
         assertion = missingUserSecrets == [ ];
         message = "Each user-mode settings.userSettings.<name>.storage.sambaShares entry with secretName must reference an existing settings.userSettings.<name>.secrets.files secret.";
+      }
+      {
+        assertion =
+          builtins.all
+            (share:
+              hasValue (share.secretName or null)
+              || hasValue (share.password or null))
+            userShares;
+        message = "Each user-mode settings.userSettings.<name>.storage.sambaShares entry requires either secretName or a raw password.";
       }
     ];
   };
