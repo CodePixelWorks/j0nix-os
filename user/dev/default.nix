@@ -93,7 +93,13 @@ let
   mkSshMatchBlocks = name: sshProfile:
     let
       host = sshProfile.host or name;
-      aliases = sshProfile.aliases or [ ];
+      explicitAliases = sshProfile.aliases or [ ];
+      hostIsPattern = (builtins.match ".*[\\*\\?].*" host) != null;
+      aliases =
+        lib.unique (
+          lib.optionals (!(sshProfile ? match) && !hostIsPattern && name != host) [ name ]
+          ++ explicitAliases
+        );
       resolvedIdentityFile =
         if sshProfile ? identityKey then
           let
