@@ -29,21 +29,24 @@ lib.mkIf enabled {
     startupScript
   ];
 
-  xdg.configFile = lib.mkMerge [
-    (lib.mkIf (keyFileSecretPath != null) {
-      "keepassxc/keys/${keyFileTargetName}".source = keyFileSecretPath;
-    })
-    (lib.mkIf autoStart {
-      "autostart/keepassxc.desktop".text = ''
-        [Desktop Entry]
-        Type=Application
-        Name=KeePassXC
-        Exec=${config.home.profileDirectory}/bin/keepassxc-startup
-        Terminal=false
-        X-GNOME-Autostart-enabled=true
-      '';
-    })
-  ];
+  xdg.configFile = lib.mkIf (keyFileSecretPath != null) {
+    "keepassxc/keys/${keyFileTargetName}".source = keyFileSecretPath;
+  };
+
+  systemd.user.services.keepassxc-startup = lib.mkIf autoStart {
+    Unit = {
+      Description = "KeePassXC startup database launcher";
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      Type = "simple";
+      ExecStart = "${config.home.profileDirectory}/bin/keepassxc-startup";
+      Restart = "on-failure";
+      RestartSec = 2;
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
 
   assertions = [
     {
