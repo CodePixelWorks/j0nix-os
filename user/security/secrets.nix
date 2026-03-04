@@ -4,7 +4,9 @@ let
   cfg = settings.secrets or { };
   userCfg = cfg.user or { };
   userAgeCfg = userCfg.age or { };
+  rawFiles = userCfg.files or { };
   rawSshKeys = userCfg.sshKeys or { };
+  files = if builtins.isAttrs rawFiles then rawFiles else { };
   sshKeys = if builtins.isAttrs rawSshKeys then rawSshKeys else { };
   defaultSopsFile = userCfg.defaultSopsFile or (cfg.defaultUserSopsFile or null);
   defaultSopsFormat = userCfg.defaultSopsFormat or (cfg.defaultSopsFormat or "yaml");
@@ -21,9 +23,7 @@ let
     else
       ((cfg.age or { }).keyFile or null);
   useInheritedSystemKey = inheritedSystemAgeKeyFile != null && resolvedAgeKeyFile == inheritedSystemAgeKeyFile;
-  rawItems = userCfg.items or { };
-  items = if builtins.isAttrs rawItems then rawItems else { };
-  mkSecret = name: spec:
+  mkSecretValue = name: spec:
     let
       effectiveSopsFile =
         if spec ? sopsFile then
@@ -32,42 +32,51 @@ let
           defaultSopsFile;
     in
     {
-      inherit name;
-      value =
-        {
-          key = spec.key or name;
-          format = spec.format or defaultSopsFormat;
-          sopsFile = effectiveSopsFile;
-        }
-        // lib.optionalAttrs (spec ? mode) {
-          mode = spec.mode;
-        }
-        // lib.optionalAttrs (spec ? path) {
-          path = spec.path;
-        };
+      key = spec.key or name;
+      format = spec.format or defaultSopsFormat;
+      sopsFile = effectiveSopsFile;
+    }
+    // lib.optionalAttrs (spec ? mode) {
+      mode = spec.mode;
+    }
+    // lib.optionalAttrs (spec ? path) {
+      path = spec.path;
     };
-  missingSopsFileSecrets =
+  fileSecrets = builtins.mapAttrs mkSecretValue files;
+  sshKeySecrets = builtins.mapAttrs
+    (name: spec:
+      mkSecretValue name {
+        key = spec.key or name;
+      }
+      // lib.optionalAttrs (spec ? mode) {
+        mode = spec.mode;
+      }
+      // lib.optionalAttrs (spec ? path) {
+        path = spec.path;
+      })
+    sshKeys;
+  overlappingSecretNames =
+    builtins.filter (name: builtins.hasAttr name files) (builtins.attrNames sshKeys);
+  missingSopsFileFiles =
     builtins.filter
       (name:
         let
-          spec = items.${name};
+          spec = files.${name};
         in
         (if spec ? sopsFile then spec.sopsFile else defaultSopsFile) == null)
-      (builtins.attrNames items);
-  missingSshKeySecrets =
+      (builtins.attrNames files);
+  missingSopsFileSshKeys =
     builtins.filter
       (name:
         let
           spec = sshKeys.${name};
-          secretName = spec.secretName or name;
         in
-        !(lib.hasAttrByPath [ secretName ] items))
+        (if spec ? sopsFile then spec.sopsFile else defaultSopsFile) == null)
       (builtins.attrNames sshKeys);
-  validSshKeyNames = builtins.filter (name: !(builtins.elem name missingSshKeySecrets)) (builtins.attrNames sshKeys);
+  validSshKeyNames = builtins.attrNames sshKeys;
   deploySshKey = name:
     let
       spec = sshKeys.${name};
-      secretName = spec.secretName or name;
       targetName = spec.targetName or name;
       privatePath = "${config.home.homeDirectory}/.ssh/${targetName}";
       publicPath = "${privatePath}.pub";
@@ -86,7 +95,7 @@ let
           ''
         else
           ''
-            if ! ${pkgs.openssh}/bin/ssh-keygen -y -f ${lib.escapeShellArg config.sops.secrets.${secretName}.path} > "$tmp_pub"; then
+            if ! ${pkgs.openssh}/bin/ssh-keygen -y -f ${lib.escapeShellArg config.sops.secrets.${name}.path} > "$tmp_pub"; then
               echo "warning: could not derive public key for ${targetName}; keeping existing ${publicPath} if present" >&2
               rm -f "$tmp_pub"
               tmp_pub=""
@@ -94,7 +103,7 @@ let
           '';
     in
     ''
-      ln -sfn ${lib.escapeShellArg config.sops.secrets.${secretName}.path} ${lib.escapeShellArg privatePath}
+      ln -sfn ${lib.escapeShellArg config.sops.secrets.${name}.path} ${lib.escapeShellArg privatePath}
       tmp_pub="$(mktemp)"
       ${renderPublicKey}
       if [ -n "$tmp_pub" ] && [ -f "$tmp_pub" ]; then
@@ -121,7 +130,7 @@ lib.mkIf enableSops {
       // lib.optionalAttrs useInheritedSystemKey {
         generateKey = false;
       };
-    secrets = builtins.listToAttrs (map (name: mkSecret name items.${name}) (builtins.attrNames items));
+    secrets = lib.recursiveUpdate fileSecrets sshKeySecrets;
   } // lib.optionalAttrs (defaultSopsFile != null) {
     defaultSopsFile = defaultSopsFile;
   });
@@ -132,20 +141,24 @@ lib.mkIf enableSops {
 
   assertions = [
     {
-      assertion = builtins.isAttrs rawItems;
-      message = "settings.userSettings.<name>.secrets.items must be an attrset of secret definitions";
+      assertion = builtins.isAttrs rawFiles;
+      message = "settings.userSettings.<name>.secrets.files must be an attrset of secret definitions";
     }
     {
       assertion = builtins.isAttrs rawSshKeys;
       message = "settings.userSettings.<name>.secrets.sshKeys must be an attrset of deployable SSH key definitions";
     }
     {
-      assertion = missingSopsFileSecrets == [ ];
-      message = "Each settings.userSettings.<name>.secrets.items entry requires either its own sopsFile or settings.userSettings.<name>.secrets.defaultSopsFile/settings.secrets.defaultUserSopsFile.";
+      assertion = overlappingSecretNames == [ ];
+      message = "settings.userSettings.<name>.secrets.files and settings.userSettings.<name>.secrets.sshKeys must not reuse the same attr name.";
     }
     {
-      assertion = missingSshKeySecrets == [ ];
-      message = "Each settings.userSettings.<name>.secrets.sshKeys entry must reference an existing items secret via secretName (or matching attr name).";
+      assertion = missingSopsFileFiles == [ ];
+      message = "Each settings.userSettings.<name>.secrets.files entry requires either its own sopsFile or settings.userSettings.<name>.secrets.defaultSopsFile/settings.secrets.defaultUserSopsFile.";
+    }
+    {
+      assertion = missingSopsFileSshKeys == [ ];
+      message = "Each settings.userSettings.<name>.secrets.sshKeys entry requires either its own sopsFile or settings.userSettings.<name>.secrets.defaultSopsFile/settings.secrets.defaultUserSopsFile.";
     }
     {
       assertion =
@@ -159,7 +172,7 @@ lib.mkIf enableSops {
       message = "Each settings.userSettings.<name>.secrets.sshKeys entry may define at most one of: publicKey, publicKeyFile.";
     }
     {
-      assertion = items == { } || resolvedAgeKeyFile != null;
+      assertion = (files == { } && sshKeys == { }) || resolvedAgeKeyFile != null;
       message = "User sops secrets for ${settings.username} require a key source. Under NixOS, Home Manager should inherit osConfig.sops.age.keyFile; for standalone Home Manager set settings.userSettings.<name>.secrets.age.keyFile or settings.secrets.age.keyFile.";
     }
   ];
