@@ -7,6 +7,22 @@
 
       vscodeOverlay = inputs.nix-vscode-extensions.overlays.default;
       localFixesOverlay = final: prev: {
+        hyprland-minimizer-orteip = prev.rustPlatform.buildRustPackage {
+          pname = "hyprland_minimizer";
+          version = "unstable";
+          src = inputs."hyprland-minimizer-orteip";
+          cargoLock = {
+            lockFile = "${inputs."hyprland-minimizer-orteip"}/Cargo.lock";
+          };
+          meta = with prev.lib; {
+            description = "Hyprland minimizer implementation by 0rteip";
+            homepage = "https://github.com/0rteip/hyprland_minimizer";
+            license = licenses.mit;
+            maintainers = [ ];
+            mainProgram = "hyprland_minimizer";
+            platforms = platforms.linux;
+          };
+        };
         lager = prev.lager.overrideAttrs (old: {
           cmakeFlags = (old.cmakeFlags or [ ]) ++ [
             "-DBoost_NO_BOOST_CMAKE=ON"
@@ -352,6 +368,11 @@
     hypr-dynamic-cursors = {
       url = "github:VirtCode/hypr-dynamic-cursors";
       inputs.hyprland.follows = "hyprland";
+    };
+
+    hyprland-minimizer-orteip = {
+      url = "github:0rteip/hyprland_minimizer";
+      flake = false;
     };
 
     plasma-manager = {
