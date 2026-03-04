@@ -13,6 +13,10 @@ let
   sshHosts = sshCfg.hosts or { };
   sshEnabled = sshCfg.enable or true;
   sshAddKeysToAgent = sshCfg.addKeysToAgent or "yes";
+  sshAgentCfg = sshCfg.agent or { };
+  sshAgentProvider = sshAgentCfg.provider or "openssh";
+  keyringCfg = sshCfg.keyring or { };
+  keyringEnabled = keyringCfg.enable or false;
   userSecretsCfg = ((settings.secrets or { }).user or { });
   deployedSshKeys = userSecretsCfg.sshKeys or { };
   supportedSshProfileKeys = [
@@ -161,6 +165,14 @@ in
     };
 
     xdg.configFile = lib.mkIf gitEnabled (builtins.listToAttrs (lib.mapAttrsToList mkGitHostInclude gitHostProfiles));
+
+    home.sessionVariables =
+      lib.optionalAttrs (sshEnabled && sshAgentProvider == "gnome-keyring") {
+        SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/gcr/ssh";
+      }
+      // lib.optionalAttrs (sshEnabled && keyringEnabled) {
+        SSH_ASKPASS_REQUIRE = "prefer";
+      };
 
     programs.ssh = lib.mkIf sshEnabled {
       enable = true;
