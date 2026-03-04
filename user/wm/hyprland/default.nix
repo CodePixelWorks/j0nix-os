@@ -52,7 +52,7 @@ let
     if minimizerPackage != null then
       lib.getExe minimizerPackage
     else if minimizerIsOrteip then
-      "hyprland_minimizer"
+      "hyprland-minimizer"
     else
       "hyprland-minimizer";
   minimizerCommand = minimizerCfg.command or minimizerDefaultCommand;
