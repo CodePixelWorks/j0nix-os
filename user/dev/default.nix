@@ -43,20 +43,12 @@ let
     "remoteForwards"
     "dynamicForwards"
   ];
-  deployedIdentityPathFor = secretName:
-    let
-      matches =
-        lib.filterAttrs
-          (name: spec:
-            (spec.secretName or name) == secretName)
-          deployedSshKeys;
-    in
-    if matches == { } then
+  deployedIdentityPathFor = keyName:
+    if !(builtins.hasAttr keyName deployedSshKeys) then
       null
     else
       let
-        keyName = builtins.head (builtins.attrNames matches);
-        spec = matches.${keyName};
+        spec = deployedSshKeys.${keyName};
         targetName = spec.targetName or keyName;
       in
       "~/.ssh/${targetName}";
@@ -97,7 +89,17 @@ let
       host = sshProfile.host or name;
       aliases = sshProfile.aliases or [ ];
       resolvedIdentityFile =
-        if sshProfile ? identitySecretName then
+        if sshProfile ? identityKey then
+          let
+            deployedPath = deployedIdentityPathFor sshProfile.identityKey;
+          in
+          if deployedPath != null then
+            deployedPath
+          else if lib.hasAttrByPath [ sshProfile.identityKey ] (config.sops.secrets or { }) then
+            lib.getAttrFromPath [ sshProfile.identityKey "path" ] config.sops.secrets
+          else
+            (sshProfile.identityFile or null)
+        else if sshProfile ? identitySecretName then
           let
             deployedPath = deployedIdentityPathFor sshProfile.identitySecretName;
           in
