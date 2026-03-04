@@ -3,7 +3,8 @@ let
   dm = import ./display-manager/contract.nix { inherit lib; };
   greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
   users = builtins.attrNames (settings.userSettings or { });
-  primaryUser = builtins.head users;
+  hasUsers = users != [ ];
+  primaryUser = if hasUsers then builtins.head users else "root";
   userOverrides = settings.userSettings or { };
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   hyprlandSessionName = if useUWSM then "hyprland-uwsm" else "hyprland";
@@ -145,6 +146,10 @@ in {
   programs.regreet.enable = useGreetd && selectedGreetdGreeter == "regreet";
 
   assertions = [
+    {
+      assertion = hasUsers;
+      message = "system/wm/hyprland.nix requires at least one entry in settings.userSettings.";
+    }
     {
       assertion = builtins.elem selectedDisplayManager dm.validDisplayManagers;
       message = "settings.displayManager must be one of: greetd, sddm, gdm";
