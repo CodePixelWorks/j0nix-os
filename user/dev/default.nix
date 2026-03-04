@@ -150,12 +150,19 @@ let
         in
         ''
           if [ -f ${lib.escapeShellArg privatePath} ] && [ -f ${lib.escapeShellArg passphrasePath} ]; then
-            askpass="$(mktemp)"
-            printf '%s\n' '#!/bin/sh' 'exec cat ${lib.escapeShellArg passphrasePath}' > "$askpass"
-            chmod 700 "$askpass"
-            DISPLAY="''${DISPLAY:-:0}" SSH_ASKPASS="$askpass" SSH_ASKPASS_REQUIRE=force \
-              setsid -w ${pkgs.openssh}/bin/ssh-add ${lib.escapeShellArg privatePath} < /dev/null > /dev/null 2>&1 || true
-            rm -f "$askpass"
+            passphrase="$(cat ${lib.escapeShellArg passphrasePath})"
+            if ${pkgs.openssh}/bin/ssh-keygen -y -P "$passphrase" -f ${lib.escapeShellArg privatePath} > /dev/null 2>&1; then
+              askpass="$(mktemp)"
+              printf '%s\n' '#!/bin/sh' 'exec cat ${lib.escapeShellArg passphrasePath}' > "$askpass"
+              chmod 700 "$askpass"
+              if ! DISPLAY="''${DISPLAY:-:0}" SSH_ASKPASS="$askpass" SSH_ASKPASS_REQUIRE=force \
+                setsid -w ${pkgs.openssh}/bin/ssh-add ${lib.escapeShellArg privatePath} < /dev/null > /dev/null 2>&1; then
+                echo "warning: failed to load ${targetName} into the SSH agent" >&2
+              fi
+              rm -f "$askpass"
+            else
+              echo "warning: passphrase secret does not unlock ${targetName}; skipping automatic SSH agent load" >&2
+            fi
           fi
         '';
     in
