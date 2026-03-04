@@ -670,6 +670,22 @@
         "type": "github"
       }
     },
+    "hyprland-minimizer-orteip": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1769602117,
+        "narHash": "sha256-/C5t+84EWZPEgW46PBIuy7MprBzxXHCZTxPf6LyE89A=",
+        "owner": "0rteip",
+        "repo": "hyprland_minimizer",
+        "rev": "3859257bab455e09742e7aec5bd5f70e8880ebf1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "0rteip",
+        "repo": "hyprland_minimizer",
+        "type": "github"
+      }
+    },
     "hyprland-plugins": {
       "inputs": {
         "hyprland": [
@@ -1247,6 +1263,7 @@
         "home-manager": "home-manager",
         "hypr-dynamic-cursors": "hypr-dynamic-cursors",
         "hyprland": "hyprland",
+        "hyprland-minimizer-orteip": "hyprland-minimizer-orteip",
         "hyprland-plugins": "hyprland-plugins",
         "nix-cachyos-kernel": "nix-cachyos-kernel",
         "nix-vscode-extensions": "nix-vscode-extensions",

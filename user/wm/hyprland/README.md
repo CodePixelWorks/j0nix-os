@@ -29,7 +29,7 @@ The module defines a shared base keymap in `user/wm/hyprland/default.nix` and me
 Per-user toggle:
 - `settings.userSettings.<name>.hyprland.minimizer.enable`
 - `settings.userSettings.<name>.hyprland.minimizer.variant` (`denis` | `0rteip`)
-- `settings.userSettings.<name>.hyprland.minimizer.command`
+- `settings.userSettings.<name>.hyprland.minimizer.command` (optional override; auto-selected by variant when unset)
 - `settings.userSettings.<name>.hyprland.minimizer.orteip.appId`
 
 When enabled:
@@ -38,6 +38,7 @@ When enabled:
   - `SUPER+ALT+SHIFT+M`: restore-last (`denis`) or toggle same app (`0rteip`)
   - `SUPER+ALT+C`: menu (`denis`) or toggle same app (`0rteip`)
 - If `pkgs.hyprland-minimizer` exists in nixpkgs, it is added automatically.
+- For `0rteip`, `hyprland-minimizer-orteip` is built from source and installed automatically.
 - KeePassXC startup integration uses the minimizer path instead of `--minimized`.
 - For `0rteip`, a user config is rendered to `~/.config/hyprland-minimizer/config.toml`.
 
