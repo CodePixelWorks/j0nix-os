@@ -18,3 +18,5 @@ Program toggles should be wired through `settings.programs.*`.
 - optional startup database path
 - optional secret-backed key file deployment (`keyFileSecretName`)
 - autostart via user systemd (`graphical-session.target`), which is reliable on Hyprland
+
+If `settings.userSettings.<name>.hyprland.minimizer.enable = true`, KeePassXC startup prefers the minimizer workflow over `--minimized`.
