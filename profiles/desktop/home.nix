@@ -71,6 +71,7 @@ in
 {
   imports = [
     ../../user/gaming
+    ../../user/storage
   ];
 
   home = {
