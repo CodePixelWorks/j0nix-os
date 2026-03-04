@@ -28,15 +28,18 @@ The module defines a shared base keymap in `user/wm/hyprland/default.nix` and me
 
 Per-user toggle:
 - `settings.userSettings.<name>.hyprland.minimizer.enable`
+- `settings.userSettings.<name>.hyprland.minimizer.variant` (`denis` | `0rteip`)
 - `settings.userSettings.<name>.hyprland.minimizer.command`
+- `settings.userSettings.<name>.hyprland.minimizer.orteip.appId`
 
 When enabled:
 - Hyprland binds are added:
-  - `SUPER+ALT+M`: minimize focused window
-  - `SUPER+ALT+SHIFT+M`: restore last minimized window
-  - `SUPER+ALT+C`: open minimizer menu
+  - `SUPER+ALT+M`: minimize/toggle
+  - `SUPER+ALT+SHIFT+M`: restore-last (`denis`) or toggle same app (`0rteip`)
+  - `SUPER+ALT+C`: menu (`denis`) or toggle same app (`0rteip`)
 - If `pkgs.hyprland-minimizer` exists in nixpkgs, it is added automatically.
 - KeePassXC startup integration uses the minimizer path instead of `--minimized`.
+- For `0rteip`, a user config is rendered to `~/.config/hyprland-minimizer/config.toml`.
 
 ## Core Binds (Hyprland)
 
