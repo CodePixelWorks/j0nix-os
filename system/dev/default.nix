@@ -5,6 +5,7 @@ let
   userOverrides = settings.userSettings or { };
   allUsers = builtins.attrNames userOverrides;
   dockerCfg = dev.docker or { };
+  dockerAddressPools = dockerCfg.addressPools or [ ];
   dockerUsers =
     lib.filter
       (name: ((((userOverrides.${name} or { }).dev or { }).docker or { }).enable or false))
@@ -76,6 +77,8 @@ lib.mkIf enabled {
     daemon.settings = {
       features.buildkit = true;
       experimental = false;
+    } // lib.optionalAttrs (dockerAddressPools != [ ]) {
+      default-address-pools = dockerAddressPools;
     };
   };
 
@@ -124,6 +127,21 @@ lib.mkIf enabled {
     {
       assertion = (!aiEnabled) || (!geminiEnabled) || hasGeminiPackage;
       message = "settings.dev.ai.gemini=true but pkgs.gemini-cli is unavailable";
+    }
+    {
+      assertion = builtins.isList dockerAddressPools;
+      message = "settings.dev.docker.addressPools must be a list of { base, size } entries.";
+    }
+    {
+      assertion = lib.all
+        (pool:
+          builtins.isAttrs pool
+          && (pool ? base)
+          && (pool ? size)
+          && builtins.isString pool.base
+          && builtins.isInt pool.size)
+        dockerAddressPools;
+      message = "Each settings.dev.docker.addressPools entry must be an attrset with string `base` and int `size`.";
     }
   ];
 }
