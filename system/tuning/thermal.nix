@@ -140,7 +140,7 @@ in
 
     powerManagement.cpuFreqGovernor = governor;
 
-    environment.systemPackages = with pkgs; [
+    j0nix.software.systemPackages = with pkgs; [
       dmidecode
       lm_sensors
     ] ++ lib.optionals fanBoostEnabled [ fanBoostScript ];
