@@ -5,7 +5,7 @@ let
   installDiscord = cfg.installDiscord or true;
 in
 lib.mkIf enabled {
-  home.packages =
+  j0nix.user.software.packages =
     [ pkgs.betterdiscordctl ]
     ++ lib.optionals installDiscord [ pkgs.discord ];
 }

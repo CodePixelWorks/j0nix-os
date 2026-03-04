@@ -15,7 +15,7 @@ let
     && (inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system} ? default);
 in
 {
-  home.packages =
+  j0nix.user.software.packages =
     (with pkgs; [
       wlr-randr
       wtype
