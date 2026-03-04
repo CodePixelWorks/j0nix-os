@@ -298,10 +298,20 @@ sshKeys.jonas-pixel-und-code = {
   key = "ssh/id_ed25519_jonas-pixel-und-code";
   targetName = "id_ed25519_jonas-pixel-und-code";
   publicKeyFile = ./public/users/jonas/ssh/id_ed25519_jonas-pixel-und-code.pub;
+  # Optional for passphrase-protected keys:
+  # passphraseKey = "ssh_passphrases/id_ed25519_jonas-pixel-und-code";
 };
 ```
 
 You can also inline it with `publicKey = "ssh-ed25519 AAAA... comment";`.
+
+For passphrase-protected keys, you can also add:
+
+- `passphraseKey = "ssh_passphrases/<key-name>"`
+
+When `settings.userSettings.<name>.dev.ssh.agent.provider = "gnome-keyring"`, the user
+session will automatically load those keys into the SSH agent during login using the
+secret-backed passphrase.
 
 Recommended location for repo-tracked public keys:
 
