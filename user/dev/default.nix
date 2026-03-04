@@ -155,8 +155,18 @@ let
               askpass="$(mktemp)"
               printf '%s\n' '#!/bin/sh' 'exec cat ${lib.escapeShellArg passphrasePath}' > "$askpass"
               chmod 700 "$askpass"
-              if ! DISPLAY="''${DISPLAY:-:0}" SSH_ASKPASS="$askpass" SSH_ASKPASS_REQUIRE=force \
-                setsid -w ${pkgs.openssh}/bin/ssh-add ${lib.escapeShellArg privatePath} < /dev/null > /dev/null 2>&1; then
+              load_attempt=0
+              loaded=0
+              while [ "$load_attempt" -lt 5 ]; do
+                if DISPLAY="''${DISPLAY:-:0}" SSH_ASKPASS="$askpass" SSH_ASKPASS_REQUIRE=force \
+                  setsid -w ${pkgs.openssh}/bin/ssh-add ${lib.escapeShellArg privatePath} < /dev/null > /dev/null 2>&1; then
+                  loaded=1
+                  break
+                fi
+                load_attempt=$((load_attempt + 1))
+                sleep 1
+              done
+              if [ "$loaded" -ne 1 ]; then
                 echo "warning: failed to load ${targetName} into the SSH agent" >&2
               fi
               rm -f "$askpass"
@@ -168,6 +178,16 @@ let
     in
     pkgs.writeShellScriptBin "ssh-load-secret-keys" ''
       set -eu
+      agent_socket="''${SSH_AUTH_SOCK:-''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh}"
+      wait_attempt=0
+      while [ "$wait_attempt" -lt 20 ] && [ ! -S "$agent_socket" ]; do
+        wait_attempt=$((wait_attempt + 1))
+        sleep 1
+      done
+      if [ ! -S "$agent_socket" ]; then
+        echo "warning: SSH agent socket $agent_socket was not ready; skipping declarative SSH key load" >&2
+        exit 0
+      fi
       ${lib.concatStringsSep "\n" (lib.mapAttrsToList loadKey sshKeysWithPassphrases)}
     '';
 in
@@ -257,8 +277,9 @@ in
     systemd.user.services.ssh-secret-keys-load = lib.mkIf (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { }) {
       Unit = {
         Description = "Load declarative secret-backed SSH keys into the SSH agent";
-        After = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" "gcr-ssh-agent.service" ];
         PartOf = [ "graphical-session.target" ];
+        Wants = [ "gcr-ssh-agent.service" ];
       };
       Service = {
         Type = "oneshot";
