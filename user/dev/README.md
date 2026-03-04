@@ -20,4 +20,5 @@ Notable controls:
 - `settings.userSettings.<name>.dev.ssh.hosts.<name>.*`: SSH host definitions, aliases, and identity mapping
 - `settings.userSettings.<name>.dev.ssh.agent.provider = "gnome-keyring"`: route SSH agent handling through the session keyring
 - `settings.userSettings.<name>.dev.ssh.keyring.enable = true`: prefer askpass/keyring-assisted passphrase prompts in GUI sessions
+- `settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey`: optional SOPS path for automatic key loading into the keyring-backed agent
 - `settings.dev.ai.installScope`: install shared AI CLIs as `system` packages or per-user via Home Manager
