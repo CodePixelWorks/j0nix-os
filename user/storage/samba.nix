@@ -54,7 +54,8 @@ if username:
     if password:
         auth += ":" + quote(password, safe="")
     auth += "@"
-print(f"smb://{auth}{host}/{quote(share, safe=\"\")}")
+escaped_share = quote(share, safe="")
+print(f"smb://{auth}{host}/{escaped_share}")
 PY
 )"
       if [ -d ${lib.escapeShellArg gvfsPath} ]; then
@@ -85,7 +86,8 @@ from os import environ
 from urllib.parse import quote
 host = environ["SMB_HOST"]
 share = environ["SMB_SHARE"]
-print(f"smb://{host}/{quote(share, safe=\"\")}")
+escaped_share = quote(share, safe="")
+print(f"smb://{host}/{escaped_share}")
 PY
 )"
       if [ -L ${lib.escapeShellArg "${mountRoot}/${aliasName}"} ]; then
