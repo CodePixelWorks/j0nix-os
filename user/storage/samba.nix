@@ -14,6 +14,8 @@ let
     in
     if hasValue secretName && lib.hasAttrByPath [ secretName ] (config.sops.secrets or { }) then
       config.sops.secrets.${secretName}.path
+    else if hasValue secretName && lib.hasAttrByPath [ secretName ] (config.sops.templates or { }) then
+      config.sops.templates.${secretName}.path
     else
       null;
 
