@@ -8,6 +8,8 @@ let
   rawSshKeys = userCfg.sshKeys or { };
   files = if builtins.isAttrs rawFiles then rawFiles else { };
   sshKeys = if builtins.isAttrs rawSshKeys then rawSshKeys else { };
+  plainFiles = lib.filterAttrs (_: spec: !(spec ? fields)) files;
+  structuredFiles = lib.filterAttrs (_: spec: spec ? fields) files;
   defaultSopsFile = userCfg.defaultSopsFile or (cfg.defaultUserSopsFile or null);
   defaultSopsFormat = userCfg.defaultSopsFormat or (cfg.defaultSopsFormat or "yaml");
   inheritedSystemAgeKeyFile =
@@ -42,7 +44,56 @@ let
     // lib.optionalAttrs (spec ? path) {
       path = spec.path;
     };
-  fileSecrets = builtins.mapAttrs mkSecretValue files;
+  fileSecrets = builtins.mapAttrs mkSecretValue plainFiles;
+  structuredFileFieldSecrets =
+    lib.foldl'
+      (acc: name:
+        let
+          spec = structuredFiles.${name};
+          fieldSpecs = if builtins.isAttrs spec.fields then spec.fields else { };
+          fieldSecrets =
+            lib.mapAttrs'
+              (fieldName: fieldKey:
+                lib.nameValuePair "${name}__${fieldName}" (
+                  mkSecretValue "${name}__${fieldName}" {
+                    key = fieldKey;
+                    format = spec.format or defaultSopsFormat;
+                    sopsFile = if spec ? sopsFile then spec.sopsFile else defaultSopsFile;
+                  }
+                  // lib.optionalAttrs (spec ? mode) {
+                    mode = spec.mode;
+                  }
+                ))
+              fieldSpecs;
+        in
+        acc // fieldSecrets)
+      { }
+      (builtins.attrNames structuredFiles);
+  structuredFileTemplates =
+    builtins.mapAttrs
+      (name: spec:
+        let
+          fieldSpecs = if builtins.isAttrs spec.fields then spec.fields else { };
+          content =
+            lib.concatStringsSep "\n"
+              (map
+                (fieldName:
+                  let
+                    placeholderName = "${name}__${fieldName}";
+                  in
+                  "${fieldName}: ${builtins.getAttr placeholderName config.sops.placeholder}")
+                (builtins.attrNames fieldSpecs));
+        in
+        {
+          inherit content;
+        }
+        // lib.optionalAttrs (spec ? mode) {
+          mode = spec.mode;
+        }
+        // lib.optionalAttrs (spec ? path) {
+          path = spec.path;
+        })
+      structuredFiles;
   sshKeySecrets = builtins.mapAttrs
     (name: spec:
       mkSecretValue name {
@@ -154,7 +205,11 @@ lib.mkIf enableSops {
       // lib.optionalAttrs useInheritedSystemKey {
         generateKey = false;
       };
-    secrets = lib.recursiveUpdate (lib.recursiveUpdate fileSecrets sshKeySecrets) sshKeyPassphraseSecrets;
+    secrets =
+      lib.recursiveUpdate
+        (lib.recursiveUpdate (lib.recursiveUpdate fileSecrets structuredFileFieldSecrets) sshKeySecrets)
+        sshKeyPassphraseSecrets;
+    templates = structuredFileTemplates;
   } // lib.optionalAttrs (defaultSopsFile != null) {
     defaultSopsFile = defaultSopsFile;
   });
@@ -167,6 +222,17 @@ lib.mkIf enableSops {
     {
       assertion = builtins.isAttrs rawFiles;
       message = "settings.userSettings.<name>.secrets.files must be an attrset of secret definitions";
+    }
+    {
+      assertion =
+        lib.all
+          (name:
+            let
+              spec = files.${name};
+            in
+            !(spec ? fields) || builtins.isAttrs spec.fields)
+          (builtins.attrNames files);
+      message = "Each settings.userSettings.<name>.secrets.files.<name>.fields value must be an attrset when used.";
     }
     {
       assertion = builtins.isAttrs rawSshKeys;
