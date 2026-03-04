@@ -5,8 +5,8 @@ let
   userShares = builtins.filter (share: (share.mode or "system") == "user") rawShares;
   hasValue = value: value != null && value != "";
   mountRoot = "${config.home.homeDirectory}/Mounts";
-  gioBin = "${pkgs.glib}/bin/gio";
-  pythonBin = "${pkgs.python3}/bin/python3";
+  rcloneBin = "${pkgs.rclone}/bin/rclone";
+  fuseUnmountBin = "${pkgs.fuse3}/bin/fusermount3";
 
   secretPathFor = share:
     let
@@ -24,85 +24,107 @@ let
         && secretPathFor share == null)
       userShares;
 
+  shareNameOf = share: share.name or share.share;
+  mountAliasOf = share: share.mountAlias or (shareNameOf share);
+  mountPathOf = share: "${mountRoot}/${mountAliasOf share}";
+  runtimeConfigPathOf = share: "$XDG_RUNTIME_DIR/rclone-smb-${shareNameOf share}.conf";
+
+  rcloneConfigScript = share:
+    let
+      secretPath = secretPathFor share;
+      secretPathArg = lib.escapeShellArg (if secretPath != null then secretPath else "");
+    in
+    ''
+      config_path=${lib.escapeShellArg (runtimeConfigPathOf share)}
+      username=${lib.escapeShellArg (share.username or "")}
+      password=""
+      domain=""
+      if [ -n ${secretPathArg} ]; then
+        while IFS='=' read -r key value; do
+          case "$key" in
+            username) username="$value" ;;
+            password) password="$value" ;;
+            domain) domain="$value" ;;
+          esac
+        done < ${secretPathArg}
+      fi
+      if [ -z "$username" ] && [ -n ${lib.escapeShellArg (share.username or "")} ]; then
+        username=${lib.escapeShellArg (share.username or "")}
+      fi
+      if [ -z "$username" ]; then
+        echo "warning: SMB share ${shareNameOf share} has no username configured" >&2
+        exit 1
+      fi
+      password_obscured=""
+      if [ -n "$password" ]; then
+        password_obscured="$(${rcloneBin} obscure "$password")"
+      fi
+      {
+        printf '%s\n' '[share]'
+        printf '%s\n' 'type = smb'
+        printf 'host = %s\n' ${lib.escapeShellArg share.host}
+        printf 'user = %s\n' "$username"
+        printf 'pass = %s\n' "$password_obscured"
+        ${lib.optionalString (share ? port && share.port != null) "printf 'port = %s\\n' ${lib.escapeShellArg (toString share.port)}"}
+        printf 'domain = %s\n' "$domain"
+      } > "$config_path"
+      chmod 600 "$config_path"
+    '';
+
+  mountCommandFor = share:
+    let
+      mountPath = mountPathOf share;
+      extraArgs = share.rcloneArgs or [ ];
+      args =
+        [
+          "mount"
+          "--config" (runtimeConfigPathOf share)
+          "share:${share.share}"
+          mountPath
+          "--dir-cache-time" (share.dirCacheTime or "5m")
+          "--vfs-cache-mode" (share.vfsCacheMode or "full")
+          "--volname" (share.gvfsName or mountAliasOf share)
+          "--network-mode"
+        ] ++ extraArgs;
+    in
+    lib.escapeShellArgs ([ rcloneBin ] ++ args);
+
   mountScriptFor = share:
     let
-      shareName = share.name or share.share;
-      aliasName = share.mountAlias or shareName;
-      gvfsPath = "\${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gvfs/smb-share:server=${share.host},share=${share.share}";
-      secretPath = secretPathFor share;
+      mountPath = mountPathOf share;
+      shareName = shareNameOf share;
     in
     ''
       set -eu
+      export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
       mkdir -p ${lib.escapeShellArg mountRoot}
-      export SMB_HOST=${lib.escapeShellArg share.host}
-      export SMB_SHARE=${lib.escapeShellArg share.share}
-      export SMB_USERNAME=${lib.escapeShellArg (share.username or "")}
-      export SMB_PASSWORD=""
-      ${lib.optionalString (secretPath != null) ''
-        export SMB_PASSWORD="$(tr -d '\n' < ${lib.escapeShellArg secretPath})"
-      ''}
-      uri="$(${pythonBin} - <<'PY'
-from os import environ
-from urllib.parse import quote
-host = environ["SMB_HOST"]
-share = environ["SMB_SHARE"]
-username = environ.get("SMB_USERNAME", "")
-password = environ.get("SMB_PASSWORD", "")
-auth = ""
-if username:
-    auth = quote(username, safe="")
-    if password:
-        auth += ":" + quote(password, safe="")
-    auth += "@"
-escaped_share = quote(share, safe="")
-print(f"smb://{auth}{host}/{escaped_share}")
-PY
-)"
-      if [ -d ${lib.escapeShellArg gvfsPath} ]; then
-        ln -sfn ${lib.escapeShellArg gvfsPath} ${lib.escapeShellArg "${mountRoot}/${aliasName}"}
+      mkdir -p ${lib.escapeShellArg mountPath}
+      ${rcloneConfigScript share}
+      if mountpoint -q ${lib.escapeShellArg mountPath}; then
         exit 0
       fi
-      if ! ${gioBin} mount "$uri"; then
-        echo "warning: failed to mount SMB share ${shareName}" >&2
-        exit 0
-      fi
-      if [ -d ${lib.escapeShellArg gvfsPath} ]; then
-        ln -sfn ${lib.escapeShellArg gvfsPath} ${lib.escapeShellArg "${mountRoot}/${aliasName}"}
-      fi
+      exec ${mountCommandFor share}
     '';
 
   unmountScriptFor = share:
     let
-      shareName = share.name or share.share;
-      aliasName = share.mountAlias or shareName;
-      gvfsPath = "\${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gvfs/smb-share:server=${share.host},share=${share.share}";
+      mountPath = mountPathOf share;
+      configPath = runtimeConfigPathOf share;
     in
     ''
       set -eu
-      export SMB_HOST=${lib.escapeShellArg share.host}
-      export SMB_SHARE=${lib.escapeShellArg share.share}
-      uri="$(${pythonBin} - <<'PY'
-from os import environ
-from urllib.parse import quote
-host = environ["SMB_HOST"]
-share = environ["SMB_SHARE"]
-escaped_share = quote(share, safe="")
-print(f"smb://{host}/{escaped_share}")
-PY
-)"
-      if [ -L ${lib.escapeShellArg "${mountRoot}/${aliasName}"} ]; then
-        rm -f ${lib.escapeShellArg "${mountRoot}/${aliasName}"}
+      export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+      if mountpoint -q ${lib.escapeShellArg mountPath}; then
+        ${fuseUnmountBin} -u ${lib.escapeShellArg mountPath} || true
       fi
-      if [ -d ${lib.escapeShellArg gvfsPath} ]; then
-        ${gioBin} mount -u "$uri" || true
-      fi
+      rm -f "$XDG_RUNTIME_DIR/rclone-smb-${shareNameOf share}.conf"
     '';
 
   shareCommands =
     lib.concatMap
       (share:
         let
-          shareName = share.name or share.share;
+          shareName = shareNameOf share;
         in
         [
           (pkgs.writeShellScriptBin "user-smb-mount-${shareName}" (mountScriptFor share))
@@ -115,19 +137,23 @@ PY
       (map
         (share:
           let
-            shareName = share.name or share.share;
+            shareName = shareNameOf share;
           in
           {
             name = "user-smb-${shareName}";
             value = {
               Unit = {
                 Description = "User SMB mount for ${shareName}";
-                After = [ "graphical-session.target" ];
+                After = [ "graphical-session.target" "network-online.target" ];
+                Wants = [ "network-online.target" ];
                 PartOf = [ "graphical-session.target" ];
               };
               Service = {
-                Type = "oneshot";
+                Type = "simple";
                 ExecStart = "${config.home.profileDirectory}/bin/user-smb-mount-${shareName}";
+                ExecStop = "${config.home.profileDirectory}/bin/user-smb-unmount-${shareName}";
+                Restart = "on-failure";
+                RestartSec = 3;
               };
               Install = {
                 WantedBy = [ "graphical-session.target" ];
@@ -135,7 +161,10 @@ PY
             };
           })
         (builtins.filter (share: share.autoMount or false) userShares));
-  autoMountShareNames = map (share: share.name or share.share) (builtins.filter (share: share.autoMount or false) userShares);
+
+  autoMountServiceNames =
+    map (share: "user-smb-${shareNameOf share}.service")
+      (builtins.filter (share: share.autoMount or false) userShares);
 in
 {
   config = lib.mkIf (userShares != [ ]) {
@@ -144,24 +173,25 @@ in
         mkdir -p ${lib.escapeShellArg mountRoot}
       '';
 
-    home.activation.autoMountUserSambaShares =
+    home.activation.restartUserSambaMounts =
       lib.hm.dag.entryAfter [ "writeBoundary" ] (
-        if autoMountShareNames == [ ] then
+        if autoMountServiceNames == [ ] then
           ":"
         else
           ''
             runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
             if [ -S "$runtime_dir/bus" ]; then
-              ${lib.concatStringsSep "\n" (map (shareName: ''
-                ${config.home.profileDirectory}/bin/user-smb-mount-${shareName} || true
-              '') autoMountShareNames)}
+              systemctl --user daemon-reload
+              ${lib.concatStringsSep "\n" (map (svc: ''
+                systemctl --user restart ${lib.escapeShellArg svc} || true
+              '') autoMountServiceNames)}
             else
-              echo "warning: user session bus not available; skipping immediate SMB auto-mount during activation" >&2
+              echo "warning: user session bus not available; skipping immediate SMB remount during activation" >&2
             fi
           ''
       );
 
-    j0nix.user.software.packages = shareCommands;
+    j0nix.user.software.packages = [ pkgs.rclone pkgs.fuse3 ] ++ shareCommands;
 
     systemd.user.services = autoMountUnits;
 
