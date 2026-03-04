@@ -58,6 +58,10 @@ let
   minimizerCommand = minimizerCfg.command or minimizerDefaultCommand;
   minimizerOrteipCfg = minimizerCfg.orteip or { };
   minimizerOrteipAppId = minimizerOrteipCfg.appId or "keepassxc";
+  minimizerBinds = minimizerCfg.binds or { };
+  minimizerToggleBind = minimizerBinds.toggle or "$mainMod CTRL, m";
+  minimizerRestoreBind = minimizerBinds.restore or "$mainMod CTRL SHIFT, m";
+  minimizerMenuBind = minimizerBinds.menu or "$mainMod CTRL, c";
   minimizerToggleCommand =
     if minimizerIsOrteip then "${minimizerCommand} ${minimizerOrteipAppId}" else minimizerCommand;
   minimizerRestoreCommand =
@@ -194,9 +198,9 @@ let
     "CTRL SHIFT, Print, exec, wm-screenshot-area"
   ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind ++ dmsOverviewRemoteToggleBind
     ++ lib.optionals minimizerEnabled [
-      "$mainMod ALT, m, exec, ${minimizerToggleCommand}"
-      "$mainMod ALT SHIFT, m, exec, ${minimizerRestoreCommand}"
-      "$mainMod ALT, c, exec, ${minimizerMenuCommand}"
+      "${minimizerToggleBind}, exec, ${minimizerToggleCommand}"
+      "${minimizerRestoreBind}, exec, ${minimizerRestoreCommand}"
+      "${minimizerMenuBind}, exec, ${minimizerMenuCommand}"
     ];
   shellHyprKeybinds =
     if isCaelestiaShell then
