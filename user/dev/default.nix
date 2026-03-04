@@ -19,6 +19,8 @@ let
   keyringEnabled = keyringCfg.enable or false;
   userSecretsCfg = ((settings.secrets or { }).user or { });
   deployedSshKeys = userSecretsCfg.sshKeys or { };
+  sshKeysWithPassphrases =
+    lib.filterAttrs (_: spec: (spec.passphraseKey or null) != null) deployedSshKeys;
   supportedSshProfileKeys = [
     "match"
     "port"
@@ -139,6 +141,33 @@ let
     [
       (mkBlock name host)
     ] ++ map (alias: mkBlock "${name}-alias-${alias}" alias) aliases;
+  loadSecretBackedSshKeysScript =
+    let
+      loadKey = name: spec:
+        let
+          targetName = spec.targetName or name;
+          privatePath = "${config.home.homeDirectory}/.ssh/${targetName}";
+          passphraseSecretName = "${name}-passphrase";
+          passphrasePath = config.sops.secrets.${passphraseSecretName}.path;
+        in
+        ''
+          if [ -f ${lib.escapeShellArg privatePath} ] && [ -f ${lib.escapeShellArg passphrasePath} ]; then
+            askpass="$(mktemp)"
+            cat > "$askpass" <<'EOF'
+            #!/bin/sh
+            exec cat ${lib.escapeShellArg passphrasePath}
+            EOF
+            chmod 700 "$askpass"
+            DISPLAY="''${DISPLAY:-:0}" SSH_ASKPASS="$askpass" SSH_ASKPASS_REQUIRE=force \
+              setsid -w ${pkgs.openssh}/bin/ssh-add ${lib.escapeShellArg privatePath} < /dev/null > /dev/null 2>&1 || true
+            rm -f "$askpass"
+          fi
+        '';
+    in
+    pkgs.writeShellScriptBin "ssh-load-secret-keys" ''
+      set -eu
+      ${lib.concatStringsSep "\n" (lib.mapAttrsToList loadKey sshKeysWithPassphrases)}
+    '';
 in
 {
   imports = [
@@ -195,28 +224,55 @@ in
         };
     };
 
-    j0nix.user.software.packages = with pkgs; [
-      git
-      gh
-      lazygit
-      just
-      jq
-      yq
-      httpie
-      hurl
-      wget
-      curl
-      openssl
-      unzip
-      zip
-      tree
-      tmux
-      shellcheck
-      shfmt
-      nil
-      nixd
-      statix
-      deadnix
+    j0nix.user.software.packages =
+      (with pkgs; [
+        git
+        gh
+        lazygit
+        just
+        jq
+        yq
+        httpie
+        hurl
+        wget
+        curl
+        openssl
+        unzip
+        zip
+        tree
+        tmux
+        shellcheck
+        shfmt
+        nil
+        nixd
+        statix
+        deadnix
+      ])
+      ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { }) [
+        loadSecretBackedSshKeysScript
+      ];
+
+    systemd.user.services.ssh-secret-keys-load = lib.mkIf (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { }) {
+      Unit = {
+        Description = "Load declarative secret-backed SSH keys into the SSH agent";
+        After = [ "graphical-session.target" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        Type = "oneshot";
+        Environment = [ "SSH_AUTH_SOCK=%t/gcr/ssh" ];
+        ExecStart = "${lib.getExe loadSecretBackedSshKeysScript}";
+      };
+      Install = {
+        WantedBy = [ "graphical-session.target" ];
+      };
+    };
+
+    assertions = [
+      {
+        assertion = (sshKeysWithPassphrases == { }) || sshAgentProvider == "gnome-keyring";
+        message = "settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey requires settings.userSettings.<name>.dev.ssh.agent.provider = gnome-keyring for automatic keyring loading.";
+      }
     ];
   };
 }
