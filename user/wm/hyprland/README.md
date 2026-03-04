@@ -31,12 +31,13 @@ Per-user toggle:
 - `settings.userSettings.<name>.hyprland.minimizer.variant` (`denis` | `0rteip`)
 - `settings.userSettings.<name>.hyprland.minimizer.command` (optional override; auto-selected by variant when unset)
 - `settings.userSettings.<name>.hyprland.minimizer.orteip.appId`
+- `settings.userSettings.<name>.hyprland.minimizer.binds.{toggle,restore,menu}`
 
 When enabled:
 - Hyprland binds are added:
-  - `SUPER+ALT+M`: minimize/toggle
-  - `SUPER+ALT+SHIFT+M`: restore-last (`denis`) or toggle same app (`0rteip`)
-  - `SUPER+ALT+C`: menu (`denis`) or toggle same app (`0rteip`)
+  - `SUPER+CTRL+M`: minimize/toggle
+  - `SUPER+CTRL+SHIFT+M`: restore-last (`denis`) or toggle same app (`0rteip`)
+  - `SUPER+CTRL+C`: menu (`denis`) or toggle same app (`0rteip`)
 - If `pkgs.hyprland-minimizer` exists in nixpkgs, it is added automatically.
 - For `0rteip`, `hyprland-minimizer-orteip` is built from source and installed automatically.
 - KeePassXC startup integration uses the minimizer path instead of `--minimized`.
