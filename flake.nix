@@ -19,7 +19,7 @@
             homepage = "https://github.com/0rteip/hyprland_minimizer";
             license = licenses.mit;
             maintainers = [ ];
-            mainProgram = "hyprland_minimizer";
+            mainProgram = "hyprland-minimizer";
             platforms = platforms.linux;
           };
         };
