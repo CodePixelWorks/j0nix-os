@@ -31,7 +31,8 @@ For user secrets:
 
 1. Create an encrypted file, for example:
    - `sops secrets/users/jonas.yaml`
-2. Reference entries from `settings.userSettings.jonas.secrets.items`
+2. Reference generic secret files from `settings.userSettings.jonas.secrets.files`
+3. Reference secret-backed SSH keys from `settings.userSettings.jonas.secrets.sshKeys`
 
 Example:
 
@@ -53,18 +54,12 @@ Use that path from modules (for example Samba `credentials=` files) instead of s
 User example:
 
 ```nix
-secrets = {
-  defaultUserSopsFile = ./secrets/users/jonas.yaml;
-  users.jonas = {
-    items = {
-      jonas-pixel-und-code = {
-        key = "ssh/jonas_pixel_und_code";
-      };
-    };
-    sshKeys.jonas-pixel-und-code = {
-      secretName = "jonas-pixel-und-code";
-      targetName = "id_ed25519_jonas-pixel-und-code";
-    };
+userSettings.jonas.secrets = {
+  defaultSopsFile = ./secrets/users/jonas.yaml;
+  files = { };
+  sshKeys.jonas-pixel-und-code = {
+    key = "ssh/id_ed25519_jonas-pixel-und-code";
+    targetName = "id_ed25519_jonas-pixel-und-code";
   };
 };
 ```
@@ -96,7 +91,7 @@ If you want an explicit filename scheme, set `targetName`. Example:
 
 - `targetName = "id_ed25519_jonas-pixel-und-code"`
 
-Without an `sshKeys` entry, no visible `~/.ssh/<name>` file is created. The secret only exists in the SOPS-managed path.
+Without an `sshKeys` entry, no visible `~/.ssh/<name>` file is created. Use `secrets.files` for ordinary secret files that should stay only in the SOPS-managed path.
 
 Under NixOS, the Home Manager layer can automatically reuse the system Age key:
 
