@@ -3,6 +3,7 @@ let
   dev = settings.dev or { };
   ai = dev.ai or { };
   enabled = (dev.enable or true) && (ai.enable or true);
+  installScope = ai.installScope or "system"; # "system" | "user"
   preferredTerminal = settings.preferredTerminal or "kitty";
   codex = import ../../system/dev/codex.nix { inherit inputs lib pkgs settings; };
   codexEnabled = codex.enabled;
@@ -12,9 +13,9 @@ let
 in
 lib.mkIf enabled {
   j0nix.user.software.packages =
-    lib.optionals (codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
-    ++ lib.optionals (geminiEnabled && hasGeminiPackage) [ pkgs.gemini-cli ]
-    ++ lib.optionals geminiEnabled [
+    lib.optionals (installScope == "user" && codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
+    ++ lib.optionals (installScope == "user" && geminiEnabled && hasGeminiPackage) [ pkgs.gemini-cli ]
+    ++ lib.optionals (installScope == "user" && geminiEnabled) [
       (pkgs.writeShellScriptBin "gemini-launcher" ''
         KEY_FILE="$HOME/.gem.key"
 
@@ -59,6 +60,10 @@ lib.mkIf enabled {
     {
       assertion = (!geminiEnabled) || hasGeminiPackage;
       message = "settings.dev.ai.gemini=true but pkgs.gemini-cli is unavailable";
+    }
+    {
+      assertion = builtins.elem installScope [ "system" "user" ];
+      message = "settings.dev.ai.installScope must be one of: system, user";
     }
   ];
 }
