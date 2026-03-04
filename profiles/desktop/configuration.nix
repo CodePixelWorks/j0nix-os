@@ -1,4 +1,14 @@
-{ pkgs, lib, settings, inputs, ... }:
+{
+  pkgs,
+  lib,
+  settings,
+  inputs,
+  ...
+}:
+let
+  hmUsers = builtins.attrNames (settings.userSettings or { });
+  hmServiceNames = map (username: "home-manager-${username}") hmUsers;
+in
 {
   imports = [
     ./hardware-configuration.nix
@@ -45,7 +55,8 @@
     ../../system/dev
     ../../system/tuning
     ../../system/gaming
-  ] ++ (map (wm: ../../system/wm/${wm}.nix) settings.wms);
+  ]
+  ++ (map (wm: ../../system/wm/${wm}.nix) settings.wms);
 
   boot = {
     # boot policy (tmp/loader/resume/swap) is defined via `j0nix.desktop.boot`
@@ -58,6 +69,12 @@
 
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [ stdenv.cc.cc ];
+
+  # Home Manager activation uses `systemctl`; ensure it is always available in
+  # the unit PATH even in restricted service environments.
+  systemd.services = lib.genAttrs hmServiceNames (_: {
+    path = [ pkgs.systemd ];
+  });
 
   assertions = [
   ];
