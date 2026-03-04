@@ -24,6 +24,20 @@ Modules under `shells/` are selected per user via `settings.userSettings.<name>.
 
 The module defines a shared base keymap in `user/wm/hyprland/default.nix` and merges shell-specific binds (Caelestia, DMS, etc.) on top.
 
+## Optional Minimizer
+
+Per-user toggle:
+- `settings.userSettings.<name>.hyprland.minimizer.enable`
+- `settings.userSettings.<name>.hyprland.minimizer.command`
+
+When enabled:
+- Hyprland binds are added:
+  - `SUPER+ALT+M`: minimize focused window
+  - `SUPER+ALT+SHIFT+M`: restore last minimized window
+  - `SUPER+ALT+C`: open minimizer menu
+- If `pkgs.hyprland-minimizer` exists in nixpkgs, it is added automatically.
+- KeePassXC startup integration uses the minimizer path instead of `--minimized`.
+
 ## Core Binds (Hyprland)
 
 - `SUPER+Q`: close active window
