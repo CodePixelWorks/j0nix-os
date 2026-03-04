@@ -41,7 +41,23 @@ let
       password=""
       domain=""
       if [ -f ${secretPathArg} ]; then
-        while IFS='=' read -r key value; do
+        while IFS= read -r line; do
+          line=$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          [ -z "$line" ] && continue
+          case "$line" in
+            \#*) continue ;;
+          esac
+          if printf '%s' "$line" | grep -q ': '; then
+            key=''${line%%:*}
+            value=''${line#*:}
+          elif printf '%s' "$line" | grep -q '='; then
+            key=''${line%%=*}
+            value=''${line#*=}
+          else
+            continue
+          fi
+          key=$(printf '%s' "$key" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          value=$(printf '%s' "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
           case "$key" in
             username) username="$value" ;;
             password) password="$value" ;;
