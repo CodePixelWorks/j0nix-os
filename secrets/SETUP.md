@@ -231,21 +231,17 @@ secrets = {
     };
   };
 
-  users.jonas = {
+  userSettings.jonas.secrets = {
     age = {
       keyFile = "/home/jonas/.config/sops/age/keys.txt";
     };
 
-    items = {
-      jonas-pixel-und-code = {
-        key = "ssh/jonas_pixel_und_code";
-        mode = "0400";
-      };
-    };
+    files = { };
 
     sshKeys = {
       jonas-pixel-und-code = {
-        secretName = "jonas-pixel-und-code";
+        key = "ssh/id_ed25519_jonas-pixel-und-code";
+        mode = "0400";
         targetName = "id_ed25519_jonas-pixel-und-code";
       };
     };
@@ -299,7 +295,7 @@ If the private key is passphrase-protected, set the public key explicitly on the
 
 ```nix
 sshKeys.jonas-pixel-und-code = {
-  secretName = "jonas-pixel-und-code";
+  key = "ssh/id_ed25519_jonas-pixel-und-code";
   targetName = "id_ed25519_jonas-pixel-und-code";
   publicKeyFile = ./public/users/jonas/ssh/id_ed25519_jonas-pixel-und-code.pub;
 };
