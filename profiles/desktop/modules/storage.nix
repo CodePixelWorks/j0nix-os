@@ -10,6 +10,7 @@ let
       in
       storageCfg.sambaShares or [ ])
     (builtins.attrNames userOverrides);
+  systemSambaShares = builtins.filter (share: (share.mode or "system") != "user") sambaShares;
   hasValue = value: value != null && value != "";
   mkSambaMount = share:
     let
@@ -75,7 +76,7 @@ in
       forceDirtyNtfsMount = false;
       lazyUnmountOnShutdown = true;
     }
-  ] ++ map mkSambaMount sambaShares;
+  ] ++ map mkSambaMount systemSambaShares;
 
   j0nix.desktop.security.polkit.extraConfigSnippets =
     [ polkitRules.mkUdisksWheelMountRule ];
@@ -85,5 +86,5 @@ in
       assertion = !((hasValue (share.secretName or null)) && (share ? credentialsFile && share.credentialsFile != ""));
       message = "settings.userSettings.<name>.storage.sambaShares.${share.name or share.mountPoint or "share"} must not set both secretName and credentialsFile.";
     })
-    sambaShares;
+    systemSambaShares;
 }
