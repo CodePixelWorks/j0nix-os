@@ -10,6 +10,6 @@ Notable controls:
 - `settings.dev.ai.installScope`: installs Codex/Gemini CLIs as `system` packages (`system`) or leaves them to Home Manager (`user`)
 
 Also manages:
-- SSH agent provider selection (`settings.dev.ssh.agent.provider`)
+- SSH agent provider selection (`settings.userSettings.<name>.dev.ssh.agent.provider`)
 - OpenSSH agent startup (`provider = "openssh"`)
-- GNOME keyring service (`settings.dev.ssh.keyring.enable` or `provider = "gnome-keyring"`)
+- GNOME keyring service (`settings.userSettings.<name>.dev.ssh.keyring.enable` or `provider = "gnome-keyring"`)
