@@ -1,6 +1,11 @@
-{ lib, settings, ... }:
+{ config, lib, settings, ... }:
 let
   polkitRules = import ../../../system/lib/polkit-rules.nix { inherit lib; };
+  usersGroupGid =
+    if (config.users.groups ? users) && (config.users.groups.users ? gid) && config.users.groups.users.gid != null then
+      config.users.groups.users.gid
+    else
+      100;
   userOverrides = settings.userSettings or { };
   sambaShares = lib.concatMap
     (username:
@@ -63,8 +68,8 @@ in
       fsType = "ntfs3";
       options = [
         "rw"
-        "uid=1000"
-        "gid=100"
+        "uid=0"
+        "gid=${toString usersGroupGid}"
         "umask=0022"
         "nofail"
       ];
