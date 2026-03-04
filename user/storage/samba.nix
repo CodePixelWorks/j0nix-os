@@ -201,11 +201,11 @@ in
           ":"
         else
           ''
-            runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+            runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
             if [ -S "$runtime_dir/bus" ]; then
-              systemctl --user daemon-reload
+              ${pkgs.systemd}/bin/systemctl --user daemon-reload
               ${lib.concatStringsSep "\n" (map (svc: ''
-                systemctl --user restart ${lib.escapeShellArg svc} || true
+                ${pkgs.systemd}/bin/systemctl --user restart ${lib.escapeShellArg svc} || true
               '') autoMountServiceNames)}
             else
               echo "warning: user session bus not available; skipping immediate SMB remount during activation" >&2
