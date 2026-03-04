@@ -108,7 +108,6 @@ in
     blender
     gimp
     naps2
-    keepassxc
     mpv
     libreoffice-fresh
 

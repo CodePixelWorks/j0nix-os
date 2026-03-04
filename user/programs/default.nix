@@ -6,6 +6,7 @@
     ./betterdiscord
     ./fastfetch
     ./fusion360
+    ./keepassxc
     ./wlogout
   ];
 }
