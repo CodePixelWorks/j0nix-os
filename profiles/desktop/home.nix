@@ -4,8 +4,6 @@ let
   bambuCfg = programsCfg.bambulab or { };
   bambuProvider = bambuCfg.provider or "appimage";
   ollamaCfg = programsCfg.ollama or { };
-  syncthingCfg = programsCfg.syncthing or { };
-  syncthingEnabled = syncthingCfg.enable or false;
   # Storage policy moved to the desktop storage profile module; keep user-space udisks automount enabled here.
   enableUdiskieAutomount = true;
   configuredFileManagersRaw =
@@ -16,17 +14,6 @@ let
   preferredFileManager =
     settings.preferredFileManager
     or (if configuredFileManagers != [ ] then builtins.head configuredFileManagers else "nautilus");
-  fileManagerPackage = name:
-    if name == "nautilus" then
-      pkgs.nautilus
-    else if name == "nemo" then
-      pkgs.nemo
-    else if name == "dolphin" then
-      if (pkgs ? kdePackages) && (pkgs.kdePackages ? dolphin) then pkgs.kdePackages.dolphin else null
-    else if name == "thunar" then
-      if (pkgs ? xfce) && (pkgs.xfce ? thunar) then pkgs.xfce.thunar else null
-    else
-      null;
   fileManagerDesktopId = name:
     if name == "nautilus" then
       "org.gnome.Nautilus.desktop"
@@ -38,7 +25,6 @@ let
       "thunar.desktop"
     else
       null;
-  fileManagerPackages = lib.filter (pkg: pkg != null) (map fileManagerPackage configuredFileManagers);
   preferredFileManagerDesktopId = fileManagerDesktopId preferredFileManager;
   iconThemeCfg = settings.iconTheme or { };
   iconThemeEnabled = iconThemeCfg.enable or true;
@@ -63,10 +49,6 @@ let
         null
     else
       null;
-  iconThemeFallbackPackages = with pkgs; [
-    hicolor-icon-theme
-    adwaita-icon-theme
-  ];
 in
 {
   imports = [
@@ -78,54 +60,6 @@ in
     username = settings.username;
     homeDirectory = "/home/${settings.username}";
   };
-
-  j0nix.user.software.packages = with pkgs; [
-    foot
-    kitty
-    git
-    gh
-    starship
-    eza
-    bat
-    fd
-    ripgrep
-    tree
-    jq
-
-    obs-studio
-    qbittorrent
-    telegram-desktop
-    nextcloud-client
-    obsidian
-    drawio
-  ]
-  ++ [
-    bottles
-    simplescreenrecorder
-    gpu-screen-recorder
-    gpu-screen-recorder-gtk
-    krita
-    blender
-    gimp
-    naps2
-    mpv
-    libreoffice-fresh
-
-    gcc
-    gnumake
-    nodejs
-    python3
-    cargo
-    rustc
-    openvpn
-    unzip
-    android-tools
-    xdg-utils
-  ] ++ fileManagerPackages
-    ++ (with pkgs; if enableUdiskieAutomount then [ udiskie ] else [ ])
-    ++ lib.optionals syncthingEnabled [ pkgs.syncthing ]
-    ++ lib.optionals (pkgs ? fusion360) [ pkgs.fusion360 ]
-    ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) ([ iconThemePackage ] ++ iconThemeFallbackPackages);
 
   xdg.enable = true;
   xdg.mimeApps = {
