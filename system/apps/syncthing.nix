@@ -1,23 +1,32 @@
 { config, lib, settings, ... }:
 let
   userOverrides = settings.userSettings or { };
+  allUsers = builtins.attrNames userOverrides;
   syncthingUsers = lib.filter
     (username:
       let cfg = (((userOverrides.${username} or { }).programs or { }).syncthing or { });
       in cfg.enable or false)
-    (builtins.attrNames userOverrides);
+    allUsers;
   enabled = syncthingUsers != [ ];
-  serviceUser = if enabled then builtins.head syncthingUsers else builtins.head (builtins.attrNames userOverrides);
-  syncthingCfg = if enabled then (((userOverrides.${serviceUser} or { }).programs or { }).syncthing or { }) else { };
+  serviceUser = if enabled then builtins.head syncthingUsers else null;
+  syncthingCfg =
+    if serviceUser != null then
+      (((userOverrides.${serviceUser} or { }).programs or { }).syncthing or { })
+    else
+      { };
   configDir =
-    if (syncthingCfg ? configDir) && syncthingCfg.configDir != null then
+    if serviceUser == null then
+      null
+    else if (syncthingCfg ? configDir) && syncthingCfg.configDir != null then
       syncthingCfg.configDir
     else if (syncthingCfg ? homeDir) && syncthingCfg.homeDir != null then
       syncthingCfg.homeDir
     else
       "/home/${serviceUser}/.config/syncthing";
   dataDir =
-    if (syncthingCfg ? dataDir) && syncthingCfg.dataDir != null then
+    if serviceUser == null then
+      null
+    else if (syncthingCfg ? dataDir) && syncthingCfg.dataDir != null then
       syncthingCfg.dataDir
     else
       "/home/${serviceUser}";
@@ -51,6 +60,10 @@ lib.mkIf enabled {
   };
 
   assertions = [
+    {
+      assertion = allUsers != [ ];
+      message = "system/apps/syncthing.nix requires at least one entry in settings.userSettings when syncthing is enabled.";
+    }
     {
       assertion = builtins.length syncthingUsers <= 1;
       message = "At most one user may enable userSettings.<name>.programs.syncthing for the shared system Syncthing service.";
