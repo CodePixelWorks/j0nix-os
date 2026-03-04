@@ -55,6 +55,21 @@ let
         path = spec.path;
       })
     sshKeys;
+  sshKeyPassphraseSecrets =
+    lib.mapAttrs'
+      (name: spec:
+        let
+          passphraseKey = spec.passphraseKey or null;
+        in
+        lib.nameValuePair "${name}-passphrase" (
+          mkSecretValue "${name}-passphrase" {
+            key = passphraseKey;
+            format = spec.passphraseFormat or defaultSopsFormat;
+            sopsFile = spec.passphraseSopsFile or (spec.sopsFile or defaultSopsFile);
+            mode = spec.passphraseMode or "0400";
+          }
+        ))
+      (lib.filterAttrs (_: spec: (spec.passphraseKey or null) != null) sshKeys);
   overlappingSecretNames =
     builtins.filter (name: builtins.hasAttr name files) (builtins.attrNames sshKeys);
   missingSopsFileFiles =
@@ -72,6 +87,15 @@ let
           spec = sshKeys.${name};
         in
         (if spec ? sopsFile then spec.sopsFile else defaultSopsFile) == null)
+      (builtins.attrNames sshKeys);
+  missingSopsFileSshKeyPassphrases =
+    builtins.filter
+      (name:
+        let
+          spec = sshKeys.${name};
+        in
+        (spec.passphraseKey or null) != null
+        && (if spec ? passphraseSopsFile then spec.passphraseSopsFile else if spec ? sopsFile then spec.sopsFile else defaultSopsFile) == null)
       (builtins.attrNames sshKeys);
   validSshKeyNames = builtins.attrNames sshKeys;
   deploySshKey = name:
@@ -130,7 +154,7 @@ lib.mkIf enableSops {
       // lib.optionalAttrs useInheritedSystemKey {
         generateKey = false;
       };
-    secrets = lib.recursiveUpdate fileSecrets sshKeySecrets;
+    secrets = lib.recursiveUpdate (lib.recursiveUpdate fileSecrets sshKeySecrets) sshKeyPassphraseSecrets;
   } // lib.optionalAttrs (defaultSopsFile != null) {
     defaultSopsFile = defaultSopsFile;
   });
@@ -159,6 +183,10 @@ lib.mkIf enableSops {
     {
       assertion = missingSopsFileSshKeys == [ ];
       message = "Each settings.userSettings.<name>.secrets.sshKeys entry requires either its own sopsFile or settings.userSettings.<name>.secrets.defaultSopsFile/settings.secrets.defaultUserSopsFile.";
+    }
+    {
+      assertion = missingSopsFileSshKeyPassphrases == [ ];
+      message = "Each settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey requires either passphraseSopsFile, sopsFile, or settings.userSettings.<name>.secrets.defaultSopsFile/settings.secrets.defaultUserSopsFile.";
     }
     {
       assertion =
