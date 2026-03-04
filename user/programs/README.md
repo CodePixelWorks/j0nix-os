@@ -17,7 +17,15 @@ Program toggles should be wired through `settings.programs.*`.
 - optional autostart
 - optional startup database path
 - optional secret-backed key file deployment (`keyFileSecretName`)
+- optional workspace integration (`workspace.mode = special-workspace|minimizer`)
+- optional unlock modes (`autoUnlock.mode = strict|balanced|convenient|full-auto`)
 - autostart via user systemd (`graphical-session.target`), which is reliable on Hyprland
 
-If `settings.userSettings.<name>.hyprland.minimizer.enable = true`, KeePassXC startup prefers the minimizer workflow over `--minimized`.
-Variant `0rteip` uses `settings.userSettings.<name>.hyprland.minimizer.orteip.appId` to address the minimizer app entry.
+Installed helper commands:
+- `keepassxc-startup`: start KeePassXC with configured unlock/workspace behavior
+- `keepassxc-toggle`: toggle Keepass visibility (special workspace or minimizer mode)
+- `keepassxc-doctor`: print effective runtime checks (db/keyfile/keyring/secret)
+- `keepassxc-secret-set [entry]`: store KeePass database password in keyring for convenient mode
+
+If `settings.userSettings.<name>.hyprland.minimizer.enable = true` and `workspace.mode = \"minimizer\"`,
+KeePassXC startup prefers the minimizer workflow over `--minimized`.
