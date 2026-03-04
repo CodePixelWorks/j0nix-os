@@ -6,6 +6,8 @@ let
       config.users.groups.users.gid
     else
       100;
+  storageCfg = settings.storage or { };
+  systemMounts = storageCfg.systemMounts or [ ];
   userOverrides = settings.userSettings or { };
   sambaShares = lib.concatMap
     (username:
@@ -54,34 +56,33 @@ let
       forceDirtyNtfsMount = false;
       lazyUnmountOnShutdown = false;
     };
+  hasUidOption = opts: builtins.any (opt: lib.hasPrefix "uid=" opt) opts;
+  hasGidOption = opts: builtins.any (opt: lib.hasPrefix "gid=" opt) opts;
+  enrichSystemMount = mount:
+    let
+      mountFsType = mount.fsType or "";
+      mountOptions = mount.options or [ ];
+      addNtfsOwnerDefaults =
+        builtins.elem mountFsType [ "ntfs3" "ntfs" ]
+        && (!hasUidOption mountOptions)
+        && (!hasGidOption mountOptions);
+    in
+    mount // {
+      options =
+        mountOptions
+        ++ lib.optionals addNtfsOwnerDefaults [
+          "uid=0"
+          "gid=${toString usersGroupGid}"
+        ];
+    };
 in
 {
   services.gvfs.enable = true;
   services.udisks2.enable = true;
 
-  j0nix.desktop.storage.mounts = [
-    {
-      name = "games";
-      enable = true;
-      mountPoint = "/mnt/Games";
-      device = "/dev/disk/by-uuid/6A68028468024F6F";
-      fsType = "ntfs3";
-      options = [
-        "rw"
-        "uid=0"
-        "gid=${toString usersGroupGid}"
-        "umask=0022"
-        "nofail"
-      ];
-      gvfsShow = true;
-      gvfsName = "GAMES";
-      automount = false;
-      idleTimeout = "5min";
-      preventRemount = true;
-      forceDirtyNtfsMount = false;
-      lazyUnmountOnShutdown = true;
-    }
-  ] ++ map mkSambaMount systemSambaShares;
+  j0nix.desktop.storage.mounts =
+    (map enrichSystemMount systemMounts)
+    ++ map mkSambaMount systemSambaShares;
 
   j0nix.desktop.security.polkit.extraConfigSnippets =
     [ polkitRules.mkUdisksWheelMountRule ];
