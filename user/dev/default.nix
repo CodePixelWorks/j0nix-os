@@ -153,10 +153,7 @@ let
         ''
           if [ -f ${lib.escapeShellArg privatePath} ] && [ -f ${lib.escapeShellArg passphrasePath} ]; then
             askpass="$(mktemp)"
-            cat > "$askpass" <<'EOF'
-            #!/bin/sh
-            exec cat ${lib.escapeShellArg passphrasePath}
-            EOF
+            printf '%s\n' '#!/bin/sh' 'exec cat ${lib.escapeShellArg passphrasePath}' > "$askpass"
             chmod 700 "$askpass"
             DISPLAY="''${DISPLAY:-:0}" SSH_ASKPASS="$askpass" SSH_ASKPASS_REQUIRE=force \
               setsid -w ${pkgs.openssh}/bin/ssh-add ${lib.escapeShellArg privatePath} < /dev/null > /dev/null 2>&1 || true
