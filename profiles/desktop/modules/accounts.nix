@@ -8,13 +8,17 @@ let
       "zsh"
     else
       (userOverrides.${primaryUser}.shell or "zsh");
+  dockerUsers =
+    builtins.filter
+      (username: ((((userOverrides.${username} or { }).dev or { }).docker or { }).enable or false))
+      users;
 in
 {
   j0nix.desktop.accounts = {
     inherit users;
     inherit defaultShell;
     userShells = lib.mapAttrs (_: cfg: cfg.shell) (lib.filterAttrs (_: cfg: cfg ? shell) userOverrides);
-    includeDockerGroup = (((settings.dev or { }).docker or { }).enable or true);
+    inherit dockerUsers;
     autologinUser = null;
   };
 }
