@@ -20,6 +20,24 @@ let
       localModuleDefinitions;
   disallowedHomePackagesFiles =
     lib.unique (map (def: toString (def.file or "<unknown>")) disallowedHomePackagesDefinitions);
+  softwareDefinitions =
+    lib.filter
+      (def:
+        let
+          file = toString (def.file or "");
+        in
+          file != "" && lib.hasPrefix "${repoRoot}/" file)
+      (options.j0nix.user.software.packages.definitionsWithLocations or [ ]);
+  profileSoftwareDefinitions =
+    lib.filter
+      (def:
+        let
+          file = toString (def.file or "");
+        in
+          lib.hasInfix "/profiles/" file)
+      softwareDefinitions;
+  profileSoftwareFiles =
+    lib.unique (map (def: toString (def.file or "<unknown>")) profileSoftwareDefinitions);
 in
 {
   imports = [
@@ -41,6 +59,14 @@ in
           Do not define home.packages directly in repository modules.
           Use j0nix.user.software.packages instead.
           Offending module file(s): ${lib.concatStringsSep ", " disallowedHomePackagesFiles}
+        '';
+      }
+      {
+        assertion = profileSoftwareDefinitions == [ ];
+        message = ''
+          Do not declare j0nix.user.software.packages in profile modules.
+          Put package selections in user/software/* or feature modules instead.
+          Offending profile file(s): ${lib.concatStringsSep ", " profileSoftwareFiles}
         '';
       }
     ];
