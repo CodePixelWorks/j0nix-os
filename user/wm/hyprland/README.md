@@ -40,8 +40,20 @@ When enabled:
   - `SUPER+CTRL+C`: menu (`denis`) or toggle same app (`0rteip`)
 - If `pkgs.hyprland-minimizer` exists in nixpkgs, it is added automatically.
 - For `0rteip`, `hyprland-minimizer-orteip` is built from source and installed automatically.
-- KeePassXC startup integration uses the minimizer path instead of `--minimized`.
-- For `0rteip`, a user config is rendered to `~/.config/hyprland-minimizer/config.toml`.
+
+## KeePassXC Workspace Integration
+
+Per-user toggle under `settings.userSettings.<name>.programs.keepassxc`:
+- `workspace.enable`
+- `workspace.mode` (`special-workspace` | `minimizer`)
+- `workspace.name` (used as `special:<name>` when mode is `special-workspace`)
+- `workspace.toggleBind` (default: `SUPER+CTRL+P`)
+- `autoUnlock.mode` (`strict` | `balanced` | `convenient` | `full-auto`)
+
+Behavior:
+- `special-workspace`: KeePassXC windows are routed to `special:<workspace.name>`.
+- `minimizer`: `keepassxc-toggle` uses the configured Hyprland minimizer backend.
+- `keepassxc-toggle` is the single command used by keybinds and shell actions.
 
 ## Core Binds (Hyprland)
 
@@ -63,6 +75,7 @@ When enabled:
 - `SUPER+1..0`: switch workspace
 - `SUPER+SHIFT+1..0`: move window to workspace (with following it)
 - `SUPER+CTRL+c`: center active window
+- `SUPER+CTRL+P`: toggle KeePassXC (special workspace or minimizer mode)
 
 ## Remote / Moonlight Fallback Binds
 
