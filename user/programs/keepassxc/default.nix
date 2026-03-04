@@ -4,7 +4,10 @@ let
   hyprlandCfg = settings.hyprland or { };
   minimizerCfg = hyprlandCfg.minimizer or { };
   minimizerEnabled = minimizerCfg.enable or false;
+  minimizerVariant = minimizerCfg.variant or "denis";
   minimizerCommand = minimizerCfg.command or "hyprland-minimizer";
+  minimizerOrteipCfg = minimizerCfg.orteip or { };
+  minimizerOrteipAppId = minimizerOrteipCfg.appId or "keepassxc";
   enabled = cfg.enable or false;
   autoStart = cfg.autoStart or false;
   startMinimized = cfg.startMinimized or true;
@@ -26,8 +29,12 @@ let
       (
         for _ in $(seq 1 50); do
           if ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e '.[] | select(.class=="KeePassXC")' >/dev/null 2>&1; then
-            ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
-            ${minimizerCommand} >/dev/null 2>&1 || true
+            if [ "${minimizerVariant}" = "0rteip" ]; then
+              ${minimizerCommand} ${minimizerOrteipAppId} >/dev/null 2>&1 || true
+            else
+              ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
+              ${minimizerCommand} >/dev/null 2>&1 || true
+            fi
             exit 0
           fi
           sleep 0.2
