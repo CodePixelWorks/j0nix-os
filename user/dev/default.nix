@@ -93,13 +93,7 @@ let
   mkSshMatchBlocks = name: sshProfile:
     let
       host = sshProfile.host or name;
-      explicitAliases = sshProfile.aliases or [ ];
-      hostIsPattern = (builtins.match ".*[\\*\\?].*" host) != null;
-      aliases =
-        lib.unique (
-          lib.optionals (!(sshProfile ? match) && !hostIsPattern && name != host) [ name ]
-          ++ explicitAliases
-        );
+      aliases = sshProfile.aliases or [ ];
       resolvedIdentityFile =
         if sshProfile ? identityKey then
           let
@@ -137,16 +131,14 @@ let
           match = sshProfile.match;
         }
         // lib.filterAttrs (key: _: builtins.elem key supportedSshProfileKeys) sshProfile;
-      mkBlock = attrName: hostPattern: {
+      mkBlock = attrName: {
         name = attrName;
-        value = commonValue // lib.optionalAttrs (!(sshProfile ? match)) {
-          host = hostPattern;
-        };
+        value = commonValue;
       };
     in
     [
-      (mkBlock name host)
-    ] ++ map (alias: mkBlock "${name}-alias-${alias}" alias) aliases;
+      (mkBlock name)
+    ] ++ map mkBlock aliases;
   loadSecretBackedSshKeysScript =
     let
       loadKey = name: spec:
