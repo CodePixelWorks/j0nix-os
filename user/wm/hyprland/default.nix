@@ -68,6 +68,17 @@ let
     if minimizerIsDenis then "${minimizerCommand} --restore-last" else minimizerToggleCommand;
   minimizerMenuCommand =
     if minimizerIsDenis then "${minimizerCommand} --menu" else minimizerToggleCommand;
+  keepassCfg = ((settings.programs or { }).keepassxc or { });
+  keepassEnabled = keepassCfg.enable or false;
+  keepassWorkspaceCfg = keepassCfg.workspace or { };
+  keepassWorkspaceEnable = keepassWorkspaceCfg.enable or true;
+  keepassWorkspaceMode = keepassWorkspaceCfg.mode or (if minimizerEnabled then "minimizer" else "special-workspace");
+  keepassWorkspaceName = keepassWorkspaceCfg.name or "keepass";
+  keepassToggleBind = keepassWorkspaceCfg.toggleBind or "$mainMod CTRL, p";
+  keepassSpecialWorkspaceWindowRule =
+    lib.optional
+      (keepassEnabled && keepassWorkspaceEnable && keepassWorkspaceMode == "special-workspace")
+      "workspace special:${keepassWorkspaceName}, class:^(KeePassXC)$";
   preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
@@ -197,6 +208,9 @@ let
     "$mainMod SHIFT, q, exit,"
     "CTRL SHIFT, Print, exec, wm-screenshot-area"
   ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind ++ dmsOverviewRemoteToggleBind
+    ++ lib.optionals (keepassEnabled && keepassWorkspaceEnable) [
+      "${keepassToggleBind}, exec, keepassxc-toggle"
+    ]
     ++ lib.optionals minimizerEnabled [
       "${minimizerToggleBind}, exec, ${minimizerToggleCommand}"
       "${minimizerRestoreBind}, exec, ${minimizerRestoreCommand}"
@@ -344,14 +358,6 @@ let
     else
       "";
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
-  minimizerOrteipConfigText = ''
-    [apps.${minimizerOrteipAppId}]
-    name = "KeePassXC"
-    class = "KeePassXC"
-    command = ["${config.home.profileDirectory}/bin/keepassxc-startup"]
-    launch_in_background = true
-  '';
-
   # `exec-once` is used for both direct Hyprland sessions and UWSM-managed sessions.
   shellStartupCommand = if selectedShell == "none" then null else "wm-shell-start";
 in {
@@ -428,7 +434,7 @@ in {
         disable_splash_rendering = true;
       };
 
-      windowrule = defaultFloatWindowRules;
+      windowrule = defaultFloatWindowRules ++ keepassSpecialWorkspaceWindowRule;
 
       bind =
         if isCaelestiaShell then [ ] else effectiveBindLists.bind;
@@ -442,11 +448,6 @@ in {
     };
 
   };
-
-  xdg.configFile."hyprland-minimizer/config.toml" = lib.mkIf (minimizerEnabled && minimizerIsOrteip) {
-    text = minimizerOrteipConfigText;
-  };
-
   xdg.configFile."hypr/hyprland.conf".force = true;
 
   assertions = [
