@@ -6,7 +6,7 @@ in
 {
   j0nix.desktop.network = {
     hostName = profileMeta.hostname;
-    networkmanager.enable = true;
+    networkmanager.enable = network.networkmanager.enable or true;
     wifiManagerGui = {
       enable = network.wifiManagerGui.enable or true;
       desktopEntry.enable = network.wifiManagerGui.desktopEntry.enable or true;
