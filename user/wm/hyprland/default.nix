@@ -114,6 +114,10 @@ let
       "$mainMod CTRL, Backslash, centerwindow, 1"
     ];
     binde = [
+      "$mainMod ALT, h, resizeactive, -60 0"
+      "$mainMod ALT, j, resizeactive, 0 60"
+      "$mainMod ALT, k, resizeactive, 0 -60"
+      "$mainMod ALT, l, resizeactive, 60 0"
       "$mainMod, minus, splitratio, -0.1"
       "$mainMod, equal, splitratio, 0.1"
       "$mainMod, Page_Up, workspace, -1"
