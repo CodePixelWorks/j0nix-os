@@ -5,7 +5,21 @@ let
   minimizerCfg = hyprlandCfg.minimizer or { };
   minimizerEnabled = minimizerCfg.enable or false;
   minimizerVariant = minimizerCfg.variant or "denis";
-  minimizerCommand = minimizerCfg.command or "hyprland-minimizer";
+  minimizerPackage =
+    if minimizerVariant == "0rteip" then
+      if pkgs ? "hyprland-minimizer-orteip" then pkgs."hyprland-minimizer-orteip" else null
+    else if pkgs ? "hyprland-minimizer" then
+      pkgs."hyprland-minimizer"
+    else
+      null;
+  minimizerDefaultCommand =
+    if minimizerPackage != null then
+      lib.getExe minimizerPackage
+    else if minimizerVariant == "0rteip" then
+      "hyprland_minimizer"
+    else
+      "hyprland-minimizer";
+  minimizerCommand = minimizerCfg.command or minimizerDefaultCommand;
   minimizerOrteipCfg = minimizerCfg.orteip or { };
   minimizerOrteipAppId = minimizerOrteipCfg.appId or "keepassxc";
   enabled = cfg.enable or false;
