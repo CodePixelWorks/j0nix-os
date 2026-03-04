@@ -38,7 +38,18 @@ let
   hyprlandDebug = hyprlandCfg.debug or { };
   minimizerCfg = hyprlandCfg.minimizer or { };
   minimizerEnabled = minimizerCfg.enable or false;
+  minimizerVariant = minimizerCfg.variant or "denis";
+  minimizerIsDenis = minimizerVariant == "denis";
+  minimizerIsOrteip = minimizerVariant == "0rteip";
   minimizerCommand = minimizerCfg.command or "hyprland-minimizer";
+  minimizerOrteipCfg = minimizerCfg.orteip or { };
+  minimizerOrteipAppId = minimizerOrteipCfg.appId or "keepassxc";
+  minimizerToggleCommand =
+    if minimizerIsOrteip then "${minimizerCommand} ${minimizerOrteipAppId}" else minimizerCommand;
+  minimizerRestoreCommand =
+    if minimizerIsDenis then "${minimizerCommand} --restore-last" else minimizerToggleCommand;
+  minimizerMenuCommand =
+    if minimizerIsDenis then "${minimizerCommand} --menu" else minimizerToggleCommand;
   minimizerPackage = if pkgs ? "hyprland-minimizer" then pkgs."hyprland-minimizer" else null;
   preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
@@ -170,9 +181,9 @@ let
     "CTRL SHIFT, Print, exec, wm-screenshot-area"
   ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind ++ dmsOverviewRemoteToggleBind
     ++ lib.optionals minimizerEnabled [
-      "$mainMod ALT, m, exec, ${minimizerCommand}"
-      "$mainMod ALT SHIFT, m, exec, ${minimizerCommand} --restore-last"
-      "$mainMod ALT, c, exec, ${minimizerCommand} --menu"
+      "$mainMod ALT, m, exec, ${minimizerToggleCommand}"
+      "$mainMod ALT SHIFT, m, exec, ${minimizerRestoreCommand}"
+      "$mainMod ALT, c, exec, ${minimizerMenuCommand}"
     ];
   shellHyprKeybinds =
     if isCaelestiaShell then
@@ -316,6 +327,13 @@ let
     else
       "";
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
+  minimizerOrteipConfigText = ''
+    [apps.${minimizerOrteipAppId}]
+    name = "KeePassXC"
+    class = "KeePassXC"
+    command = ["${config.home.profileDirectory}/bin/keepassxc-startup"]
+    launch_in_background = true
+  '';
 
   # `exec-once` is used for both direct Hyprland sessions and UWSM-managed sessions.
   shellStartupCommand = if selectedShell == "none" then null else "wm-shell-start";
@@ -408,6 +426,10 @@ in {
 
   };
 
+  xdg.configFile."hyprland-minimizer/config.toml" = lib.mkIf (minimizerEnabled && minimizerIsOrteip) {
+    text = minimizerOrteipConfigText;
+  };
+
   xdg.configFile."hypr/hyprland.conf".force = true;
 
   assertions = [
@@ -426,6 +448,14 @@ in {
     {
       assertion = !minimizerEnabled || minimizerCommand != "";
       message = "settings.hyprland.minimizer.command must not be empty when minimizer is enabled.";
+    }
+    {
+      assertion = builtins.elem minimizerVariant [ "denis" "0rteip" ];
+      message = "settings.hyprland.minimizer.variant must be one of: denis, 0rteip";
+    }
+    {
+      assertion = !minimizerEnabled || minimizerOrteipAppId != "";
+      message = "settings.hyprland.minimizer.orteip.appId must not be empty when minimizer is enabled.";
     }
   ];
 }
