@@ -4,6 +4,7 @@ let
   allowedShells = [ "zsh" "fish" ];
   shellForUser = username: cfg.userShells.${username} or cfg.defaultShell;
   resolvedShells = map shellForUser cfg.users;
+  hmServiceNames = map (username: "home-manager-${username}") cfg.users;
   useZsh = builtins.elem "zsh" resolvedShells;
   useFish = builtins.elem "fish" resolvedShells;
 in
@@ -53,6 +54,12 @@ in
       extraGroups =
         cfg.baseExtraGroups
         ++ lib.optionals (builtins.elem username cfg.dockerUsers) [ "docker" ];
+    });
+
+    # HM activation scripts call `systemctl`; make it available inside the
+    # generated home-manager-<user> systemd service environment.
+    systemd.services = lib.genAttrs hmServiceNames (_: {
+      path = [ pkgs.systemd ];
     });
 
     assertions = [
