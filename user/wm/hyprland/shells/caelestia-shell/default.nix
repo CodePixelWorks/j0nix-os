@@ -167,6 +167,10 @@ let
           name = "Manual Theme";
           command = [ "caelestia-smart-theme" "disable" ];
         }
+        {
+          name = "Passwords";
+          command = [ "keepassxc-toggle" ];
+        }
       ];
     };
     session = {
