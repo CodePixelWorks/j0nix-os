@@ -36,6 +36,10 @@ let
   remoteWorkspaceMoveBinds = map (pair: "CTRL SHIFT ALT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
   hyprlandCfg = settings.hyprland or { };
   hyprlandDebug = hyprlandCfg.debug or { };
+  minimizerCfg = hyprlandCfg.minimizer or { };
+  minimizerEnabled = minimizerCfg.enable or false;
+  minimizerCommand = minimizerCfg.command or "hyprland-minimizer";
+  minimizerPackage = if pkgs ? "hyprland-minimizer" then pkgs."hyprland-minimizer" else null;
   preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
@@ -164,7 +168,12 @@ let
     "CTRL ALT, c, centerwindow, 1"
     "$mainMod SHIFT, q, exit,"
     "CTRL SHIFT, Print, exec, wm-screenshot-area"
-  ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind ++ dmsOverviewRemoteToggleBind;
+  ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind ++ dmsOverviewRemoteToggleBind
+    ++ lib.optionals minimizerEnabled [
+      "$mainMod ALT, m, exec, ${minimizerCommand}"
+      "$mainMod ALT SHIFT, m, exec, ${minimizerCommand} --restore-last"
+      "$mainMod ALT, c, exec, ${minimizerCommand} --menu"
+    ];
   shellHyprKeybinds =
     if isCaelestiaShell then
       {
@@ -319,7 +328,9 @@ in {
     slurp
     swappy
     playerctl
-  ] ++ lib.optional (installRawQuickshell && (pkgs ? quickshell)) pkgs.quickshell;
+  ]
+  ++ lib.optional (installRawQuickshell && (pkgs ? quickshell)) pkgs.quickshell
+  ++ lib.optionals (minimizerEnabled && minimizerPackage != null) [ minimizerPackage ];
 
   wayland.windowManager.hyprland = {
     enable = true;
@@ -411,6 +422,10 @@ in {
     {
       assertion = builtins.elem appExecBackend [ "app2unit" "uwsm" ];
       message = "settings.hyprland.appExecBackend must be one of: app2unit, uwsm";
+    }
+    {
+      assertion = !minimizerEnabled || minimizerCommand != "";
+      message = "settings.hyprland.minimizer.command must not be empty when minimizer is enabled.";
     }
   ];
 }

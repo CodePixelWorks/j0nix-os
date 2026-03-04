@@ -1,9 +1,14 @@
 { config, lib, pkgs, settings, ... }:
 let
   cfg = (settings.programs or { }).keepassxc or { };
+  hyprlandCfg = settings.hyprland or { };
+  minimizerCfg = hyprlandCfg.minimizer or { };
+  minimizerEnabled = minimizerCfg.enable or false;
+  minimizerCommand = minimizerCfg.command or "hyprland-minimizer";
   enabled = cfg.enable or false;
   autoStart = cfg.autoStart or false;
   startMinimized = cfg.startMinimized or true;
+  effectiveStartMinimized = startMinimized && !minimizerEnabled;
   databasePath = cfg.databasePath or null;
   keyFileSecretName = cfg.keyFileSecretName or null;
   keyFileTargetName = cfg.keyFileTargetName or "startup.key";
@@ -17,8 +22,20 @@ let
   keyFilePath = "${config.xdg.configHome}/keepassxc/keys/${keyFileTargetName}";
   startupScript = pkgs.writeShellScriptBin "keepassxc-startup" ''
     set -eu
+    if [ "${if minimizerEnabled then "1" else "0"}" = "1" ]; then
+      (
+        for _ in $(seq 1 50); do
+          if ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e '.[] | select(.class=="KeePassXC")' >/dev/null 2>&1; then
+            ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
+            ${minimizerCommand} >/dev/null 2>&1 || true
+            exit 0
+          fi
+          sleep 0.2
+        done
+      ) &
+    fi
     exec ${lib.escapeShellArg "${pkgs.keepassxc}/bin/keepassxc"} \
-      ${lib.optionalString startMinimized "--minimized"} \
+      ${lib.optionalString effectiveStartMinimized "--minimized"} \
       ${lib.optionalString (keyFileSecretPath != null) "--keyfile ${lib.escapeShellArg keyFilePath}"} \
       ${lib.optionalString (databasePath != null) (lib.escapeShellArg databasePath)}
   '';
