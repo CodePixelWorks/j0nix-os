@@ -5,10 +5,6 @@
   inputs,
   ...
 }:
-let
-  hmUsers = builtins.attrNames (settings.userSettings or { });
-  hmServiceNames = map (username: "home-manager-${username}") hmUsers;
-in
 {
   imports = [
     ./hardware-configuration.nix
@@ -69,12 +65,6 @@ in
 
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [ stdenv.cc.cc ];
-
-  # Home Manager activation uses `systemctl`; ensure it is always available in
-  # the unit PATH even in restricted service environments.
-  systemd.services = lib.genAttrs hmServiceNames (_: {
-    path = [ pkgs.systemd ];
-  });
 
   assertions = [
   ];
