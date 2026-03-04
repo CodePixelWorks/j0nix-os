@@ -3,28 +3,54 @@ let
   dev = settings.dev or { };
   enabled = dev.enable or true;
   userOverrides = settings.userSettings or { };
+  allUsers = builtins.attrNames userOverrides;
   dockerCfg = dev.docker or { };
   dockerUsers =
     lib.filter
       (name: ((((userOverrides.${name} or { }).dev or { }).docker or { }).enable or false))
-      (builtins.attrNames userOverrides);
+      allUsers;
   dockerEnabled = dockerUsers != [ ];
   ai = dev.ai or { };
   aiUsers =
     lib.filter
       (name: ((((userOverrides.${name} or { }).dev or { }).ai or { }).enable or false))
-      (builtins.attrNames userOverrides);
+      allUsers;
   aiEnabled = aiUsers != [ ];
   aiInstallScope = ai.installScope or "system"; # "system" | "user"
   codex = import ./codex.nix { inherit inputs lib pkgs settings; };
   codexEnabled = codex.enabled;
-  sshCfg = dev.ssh or { };
-  sshEnabled = sshCfg.enable or true;
-  sshAgent = sshCfg.agent or { };
+  sshUsers =
+    lib.filter
+      (name: ((((userOverrides.${name} or { }).dev or { }).ssh or { }).enable or false))
+      allUsers;
+  sshEnabled = sshUsers != [ ];
+  sshUsersNeedingKeyring =
+    lib.filter
+      (name:
+        let
+          sshCfg = (((userOverrides.${name} or { }).dev or { }).ssh or { });
+          agent = sshCfg.agent or { };
+          provider = agent.provider or "openssh";
+          keyring = sshCfg.keyring or { };
+        in
+        (keyring.enable or false) || provider == "gnome-keyring")
+      sshUsers;
+  sshAgentProviders = lib.unique (map
+    (name:
+      let
+        sshCfg = (((userOverrides.${name} or { }).dev or { }).ssh or { });
+        agent = sshCfg.agent or { };
+      in
+      agent.provider or "openssh")
+    sshUsers);
+  sshAgentProvider =
+    if sshAgentProviders == [ ] then
+      "openssh"
+    else
+      builtins.head sshAgentProviders;
+  sshAgent = { provider = sshAgentProvider; };
   sshAgentEnable = sshAgent.enable or true;
-  sshAgentProvider = sshAgent.provider or "openssh"; # "openssh" | "gnome-keyring" | "none"
-  keyring = sshCfg.keyring or { };
-  keyringEnable = keyring.enable or false;
+  keyringEnable = sshUsersNeedingKeyring != [ ];
   geminiEnabled = ai.gemini or true;
   hasGeminiPackage = pkgs ? gemini-cli;
   geminiLauncher = pkgs.writeShellScriptBin "gemini-launcher" ''
@@ -89,11 +115,11 @@ lib.mkIf enabled {
     }
     {
       assertion = builtins.elem sshAgentProvider [ "openssh" "gnome-keyring" "none" ];
-      message = "settings.dev.ssh.agent.provider must be one of: openssh, gnome-keyring, none";
+      message = "settings.userSettings.<name>.dev.ssh.agent.provider must be one of: openssh, gnome-keyring, none";
     }
     {
-      assertion = (sshAgentProvider != "gnome-keyring") || keyringEnable;
-      message = "settings.dev.ssh.agent.provider=gnome-keyring requires settings.dev.ssh.keyring.enable=true";
+      assertion = builtins.length sshAgentProviders <= 1;
+      message = "All enabled settings.userSettings.<name>.dev.ssh.agent.provider values must agree. Mixed SSH agent providers are not supported.";
     }
     {
       assertion = (!aiEnabled) || (!geminiEnabled) || hasGeminiPackage;
