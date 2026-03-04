@@ -4,8 +4,6 @@ let
   customSysctl = custom.sysctl or { };
 in
 {
-  j0nix.software.systemPackages = custom.systemPackages or [ ];
-
   j0nix.desktop.sysctl.extraFragments =
     lib.optional (customSysctl != { }) customSysctl;
 }
