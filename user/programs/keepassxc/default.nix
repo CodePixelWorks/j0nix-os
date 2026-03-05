@@ -71,7 +71,15 @@ let
   startupScript = pkgs.writeShellScriptBin "keepassxc-startup" ''
     set -eu
 
-    if ${pkgs.procps}/bin/pgrep -u "$(${pkgs.coreutils}/bin/id -u)" -x keepassxc >/dev/null 2>&1; then
+    export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+    lock_file="$XDG_RUNTIME_DIR/keepassxc-startup.lock"
+    exec 9>"$lock_file"
+    if ! ${pkgs.util-linux}/bin/flock -n 9; then
+      # Another startup/toggle path is already launching KeePassXC.
+      exit 0
+    fi
+
+    if ${pkgs.procps}/bin/pgrep -u "$(${pkgs.coreutils}/bin/id -u)" -f '/keepassxc($| )|/.keepassxc-wrapped($| )' >/dev/null 2>&1; then
       exit 0
     fi
 
@@ -151,6 +159,8 @@ let
     hyprctl_bin="${pkgs.hyprland}/bin/hyprctl"
     jq_bin="${pkgs.jq}/bin/jq"
     startup_bin="${config.home.profileDirectory}/bin/keepassxc-startup"
+    pgrep_bin="${pkgs.procps}/bin/pgrep"
+    id_bin="${pkgs.coreutils}/bin/id"
 
     if [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
       exec "$startup_bin"
@@ -158,6 +168,10 @@ let
 
     has_client() {
       "$hyprctl_bin" clients -j | "$jq_bin" -e '.[] | select((.class=="KeePassXC") or (.initialClass=="KeePassXC"))' >/dev/null 2>&1
+    }
+
+    has_process() {
+      "$pgrep_bin" -u "$("$id_bin" -u)" -f '/keepassxc($| )|/.keepassxc-wrapped($| )' >/dev/null 2>&1
     }
 
     if [ "${if workspaceEnable && workspaceMode == "minimizer" then "1" else "0"}" = "1" ] && [ "${if minimizerEnabled then "1" else "0"}" = "1" ]; then
@@ -168,7 +182,7 @@ let
       fi
     fi
 
-    if ! has_client; then
+    if ! has_client && ! has_process; then
       "$startup_bin" >/dev/null 2>&1 &
       for _ in $(seq 1 80); do
         has_client && break
