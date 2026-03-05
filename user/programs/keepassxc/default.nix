@@ -71,6 +71,10 @@ let
   startupScript = pkgs.writeShellScriptBin "keepassxc-startup" ''
     set -eu
 
+    if ${pkgs.procps}/bin/pgrep -u "$(${pkgs.coreutils}/bin/id -u)" -x keepassxc >/dev/null 2>&1; then
+      exit 0
+    fi
+
     launch_keepassxc() {
       if [ "${if autoUnlockMode == "strict" then "1" else "0"}" = "1" ]; then
         exec ${keepassxcBin} ${lib.optionalString effectiveStartMinimized "--minimized"}
@@ -107,6 +111,19 @@ let
 
       eval "exec ${keepassxcBin} $keepass_args"
     }
+
+    if [ "${if workspaceEnable && workspaceMode == "special-workspace" then "1" else "0"}" = "1" ]; then
+      (
+        for _ in $(seq 1 80); do
+          if ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e '.[] | select((.class=="KeePassXC") or (.initialClass=="KeePassXC"))' >/dev/null 2>&1; then
+            ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
+            ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspacesilent "special:${workspaceName}" >/dev/null 2>&1 || true
+            exit 0
+          fi
+          sleep 0.1
+        done
+      ) &
+    fi
 
     if [ "${if minimizerEnabled then "1" else "0"}" = "1" ]; then
       (
@@ -159,6 +176,8 @@ let
       done
     fi
 
+    "$hyprctl_bin" dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
+    "$hyprctl_bin" dispatch movetoworkspacesilent ${lib.escapeShellArg "special:${workspaceName}"} >/dev/null 2>&1 || true
     "$hyprctl_bin" dispatch togglespecialworkspace ${lib.escapeShellArg workspaceName} >/dev/null 2>&1 || true
     "$hyprctl_bin" dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
   '';
@@ -251,7 +270,7 @@ lib.mkIf enabled {
     Service = {
       Type = "simple";
       ExecStart = "${config.home.profileDirectory}/bin/keepassxc-startup";
-      Restart = "on-failure";
+      Restart = "on-abnormal";
       RestartSec = 2;
     };
     Install.WantedBy = [ "graphical-session.target" ];
