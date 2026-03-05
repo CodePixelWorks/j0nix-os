@@ -75,10 +75,6 @@ let
   keepassWorkspaceMode = keepassWorkspaceCfg.mode or (if minimizerEnabled then "minimizer" else "special-workspace");
   keepassWorkspaceName = keepassWorkspaceCfg.name or "keepass";
   keepassToggleBind = keepassWorkspaceCfg.toggleBind or "$mainMod CTRL, p";
-  keepassSpecialWorkspaceWindowRule =
-    lib.optional
-      (keepassEnabled && keepassWorkspaceEnable && keepassWorkspaceMode == "special-workspace")
-      "match:class ^(KeePassXC)$, workspace special:${keepassWorkspaceName}";
   preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
@@ -434,7 +430,7 @@ in {
         disable_splash_rendering = true;
       };
 
-      windowrule = defaultFloatWindowRules ++ keepassSpecialWorkspaceWindowRule;
+      windowrule = defaultFloatWindowRules;
 
       bind =
         if isCaelestiaShell then [ ] else effectiveBindLists.bind;
