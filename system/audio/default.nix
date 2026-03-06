@@ -4,6 +4,7 @@ let
   audioBackend = cfg.backend;
   usePipeWire = audioBackend == "pipewire";
   usePulseAudio = audioBackend == "pulseaudio";
+  preventInterfaceSuspend = cfg.preventInterfaceSuspend;
   enableHiFiCodecs = cfg.bluetooth.enableHiFiCodecs;
   enableMsbc = cfg.bluetooth.enableMsbc;
   bluetoothCodecs = cfg.bluetooth.codecs;
@@ -14,6 +15,12 @@ in
     backend = lib.mkOption {
       type = lib.types.enum [ "pipewire" "pulseaudio" ];
       default = "pipewire";
+    };
+
+    preventInterfaceSuspend = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Disable PipeWire/WirePlumber idle suspend for ALSA devices to avoid interface flapping.";
     };
 
     bluetooth = {
@@ -50,24 +57,45 @@ in
 
     security.rtkit.enable = true;
 
-    services.pipewire.wireplumber.extraConfig = lib.mkIf (usePipeWire && enableHiFiCodecs) {
-      "51-bluez-codecs" = {
-        "monitor.bluez.properties" = {
-          "bluez5.codecs" = bluetoothCodecs;
-          "bluez5.enable-msbc" = enableMsbc;
-          "bluez5.enable-sbc-xq" = builtins.elem "sbc_xq" bluetoothCodecs;
-          "bluez5.enable-hw-volume" = true;
-          "bluez5.roles" = [
-            "hsp_hs"
-            "hsp_ag"
-            "hfp_hf"
-            "hfp_ag"
-            "a2dp_sink"
-            "a2dp_source"
+    services.pipewire.wireplumber.extraConfig = lib.mkMerge [
+      (lib.mkIf (usePipeWire && preventInterfaceSuspend) {
+        "50-alsa-no-suspend" = {
+          "monitor.alsa.rules" = [
+            {
+              matches = [
+                {
+                  "node.name" = "~alsa_(input|output).*";
+                }
+              ];
+              actions = {
+                update-props = {
+                  "session.suspend-timeout-seconds" = 0;
+                  "node.pause-on-idle" = false;
+                };
+              };
+            }
           ];
         };
-      };
-    };
+      })
+      (lib.mkIf (usePipeWire && enableHiFiCodecs) {
+        "51-bluez-codecs" = {
+          "monitor.bluez.properties" = {
+            "bluez5.codecs" = bluetoothCodecs;
+            "bluez5.enable-msbc" = enableMsbc;
+            "bluez5.enable-sbc-xq" = builtins.elem "sbc_xq" bluetoothCodecs;
+            "bluez5.enable-hw-volume" = true;
+            "bluez5.roles" = [
+              "hsp_hs"
+              "hsp_ag"
+              "hfp_hf"
+              "hfp_ag"
+              "a2dp_sink"
+              "a2dp_source"
+            ];
+          };
+        };
+      })
+    ];
 
     services.pulseaudio = {
       enable = usePulseAudio;
