@@ -11,6 +11,7 @@ Driver stack controlled by `settings.drivers.*`.
 - `nvidia-prime-drivers.nix`: PRIME offload settings
 - `vm-guest-services.nix`: guest integrations (QEMU/SPICE/VMware)
 - `local-hardware-clock.nix`: RTC local-time toggle
+- `support.nix`: support drivers and host-specific hardware stabilizers (e.g. IT87, USB keep-awake rules)
 
 ## Notes
 
