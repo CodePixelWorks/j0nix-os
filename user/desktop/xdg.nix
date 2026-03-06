@@ -20,6 +20,39 @@ let
     else
       null;
   preferredFileManagerDesktopId = fileManagerDesktopId preferredFileManager;
+  # Krita ships many mime-specific launcher files (krita_png.desktop, ...).
+  # Hide those helpers from "Open With" and keep only org.kde.krita.desktop visible.
+  kritaMimeHelperDesktopEntries = [
+    "krita_brush"
+    "krita_csv"
+    "krita_exr"
+    "krita_gif"
+    "krita_heif"
+    "krita_heightmap"
+    "krita_jp2"
+    "krita_jpeg"
+    "krita_jxl"
+    "krita_kra"
+    "krita_krz"
+    "krita_ora"
+    "krita_pdf"
+    "krita_png"
+    "krita_psd"
+    "krita_qimageio"
+    "krita_spriter"
+    "krita_svg"
+    "krita_tga"
+    "krita_tiff"
+    "krita_webp"
+    "krita_xcf"
+  ];
+  kritaMimeHelperOverrides = lib.genAttrs kritaMimeHelperDesktopEntries (entry: {
+    name = "Krita Internal Handler (${entry})";
+    noDisplay = true;
+    terminal = false;
+    type = "Application";
+    exec = "false";
+  });
 in
 {
   xdg.enable = true;
@@ -50,6 +83,7 @@ in
       BOOK = "${config.home.homeDirectory}/Media/Books";
     };
   };
+  xdg.desktopEntries = kritaMimeHelperOverrides;
 
   assertions = [
     {
