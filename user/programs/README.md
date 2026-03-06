@@ -19,6 +19,7 @@ Program toggles should be wired through `settings.programs.*`.
 - optional preferred runner pin (`runner = "kron4ek-wine-11.2-amd64"`)
 - automatic bottle initialization (`bottles-cli new`) for first use
 - optional auto-bootstrap service on login (`autoBootstrapOnLogin = true`)
+- periodic retry timer (`winexe-bottle-bootstrap.timer`) to ensure the default bottle is eventually created
 - optional suppression of Bottles sandbox warning popup (`removeWarningPopup = true`)
 - `winexe-run <file.exe|file.msi>` helper
 - optional default MIME handler for `.exe`/`.msi` style payloads
