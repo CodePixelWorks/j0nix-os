@@ -23,6 +23,7 @@ Program toggles should be wired through `settings.programs.*`.
 - optional default MIME handler for `.exe`/`.msi` style payloads
 
 Note: Bottles component downloads are runtime/user-state operations and are not part of deterministic Nix build steps.
+`winexe-run` executes via `wine` against the managed Bottles prefix (`WINEPREFIX=~/.local/share/bottles/bottles/<name>`) to avoid ShellExecute path issues.
 
 `KeePassXC` is user-scoped via `settings.userSettings.<name>.programs.keepassxc.*` and supports:
 - optional autostart
