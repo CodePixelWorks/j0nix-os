@@ -16,6 +16,7 @@ Program toggles should be wired through `settings.programs.*`.
 
 `Windows EXE` integration is configured via `settings.programs.windowsExe.*` and provides:
 - a managed default Bottles bottle (`winexe-prefix-init`)
+- optional preferred runner pin (`runner = "kron4ek-wine-11.2-amd64"`)
 - automatic bottle initialization (`bottles-cli new`) for first use
 - optional auto-bootstrap service on login (`autoBootstrapOnLogin = true`)
 - optional suppression of Bottles sandbox warning popup (`removeWarningPopup = true`)
@@ -23,7 +24,7 @@ Program toggles should be wired through `settings.programs.*`.
 - optional default MIME handler for `.exe`/`.msi` style payloads
 
 Note: Bottles component downloads are runtime/user-state operations and are not part of deterministic Nix build steps.
-`winexe-run` executes via `wine` against the managed Bottles prefix (`WINEPREFIX=~/.local/share/bottles/bottles/<name>`) to avoid ShellExecute path issues.
+`winexe-run` executes against the managed Bottles prefix (`WINEPREFIX=~/.local/share/bottles/bottles/<name>`), prefers the configured Bottles runner binary when available, and falls back to system `wine`.
 
 `KeePassXC` is user-scoped via `settings.userSettings.<name>.programs.keepassxc.*` and supports:
 - optional autostart
