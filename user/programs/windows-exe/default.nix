@@ -7,6 +7,13 @@ let
   bottleEnvironment = cfg.environment or "application";
   autoBootstrapOnLogin = cfg.autoBootstrapOnLogin or true;
   removeWarningPopup = cfg.removeWarningPopup or true;
+  winePackage =
+    if (pkgs ? wineWow64Packages) && (pkgs.wineWow64Packages ? waylandFull) then
+      pkgs.wineWow64Packages.waylandFull
+    else if (pkgs ? wineWow64Packages) && (pkgs.wineWow64Packages ? full) then
+      pkgs.wineWow64Packages.full
+    else
+      pkgs.wineWowPackages.full;
 
   winexeMimeTypes = [
     "application/x-ms-dos-executable"
@@ -53,7 +60,7 @@ let
 
   runScript = pkgs.writeShellApplication {
     name = "winexe-run";
-    runtimeInputs = [ bottleInitScript pkgs.bottles pkgs.coreutils ];
+    runtimeInputs = [ bottleInitScript winePackage pkgs.coreutils ];
     text = ''
       set -eu
 
@@ -73,22 +80,16 @@ let
       target="$(${pkgs.coreutils}/bin/readlink -f "$target")"
       bottle_name="''${WINEXE_BOTTLE_NAME:-${bottleName}}"
       winexe-prefix-init
-
-      cmd=""
+      bottle_prefix="''${XDG_DATA_HOME:-$HOME/.local/share}/bottles/bottles/$bottle_name"
+      export WINEPREFIX="$bottle_prefix"
       case "$target" in
         *.msi|*.MSI)
-          cmd="msiexec /i $(printf '%q' "$target")"
+          exec wine msiexec /i "$target" "$@"
           ;;
         *)
-          cmd="wine $(printf '%q' "$target")"
+          exec wine "$target" "$@"
           ;;
       esac
-
-      for arg in "$@"; do
-        cmd="$cmd $(printf '%q' "$arg")"
-      done
-
-      exec bottles-cli shell --bottle "$bottle_name" --input "$cmd"
     '';
   };
 
@@ -107,6 +108,7 @@ in
 lib.mkIf enabled {
   j0nix.user.software.packages = [
     pkgs.bottles
+    winePackage
     bottleInitScript
     runScript
   ];
