@@ -61,34 +61,32 @@ let
         wineserver -w >/dev/null 2>&1 || true
       fi
 
-      if [ "${if bootstrapEnable then "1" else "0"}" != "1" ]; then
-        exit 0
-      fi
-
-      if [ $# -gt 0 ]; then
-        verbs="$*"
-      else
-        verbs="${lib.concatStringsSep " " bootstrapVerbs}"
-      fi
-
-      for verb in $verbs; do
-        marker_name="$(printf '%s' "$verb" | tr '/ :=' '____')"
-        marker="$marker_dir/$marker_name.done"
-
-        if [ -f "$marker" ]; then
-          continue
-        fi
-
-        echo "Installing winetricks verb: $verb"
-        if WINETRICKS_LATEST_VERSION_CHECK=disabled winetricks -q "$verb"; then
-          touch "$marker"
+      ${if bootstrapEnable then ''
+        if [ $# -gt 0 ]; then
+          verbs="$*"
         else
-          echo "warning: winetricks verb failed: $verb" >&2
-          if [ "${if bootstrapStrict then "1" else "0"}" = "1" ]; then
-            exit 1
-          fi
+          verbs="${lib.concatStringsSep " " bootstrapVerbs}"
         fi
-      done
+
+        for verb in $verbs; do
+          marker_name="$(printf '%s' "$verb" | tr '/ :=' '____')"
+          marker="$marker_dir/$marker_name.done"
+
+          if [ -f "$marker" ]; then
+            continue
+          fi
+
+          echo "Installing winetricks verb: $verb"
+          if WINETRICKS_LATEST_VERSION_CHECK=disabled winetricks -q "$verb"; then
+            touch "$marker"
+          else
+            echo "warning: winetricks verb failed: $verb" >&2
+            ${if bootstrapStrict then "exit 1" else "true"}
+          fi
+        done
+      '' else ''
+        exit 0
+      ''}
     '';
   };
 
