@@ -9,7 +9,9 @@
     };
 
     usb.keepAwake = {
-      enable = true;
+      # Disabled by default: on this host the USB hub resets are hardware-level
+      # and forcing keep-awake can increase bus load and worsen instability.
+      enable = false;
       devices = [
         # GenesysLogic USB 2.1 hub that repeatedly drops and re-enumerates.
         "05e3:0610"
