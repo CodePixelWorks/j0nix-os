@@ -58,7 +58,8 @@
       };
       profileName = "desktop";
       profileDir = baseDir + "/profiles/${profileName}";
-      profileMeta = import (profileDir + "/meta.nix");
+      profileDetails = import (profileDir + "/details.nix") { };
+      profileMeta = profileDetails;
       profileSecrets = import (profileDir + "/secrets.nix");
       rawSettings = import (baseDir + "/settings.nix") { inherit inputs; };
 
@@ -70,7 +71,7 @@
 
       settings = rawSettings // {
         secrets = (rawSettings.secrets or { }) // profileSecrets;
-        profileDetails = import (profileDir + "/details.nix") { };
+        inherit profileDetails;
         themeDetails = import (baseDir + "/themes/${rawSettings.theme}.nix") { inherit pkgs; };
       };
 
@@ -124,7 +125,7 @@
               resolvedDefaultWMS;
         in
         merged // {
-          profileDetails = import (profileDir + "/details.nix") { };
+          inherit profileDetails;
           secrets = (baseSettings.secrets or { }) // {
             user = userSecretOverride;
           };
