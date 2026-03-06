@@ -34,16 +34,17 @@ let
       fi
 
       echo "Initializing Bottles bottle '$bottle_name' (environment: $bottle_env)"
-      if bottles-cli new -b "$bottle_name" -e "$bottle_env" >/dev/null 2>&1; then
+      bottles-cli new --bottle-name "$bottle_name" --environment "$bottle_env" >/dev/null 2>&1 || true
+
+      # bottles-cli may return success even when component bootstrap failed.
+      if [ -d "$bottle_dir" ]; then
         exit 0
       fi
 
-      if bottles-cli new --bottle "$bottle_name" --environment "$bottle_env" >/dev/null 2>&1; then
-        exit 0
-      fi
-
-      echo "warning: could not create bottle via CLI automatically." >&2
-      echo "Open Bottles once and create bottle '$bottle_name', then retry." >&2
+      echo "error: Bottles konnte die Bottle '$bottle_name' nicht anlegen." >&2
+      echo "Grund meist: fehlende Bottles-Komponenten (Runner/DXVK/VKD3D)." >&2
+      echo "Bitte einmal Bottles GUI starten und Komponenten installieren," >&2
+      echo "danach erneut ausfuehren." >&2
       exit 1
     '';
   };
@@ -64,7 +65,7 @@ let
 
       bottle_name="''${WINEXE_BOTTLE_NAME:-${bottleName}}"
       winexe-prefix-init
-      exec bottles-cli run -b "$bottle_name" -e "$target"
+      exec bottles-cli run --bottle "$bottle_name" --executable "$target" "$@"
     '';
   };
 in
