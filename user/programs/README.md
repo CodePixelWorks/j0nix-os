@@ -9,9 +9,16 @@ Common user program configs shared across shells/WMs.
 - `betterdiscord/default.nix`
 - `fastfetch/default.nix`
 - `keepassxc/default.nix`
+- `windows-exe/default.nix`
 - `wlogout/default.nix`
 
 Program toggles should be wired through `settings.programs.*`.
+
+`Windows EXE` integration is configured via `settings.programs.windowsExe.*` and provides:
+- a managed default Wine prefix (`winexe-prefix-init`)
+- optional one-time bootstrap via winetricks verbs (`corefonts`, `vcrun2022`, `dxvk`, `win10` by default)
+- `winexe-run <file.exe|file.msi>` helper
+- optional default MIME handler for `.exe`/`.msi` style payloads
 
 `KeePassXC` is user-scoped via `settings.userSettings.<name>.programs.keepassxc.*` and supports:
 - optional autostart
