@@ -17,8 +17,11 @@ Program toggles should be wired through `settings.programs.*`.
 `Windows EXE` integration is configured via `settings.programs.windowsExe.*` and provides:
 - a managed default Bottles bottle (`winexe-prefix-init`)
 - automatic bottle initialization (`bottles-cli new`) for first use
+- optional auto-bootstrap service on login (`autoBootstrapOnLogin = true`)
 - `winexe-run <file.exe|file.msi>` helper
 - optional default MIME handler for `.exe`/`.msi` style payloads
+
+Note: Bottles component downloads are runtime/user-state operations and are not part of deterministic Nix build steps.
 
 `KeePassXC` is user-scoped via `settings.userSettings.<name>.programs.keepassxc.*` and supports:
 - optional autostart
