@@ -6,6 +6,7 @@ let
   bottleName = cfg.bottleName or "Default";
   bottleEnvironment = cfg.environment or "application";
   autoBootstrapOnLogin = cfg.autoBootstrapOnLogin or true;
+  removeWarningPopup = cfg.removeWarningPopup or true;
 
   winexeMimeTypes = [
     "application/x-ms-dos-executable"
@@ -102,6 +103,12 @@ lib.mkIf enabled {
 
   xdg.mimeApps.defaultApplications = lib.mkIf setAsDefaultHandler winexeDefaultMimeApps;
 
+  dconf.settings = lib.mkIf removeWarningPopup {
+    "com/usebottles/bottles" = {
+      show-sandbox-warning = false;
+    };
+  };
+
   systemd.user.services.winexe-bottle-bootstrap = lib.mkIf autoBootstrapOnLogin {
     Unit = {
       Description = "Initialize default Bottles bottle for Windows EXE support";
@@ -133,6 +140,10 @@ lib.mkIf enabled {
     {
       assertion = builtins.isBool autoBootstrapOnLogin;
       message = "settings.programs.windowsExe.autoBootstrapOnLogin must be a boolean";
+    }
+    {
+      assertion = builtins.isBool removeWarningPopup;
+      message = "settings.programs.windowsExe.removeWarningPopup must be a boolean";
     }
   ];
 }
