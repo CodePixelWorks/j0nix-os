@@ -18,6 +18,11 @@
       "vhost_vsock"
     ];
 
+    kernelParams = [
+      # Avoid USB runtime autosuspend glitches (audio interfaces / HID devices re-enumerating).
+      "usbcore.autosuspend=-1"
+    ];
+
     modprobeOptions = {
       # USB Bluetooth adapters/controllers can become unreliable after autosuspend.
       btusb.enable_autosuspend = 0;
