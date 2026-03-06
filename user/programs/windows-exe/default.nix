@@ -8,13 +8,6 @@ let
   preferredRunner = cfg.runner or null;
   autoBootstrapOnLogin = cfg.autoBootstrapOnLogin or true;
   removeWarningPopup = cfg.removeWarningPopup or true;
-  winePackage =
-    if (pkgs ? wineWow64Packages) && (pkgs.wineWow64Packages ? waylandFull) then
-      pkgs.wineWow64Packages.waylandFull
-    else if (pkgs ? wineWow64Packages) && (pkgs.wineWow64Packages ? full) then
-      pkgs.wineWow64Packages.full
-    else
-      pkgs.wineWowPackages.full;
 
   winexeMimeTypes = [
     "application/x-ms-dos-executable"
@@ -66,7 +59,7 @@ let
 
   runScript = pkgs.writeShellApplication {
     name = "winexe-run";
-    runtimeInputs = [ bottleInitScript winePackage pkgs.coreutils ];
+    runtimeInputs = [ bottleInitScript pkgs.bottles pkgs.coreutils ];
     text = ''
       set -eu
 
@@ -85,39 +78,8 @@ let
 
       target="$(${pkgs.coreutils}/bin/readlink -f "$target")"
       bottle_name="''${WINEXE_BOTTLE_NAME:-${bottleName}}"
-      preferred_runner="''${WINEXE_BOTTLE_RUNNER:-${if preferredRunner != null then preferredRunner else ""}}"
       winexe-prefix-init
-      bottle_prefix="''${XDG_DATA_HOME:-$HOME/.local/share}/bottles/bottles/$bottle_name"
-      bottle_cfg="$bottle_prefix/bottle.yml"
-      bottles_runners_root="''${XDG_DATA_HOME:-$HOME/.local/share}/bottles/runners"
-      export WINEPREFIX="$bottle_prefix"
-
-      configured_runner=""
-      if [ -f "$bottle_cfg" ]; then
-        configured_runner="$(sed -n 's/^Runner:[[:space:]]*//p' "$bottle_cfg" | head -n 1)"
-      fi
-      effective_runner="''${configured_runner:-$preferred_runner}"
-
-      wine_cmd="wine"
-      msiexec_cmd=""
-      if [ -n "$effective_runner" ] && [ -x "$bottles_runners_root/$effective_runner/bin/wine" ]; then
-        wine_cmd="$bottles_runners_root/$effective_runner/bin/wine"
-        if [ -x "$bottles_runners_root/$effective_runner/bin/msiexec" ]; then
-          msiexec_cmd="$bottles_runners_root/$effective_runner/bin/msiexec"
-        fi
-      fi
-
-      case "$target" in
-        *.msi|*.MSI)
-          if [ -n "$msiexec_cmd" ]; then
-            exec "$msiexec_cmd" /i "$target" "$@"
-          fi
-          exec "$wine_cmd" msiexec /i "$target" "$@"
-          ;;
-        *)
-          exec "$wine_cmd" "$target" "$@"
-          ;;
-      esac
+      exec bottles-cli run --bottle "$bottle_name" --executable "$target" "$@"
     '';
   };
 
@@ -136,7 +98,6 @@ in
 lib.mkIf enabled {
   j0nix.user.software.packages = [
     pkgs.bottles
-    winePackage
     bottleInitScript
     runScript
   ];
