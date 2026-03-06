@@ -5,6 +5,7 @@ let
   setAsDefaultHandler = cfg.setAsDefaultHandler or true;
   bottleName = cfg.bottleName or "Default";
   bottleEnvironment = cfg.environment or "application";
+  preferredRunner = cfg.runner or null;
   autoBootstrapOnLogin = cfg.autoBootstrapOnLogin or true;
   removeWarningPopup = cfg.removeWarningPopup or true;
   winePackage =
@@ -35,6 +36,7 @@ let
 
       bottle_name="''${WINEXE_BOTTLE_NAME:-${bottleName}}"
       bottle_env="''${WINEXE_BOTTLE_ENV:-${bottleEnvironment}}"
+      runner_name="''${WINEXE_BOTTLE_RUNNER:-${if preferredRunner != null then preferredRunner else ""}}"
       bottles_root="''${XDG_DATA_HOME:-$HOME/.local/share}/bottles/bottles"
       bottle_dir="$bottles_root/$bottle_name"
 
@@ -43,7 +45,11 @@ let
       fi
 
       echo "Initializing Bottles bottle '$bottle_name' (environment: $bottle_env)"
-      bottles-cli new --bottle-name "$bottle_name" --environment "$bottle_env" >/dev/null 2>&1 || true
+      runner_args=()
+      if [ -n "$runner_name" ] && [ -x "''${XDG_DATA_HOME:-$HOME/.local/share}/bottles/runners/$runner_name/bin/wine" ]; then
+        runner_args=(--runner "$runner_name")
+      fi
+      bottles-cli new --bottle-name "$bottle_name" --environment "$bottle_env" "''${runner_args[@]}" >/dev/null 2>&1 || true
 
       # bottles-cli may return success even when component bootstrap failed.
       if [ -d "$bottle_dir" ]; then
@@ -79,15 +85,37 @@ let
 
       target="$(${pkgs.coreutils}/bin/readlink -f "$target")"
       bottle_name="''${WINEXE_BOTTLE_NAME:-${bottleName}}"
+      preferred_runner="''${WINEXE_BOTTLE_RUNNER:-${if preferredRunner != null then preferredRunner else ""}}"
       winexe-prefix-init
       bottle_prefix="''${XDG_DATA_HOME:-$HOME/.local/share}/bottles/bottles/$bottle_name"
+      bottle_cfg="$bottle_prefix/bottle.yml"
+      bottles_runners_root="''${XDG_DATA_HOME:-$HOME/.local/share}/bottles/runners"
       export WINEPREFIX="$bottle_prefix"
+
+      configured_runner=""
+      if [ -f "$bottle_cfg" ]; then
+        configured_runner="$(sed -n 's/^Runner:[[:space:]]*//p' "$bottle_cfg" | head -n 1)"
+      fi
+      effective_runner="''${configured_runner:-$preferred_runner}"
+
+      wine_cmd="wine"
+      msiexec_cmd=""
+      if [ -n "$effective_runner" ] && [ -x "$bottles_runners_root/$effective_runner/bin/wine" ]; then
+        wine_cmd="$bottles_runners_root/$effective_runner/bin/wine"
+        if [ -x "$bottles_runners_root/$effective_runner/bin/msiexec" ]; then
+          msiexec_cmd="$bottles_runners_root/$effective_runner/bin/msiexec"
+        fi
+      fi
+
       case "$target" in
         *.msi|*.MSI)
-          exec wine msiexec /i "$target" "$@"
+          if [ -n "$msiexec_cmd" ]; then
+            exec "$msiexec_cmd" /i "$target" "$@"
+          fi
+          exec "$wine_cmd" msiexec /i "$target" "$@"
           ;;
         *)
-          exec wine "$target" "$@"
+          exec "$wine_cmd" "$target" "$@"
           ;;
       esac
     '';
@@ -159,6 +187,10 @@ lib.mkIf enabled {
     {
       assertion = builtins.elem bottleEnvironment [ "application" "gaming" "custom" ];
       message = "settings.programs.windowsExe.environment must be one of: application, gaming, custom";
+    }
+    {
+      assertion = preferredRunner == null || (builtins.isString preferredRunner && preferredRunner != "");
+      message = "settings.programs.windowsExe.runner must be null or a non-empty string";
     }
     {
       assertion = builtins.isBool autoBootstrapOnLogin;
