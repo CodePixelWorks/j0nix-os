@@ -69,7 +69,12 @@ let
     fi
   '';
 in
-lib.mkIf enabled {
+{
+  imports = [
+    ./nix-ld.nix
+  ];
+
+  config = lib.mkIf enabled {
   virtualisation.docker = lib.mkIf dockerEnabled {
     enable = true;
     enableOnBoot = true;
@@ -144,4 +149,5 @@ lib.mkIf enabled {
       message = "Each settings.dev.docker.addressPools entry must be an attrset with string `base` and int `size`.";
     }
   ];
+  };
 }
