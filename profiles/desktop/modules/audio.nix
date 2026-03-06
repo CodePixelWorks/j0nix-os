@@ -14,6 +14,7 @@ in
 {
   j0nix.desktop.audio = {
     backend = audio.backend or "pipewire";
+    preventInterfaceSuspend = audio.preventInterfaceSuspend or true;
     bluetooth = {
       enableHiFiCodecs = audioBt.enableHiFiCodecs or true;
       enableMsbc = audioBt.enableMsbc or true;
