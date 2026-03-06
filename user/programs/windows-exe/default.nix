@@ -65,9 +65,30 @@ let
       target="$1"
       shift || true
 
+      if [ ! -e "$target" ]; then
+        echo "error: Datei nicht gefunden: $target" >&2
+        exit 1
+      fi
+
+      target="$(${pkgs.coreutils}/bin/readlink -f "$target")"
       bottle_name="''${WINEXE_BOTTLE_NAME:-${bottleName}}"
       winexe-prefix-init
-      exec bottles-cli run --bottle "$bottle_name" --executable "$target" "$@"
+
+      cmd=""
+      case "$target" in
+        *.msi|*.MSI)
+          cmd="msiexec /i $(printf '%q' "$target")"
+          ;;
+        *)
+          cmd="wine $(printf '%q' "$target")"
+          ;;
+      esac
+
+      for arg in "$@"; do
+        cmd="$cmd $(printf '%q' "$arg")"
+      done
+
+      exec bottles-cli shell --bottle "$bottle_name" --input "$cmd"
     '';
   };
 
