@@ -15,8 +15,8 @@ Common user program configs shared across shells/WMs.
 Program toggles should be wired through `settings.programs.*`.
 
 `Windows EXE` integration is configured via `settings.programs.windowsExe.*` and provides:
-- a managed default Wine prefix (`winexe-prefix-init`)
-- optional one-time bootstrap via winetricks verbs (`corefonts`, `vcrun2022`, `dxvk`, `win10` by default)
+- a managed default Bottles bottle (`winexe-prefix-init`)
+- automatic bottle initialization (`bottles-cli new`) for first use
 - `winexe-run <file.exe|file.msi>` helper
 - optional default MIME handler for `.exe`/`.msi` style payloads
 
