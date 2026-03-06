@@ -60,6 +60,7 @@ in
       eza
       bat
       fd
+      file
       ripgrep
       tree
       jq
