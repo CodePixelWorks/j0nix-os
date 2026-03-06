@@ -7,6 +7,7 @@
     ./fastfetch
     ./fusion360
     ./keepassxc
+    ./windows-exe
     ./wlogout
   ];
 }
