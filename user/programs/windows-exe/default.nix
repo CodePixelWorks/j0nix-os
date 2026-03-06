@@ -175,6 +175,23 @@ lib.mkIf enabled {
     };
   };
 
+  # Keep retrying in the background until the default bottle exists.
+  # Once created, winexe-prefix-init returns immediately.
+  systemd.user.timers.winexe-bottle-bootstrap = lib.mkIf autoBootstrapOnLogin {
+    Unit = {
+      Description = "Periodic bootstrap for default Bottles bottle";
+    };
+    Timer = {
+      OnBootSec = "2m";
+      OnUnitActiveSec = "30m";
+      Unit = "winexe-bottle-bootstrap.service";
+      Persistent = true;
+    };
+    Install = {
+      WantedBy = [ "timers.target" ];
+    };
+  };
+
   assertions = [
     {
       assertion = builtins.isBool enabled;
