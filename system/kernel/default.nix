@@ -20,6 +20,12 @@ in
       description = "Additional kernel modules to load on boot.";
     };
 
+    kernelParams = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional kernel command-line parameters.";
+    };
+
     modprobeOptions = lib.mkOption {
       type = lib.types.attrsOf (lib.types.attrsOf (lib.types.oneOf [
         lib.types.bool
@@ -40,6 +46,7 @@ in
     boot.kernelPackages = preset.mkKernelPackages pkgs;
 
     boot.kernelModules = lib.mkAfter (lib.unique cfg.modules);
+    boot.kernelParams = lib.mkAfter (lib.unique cfg.kernelParams);
 
     boot.extraModprobeConfig =
       lib.mkIf hasModprobeOptions (lib.mkAfter (modprobe.fromAttrset cfg.modprobeOptions));
