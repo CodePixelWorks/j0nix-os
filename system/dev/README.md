@@ -13,3 +13,4 @@ Also manages:
 - SSH agent provider selection (`settings.userSettings.<name>.dev.ssh.agent.provider`)
 - OpenSSH agent startup (`provider = "openssh"`)
 - GNOME keyring service (`settings.userSettings.<name>.dev.ssh.keyring.enable` or `provider = "gnome-keyring"`)
+- Nix dynamic loader compatibility (`settings.dev.nixLd.enable`)
