@@ -87,6 +87,7 @@ in
       rustc
       openvpn
       unzip
+      p7zip
       android-tools
       xdg-utils
     ])
