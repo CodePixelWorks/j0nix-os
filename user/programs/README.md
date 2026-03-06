@@ -18,6 +18,7 @@ Program toggles should be wired through `settings.programs.*`.
 - a managed default Bottles bottle (`winexe-prefix-init`)
 - automatic bottle initialization (`bottles-cli new`) for first use
 - optional auto-bootstrap service on login (`autoBootstrapOnLogin = true`)
+- optional suppression of Bottles sandbox warning popup (`removeWarningPopup = true`)
 - `winexe-run <file.exe|file.msi>` helper
 - optional default MIME handler for `.exe`/`.msi` style payloads
 
