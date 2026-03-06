@@ -5,6 +5,7 @@ let
   setAsDefaultHandler = cfg.setAsDefaultHandler or true;
   bottleName = cfg.bottleName or "Default";
   bottleEnvironment = cfg.environment or "application";
+  autoBootstrapOnLogin = cfg.autoBootstrapOnLogin or true;
 
   winexeMimeTypes = [
     "application/x-ms-dos-executable"
@@ -68,6 +69,18 @@ let
       exec bottles-cli run --bottle "$bottle_name" --executable "$target" "$@"
     '';
   };
+
+  bootstrapServiceScript = pkgs.writeShellApplication {
+    name = "winexe-bootstrap-on-login";
+    runtimeInputs = [ bottleInitScript pkgs.coreutils ];
+    text = ''
+      set -eu
+      if ! winexe-prefix-init; then
+        echo "warning: windows-exe bootstrap skipped (Bottle/Komponenten fehlen)." >&2
+      fi
+      exit 0
+    '';
+  };
 in
 lib.mkIf enabled {
   j0nix.user.software.packages = [
@@ -89,6 +102,21 @@ lib.mkIf enabled {
 
   xdg.mimeApps.defaultApplications = lib.mkIf setAsDefaultHandler winexeDefaultMimeApps;
 
+  systemd.user.services.winexe-bottle-bootstrap = lib.mkIf autoBootstrapOnLogin {
+    Unit = {
+      Description = "Initialize default Bottles bottle for Windows EXE support";
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${lib.getExe bootstrapServiceScript}";
+    };
+    Install = {
+      WantedBy = [ "default.target" ];
+    };
+  };
+
   assertions = [
     {
       assertion = builtins.isBool enabled;
@@ -101,6 +129,10 @@ lib.mkIf enabled {
     {
       assertion = builtins.elem bottleEnvironment [ "application" "gaming" "custom" ];
       message = "settings.programs.windowsExe.environment must be one of: application, gaming, custom";
+    }
+    {
+      assertion = builtins.isBool autoBootstrapOnLogin;
+      message = "settings.programs.windowsExe.autoBootstrapOnLogin must be a boolean";
     }
   ];
 }
