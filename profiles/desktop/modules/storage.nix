@@ -58,14 +58,23 @@ let
     };
   hasUidOption = opts: builtins.any (opt: lib.hasPrefix "uid=" opt) opts;
   hasGidOption = opts: builtins.any (opt: lib.hasPrefix "gid=" opt) opts;
+  hasMaskOption = opts:
+    builtins.any
+      (opt:
+        (lib.hasPrefix "umask=" opt)
+        || (lib.hasPrefix "fmask=" opt)
+        || (lib.hasPrefix "dmask=" opt))
+      opts;
   enrichSystemMount = mount:
     let
       mountFsType = mount.fsType or "";
       mountOptions = mount.options or [ ];
+      isNtfs = builtins.elem mountFsType [ "ntfs3" "ntfs" ];
       addNtfsOwnerDefaults =
-        builtins.elem mountFsType [ "ntfs3" "ntfs" ]
+        isNtfs
         && (!hasUidOption mountOptions)
         && (!hasGidOption mountOptions);
+      addNtfsMaskDefaults = isNtfs && (!hasMaskOption mountOptions);
     in
     mount // {
       options =
@@ -73,6 +82,10 @@ let
         ++ lib.optionals addNtfsOwnerDefaults [
           "uid=0"
           "gid=${toString usersGroupGid}"
+        ]
+        ++ lib.optionals addNtfsMaskDefaults [
+          # Group-writable so all normal users in group `users` can write.
+          "umask=0002"
         ];
     };
 in
