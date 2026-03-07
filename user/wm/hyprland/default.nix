@@ -122,6 +122,27 @@ let
     "match:class ^(BambuStudio)$, float 1, center 0"
     "match:title ^(bambu-studio)$, float 1, center 0"
   ];
+  additionalWindowRules = [
+    # Terminal TUIs: keep nmtui readable and centered.
+    "match:class ^(foot)$, match:title ^(nmtui)$, float 1, size 60% 70%, center 1"
+
+    # Larger settings dialogs benefit from a predictable size.
+    "match:class ^(org\\.gnome\\.Settings)$, float 1, size 70% 80%, center 1"
+    "match:class ^(org\\.pulseaudio\\.pavucontrol|pavucontrol|yad-icon-browser)$, float 1, size 60% 70%, center 1"
+    "match:class ^(nwg-look)$, float 1, size 50% 60%, center 1"
+
+    # Picture-in-picture windows: keep them floating, pinned and ratio-safe.
+    "match:title ^(Picture(-| )in(-| )[Pp]icture)$, float 1, pin 1, keep_aspect_ratio 1, move 100%-w-2% 100%-h-3%"
+
+    # Steam friends list should behave like a utility window.
+    "match:class ^(steam)$, match:title ^(Friends List)$, float 1, center 1"
+
+    # Hide blur artefacts in Fusion overlays.
+    "match:class ^(fusion360\\.exe)$, match:title ^(Fusion360|(Marking Menu))$, no_blur 1"
+
+    # Ueberzugpp helper surfaces should not steal focus.
+    "match:class ^(ueberzugpp_.*)$, float 1, no_initial_focus 1"
+  ];
   hasValue = value: value != null && value != "";
   keyboardLayoutToggleBind =
     lib.optional (hasValue layoutToggleBind) "${layoutToggleBind}, exec, wm-kbd-layout-toggle";
@@ -430,7 +451,7 @@ in {
         disable_splash_rendering = true;
       };
 
-      windowrule = defaultFloatWindowRules;
+      windowrule = defaultFloatWindowRules ++ additionalWindowRules;
 
       bind =
         if isCaelestiaShell then [ ] else effectiveBindLists.bind;
