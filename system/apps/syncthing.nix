@@ -37,8 +37,11 @@ let
       "/home/${serviceUser}";
   guiAddress = syncthingCfg.guiAddress or "127.0.0.1:8384";
   guiPasswordSecretName = syncthingCfg.guiPasswordSecretName or null;
+  hasGuiPasswordSecret =
+    guiPasswordSecretName != null
+    && lib.hasAttrByPath [ guiPasswordSecretName ] (config.sops.secrets or { });
   guiPasswordFile =
-    if guiPasswordSecretName != null then
+    if hasGuiPasswordSecret then
       config.sops.secrets.${guiPasswordSecretName}.path
     else
       (syncthingCfg.guiPasswordFile or null);
@@ -50,6 +53,10 @@ let
   folders = syncthingCfg.folders or { };
 in
 lib.mkIf enabled {
+  warnings = lib.optional
+    (guiPasswordSecretName != null && !hasGuiPasswordSecret && (syncthingCfg.guiPasswordFile or null) == null)
+    "Syncthing guiPasswordSecretName='${guiPasswordSecretName}' is not available in system sops.secrets. Set services-level secret via settings.secrets.system.<name> or provide settings.userSettings.<name>.programs.syncthing.guiPasswordFile.";
+
   systemd.services.syncthing.environment.STNODEFAULTFOLDER = "true";
 
   services.syncthing = {
