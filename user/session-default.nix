@@ -1,5 +1,7 @@
 { lib, settings, ... }:
 let
+  resolveEnabledWms = import ../system/lib/enabled-wms.nix { inherit lib; };
+  enabledWms = resolveEnabledWms settings;
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   defaultWMS = settings.defaultWMS or null;
   defaultSession =
@@ -13,11 +15,11 @@ let
         "mangowc"
       else if defaultWMS == "niri" then
         "niri"
-      else if builtins.elem "hyprland" (settings.wms or [ ]) then
+      else if builtins.elem "hyprland" enabledWms then
         (if useUWSM then "hyprland-uwsm" else "hyprland")
-      else if builtins.elem "niri" (settings.wms or [ ]) then
+      else if builtins.elem "niri" enabledWms then
         "niri"
-      else if builtins.elem "gnome" (settings.wms or [ ]) then
+      else if builtins.elem "gnome" enabledWms then
         "gnome"
       else
         null

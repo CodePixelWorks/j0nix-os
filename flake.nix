@@ -210,10 +210,6 @@
                 message = "userSettings.<name>.defaultWMS must be one of: hyprland, gnome, mangowc, niri";
               }
               {
-                assertion = builtins.elem userSettings.defaultWMS settings.wms;
-                message = "userSettings.<name>.defaultWMS must also be present in global settings.wms";
-              }
-              {
                 assertion = !(userSettings._userOverride ? wms);
                 message = "Per-user wm list is deprecated. Use userSettings.<name>.defaultWMS only.";
               }
