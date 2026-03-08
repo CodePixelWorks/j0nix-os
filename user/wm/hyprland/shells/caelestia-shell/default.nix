@@ -600,6 +600,28 @@ EOF
           fi
         fi
 
+        # Preserve QML/plugin import roots baked into the packaged caelestia-shell wrapper.
+        # Upstream quickshell runtime bypasses that wrapper, so we need to forward these paths.
+        if [ -x "${caelestiaShellPkg}/bin/caelestia-shell" ]; then
+          for qml_path in $(${pkgs.binutils}/bin/strings ${lib.escapeShellArg "${caelestiaShellPkg}/bin/caelestia-shell"} | ${pkgs.gnugrep}/bin/grep -E '/lib/qt-6/qml$' || true); do
+            case ":''${NIXPKGS_QT6_QML_IMPORT_PATH:-}:" in
+              *":$qml_path:"*) ;;
+              *)
+                export NIXPKGS_QT6_QML_IMPORT_PATH="''${NIXPKGS_QT6_QML_IMPORT_PATH:+''${NIXPKGS_QT6_QML_IMPORT_PATH}:}$qml_path"
+                ;;
+            esac
+          done
+
+          for plugin_path in $(${pkgs.binutils}/bin/strings ${lib.escapeShellArg "${caelestiaShellPkg}/bin/caelestia-shell"} | ${pkgs.gnugrep}/bin/grep -E '/lib/qt-6/plugins$' || true); do
+            case ":''${QT_PLUGIN_PATH:-}:" in
+              *":$plugin_path:"*) ;;
+              *)
+                export QT_PLUGIN_PATH="''${QT_PLUGIN_PATH:+''${QT_PLUGIN_PATH}:}$plugin_path"
+                ;;
+            esac
+          done
+        fi
+
         exec ${lib.getExe upstreamQuickshellPkg} -p ${lib.escapeShellArg "${caelestiaShellPkg}/share/caelestia-shell"} "$@"
       '')
     else
