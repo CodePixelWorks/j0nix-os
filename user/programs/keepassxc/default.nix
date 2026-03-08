@@ -29,6 +29,8 @@ let
   workspaceEnable = workspaceCfg.enable or true;
   workspaceMode = workspaceCfg.mode or (if minimizerEnabled then "minimizer" else "special-workspace");
   workspaceName = workspaceCfg.name or "keepass";
+  workspaceUsesSpecial = workspaceEnable && workspaceMode == "special-workspace";
+  workspaceUsesMinimizer = workspaceEnable && workspaceMode == "minimizer";
 
   autoUnlockCfg = cfg.autoUnlock or { };
   autoUnlockMode = autoUnlockCfg.mode or "strict";
@@ -62,7 +64,6 @@ let
 
   keyFilePath = "${config.xdg.configHome}/keepassxc/keys/${keyFileTargetName}";
   keepassxcBin = "${pkgs.keepassxc}/bin/keepassxc";
-  databasePathArg = if databasePath != null then lib.escapeShellArg databasePath else "";
 
   keyringCfg = ((settings.dev or { }).ssh or { }).keyring or { };
   sshAgentCfg = ((settings.dev or { }).ssh or { }).agent or { };
@@ -72,6 +73,14 @@ let
     set -eu
 
     export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+    db_path=${lib.escapeShellArg (if databasePath != null then databasePath else "")}
+    keepass_client_filter='
+      .[]
+      | select(
+          ((.class // "") | test("keepassxc"; "i"))
+          or ((.initialClass // "") | test("keepassxc"; "i"))
+        )
+    '
     lock_file="$XDG_RUNTIME_DIR/keepassxc-startup.lock"
     exec 9>"$lock_file"
     if ! ${pkgs.util-linux}/bin/flock -n 9; then
@@ -79,52 +88,85 @@ let
       exit 0
     fi
 
-    if ${pkgs.procps}/bin/pgrep -u "$(${pkgs.coreutils}/bin/id -u)" -f '/keepassxc($| )|/.keepassxc-wrapped($| )' >/dev/null 2>&1; then
+    has_client() {
+      [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] \
+        && ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e "$keepass_client_filter" >/dev/null 2>&1
+    }
+
+    has_process() {
+      ${pkgs.procps}/bin/pgrep -u "$(${pkgs.coreutils}/bin/id -u)" -f '/keepassxc($| )|/.keepassxc-wrapped($| )' >/dev/null 2>&1
+    }
+
+    if has_client; then
       exit 0
     fi
 
     launch_keepassxc() {
+      if has_process; then
+        if [ -n "$db_path" ]; then
+          if [ "${if keyFileSecretPath != null then "1" else "0"}" = "1" ]; then
+            exec ${keepassxcBin} --keyfile ${lib.escapeShellArg keyFilePath} "$db_path"
+          fi
+          exec ${keepassxcBin} "$db_path"
+        fi
+        exec ${keepassxcBin}
+      fi
+
       if [ "${if autoUnlockMode == "strict" then "1" else "0"}" = "1" ]; then
         exec ${keepassxcBin} ${lib.optionalString effectiveStartMinimized "--minimized"}
       fi
 
-      if [ -z ${lib.escapeShellArg (if databasePath != null then databasePath else "")} ]; then
+      if [ -z "$db_path" ]; then
         echo "warning: keepassxc.databasePath is unset; falling back to plain KeepassXC startup" >&2
         exec ${keepassxcBin} ${lib.optionalString effectiveStartMinimized "--minimized"}
       fi
 
-      keepass_args="${lib.optionalString effectiveStartMinimized "--minimized"} ${lib.optionalString (keyFileSecretPath != null) "--keyfile ${lib.escapeShellArg keyFilePath}"} ${databasePathArg}"
+      base_args=()
+      if [ "${if effectiveStartMinimized then "1" else "0"}" = "1" ]; then
+        base_args+=(--minimized)
+      fi
+      if [ "${if keyFileSecretPath != null then "1" else "0"}" = "1" ]; then
+        base_args+=(--keyfile ${lib.escapeShellArg keyFilePath})
+      fi
+      base_args+=("$db_path")
 
       if [ "${if autoUnlockMode == "balanced" then "1" else "0"}" = "1" ]; then
-        eval "exec ${keepassxcBin} $keepass_args"
+        exec ${keepassxcBin} "''${base_args[@]}"
       fi
 
       if [ "${if autoUnlockMode == "convenient" then "1" else "0"}" = "1" ]; then
         db_password="$(${pkgs.libsecret}/bin/secret-tool lookup application keepassxc entry ${lib.escapeShellArg keyringEntry} 2>/dev/null || true)"
         if [ -z "$db_password" ]; then
           echo "warning: missing keyring entry for ${keyringEntry}; falling back to balanced mode" >&2
-          eval "exec ${keepassxcBin} $keepass_args"
+          exec ${keepassxcBin} "''${base_args[@]}"
         fi
-        printf '%s\n' "$db_password" | eval "exec ${keepassxcBin} --pw-stdin $keepass_args"
+        printf '%s\n' "$db_password" | exec ${keepassxcBin} --pw-stdin "''${base_args[@]}"
       fi
 
       if [ "${if autoUnlockMode == "full-auto" then "1" else "0"}" = "1" ]; then
-        db_password="$(tr -d '\n' < ${lib.escapeShellArg (if passwordSecretPath != null then passwordSecretPath else "")})"
+        db_password="$(${pkgs.libsecret}/bin/secret-tool lookup application keepassxc entry ${lib.escapeShellArg keyringEntry} 2>/dev/null || true)"
+        if [ -z "$db_password" ]; then
+          db_password="$(tr -d '\n' < ${lib.escapeShellArg (if passwordSecretPath != null then passwordSecretPath else "")})"
+        fi
         if [ -z "$db_password" ]; then
           echo "warning: empty keepass password secret; falling back to balanced mode" >&2
-          eval "exec ${keepassxcBin} $keepass_args"
+          exec ${keepassxcBin} "''${base_args[@]}"
         fi
-        printf '%s\n' "$db_password" | eval "exec ${keepassxcBin} --pw-stdin $keepass_args"
+        if [ "${if keyringSupported then "1" else "0"}" = "1" ]; then
+          printf '%s' "$db_password" | ${pkgs.libsecret}/bin/secret-tool store --label ${lib.escapeShellArg "KeePassXC ${keyringEntry}"} application keepassxc entry ${lib.escapeShellArg keyringEntry} >/dev/null 2>&1 || true
+        fi
+        printf '%s\n' "$db_password" | exec ${keepassxcBin} --pw-stdin "''${base_args[@]}"
       fi
 
-      eval "exec ${keepassxcBin} $keepass_args"
+      exec ${keepassxcBin} "''${base_args[@]}"
     }
 
-    if [ "${if workspaceEnable && workspaceMode == "special-workspace" then "1" else "0"}" = "1" ]; then
+    if [ "${if workspaceUsesSpecial then "1" else "0"}" = "1" ]; then
       (
         for _ in $(seq 1 80); do
-          if ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e '.[] | select((.class=="KeePassXC") or (.initialClass=="KeePassXC"))' >/dev/null 2>&1; then
+          if ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e "$keepass_client_filter" >/dev/null 2>&1; then
             ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
+            ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(org\\.keepassxc\\.KeePassXC)$" >/dev/null 2>&1 || true
             ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspacesilent "special:${workspaceName}" >/dev/null 2>&1 || true
             exit 0
           fi
@@ -133,14 +175,15 @@ let
       ) &
     fi
 
-    if [ "${if minimizerEnabled then "1" else "0"}" = "1" ]; then
+    if [ "${if workspaceUsesMinimizer && minimizerEnabled then "1" else "0"}" = "1" ]; then
       (
         for _ in $(seq 1 50); do
-          if ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e '.[] | select((.class=="KeePassXC") or (.initialClass=="KeePassXC"))' >/dev/null 2>&1; then
+          if ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e "$keepass_client_filter" >/dev/null 2>&1; then
             if [ "${minimizerVariant}" = "0rteip" ]; then
               ${minimizerCommand} ${minimizerOrteipAppId} >/dev/null 2>&1 || true
             else
               ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
+              ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(org\\.keepassxc\\.KeePassXC)$" >/dev/null 2>&1 || true
               ${minimizerCommand} >/dev/null 2>&1 || true
             fi
             exit 0
@@ -161,17 +204,30 @@ let
     startup_bin="${config.home.profileDirectory}/bin/keepassxc-startup"
     pgrep_bin="${pkgs.procps}/bin/pgrep"
     id_bin="${pkgs.coreutils}/bin/id"
+    keepass_client_filter='
+      .[]
+      | select(
+          ((.class // "") | test("keepassxc"; "i"))
+          or ((.initialClass // "") | test("keepassxc"; "i"))
+        )
+    '
 
     if [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
       exec "$startup_bin"
     fi
 
     has_client() {
-      "$hyprctl_bin" clients -j | "$jq_bin" -e '.[] | select((.class=="KeePassXC") or (.initialClass=="KeePassXC"))' >/dev/null 2>&1
+      "$hyprctl_bin" clients -j | "$jq_bin" -e "$keepass_client_filter" >/dev/null 2>&1
     }
 
     has_process() {
       "$pgrep_bin" -u "$("$id_bin" -u)" -f '/keepassxc($| )|/.keepassxc-wrapped($| )' >/dev/null 2>&1
+    }
+
+    focus_keepass() {
+      "$hyprctl_bin" dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 \
+        || "$hyprctl_bin" dispatch focuswindow "class:^(org\\.keepassxc\\.KeePassXC)$" >/dev/null 2>&1 \
+        || true
     }
 
     if [ "${if workspaceEnable && workspaceMode == "minimizer" then "1" else "0"}" = "1" ] && [ "${if minimizerEnabled then "1" else "0"}" = "1" ]; then
@@ -182,7 +238,7 @@ let
       fi
     fi
 
-    if ! has_client && ! has_process; then
+    if ! has_client; then
       "$startup_bin" >/dev/null 2>&1 &
       for _ in $(seq 1 80); do
         has_client && break
@@ -190,10 +246,14 @@ let
       done
     fi
 
-    "$hyprctl_bin" dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
+    if ! has_client && has_process; then
+      "$startup_bin" >/dev/null 2>&1 || true
+    fi
+
+    focus_keepass
     "$hyprctl_bin" dispatch movetoworkspacesilent ${lib.escapeShellArg "special:${workspaceName}"} >/dev/null 2>&1 || true
     "$hyprctl_bin" dispatch togglespecialworkspace ${lib.escapeShellArg workspaceName} >/dev/null 2>&1 || true
-    "$hyprctl_bin" dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
+    focus_keepass
   '';
 
   doctorScript = pkgs.writeShellScriptBin "keepassxc-doctor" ''
