@@ -1,5 +1,6 @@
 { lib, pkgs, settings, ... }:
 let
+  resolveEnabledWms = import ../lib/enabled-wms.nix { inherit lib; };
   users = builtins.attrNames (settings.userSettings or { });
   hasUsers = users != [ ];
   primaryUser = if hasUsers then builtins.head users else "root";
@@ -8,7 +9,7 @@ let
   selectedDisplayManager = dm.resolveDisplayManager settings;
   useGreetd = selectedDisplayManager == "greetd";
   useSddm = selectedDisplayManager == "sddm";
-  useHyprlandModule = builtins.elem "hyprland" (settings.wms or [ ]);
+  useHyprlandModule = builtins.elem "hyprland" (resolveEnabledWms settings);
   manageOwnDisplayManager = !useHyprlandModule;
 
   niriStartScript = pkgs.writeShellScriptBin "start-niri" ''
