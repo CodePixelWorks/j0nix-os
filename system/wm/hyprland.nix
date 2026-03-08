@@ -1,10 +1,12 @@
 { inputs, pkgs, lib, settings, ... }:
 let
   dm = import ./display-manager/contract.nix { inherit lib; };
+  resolveEnabledWms = import ../lib/enabled-wms.nix { inherit lib; };
   greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
   users = builtins.attrNames (settings.userSettings or { });
   hasUsers = users != [ ];
   primaryUser = if hasUsers then builtins.head users else "root";
+  enabledWms = resolveEnabledWms settings;
   userOverrides = settings.userSettings or { };
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   hyprlandSessionName = if useUWSM then "hyprland-uwsm" else "hyprland";
@@ -66,12 +68,12 @@ let
   cursorSize = 24;
 
   greetdEnvironments =
-    [ "${hyprlandSessionName}.desktop" ]
+    [ "auto-wm-session.desktop" "${hyprlandSessionName}.desktop" ]
     ++ lib.optional useUWSM "hyprland.desktop"
     ++ lib.optional (!useUWSM) "hyprland-uwsm.desktop"
-    ++ lib.optional (builtins.elem "mangowc" settings.wms) "mangowc.desktop"
-    ++ lib.optional (builtins.elem "niri" settings.wms) "niri.desktop"
-    ++ lib.optional (builtins.elem "gnome" settings.wms) "gnome.desktop";
+    ++ lib.optional (builtins.elem "mangowc" enabledWms) "mangowc.desktop"
+    ++ lib.optional (builtins.elem "niri" enabledWms) "niri.desktop"
+    ++ lib.optional (builtins.elem "gnome" enabledWms) "gnome.desktop";
 
   regreetCommand =
     if regreetCompositor == "hyprland"
@@ -112,6 +114,19 @@ ${userCaseBranches}
       *) exec ${sessionCommandForWMS "hyprland"} ;;
     esac
   '';
+  autoWmSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/auto-wm-session.desktop" ''
+    [Desktop Entry]
+    Name=Auto (User Default)
+    Comment=Start the configured desktop for the authenticated user
+    TryExec=${lib.getExe autoWmScript}
+    Exec=${lib.getExe autoWmScript}
+    Type=Application
+    DesktopNames=auto-wm-session
+  '').overrideAttrs (old: {
+    passthru = (old.passthru or { }) // {
+      providedSessions = [ "auto-wm-session" ];
+    };
+  });
 in {
   imports =
     [
@@ -129,7 +144,9 @@ in {
   services.xserver.displayManager.gdm.enable = lib.mkIf useGdm true;
 
   services.displayManager.defaultSession = lib.mkIf useSddm hyprlandSessionName;
-  services.displayManager.sessionPackages = lib.optional (useGreetd && selectedGreetdGreeter == "dms-greeter" && useUWSM) hyprlandUwsmSessionPackage;
+  services.displayManager.sessionPackages =
+    lib.optionals useGreetd [ autoWmSessionPackage ]
+    ++ lib.optional (useGreetd && selectedGreetdGreeter == "dms-greeter" && useUWSM) hyprlandUwsmSessionPackage;
 
   services.greetd = lib.mkIf useGreetd {
     enable = true;
@@ -243,7 +260,7 @@ in {
   environment.etc."qmlgreet/qmlgreet.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet") {
     text = ''
       [General]
-      DefaultSession=
+      DefaultSession=auto-wm-session
 
       [Appearance]
       ColorScheme=${qmlgreetColorSchemePath}
