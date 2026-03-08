@@ -17,6 +17,20 @@ in
         "${lib.getExe pkgs.cage} -s -mlast -- ${lib.getExe regreetPackage}";
   };
 
+  qmlgreet = {
+    package,
+    compositor,
+    configPath,
+    hyprlandCommand ? null,
+  }: {
+    user = "greeter";
+    command =
+      if compositor == "hyprland" then
+        hyprlandCommand
+      else
+        "${lib.getExe pkgs.cage} -s -mlast -- ${lib.getExe package} -c ${lib.escapeShellArg configPath}";
+  };
+
   dmsGreeter = { command }: {
     user = "greeter";
     inherit command;
