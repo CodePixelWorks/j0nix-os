@@ -36,6 +36,63 @@ let
   remoteWorkspaceMoveBinds = map (pair: "CTRL SHIFT ALT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
   hyprlandCfg = settings.hyprland or { };
   hyprlandDebug = hyprlandCfg.debug or { };
+  keybindDiagnosticsCfg = hyprlandDebug.keybindDiagnostics or { };
+  keybindDiagnosticsEnable = keybindDiagnosticsCfg.enable or false;
+  keybindDiagnosticsDelaySeconds = keybindDiagnosticsCfg.delaySeconds or 8;
+  keybindDiagnosticsLogDir = keybindDiagnosticsCfg.logDir or "\${XDG_STATE_HOME:-$HOME/.local/state}/hyprland/diagnostics";
+  keybindDiagnosticsScript = pkgs.writeShellScriptBin "wm-hypr-keybind-dump" ''
+    set -eu
+
+    phase="''${1:-manual}"
+    case "$phase" in
+      --phase=*) phase="''${phase#--phase=}" ;;
+    esac
+
+    log_dir="${keybindDiagnosticsLogDir}"
+    mkdir -p "$log_dir"
+
+    ts="$(${pkgs.coreutils}/bin/date +%Y%m%d-%H%M%S)"
+    out_file="$log_dir/keybinds-$ts-$phase.log"
+
+    run_hyprctl() {
+      label="$1"
+      shift
+      echo
+      echo "## $label"
+      if command -v hyprctl >/dev/null 2>&1; then
+        hyprctl "$@" 2>&1 || true
+      else
+        echo "hyprctl not found in PATH"
+      fi
+    }
+
+    {
+      echo "# Hyprland keybind diagnostics"
+      echo "timestamp=$(${pkgs.coreutils}/bin/date --iso-8601=seconds)"
+      echo "phase=$phase"
+      echo "pid=$$"
+      echo "user=''${USER:-unknown}"
+      echo "uid=$(${pkgs.coreutils}/bin/id -u)"
+      echo "session_type=''${XDG_SESSION_TYPE:-}"
+      echo "session_class=''${XDG_SESSION_CLASS:-}"
+      echo "desktop=''${XDG_CURRENT_DESKTOP:-}"
+      echo "wayland_display=''${WAYLAND_DISPLAY:-}"
+      echo "hypr_instance=''${HYPRLAND_INSTANCE_SIGNATURE:-}"
+      echo "xdg_runtime_dir=''${XDG_RUNTIME_DIR:-}"
+      echo "path=$PATH"
+
+      run_hyprctl "version" version
+      run_hyprctl "instances" instances
+      run_hyprctl "activeworkspace" activeworkspace
+      run_hyprctl "configerrors" configerrors
+      run_hyprctl "globalshortcuts" globalshortcuts
+      run_hyprctl "binds" binds
+      run_hyprctl "devices" devices
+      run_hyprctl "layers" layers
+    } >"$out_file"
+
+    echo "$out_file"
+  '';
   minimizerCfg = hyprlandCfg.minimizer or { };
   minimizerEnabled = minimizerCfg.enable or false;
   minimizerVariant = minimizerCfg.variant or "denis";
@@ -346,6 +403,7 @@ in {
     swappy
     playerctl
   ]
+  ++ lib.optional keybindDiagnosticsEnable keybindDiagnosticsScript
   ++ lib.optional (installRawQuickshell && (pkgs ? quickshell)) pkgs.quickshell
   ++ lib.optionals (minimizerEnabled && minimizerPackage != null) [ minimizerPackage ];
 
@@ -374,7 +432,11 @@ in {
         "[workspace 2 silent] ${appExec "firefox"}"
         "[workspace 3 silent] ${appExec "${preferredTerminalCmd} btop"}"
       ] ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
-        ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "wm-overview-start" ];
+        ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "wm-overview-start" ]
+        ++ lib.optionals keybindDiagnosticsEnable [
+          "wm-hypr-keybind-dump --phase=login-initial"
+          "sh -lc 'sleep ${toString keybindDiagnosticsDelaySeconds}; wm-hypr-keybind-dump --phase=login-delayed'"
+        ];
 
       input = {
         kb_layout = settings.keyboardLayout or "de";
@@ -470,6 +532,10 @@ in {
     {
       assertion = !minimizerEnabled || minimizerOrteipAppId != "";
       message = "settings.hyprland.minimizer.orteip.appId must not be empty when minimizer is enabled.";
+    }
+    {
+      assertion = keybindDiagnosticsDelaySeconds >= 0;
+      message = "settings.hyprland.debug.keybindDiagnostics.delaySeconds must be >= 0.";
     }
   ];
 }
