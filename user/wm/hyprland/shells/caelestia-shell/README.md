@@ -30,6 +30,20 @@ Notes:
 - Set `smartScheme = true;` to re-enable automatic wallpaper-driven theming. In that mode startup switches the active scheme back to `dynamic`.
 - The launcher also gets `Auto Theme` and `Manual Theme` actions, backed by `caelestia-smart-theme enable|disable`.
 
+## Quickshell Runtime
+
+Use `settings.programs.caelestia.quickshellRuntime` to choose how `caelestia-shell` is launched:
+
+```nix
+programs.caelestia = {
+  channel = "dev";
+  quickshellRuntime = "upstream-dev"; # "wrapped" | "upstream-dev"
+};
+```
+
+- `wrapped` (default): use the shell package's bundled quickshell wrapper.
+- `upstream-dev`: run Caelestia with the upstream quickshell input package (`qs`) from the selected Caelestia channel input.
+
 ## Referenz: `shell.json` Optionen
 
 User-provided reference config (documented here as a source-of-truth example for supported/used Caelestia shell options):
