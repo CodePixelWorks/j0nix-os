@@ -41,13 +41,41 @@ let
     else
       null;
   hasInput = selectedInput != null;
+  useUpstreamQuickshell = quickshellRuntime == "upstream-dev";
   quickshellInput =
     if hasInput && (selectedInput ? inputs) && (selectedInput.inputs ? quickshell) then
       selectedInput.inputs.quickshell
     else
       null;
+  quickshellSource =
+    if quickshellInput != null then
+      (quickshellInput.outPath or quickshellInput)
+    else
+      null;
+  quickshellRev =
+    if quickshellInput != null && (quickshellInput ? rev) then
+      quickshellInput.rev
+    else
+      null;
+  upstreamQuickshellFromSource =
+    if useUpstreamQuickshell && quickshellSource != null then
+      pkgs.quickshell.overrideAttrs (old: {
+        pname = "quickshell-upstream-dev";
+        version =
+          if quickshellRev != null then
+            "unstable-${builtins.substring 0 8 quickshellRev}"
+          else
+            "unstable-dev";
+        src = quickshellSource;
+        cmakeFlags =
+          (lib.filter (flag: !(lib.hasInfix "GIT_REVISION" flag)) (old.cmakeFlags or [ ]))
+          ++ lib.optional (quickshellRev != null) (lib.cmakeFeature "GIT_REVISION" quickshellRev);
+      })
+    else
+      null;
   hasQuickshellInputPackages =
-    quickshellInput != null
+    !useUpstreamQuickshell
+    && quickshellInput != null
     && (quickshellInput ? packages)
     && (builtins.hasAttr pkgs.stdenv.hostPlatform.system quickshellInput.packages);
   quickshellInputPackageSet =
@@ -56,13 +84,14 @@ let
     else
       { };
   upstreamQuickshellPkg =
-    if quickshellInputPackageSet ? quickshell then
+    if upstreamQuickshellFromSource != null then
+      upstreamQuickshellFromSource
+    else if quickshellInputPackageSet ? quickshell then
       quickshellInputPackageSet.quickshell
     else if quickshellInputPackageSet ? default then
       quickshellInputPackageSet.default
     else
       null;
-  useUpstreamQuickshell = quickshellRuntime == "upstream-dev";
   hasHomeModule =
     hasStableInput
     && (inputs.caelestia-shell ? homeManagerModules)
