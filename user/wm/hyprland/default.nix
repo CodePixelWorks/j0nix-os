@@ -335,29 +335,18 @@ let
     bindr = mergedBindList "bindr";
     bindm = mergedBindList "bindm";
   };
-  # Caelestia uses a dedicated submap for bare-Super launcher behavior and catchall interrupts.
-  # `catchall` is only valid inside a submap, so we render a raw Hyprland block here.
+  # Caelestia still uses a dedicated submap for global dispatchers.
+  # Bare-Super catchall launcher binds are intentionally disabled because they
+  # can steal regular Super+<key> shortcuts on some Hyprland versions.
   caelestiaSubmapConfig =
     if isCaelestiaShell then
       let
-        submapLauncherLines = [
-          "bindi = Super, Super_L, global, caelestia:launcher"
-          "bindin = Super, catchall, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:272, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:273, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:274, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:275, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:276, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:277, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse_up, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse_down, global, caelestia:launcherInterrupt"
-        ];
         renderedLists =
           lib.concatStringsSep "\n"
             (lib.filter (s: s != "") [
               (renderBindLines "bind" effectiveBindLists.bind)
               (renderBindLines "bindi" effectiveBindLists.bindi)
-              # `bindin` is intentionally not rendered here; launcher interrupt binds are explicit above.
+              (renderBindLines "bindin" effectiveBindLists.bindin)
               (renderBindLines "binde" effectiveBindLists.binde)
               (renderBindLines "bindl" effectiveBindLists.bindl)
               (renderBindLines "bindle" effectiveBindLists.bindle)
@@ -368,7 +357,6 @@ let
       ''
         exec = hyprctl dispatch submap global
         submap = global
-        ${lib.concatStringsSep "\n" submapLauncherLines}
         ${renderedLists}
         submap = reset
       ''
