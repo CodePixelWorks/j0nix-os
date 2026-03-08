@@ -15,6 +15,7 @@ let
 
   selectedGreetdGreeter = dm.resolveGreetdGreeter settings;
   regreetCompositor = dm.resolveRegreetCompositor settings;
+  greetdUsesConfigurableCompositor = builtins.elem selectedGreetdGreeter [ "regreet" "qmlgreet" ];
 
   useDankMaterialShell = useGreetd && selectedGreetdGreeter == "dms-greeter";
   hasDmsPackage =
@@ -28,7 +29,13 @@ let
       null;
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
   regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
+  qmlgreetHyprlandConfigPath = "/etc/qmlgreet/hyprland.conf";
+  qmlgreetConfigPath = "/etc/qmlgreet/qmlgreet.conf";
+  qmlgreetColorSchemePath = "/etc/qmlgreet/QMLGreetDefault.colors";
   dmsGreeterHyprConfigPath = "/etc/greetd/hypr.conf";
+  qmlgreetPackage = pkgs.qmlgreet;
+  qmlgreetIconTheme = (settings.iconTheme or { }).name or "";
+  qmlgreetWallpaperPath = ((settings.dms or { }).wallpaper or { }).wallpaperPath or "";
   dmsGreeterCommand =
     "${if hasDmsPackage then lib.getExe' dmsPackage "dms-greeter" else "/run/current-system/sw/bin/dms-greeter"} --command hyprland -C ${dmsGreeterHyprConfigPath}";
   hyprlandUwsmSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/hyprland-uwsm.desktop" ''
@@ -69,6 +76,10 @@ let
   regreetCommand =
     if regreetCompositor == "hyprland"
     then "start-hyprland -- -c ${regreetHyprlandConfigPath}"
+    else null;
+  qmlgreetCommand =
+    if regreetCompositor == "hyprland"
+    then "start-hyprland -- -c ${qmlgreetHyprlandConfigPath}"
     else null;
   sessionCommandForWMS = wms:
     if wms == "hyprland" then
@@ -135,6 +146,14 @@ in {
           hyprlandCommand = regreetCommand;
         }) user command;
       })
+      (lib.mkIf (selectedGreetdGreeter == "qmlgreet") {
+        inherit (greetdVariants.qmlgreet {
+          package = qmlgreetPackage;
+          compositor = regreetCompositor;
+          configPath = qmlgreetConfigPath;
+          hyprlandCommand = qmlgreetCommand;
+        }) user command;
+      })
       (lib.mkIf (selectedGreetdGreeter == "dms-greeter") {
         inherit (greetdVariants.dmsGreeter {
           command = dmsGreeterCommand;
@@ -156,10 +175,10 @@ in {
     }
     {
       assertion = (!useGreetd) || builtins.elem selectedGreetdGreeter dm.validGreetdGreeters;
-      message = "settings.greetd.greeter must be one of: tuigreet, regreet, dms-greeter (legacy alias: darkmaterialshell)";
+      message = "settings.greetd.greeter must be one of: tuigreet, regreet, qmlgreet, dms-greeter (legacy alias: darkmaterialshell)";
     }
     {
-      assertion = (!useGreetd) || builtins.elem regreetCompositor dm.validRegreetCompositors;
+      assertion = (!useGreetd) || (!greetdUsesConfigurableCompositor) || builtins.elem regreetCompositor dm.validRegreetCompositors;
       message = "settings.greetd.regreetCompositor must be one of: cage, hyprland";
     }
     {
@@ -212,6 +231,45 @@ in {
 
       env = XCURSOR_THEME,${cursorTheme}
       env = XCURSOR_SIZE,${toString cursorSize}
+    '';
+    mode = "0444";
+  };
+
+  environment.etc."qmlgreet/QMLGreetDefault.colors" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet") {
+    source = "${qmlgreetPackage}/share/qmlgreet/QMLGreetDefault.colors";
+    mode = "0444";
+  };
+
+  environment.etc."qmlgreet/qmlgreet.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet") {
+    text = ''
+      [General]
+      DefaultSession=
+
+      [Appearance]
+      ColorScheme=${qmlgreetColorSchemePath}
+      BackgroundImage=${qmlgreetWallpaperPath}
+      IconTheme=${qmlgreetIconTheme}
+      Font=
+      FontSize=10
+
+      [Behavior]
+      ShowAvatars=true
+    '';
+    mode = "0444";
+  };
+
+  environment.etc."qmlgreet/hyprland.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet" && regreetCompositor == "hyprland") {
+    text = ''
+      misc {
+        disable_hyprland_logo = true
+        disable_splash_rendering = true
+        disable_hyprland_guiutils_check = true
+      }
+
+      env = XCURSOR_THEME,${cursorTheme}
+      env = XCURSOR_SIZE,${toString cursorSize}
+
+      exec-once = ${lib.getExe qmlgreetPackage} -c ${qmlgreetConfigPath}
     '';
     mode = "0444";
   };
