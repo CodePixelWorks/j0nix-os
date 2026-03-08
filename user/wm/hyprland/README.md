@@ -24,6 +24,10 @@ Modules under `shells/` are selected per user via `settings.userSettings.<name>.
 
 The module defines a shared base keymap in `user/wm/hyprland/default.nix` and merges shell-specific binds (Caelestia, DMS, etc.) on top.
 
+For the active incident/runbook around Caelestia keybind regressions (`upstream-dev` runtime + greetd variants), see:
+
+- `docs/HYPRLAND_CAELESTIA_KEYBINDS.md`
+
 ## Optional Minimizer
 
 Per-user toggle:
