@@ -404,6 +404,12 @@ in {
         preserve_split = true;
       };
 
+      binds = {
+        # Keep compositor shortcuts responsive even if a client requests a
+        # shortcuts inhibitor (seen intermittently with shell overlays).
+        disable_keybind_grabbing = true;
+      };
+
       misc = {
         vfr = true;
         vrr = 1;
