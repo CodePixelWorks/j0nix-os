@@ -21,6 +21,7 @@ let
   dmsSettings = settings.dms or { };
   caelestiaSettings = (settings.programs or { }).caelestia or { };
   caelestiaThemeSettings = caelestiaSettings.theme or { };
+  quickshellRuntime = caelestiaSettings.quickshellRuntime or "wrapped";
   caelestiaChannel = caelestiaSettings.channel or "stable";
   caelestiaInputName = if caelestiaChannel == "dev" then "caelestia-shell-dev" else "caelestia-shell";
   hasValue = value: value != null && value != "";
@@ -40,6 +41,28 @@ let
     else
       null;
   hasInput = selectedInput != null;
+  quickshellInput =
+    if hasInput && (selectedInput ? inputs) && (selectedInput.inputs ? quickshell) then
+      selectedInput.inputs.quickshell
+    else
+      null;
+  hasQuickshellInputPackages =
+    quickshellInput != null
+    && (quickshellInput ? packages)
+    && (builtins.hasAttr pkgs.stdenv.hostPlatform.system quickshellInput.packages);
+  quickshellInputPackageSet =
+    if hasQuickshellInputPackages then
+      quickshellInput.packages.${pkgs.stdenv.hostPlatform.system}
+    else
+      { };
+  upstreamQuickshellPkg =
+    if quickshellInputPackageSet ? quickshell then
+      quickshellInputPackageSet.quickshell
+    else if quickshellInputPackageSet ? default then
+      quickshellInputPackageSet.default
+    else
+      null;
+  useUpstreamQuickshell = quickshellRuntime == "upstream-dev";
   hasHomeModule =
     hasStableInput
     && (inputs.caelestia-shell ? homeManagerModules)
@@ -496,6 +519,37 @@ EOF
       esac
     '')
   ];
+  caelestiaUpstreamShellWrapper =
+    if useUpstreamQuickshell && upstreamQuickshellPkg != null && caelestiaShellPkg != null then
+      lib.hiPrio (pkgs.writeShellScriptBin "caelestia-shell" ''
+        set -eu
+        export PATH="${lib.makeBinPath [
+          pkgs.fish
+          pkgs.ddcutil
+          pkgs.brightnessctl
+          pkgs.app2unit
+          pkgs.networkmanager
+          pkgs.lm_sensors
+          pkgs.swappy
+          pkgs.wl-clipboard
+          pkgs.libqalculate
+          pkgs.bashInteractive
+          pkgs.hyprland
+        ]}:$PATH"
+        export CAELESTIA_XKB_RULES_PATH="${pkgs.xkeyboard-config}/share/X11/xkb/rules/base.lst"
+
+        # Keep optional native helper lookups compatible with the upstream wrapper.
+        if [ -z "''${CAELESTIA_LIB_DIR:-}" ] && [ -x "${caelestiaShellPkg}/bin/caelestia-shell" ]; then
+          guessed_lib_dir="$(${pkgs.binutils}/bin/strings ${lib.escapeShellArg "${caelestiaShellPkg}/bin/caelestia-shell"} | ${pkgs.gnugrep}/bin/grep -m1 '/caelestia-extras/lib' || true)"
+          if [ -n "$guessed_lib_dir" ]; then
+            export CAELESTIA_LIB_DIR="$guessed_lib_dir"
+          fi
+        fi
+
+        exec ${lib.getExe upstreamQuickshellPkg} -p ${lib.escapeShellArg "${caelestiaShellPkg}/share/caelestia-shell"} "$@"
+      '')
+    else
+      null;
 in
 {
   imports = lib.optional hasHomeModule inputs.caelestia-shell.homeManagerModules.default;
@@ -505,6 +559,8 @@ in
   j0nix.user.shells.quickshell.packages = lib.mkAfter (listMerge.mergeUnique [
     (lib.optionals (caelestiaShellPkg != null) [ caelestiaShellPkg ])
     (lib.optionals (caelestiaCliPkg != null) [ caelestiaCliPkg ])
+    (lib.optionals (useUpstreamQuickshell && upstreamQuickshellPkg != null) [ upstreamQuickshellPkg ])
+    (lib.optionals (caelestiaUpstreamShellWrapper != null) [ caelestiaUpstreamShellWrapper ])
     shellRuntimePackages
     shellScriptPackages
     (lib.optionals (iconThemeEnabled && iconThemePackage != null) [ iconThemePackage ])
@@ -627,11 +683,23 @@ EOF
       message = "settings.programs.caelestia.channel must be one of: stable, dev";
     }
     {
+      assertion = builtins.elem quickshellRuntime [ "wrapped" "upstream-dev" ];
+      message = "settings.programs.caelestia.quickshellRuntime must be one of: wrapped, upstream-dev";
+    }
+    {
       assertion = hasHomeModule || (caelestiaShellPkg != null);
       message = ''
         inputs.${caelestiaInputName} must expose either:
         - homeManagerModules.default
         - packages.${pkgs.stdenv.hostPlatform.system}.with-cli (or default)
+      '';
+    }
+    {
+      assertion = (!useUpstreamQuickshell) || (upstreamQuickshellPkg != null && caelestiaShellPkg != null);
+      message = ''
+        settings.programs.caelestia.quickshellRuntime=upstream-dev requires:
+        - inputs.${caelestiaInputName}.inputs.quickshell.packages.${pkgs.stdenv.hostPlatform.system}
+        - inputs.${caelestiaInputName}.packages.${pkgs.stdenv.hostPlatform.system}.caelestia-shell (or default)
       '';
     }
     {
