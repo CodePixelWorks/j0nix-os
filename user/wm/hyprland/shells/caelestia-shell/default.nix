@@ -152,6 +152,15 @@ let
     ++ lib.optionals (hasValue configuredMode) [ "-m ${lib.escapeShellArg configuredMode}" ]
     ++ lib.optionals (hasValue configuredVariant) [ "-v ${lib.escapeShellArg configuredVariant}" ]
   );
+  hyprlandCfg = settings.hyprland or { };
+  keepassCfg = (settings.programs or { }).keepassxc or { };
+  keepassEnabled = keepassCfg.enable or false;
+  keepassWorkspaceCfg = keepassCfg.workspace or { };
+  keepassWorkspaceEnable = keepassWorkspaceCfg.enable or true;
+  minimizerEnabled = ((hyprlandCfg.minimizer or { }).enable or false);
+  keepassWorkspaceMode = keepassWorkspaceCfg.mode or (if minimizerEnabled then "minimizer" else "special-workspace");
+  keepassWorkspaceName = keepassWorkspaceCfg.name or "keepass";
+  keepassSpecialWorkspaceEnabled = keepassEnabled && keepassWorkspaceEnable && keepassWorkspaceMode == "special-workspace";
   preferredTerminal = settings.preferredTerminal or "kitty";
   seededCaelestiaConfig = {
     general = {
@@ -190,6 +199,7 @@ let
           name = "Manual Theme";
           command = [ "caelestia-smart-theme" "disable" ];
         }
+      ] ++ lib.optionals keepassEnabled [
         {
           name = "Passwords";
           command = [ "keepassxc-toggle" ];
@@ -209,6 +219,17 @@ let
   } // lib.optionalAttrs (configuredWallpaperDir != null && configuredWallpaperDir != "") {
     paths = {
       wallpaperDir = configuredWallpaperDir;
+    };
+  } // lib.optionalAttrs keepassSpecialWorkspaceEnabled {
+    bar = {
+      workspaces = {
+        specialWorkspaceIcons = [
+          {
+            name = keepassWorkspaceName;
+            icon = "password";
+          }
+        ];
+      };
     };
   };
   seededWallpaperDirValue =
@@ -594,6 +615,9 @@ EOF
         $DRY_RUN_CMD ${pkgs.jq}/bin/jq \
           --arg term "${preferredTerminal}" \
           --arg wallpaperDir "${seededWallpaperDirValue}" \
+          --arg keepassWorkspaceName "${keepassWorkspaceName}" \
+          --argjson keepassEnabled ${if keepassEnabled then "true" else "false"} \
+          --argjson keepassSpecialWorkspaceEnabled ${if keepassSpecialWorkspaceEnabled then "true" else "false"} \
           '
             .general = ((.general // {}) | .apps = ((.apps // {}) | .terminal = (.terminal // [$term])))
             | .general.idle = (.general.idle // {})
@@ -627,13 +651,26 @@ EOF
                         .command = ["caelestia-smart-theme", "enable"]
                       elif (.name? == "Manual Theme") then
                         .command = ["caelestia-smart-theme", "disable"]
+                      elif ($keepassEnabled and .name? == "Passwords") then
+                        .command = ["keepassxc-toggle"]
                       else
                         .
                       end
                     )
                   | if any(.[]; .name? == "Auto Theme") then . else . + [{ "name": "Auto Theme", "command": ["caelestia-smart-theme", "enable"] }] end
                   | if any(.[]; .name? == "Manual Theme") then . else . + [{ "name": "Manual Theme", "command": ["caelestia-smart-theme", "disable"] }] end
+                  | if ($keepassEnabled and (any(.[]; .name? == "Passwords") | not)) then . + [{ "name": "Passwords", "command": ["keepassxc-toggle"] }] else . end
                 )
+              else
+                .
+              end
+            | if $keepassSpecialWorkspaceEnabled then
+                .bar = (.bar // {})
+                | .bar.workspaces = (.bar.workspaces // {})
+                | .bar.workspaces.specialWorkspaceIcons = (
+                    (if ((.bar.workspaces.specialWorkspaceIcons? | type) == "array") then .bar.workspaces.specialWorkspaceIcons else [] end)
+                    | if any(.[]; .name? == $keepassWorkspaceName) then . else . + [{ "name": $keepassWorkspaceName, "icon": "password" }] end
+                  )
               else
                 .
               end
