@@ -9,5 +9,13 @@
     sshKeyPaths = [ ];
   };
 
-  system = { };
+  system = {
+    syncthing-gui-password = {
+      key = "syncthing/gui_password";
+      sopsFile = ../../secrets/users/jonas.yaml;
+      owner = "jonas";
+      group = "users";
+      mode = "0400";
+    };
+  };
 }
