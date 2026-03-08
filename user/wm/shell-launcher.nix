@@ -193,6 +193,8 @@ in
     '')
     (writeShellScriptBin "system-suspend-safe" ''
       timeout_bin="${pkgs.coreutils}/bin/timeout"
+      loginctl_bin="${pkgs.systemd}/bin/loginctl"
+      systemctl_bin="${pkgs.systemd}/bin/systemctl"
 
       # Best-effort lock before suspend to avoid resuming on an unlocked session.
       if command -v dms >/dev/null 2>&1; then
@@ -202,17 +204,17 @@ in
         pgrep -x hyprlock >/dev/null 2>&1 || hyprlock >/dev/null 2>&1 &
         sleep 0.5
       else
-        loginctl lock-session >/dev/null 2>&1 || ${pkgs.systemd}/bin/loginctl lock-session >/dev/null 2>&1 || true
+        "$loginctl_bin" lock-session >/dev/null 2>&1 || true
         sleep 0.3
       fi
 
-      loginctl suspend \
-        || ${pkgs.systemd}/bin/loginctl suspend \
-        || systemctl suspend \
-        || ${pkgs.systemd}/bin/systemctl suspend
+      "$loginctl_bin" suspend \
+        || "$systemctl_bin" suspend
     '')
     (writeShellScriptBin "system-hibernate-safe" ''
       timeout_bin="${pkgs.coreutils}/bin/timeout"
+      loginctl_bin="${pkgs.systemd}/bin/loginctl"
+      systemctl_bin="${pkgs.systemd}/bin/systemctl"
 
       if command -v dms >/dev/null 2>&1; then
         "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
@@ -221,17 +223,17 @@ in
         pgrep -x hyprlock >/dev/null 2>&1 || hyprlock >/dev/null 2>&1 &
         sleep 0.5
       else
-        loginctl lock-session >/dev/null 2>&1 || ${pkgs.systemd}/bin/loginctl lock-session >/dev/null 2>&1 || true
+        "$loginctl_bin" lock-session >/dev/null 2>&1 || true
         sleep 0.3
       fi
 
-      loginctl hibernate \
-        || ${pkgs.systemd}/bin/loginctl hibernate \
-        || systemctl hibernate \
-        || ${pkgs.systemd}/bin/systemctl hibernate
+      "$loginctl_bin" hibernate \
+        || "$systemctl_bin" hibernate
     '')
     (writeShellScriptBin "system-suspend-then-hibernate-safe" ''
       timeout_bin="${pkgs.coreutils}/bin/timeout"
+      loginctl_bin="${pkgs.systemd}/bin/loginctl"
+      systemctl_bin="${pkgs.systemd}/bin/systemctl"
 
       if command -v dms >/dev/null 2>&1; then
         "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
@@ -240,20 +242,18 @@ in
         pgrep -x hyprlock >/dev/null 2>&1 || hyprlock >/dev/null 2>&1 &
         sleep 0.5
       else
-        loginctl lock-session >/dev/null 2>&1 || ${pkgs.systemd}/bin/loginctl lock-session >/dev/null 2>&1 || true
+        "$loginctl_bin" lock-session >/dev/null 2>&1 || true
         sleep 0.3
       fi
 
-      loginctl suspend-then-hibernate \
-        || ${pkgs.systemd}/bin/loginctl suspend-then-hibernate \
-        || systemctl suspend-then-hibernate \
-        || ${pkgs.systemd}/bin/systemctl suspend-then-hibernate
+      "$loginctl_bin" suspend-then-hibernate \
+        || "$systemctl_bin" suspend-then-hibernate
     '')
     (writeShellScriptBin "system-reboot-safe" ''
-      loginctl reboot || systemctl reboot
+      "${pkgs.systemd}/bin/loginctl" reboot || "${pkgs.systemd}/bin/systemctl" reboot
     '')
     (writeShellScriptBin "system-poweroff-safe" ''
-      loginctl poweroff || systemctl poweroff
+      "${pkgs.systemd}/bin/loginctl" poweroff || "${pkgs.systemd}/bin/systemctl" poweroff
     '')
     (writeShellScriptBin "wm-shell-stop" ''
       shell="${selectedShell}"
