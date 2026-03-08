@@ -84,7 +84,8 @@ flowchart TD
   E --> F{settings.greetd.greeter}
   F -->|tuigreet| G[tuigreet command]
   F -->|regreet| H[regreet with cage/hyprland]
-  F -->|dms-greeter| I[dank-material-shell greeter module]
+  F -->|qmlgreet| I[qmlgreet with cage/hyprland]
+  F -->|dms-greeter| J[dank-material-shell greeter module]
 ```
 
 ## Runtime Login Sequences
@@ -119,7 +120,7 @@ sequenceDiagram
 sequenceDiagram
   actor U as User
   participant G as greetd
-  participant GR as Greeter (tuigreet/regreet/DMS greeter)
+  participant GR as Greeter (tuigreet/regreet/qmlgreet/DMS greeter)
   participant HY as Hyprland Session
   participant HM as Home Manager User Profile
   participant SH as Shell Process (AGS/DMS/Noctalia)
@@ -132,6 +133,8 @@ sequenceDiagram
     GR->>HY: start Hyprland
   else greeter = regreet
     GR->>HY: start-hyprland (or cage+regreet path)
+  else greeter = qmlgreet
+    GR->>HY: start-hyprland (or cage+qmlgreet path)
   else greeter = dms-greeter
     GR->>HY: DMS greeter compositor path
   end
