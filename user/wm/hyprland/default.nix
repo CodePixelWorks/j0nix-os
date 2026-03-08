@@ -40,6 +40,22 @@ let
   keybindDiagnosticsEnable = keybindDiagnosticsCfg.enable or false;
   keybindDiagnosticsDelaySeconds = keybindDiagnosticsCfg.delaySeconds or 8;
   keybindDiagnosticsLogDir = keybindDiagnosticsCfg.logDir or "\${XDG_STATE_HOME:-$HOME/.local/state}/hyprland/diagnostics";
+  keybindDiagnosticsProbeScript = pkgs.writeShellScriptBin "wm-hypr-keybind-probe" ''
+    set -eu
+    label="''${1:-unknown}"
+    log_dir="${keybindDiagnosticsLogDir}"
+    mkdir -p "$log_dir"
+    log_file="$log_dir/keybind-probe.log"
+    printf '%s label=%s uid=%s wayland=%s hypr=%s\n' \
+      "$(${pkgs.coreutils}/bin/date --iso-8601=seconds)" \
+      "$label" \
+      "$(${pkgs.coreutils}/bin/id -u)" \
+      "''${WAYLAND_DISPLAY:-}" \
+      "''${HYPRLAND_INSTANCE_SIGNATURE:-}" >>"$log_file"
+    if command -v notify-send >/dev/null 2>&1; then
+      notify-send "Hyprland keybind probe" "$label" >/dev/null 2>&1 || true
+    fi
+  '';
   keybindDiagnosticsScript = pkgs.writeShellScriptBin "wm-hypr-keybind-dump" ''
     set -eu
 
@@ -66,6 +82,14 @@ let
       fi
     }
 
+    run_cmd() {
+      label="$1"
+      shift
+      echo
+      echo "## $label"
+      "$@" 2>&1 || true
+    }
+
     {
       echo "# Hyprland keybind diagnostics"
       echo "timestamp=$(${pkgs.coreutils}/bin/date --iso-8601=seconds)"
@@ -89,6 +113,8 @@ let
       run_hyprctl "binds" binds
       run_hyprctl "devices" devices
       run_hyprctl "layers" layers
+      run_cmd "app2unit probe" app2unit -- true
+      run_cmd "uwsm app probe" ${lib.getExe pkgs.uwsm} app -- true
     } >"$out_file"
 
     echo "$out_file"
@@ -282,6 +308,10 @@ let
     "$mainMod SHIFT, q, exit,"
     "CTRL SHIFT, Print, exec, wm-screenshot-area"
   ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind ++ dmsOverviewRemoteToggleBind
+    ++ lib.optionals keybindDiagnosticsEnable [
+      "$mainMod SHIFT, F12, exec, wm-hypr-keybind-probe super-shift-f12"
+      "CTRL ALT, F12, exec, wm-hypr-keybind-probe ctrl-alt-f12"
+    ]
     ++ lib.optionals (keepassEnabled && keepassWorkspaceEnable) [
       "${keepassToggleBind}, exec, keepassxc-toggle"
     ]
@@ -403,7 +433,10 @@ in {
     swappy
     playerctl
   ]
-  ++ lib.optional keybindDiagnosticsEnable keybindDiagnosticsScript
+  ++ lib.optionals keybindDiagnosticsEnable [
+    keybindDiagnosticsScript
+    keybindDiagnosticsProbeScript
+  ]
   ++ lib.optional (installRawQuickshell && (pkgs ? quickshell)) pkgs.quickshell
   ++ lib.optionals (minimizerEnabled && minimizerPackage != null) [ minimizerPackage ];
 
