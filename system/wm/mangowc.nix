@@ -110,7 +110,7 @@ in {
     }
     {
       assertion = (!(manageOwnDisplayManager && useGreetd)) || builtins.elem selectedGreetdGreeter dm.validGreetdGreeters;
-      message = "settings.greetd.greeter must be one of: tuigreet, regreet, dms-greeter (legacy alias: darkmaterialshell)";
+      message = "settings.greetd.greeter must be one of: tuigreet, regreet, qmlgreet, dms-greeter (legacy alias: darkmaterialshell)";
     }
   ];
 }

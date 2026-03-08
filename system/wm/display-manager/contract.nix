@@ -1,7 +1,7 @@
 { lib }:
 let
   validDisplayManagers = [ "greetd" "sddm" "gdm" ];
-  validGreetdGreeters = [ "tuigreet" "regreet" "dms-greeter" ];
+  validGreetdGreeters = [ "tuigreet" "regreet" "qmlgreet" "dms-greeter" ];
   validRegreetCompositors = [ "cage" "hyprland" ];
 in
 {
