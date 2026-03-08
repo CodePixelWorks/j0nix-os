@@ -5,6 +5,10 @@
   inputs,
   ...
 }:
+let
+  resolveEnabledWms = import ../../system/lib/enabled-wms.nix { inherit lib; };
+  enabledWms = resolveEnabledWms settings;
+in
 {
   imports = [
     ./hardware-configuration.nix
@@ -52,7 +56,7 @@
     ../../system/tuning
     ../../system/gaming
   ]
-  ++ (map (wm: ../../system/wm/${wm}.nix) settings.wms);
+  ++ (map (wm: ../../system/wm/${wm}.nix) enabledWms);
 
   boot = {
     # boot policy (tmp/loader/resume/swap) is defined via `j0nix.desktop.boot`
