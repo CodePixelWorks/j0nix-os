@@ -327,12 +327,7 @@ in
     (writeShellScriptBin "wm-shell-recover" ''
       # Recover from stuck input/layer states before restarting the shell UI.
       if command -v hyprctl >/dev/null 2>&1; then
-        if [ "${selectedShell}" = "caelestia-shell" ]; then
-          # Caelestia keeps keybinds in the persistent "global" submap.
-          hyprctl dispatch submap global >/dev/null 2>&1 || true
-        else
-          hyprctl dispatch submap reset >/dev/null 2>&1 || true
-        fi
+        hyprctl dispatch submap reset >/dev/null 2>&1 || true
       fi
       pkill fuzzel >/dev/null 2>&1 || true
       exec wm-shell-restart
