@@ -7,6 +7,8 @@
 
       vscodeOverlay = inputs.nix-vscode-extensions.overlays.default;
       localFixesOverlay = final: prev: {
+        mauiman4 = final.callPackage ./system/software/pkgs/maui/mauiman4.nix { };
+        mauikit4 = final.callPackage ./system/software/pkgs/maui/mauikit4.nix { };
         hyprland-minimizer-orteip = prev.rustPlatform.buildRustPackage {
           pname = "hyprland_minimizer";
           version = "unstable";
