@@ -67,6 +67,10 @@ let
           else
             "unstable-dev";
         src = quickshellSource;
+        buildInputs = (old.buildInputs or [ ]) ++ [
+          pkgs.libsysprof-capture
+          pkgs.polkit
+        ];
         cmakeFlags =
           (lib.filter (flag: !(lib.hasInfix "GIT_REVISION" flag)) (old.cmakeFlags or [ ]))
           ++ lib.optional (quickshellRev != null) (lib.cmakeFeature "GIT_REVISION" quickshellRev);
