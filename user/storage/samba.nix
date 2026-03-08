@@ -5,6 +5,7 @@ let
   userShares = builtins.filter (share: (share.mode or "system") == "user") rawShares;
   hasValue = value: value != null && value != "";
   mountRoot = "${config.home.homeDirectory}/Mounts";
+  cacheHome = lib.attrByPath [ "xdg" "cacheHome" ] "${config.home.homeDirectory}/.cache" config;
   rcloneBin = "${pkgs.rclone}/bin/rclone";
   fuseUnmountBin = "${pkgs.fuse3}/bin/fusermount3";
 
@@ -29,6 +30,7 @@ let
   shareNameOf = share: share.name or share.share;
   mountAliasOf = share: share.mountAlias or (shareNameOf share);
   mountPathOf = share: "${mountRoot}/${mountAliasOf share}";
+  cacheDirOf = share: "${cacheHome}/rclone/smb/${shareNameOf share}";
   runtimeConfigPathOf = share: "$XDG_RUNTIME_DIR/rclone-smb-${shareNameOf share}.conf";
 
   rcloneConfigScript = share:
@@ -105,8 +107,11 @@ let
         --config "$XDG_RUNTIME_DIR/rclone-smb-${shareNameOf share}.conf" \
         ${lib.escapeShellArg "share:${share.share}"} \
         ${lib.escapeShellArg mountPath} \
+        --cache-dir ${lib.escapeShellArg (cacheDirOf share)} \
         --dir-cache-time ${lib.escapeShellArg (share.dirCacheTime or "5m")} \
         --vfs-cache-mode ${lib.escapeShellArg (share.vfsCacheMode or "full")} \
+        --vfs-cache-max-size ${lib.escapeShellArg (share.vfsCacheMaxSize or "5G")} \
+        --vfs-cache-max-age ${lib.escapeShellArg (share.vfsCacheMaxAge or "1h")} \
         --volname ${lib.escapeShellArg (share.gvfsName or mountAliasOf share)} \
         --network-mode${extraArgsText}
     '';
@@ -114,6 +119,7 @@ let
   mountScriptFor = share:
     let
       mountPath = mountPathOf share;
+      cacheDir = cacheDirOf share;
       shareName = shareNameOf share;
     in
     ''
@@ -121,6 +127,7 @@ let
       export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
       mkdir -p ${lib.escapeShellArg mountRoot}
       mount_path=${lib.escapeShellArg mountPath}
+      cache_dir=${lib.escapeShellArg cacheDir}
 
       # Recover from stale/broken FUSE mountpoints ("Transport endpoint is not connected").
       if [ -e "$mount_path" ] && ! ${pkgs.coreutils}/bin/stat "$mount_path" >/dev/null 2>&1; then
@@ -130,6 +137,7 @@ let
       fi
 
       mkdir -p "$mount_path"
+      mkdir -p "$cache_dir"
       ${rcloneConfigScript share}
       if ${pkgs.util-linux}/bin/mountpoint -q "$mount_path"; then
         exit 0
