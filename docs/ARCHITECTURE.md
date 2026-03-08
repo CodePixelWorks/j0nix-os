@@ -2,6 +2,10 @@
 
 This document describes how `j0nix-os` is structured, how settings flow through the flake, and how runtime session selection works.
 
+Related deep dives:
+
+- [QMLGreet Integration](./QMLGREET.md)
+
 ## Design Goals
 
 - Independent codebase (no local imports from sibling reference projects)
