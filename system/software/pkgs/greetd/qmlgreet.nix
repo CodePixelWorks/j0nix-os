@@ -7,6 +7,7 @@
   ninja,
   pkg-config,
   qt6,
+  kdePackages,
   mauikit4,
   wayland,
   wayland-scanner,
@@ -38,11 +39,13 @@ stdenv.mkDerivation (finalAttrs: {
     qt6.qtbase
     qt6.qtdeclarative
     qt6.qtwayland
+    kdePackages.qqc2-desktop-style
     wayland
   ];
 
   qtWrapperArgs = [
     "--prefix QML2_IMPORT_PATH : ${mauikit4}/lib/qt-6/qml"
+    "--prefix QML2_IMPORT_PATH : ${kdePackages.qqc2-desktop-style}/lib/qt-6/qml"
   ];
 
   postInstall = ''
