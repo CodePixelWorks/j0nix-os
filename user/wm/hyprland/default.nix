@@ -322,9 +322,7 @@ let
         extraConfig = "";
       };
   mergedBindList = key: (baseHyprKeybinds.${key} or [ ]) ++ (shellHyprKeybinds.${key} or [ ]);
-  renderBindLines = key: entries:
-    lib.concatStringsSep "\n" (map (entry: "${key} = ${entry}") entries);
-  # Final merged bind lists used either via HM settings or via the Caelestia raw submap block.
+  # Final merged bind lists rendered through Home Manager Hyprland settings.
   effectiveBindLists = {
     bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ remoteWorkspaceSwitchBinds ++ remoteWorkspaceMoveBinds ++ mergedBindList "bind";
     bindi = mergedBindList "bindi";
@@ -335,33 +333,6 @@ let
     bindr = mergedBindList "bindr";
     bindm = mergedBindList "bindm";
   };
-  # Caelestia still uses a dedicated submap for global dispatchers.
-  # Bare-Super catchall launcher binds are intentionally disabled because they
-  # can steal regular Super+<key> shortcuts on some Hyprland versions.
-  caelestiaSubmapConfig =
-    if isCaelestiaShell then
-      let
-        renderedLists =
-          lib.concatStringsSep "\n"
-            (lib.filter (s: s != "") [
-              (renderBindLines "bind" effectiveBindLists.bind)
-              (renderBindLines "bindi" effectiveBindLists.bindi)
-              (renderBindLines "bindin" effectiveBindLists.bindin)
-              (renderBindLines "binde" effectiveBindLists.binde)
-              (renderBindLines "bindl" effectiveBindLists.bindl)
-              (renderBindLines "bindle" effectiveBindLists.bindle)
-              (renderBindLines "bindr" effectiveBindLists.bindr)
-              (renderBindLines "bindm" effectiveBindLists.bindm)
-            ]);
-      in
-      ''
-        exec = hyprctl dispatch submap global
-        submap = global
-        ${renderedLists}
-        submap = reset
-      ''
-    else
-      "";
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
   # `exec-once` is used for both direct Hyprland sessions and UWSM-managed sessions.
   shellStartupCommand = if selectedShell == "none" then null else "wm-shell-start";
@@ -392,8 +363,7 @@ in {
       # Backwards compatibility with older DMS layouts.
       source = ${hyprDmsDir}/layout.conf
       '')
-      + (shellHyprKeybinds.extraConfig or "")
-      + caelestiaSubmapConfig;
+      + (shellHyprKeybinds.extraConfig or "");
 
     settings = {
       "$mainMod" = "SUPER";
@@ -457,15 +427,14 @@ in {
 
       windowrule = defaultFloatWindowRules ++ additionalWindowRules;
 
-      bind =
-        if isCaelestiaShell then [ ] else effectiveBindLists.bind;
-      bindi = mergedBindList "bindi";
-      bindin = mergedBindList "bindin";
-      binde = if isCaelestiaShell then [ ] else mergedBindList "binde";
-      bindl = if isCaelestiaShell then [ ] else mergedBindList "bindl";
-      bindle = if isCaelestiaShell then [ ] else mergedBindList "bindle";
-      bindr = if isCaelestiaShell then [ ] else mergedBindList "bindr";
-      bindm = if isCaelestiaShell then [ ] else mergedBindList "bindm";
+      bind = effectiveBindLists.bind;
+      bindi = effectiveBindLists.bindi;
+      bindin = effectiveBindLists.bindin;
+      binde = effectiveBindLists.binde;
+      bindl = effectiveBindLists.bindl;
+      bindle = effectiveBindLists.bindle;
+      bindr = effectiveBindLists.bindr;
+      bindm = effectiveBindLists.bindm;
     };
 
   };
