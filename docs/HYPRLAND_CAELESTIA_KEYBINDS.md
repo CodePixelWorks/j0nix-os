@@ -82,6 +82,21 @@ Only change one axis at a time:
 - Axis A: `settings.programs.caelestia.quickshellRuntime`
 - Axis B: `settings.greetd.greeter`
 
+## Fast History Fallback
+
+If regression timing is unclear (for example \"it worked two days ago\"), use:
+
+```bash
+scripts/find-working-hyprland-variant.sh --since '7 days ago' --max 25
+```
+
+What it does:
+
+- walks recent commits touching Hyprland/Caelestia keymap-relevant files,
+- applies each candidate with `nixos-rebuild test`,
+- asks for manual `works/broken`,
+- and restores current `HEAD` config at the end.
+
 ## Data Collection Checklist (per permutation)
 
 After login (without manual recovery commands first):
