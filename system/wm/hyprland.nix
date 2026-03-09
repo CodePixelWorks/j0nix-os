@@ -84,11 +84,7 @@ let
     then "start-hyprland -- -c ${qmlgreetHyprlandConfigPath}"
     else null;
   startHyprlandSessionScript = pkgs.writeShellScriptBin "start-hyprland-session" ''
-    # Keep user services (shell/overview/autostarts) deterministic across greeters.
-    if command -v systemctl >/dev/null 2>&1; then
-      systemctl --user start graphical-session.target >/dev/null 2>&1 || true
-    fi
-
+    # Graphical-session user target is started by Hyprland exec-once after the compositor is ready.
     if [ "${if useUWSM then "1" else "0"}" = "1" ]; then
       exec ${lib.getExe pkgs.uwsm} start hyprland.desktop "$@"
     fi
