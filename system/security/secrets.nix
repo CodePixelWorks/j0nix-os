@@ -45,6 +45,22 @@ let
         in
         (if spec ? sopsFile then spec.sopsFile else defaultSopsFile) == null)
       (builtins.attrNames systemSecrets);
+  referencedSopsFiles =
+    lib.unique (
+      builtins.filter
+        (path: path != null)
+        (map
+          (name:
+            let
+              spec = systemSecrets.${name};
+            in
+            if spec ? sopsFile then spec.sopsFile else defaultSopsFile)
+          (builtins.attrNames systemSecrets))
+    );
+  missingSopsFilesOnDisk =
+    builtins.filter
+      (path: !(builtins.pathExists (toString path)))
+      referencedSopsFiles;
 in
 lib.mkIf enableSops {
   sops = ({
@@ -67,6 +83,12 @@ lib.mkIf enableSops {
     {
       assertion = missingSopsFileSecrets == [ ];
       message = "Each settings.secrets.system entry requires either its own sopsFile or settings.secrets.defaultSopsFile.";
+    }
+    {
+      assertion = missingSopsFilesOnDisk == [ ];
+      message =
+        "Referenced system sopsFile path(s) do not exist: "
+        + lib.concatStringsSep ", " (map toString missingSopsFilesOnDisk);
     }
   ];
 }

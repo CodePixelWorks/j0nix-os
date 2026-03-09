@@ -148,6 +148,40 @@ let
         (spec.passphraseKey or null) != null
         && (if spec ? passphraseSopsFile then spec.passphraseSopsFile else if spec ? sopsFile then spec.sopsFile else defaultSopsFile) == null)
       (builtins.attrNames sshKeys);
+  referencedFileSopsFiles =
+    map
+      (name:
+        let
+          spec = files.${name};
+        in
+        if spec ? sopsFile then spec.sopsFile else defaultSopsFile)
+      (builtins.attrNames files);
+  referencedSshSopsFiles =
+    map
+      (name:
+        let
+          spec = sshKeys.${name};
+        in
+        if spec ? sopsFile then spec.sopsFile else defaultSopsFile)
+      (builtins.attrNames sshKeys);
+  referencedSshPassphraseSopsFiles =
+    map
+      (name:
+        let
+          spec = sshKeys.${name};
+        in
+        if spec ? passphraseSopsFile then spec.passphraseSopsFile else if spec ? sopsFile then spec.sopsFile else defaultSopsFile)
+      (builtins.attrNames (lib.filterAttrs (_: spec: (spec.passphraseKey or null) != null) sshKeys));
+  referencedSopsFiles =
+    lib.unique (
+      builtins.filter
+        (path: path != null)
+        (referencedFileSopsFiles ++ referencedSshSopsFiles ++ referencedSshPassphraseSopsFiles)
+    );
+  missingSopsFilesOnDisk =
+    builtins.filter
+      (path: !(builtins.pathExists (toString path)))
+      referencedSopsFiles;
   validSshKeyNames = builtins.attrNames sshKeys;
   deploySshKey = name:
     let
@@ -268,6 +302,12 @@ lib.mkIf enableSops {
     {
       assertion = (files == { } && sshKeys == { }) || resolvedAgeKeyFile != null;
       message = "User sops secrets for ${settings.username} require a key source. Under NixOS, Home Manager should inherit osConfig.sops.age.keyFile; for standalone Home Manager set settings.userSettings.<name>.secrets.age.keyFile or settings.secrets.age.keyFile.";
+    }
+    {
+      assertion = missingSopsFilesOnDisk == [ ];
+      message =
+        "Referenced user sopsFile path(s) for ${settings.username} do not exist: "
+        + lib.concatStringsSep ", " (map toString missingSopsFilesOnDisk);
     }
   ];
 }
