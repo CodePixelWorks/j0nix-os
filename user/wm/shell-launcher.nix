@@ -407,6 +407,22 @@ in
     source = config.lib.file.mkOutOfStoreSymlink "${overviewSource}";
   };
 
+  # Migrate away from legacy WM user-services that were removed from the startup path.
+  # This avoids stale enabled units continuing to start shell/overview too early.
+  home.activation.wmLegacyUnitCleanup = lib.hm.dag.entryAfter [ "reloadSystemd" "writeBoundary" ] ''
+    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+    if [ -S "$runtime_dir/bus" ]; then
+      ${pkgs.systemd}/bin/systemctl --user daemon-reload || true
+      for unit in hyprland-shell.service hyprland-wallpaper.service hyprland-startup-apps.service hyprland-keybind-diagnostics.service; do
+        ${pkgs.systemd}/bin/systemctl --user stop "$unit" >/dev/null 2>&1 || true
+        ${pkgs.systemd}/bin/systemctl --user disable "$unit" >/dev/null 2>&1 || true
+      done
+      ${pkgs.systemd}/bin/systemctl --user disable wm-overview.service >/dev/null 2>&1 || true
+    else
+      echo "warning: user session bus not available; skipping WM legacy unit cleanup during activation" >&2
+    fi
+  '';
+
   systemd.user.services = lib.mkIf (overviewEnable && supportsOverview) {
     wm-overview = {
       Unit = {
