@@ -195,11 +195,18 @@ let
   keepassWorkspaceName = keepassWorkspaceCfg.name or "keepass";
   keepassSpecialWorkspaceEnabled = keepassEnabled && keepassWorkspaceEnable && keepassWorkspaceMode == "special-workspace";
   preferredTerminal = settings.preferredTerminal or "kitty";
+  materialIconFontDefault = "Material Symbols Rounded";
+  materialIconFontAllowed = [
+    "Material Symbols Rounded"
+    "Material Symbols Outlined"
+    "Material Symbols Sharp"
+  ];
+  materialIconFontAllowedJson = builtins.toJSON materialIconFontAllowed;
   seededCaelestiaConfig = {
     appearance = {
       font = {
         family = {
-          material = "Material Symbols Rounded";
+          material = materialIconFontDefault;
         };
       };
     };
@@ -385,7 +392,7 @@ let
       hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
       jq_bin="${pkgs.jq}/bin/jq"
 
-      ensure_material_icon_font() {
+      repair_caelestia_layout_config() {
         local cfg_dir cfg_file tmp_file
 
         cfg_dir="$HOME/.config/caelestia"
@@ -395,15 +402,33 @@ let
         [ -f "$cfg_file" ] || return 0
         "$jq_bin" -e . "$cfg_file" >/dev/null 2>&1 || return 0
 
-        if "$jq_bin" -e '(.appearance.font.family.material? // "" | tostring | test("^Material Symbols"))' "$cfg_file" >/dev/null 2>&1; then
-          return 0
-        fi
-
-        "$jq_bin" '
+        "$jq_bin" \
+          --arg defaultMaterial "${materialIconFontDefault}" \
+          --argjson allowedFonts '${materialIconFontAllowedJson}' '
+          def as_num($default):
+            if type == "number" then . else $default end;
+          def clamp($min; $max):
+            if . < $min then $min elif . > $max then $max else . end;
           .appearance = (.appearance // {})
           | .appearance.font = (.appearance.font // {})
           | .appearance.font.family = (.appearance.font.family // {})
-          | .appearance.font.family.material = "Material Symbols Rounded"
+          | .appearance.font.family.material = (
+              (.appearance.font.family.material? // "") as $materialFont
+              | ($materialFont | tostring) as $materialFontString
+              | if ($allowedFonts | index($materialFontString)) != null then
+                  $materialFontString
+                else
+                  $defaultMaterial
+                end
+            )
+          | .appearance.padding = (.appearance.padding // {})
+          | .appearance.padding.scale = ((.appearance.padding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
+          | .appearance.spacing = (.appearance.spacing // {})
+          | .appearance.spacing.scale = ((.appearance.spacing.scale // 1) | as_num(1) | clamp(0.5; 2.0))
+          | .appearance.rounding = (.appearance.rounding // {})
+          | .appearance.rounding.scale = ((.appearance.rounding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
+          | .appearance.font.size = (.appearance.font.size // {})
+          | .appearance.font.size.scale = ((.appearance.font.size.scale // 1) | as_num(1) | clamp(0.5; 2.0))
         ' "$cfg_file" >"$tmp_file" \
           && mv -f "$tmp_file" "$cfg_file"
       }
@@ -461,7 +486,7 @@ let
         caelestia-gamemode-fan-sync start >/dev/null 2>&1 || true
       fi
 
-      ensure_material_icon_font
+      repair_caelestia_layout_config
 
       ${lib.optionalString (smartSchemeEnabled || manualThemeApply) ''
       if command -v caelestia-apply-theme >/dev/null 2>&1; then
@@ -748,7 +773,13 @@ EOF
           --arg keepassWorkspaceName "${keepassWorkspaceName}" \
           --argjson keepassEnabled ${if keepassEnabled then "true" else "false"} \
           --argjson keepassSpecialWorkspaceEnabled ${if keepassSpecialWorkspaceEnabled then "true" else "false"} \
+          --arg defaultMaterial "${materialIconFontDefault}" \
+          --argjson allowedMaterialFonts '${materialIconFontAllowedJson}' \
           '
+            def as_num($default):
+              if type == "number" then . else $default end;
+            def clamp($min; $max):
+              if . < $min then $min elif . > $max then $max else . end;
             .general = ((.general // {}) | .apps = ((.apps // {}) | .terminal = (.terminal // [$term])))
             | .general.idle = (.general.idle // {})
             | .general.idle.lockBeforeSleep = (.general.idle.lockBeforeSleep // true)
@@ -818,12 +849,21 @@ EOF
             | .appearance.font.family.material =
                 (
                   (.appearance.font.family.material? // "") as $materialFont
-                  | if ($materialFont | tostring | test("^Material Symbols")) then
-                      $materialFont
+                  | ($materialFont | tostring) as $materialFontString
+                  | if ($allowedMaterialFonts | index($materialFontString)) != null then
+                      $materialFontString
                     else
-                      "Material Symbols Rounded"
+                      $defaultMaterial
                     end
                 )
+            | .appearance.padding = (.appearance.padding // {})
+            | .appearance.padding.scale = ((.appearance.padding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
+            | .appearance.spacing = (.appearance.spacing // {})
+            | .appearance.spacing.scale = ((.appearance.spacing.scale // 1) | as_num(1) | clamp(0.5; 2.0))
+            | .appearance.rounding = (.appearance.rounding // {})
+            | .appearance.rounding.scale = ((.appearance.rounding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
+            | .appearance.font.size = (.appearance.font.size // {})
+            | .appearance.font.size.scale = ((.appearance.font.size.scale // 1) | as_num(1) | clamp(0.5; 2.0))
             | if $wallpaperDir != "" then
                 .paths = ((.paths // {}) | .wallpaperDir = (.wallpaperDir // $wallpaperDir))
               else
