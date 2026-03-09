@@ -19,6 +19,7 @@ in
         <alias>
           <family>sans-serif</family>
           <prefer>
+            <family>Cantarell</family>
             <family>Noto Sans</family>
             <family>Noto Sans CJK SC</family>
           </prefer>
