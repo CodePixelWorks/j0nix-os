@@ -1,6 +1,7 @@
-{ lib, pkgs, settings, ... }:
+{ config, lib, pkgs, settings, ... }:
 let
   preferredTerminal = settings.preferredTerminal or "kitty";
+  homeBinDir = "${config.home.profileDirectory}/bin";
   niriSessionCheckScript = pkgs.writeShellScript "wm-niri-session-check" ''
     case "''${XDG_CURRENT_DESKTOP:-}:''${XDG_SESSION_DESKTOP:-}" in
       *niri*|*Niri*) exit 0 ;;
@@ -46,8 +47,8 @@ in
       Service = {
         Type = "simple";
         ExecCondition = niriSessionCheckScript;
-        ExecStart = "${lib.getExe pkgs.bash} -lc 'exec wm-shell-start'";
-        ExecStop = "${lib.getExe pkgs.bash} -lc 'wm-shell-stop >/dev/null 2>&1 || true'";
+        ExecStart = "${homeBinDir}/wm-shell-start";
+        ExecStop = "${homeBinDir}/wm-shell-stop";
         Restart = "on-failure";
         RestartSec = 1;
       };
