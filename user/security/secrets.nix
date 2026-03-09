@@ -24,6 +24,11 @@ let
       inheritedSystemAgeKeyFile
     else
       ((cfg.age or { }).keyFile or null);
+  exportedAgeKeyFile =
+    if userAgeCfg ? keyFile && userAgeCfg.keyFile != null then
+      userAgeCfg.keyFile
+    else
+      null;
   useInheritedSystemKey = inheritedSystemAgeKeyFile != null && resolvedAgeKeyFile == inheritedSystemAgeKeyFile;
   mkSecretValue = name: spec:
     let
@@ -230,6 +235,10 @@ let
     );
 in
 lib.mkIf enableSops {
+  home.sessionVariables = lib.optionalAttrs (exportedAgeKeyFile != null) {
+    SOPS_AGE_KEY_FILE = exportedAgeKeyFile;
+  };
+
   sops = ({
     defaultSopsFormat = defaultSopsFormat;
     age =
