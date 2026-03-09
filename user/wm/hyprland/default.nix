@@ -11,6 +11,8 @@ let
   appExecBackend = (settings.hyprland or { }).appExecBackend or "auto";
   app2unitExec = lib.getExe pkgs.app2unit;
   uwsmExec = lib.getExe pkgs.uwsm;
+  hyprctlExec = lib.getExe' pkgs.hyprland "hyprctl";
+  homeBinDir = "${config.home.profileDirectory}/bin";
   effectiveAppExecBackend =
     if !useUWSM then "app2unit"
     else if appExecBackend == "auto" then "app2unit"
@@ -467,22 +469,9 @@ let
       "";
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
   shellStartupCommand = if selectedShell == "none" then null else "wm-shell-start";
-  hyprlandSessionCheckScript = pkgs.writeShellScript "wm-hypr-session-check" ''
-    if [ "''${XDG_CURRENT_DESKTOP:-}" = "Hyprland" ] \
-      || [ "''${XDG_SESSION_DESKTOP:-}" = "hyprland" ] \
-      || [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-      exit 0
-    fi
-
-    if command -v hyprctl >/dev/null 2>&1 && hyprctl instances >/dev/null 2>&1; then
-      exit 0
-    fi
-
-    exit 1
-  '';
   hyprlandStartupAppsScript = pkgs.writeShellScriptBin "wm-hypr-startup-apps" ''
-    hyprctl_bin="$(command -v hyprctl || true)"
-    [ -n "$hyprctl_bin" ] || exit 0
+    hyprctl_bin="${hyprctlExec}"
+    [ -x "$hyprctl_bin" ] || exit 0
 
     launch_on_workspace() {
       workspace="$1"
@@ -499,9 +488,9 @@ let
     fi
   '';
   hyprlandKeybindDiagnosticsStartupScript = pkgs.writeShellScriptBin "wm-hypr-keybind-diagnostics-startup" ''
-    wm-hypr-keybind-dump --phase=login-initial
+    ${homeBinDir}/wm-hypr-keybind-dump --phase=login-initial
     sleep ${toString keybindDiagnosticsDelaySeconds}
-    wm-hypr-keybind-dump --phase=login-delayed
+    ${homeBinDir}/wm-hypr-keybind-dump --phase=login-delayed
   '';
 in {
   j0nix.user.software.packages = with pkgs; [
@@ -620,7 +609,6 @@ in {
         };
         Service = {
           Type = "simple";
-          ExecCondition = hyprlandSessionCheckScript;
           ExecStart = lib.getExe' pkgs.swww "swww-daemon";
           Restart = "on-failure";
           RestartSec = 1;
@@ -632,11 +620,10 @@ in {
         Unit = {
           Description = "Hyprland startup apps";
           PartOf = [ "graphical-session.target" ];
-          After = [ "graphical-session.target" ];
+          After = [ "graphical-session.target" "hyprland-shell.service" ];
         };
         Service = {
           Type = "oneshot";
-          ExecCondition = hyprlandSessionCheckScript;
           ExecStart = lib.getExe hyprlandStartupAppsScript;
           RemainAfterExit = true;
         };
@@ -652,9 +639,8 @@ in {
         };
         Service = {
           Type = "simple";
-          ExecCondition = hyprlandSessionCheckScript;
-          ExecStart = "${lib.getExe pkgs.bash} -lc 'exec ${shellStartupCommand}'";
-          ExecStop = "${lib.getExe pkgs.bash} -lc 'wm-shell-stop >/dev/null 2>&1 || true'";
+          ExecStart = "${homeBinDir}/wm-shell-start";
+          ExecStop = "${homeBinDir}/wm-shell-stop";
           Restart = "on-failure";
           RestartSec = 1;
         };
@@ -666,11 +652,10 @@ in {
         Unit = {
           Description = "Hyprland keybind diagnostics startup";
           PartOf = [ "graphical-session.target" ];
-          After = [ "graphical-session.target" ];
+          After = [ "graphical-session.target" "hyprland-shell.service" ];
         };
         Service = {
           Type = "oneshot";
-          ExecCondition = hyprlandSessionCheckScript;
           ExecStart = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
         };
         Install.WantedBy = [ "graphical-session.target" ];
