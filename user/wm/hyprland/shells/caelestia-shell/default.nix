@@ -196,6 +196,13 @@ let
   keepassSpecialWorkspaceEnabled = keepassEnabled && keepassWorkspaceEnable && keepassWorkspaceMode == "special-workspace";
   preferredTerminal = settings.preferredTerminal or "kitty";
   seededCaelestiaConfig = {
+    appearance = {
+      font = {
+        family = {
+          material = "Material Symbols Rounded";
+        };
+      };
+    };
     general = {
       apps = {
         terminal = [ preferredTerminal ];
@@ -376,6 +383,30 @@ let
       export PATH="/run/wrappers/bin:${lib.makeBinPath [ gpu-screen-recorder gpu-screen-recorder-gtk ]}:$PATH"
       upstream_runtime="${if useUpstreamQuickshell then "1" else "0"}"
       hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
+      jq_bin="${pkgs.jq}/bin/jq"
+
+      ensure_material_icon_font() {
+        local cfg_dir cfg_file tmp_file
+
+        cfg_dir="$HOME/.config/caelestia"
+        cfg_file="$cfg_dir/shell.json"
+        tmp_file="$cfg_file.codex-font-tmp"
+
+        [ -f "$cfg_file" ] || return 0
+        "$jq_bin" -e . "$cfg_file" >/dev/null 2>&1 || return 0
+
+        if "$jq_bin" -e '(.appearance.font.family.material? // "" | tostring | test("^Material Symbols"))' "$cfg_file" >/dev/null 2>&1; then
+          return 0
+        fi
+
+        "$jq_bin" '
+          .appearance = (.appearance // {})
+          | .appearance.font = (.appearance.font // {})
+          | .appearance.font.family = (.appearance.font.family // {})
+          | .appearance.font.family.material = "Material Symbols Rounded"
+        ' "$cfg_file" >"$tmp_file" \
+          && mv -f "$tmp_file" "$cfg_file"
+      }
 
       ensure_hyprland_global_submap() {
         local attempts=0
@@ -429,6 +460,8 @@ let
       if command -v caelestia-gamemode-fan-sync >/dev/null 2>&1; then
         caelestia-gamemode-fan-sync start >/dev/null 2>&1 || true
       fi
+
+      ensure_material_icon_font
 
       ${lib.optionalString (smartSchemeEnabled || manualThemeApply) ''
       if command -v caelestia-apply-theme >/dev/null 2>&1; then
@@ -779,6 +812,18 @@ EOF
                 | .reboot = ["system-reboot-safe"]
               )
             | .services = ((.services // {}) | .smartScheme = ${if smartSchemeEnabled then "true" else "false"})
+            | .appearance = (.appearance // {})
+            | .appearance.font = (.appearance.font // {})
+            | .appearance.font.family = (.appearance.font.family // {})
+            | .appearance.font.family.material =
+                (
+                  (.appearance.font.family.material? // "") as $materialFont
+                  | if ($materialFont | tostring | test("^Material Symbols")) then
+                      $materialFont
+                    else
+                      "Material Symbols Rounded"
+                    end
+                )
             | if $wallpaperDir != "" then
                 .paths = ((.paths // {}) | .wallpaperDir = (.wallpaperDir // $wallpaperDir))
               else
