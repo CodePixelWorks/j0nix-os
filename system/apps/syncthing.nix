@@ -19,6 +19,35 @@ let
       (((userOverrides.${serviceUser} or { }).programs or { }).syncthing or { })
     else
       { };
+  serviceUserSecrets =
+    if serviceUser != null then
+      ((userOverrides.${serviceUser} or { }).secrets or { })
+    else
+      { };
+  serviceUserSecretFilesRaw = serviceUserSecrets.files or { };
+  serviceUserSecretFiles =
+    if builtins.isAttrs serviceUserSecretFilesRaw then serviceUserSecretFilesRaw else { };
+  userGuiPasswordSecretSpec =
+    if guiPasswordSecretName != null && lib.hasAttrByPath [ guiPasswordSecretName ] serviceUserSecretFiles then
+      serviceUserSecretFiles.${guiPasswordSecretName}
+    else
+      null;
+  userSecretsDefaultSopsFile =
+    serviceUserSecrets.defaultSopsFile or ((settings.secrets or { }).defaultUserSopsFile or null);
+  userSecretsDefaultSopsFormat =
+    serviceUserSecrets.defaultSopsFormat or ((settings.secrets or { }).defaultSopsFormat or "yaml");
+  userGuiPasswordSecretSopsFile =
+    if userGuiPasswordSecretSpec != null then
+      (if userGuiPasswordSecretSpec ? sopsFile then userGuiPasswordSecretSpec.sopsFile else userSecretsDefaultSopsFile)
+    else
+      null;
+  hasSystemGuiPasswordSecret =
+    guiPasswordSecretName != null
+    && lib.hasAttrByPath [ guiPasswordSecretName ] (((settings.secrets or { }).system or { }));
+  bridgeUserGuiPasswordSecret =
+    guiPasswordSecretName != null
+    && !hasSystemGuiPasswordSecret
+    && userGuiPasswordSecretSpec != null;
   configDir =
     if serviceUser == null then
       null
@@ -55,7 +84,22 @@ in
 lib.mkIf enabled {
   warnings = lib.optional
     (guiPasswordSecretName != null && !hasGuiPasswordSecret && (syncthingCfg.guiPasswordFile or null) == null)
-    "Syncthing guiPasswordSecretName='${guiPasswordSecretName}' is not available in system sops.secrets. Set services-level secret via settings.secrets.system.<name> or provide settings.userSettings.<name>.programs.syncthing.guiPasswordFile.";
+    "Syncthing guiPasswordSecretName='${guiPasswordSecretName}' is neither defined in settings.secrets.system nor in settings.userSettings.${serviceUser}.secrets.files, and no guiPasswordFile is set.";
+
+  sops.secrets = lib.mkIf bridgeUserGuiPasswordSecret {
+    "${guiPasswordSecretName}" =
+      {
+        key = userGuiPasswordSecretSpec.key or guiPasswordSecretName;
+        format = userGuiPasswordSecretSpec.format or userSecretsDefaultSopsFormat;
+        sopsFile = userGuiPasswordSecretSopsFile;
+        owner = serviceUser;
+        group = serviceGroup;
+        mode = userGuiPasswordSecretSpec.mode or "0400";
+      }
+      // lib.optionalAttrs (userGuiPasswordSecretSpec ? path) {
+        path = userGuiPasswordSecretSpec.path;
+      };
+  };
 
   systemd.services.syncthing.environment.STNODEFAULTFOLDER = "true";
 
@@ -99,6 +143,18 @@ lib.mkIf enabled {
     {
       assertion = guiPasswordSecretName == null || guiPasswordSecretName != "";
       message = "settings.userSettings.<name>.programs.syncthing.guiPasswordSecretName must be a non-empty string when set";
+    }
+    {
+      assertion = builtins.isAttrs serviceUserSecretFilesRaw;
+      message = "settings.userSettings.<name>.secrets.files must be an attrset when Syncthing is enabled.";
+    }
+    {
+      assertion = userGuiPasswordSecretSpec == null || !(userGuiPasswordSecretSpec ? fields);
+      message = "settings.userSettings.<name>.secrets.files.<guiPasswordSecretName> must be a plain secret (no fields attrset) for Syncthing guiPasswordSecretName.";
+    }
+    {
+      assertion = (!bridgeUserGuiPasswordSecret) || userGuiPasswordSecretSopsFile != null;
+      message = "Syncthing bridged user secret '${guiPasswordSecretName}' requires settings.userSettings.<name>.secrets.defaultSopsFile or an explicit sopsFile on that secret.";
     }
     {
       assertion = builtins.isAttrs syncOptions;
