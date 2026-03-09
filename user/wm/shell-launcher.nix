@@ -51,6 +51,10 @@ in
           exec noctalia-start
           ;;
         caelestia-shell)
+          if command -v hyprctl >/dev/null 2>&1; then
+            # Keep Caelestia keymaps alive across startup/restart paths.
+            hyprctl dispatch submap global >/dev/null 2>&1 || true
+          fi
           exec caelestia-start
           ;;
         dank-material-shell)
