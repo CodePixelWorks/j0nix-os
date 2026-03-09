@@ -4,7 +4,6 @@ let
   dmsSettings = settings.dms or { };
   overviewSettings = dmsSettings.overview or { };
   overviewEnable = overviewSettings.enable or false;
-  overviewAutostart = overviewSettings.autostart or false;
   overviewName = "overview";
   overviewSource = inputs.quickshell-overview;
   homeBinDir = "${config.home.profileDirectory}/bin";
@@ -420,7 +419,7 @@ in
         Restart = "on-failure";
         RestartSec = 1;
       };
-      Install.WantedBy = lib.optional overviewAutostart "graphical-session.target";
+      Install.WantedBy = [ ];
     };
   };
 
