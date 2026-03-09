@@ -12,6 +12,7 @@ Recommended layout:
 - `secrets/hosts/Jonas-PC.yaml`
 - `secrets/users/jonas.yaml`
 - `.sops.yaml`
+- `secrets/scripts/sops-safe-rekey.sh`
 
 Recommended key model:
 
@@ -33,6 +34,13 @@ For user secrets:
    - `sops secrets/users/jonas.yaml`
 2. Reference generic secret files from `settings.userSettings.jonas.secrets.files`
 3. Reference secret-backed SSH keys from `settings.userSettings.jonas.secrets.sshKeys`
+
+When you change recipients in `.sops.yaml`, run:
+
+- `./secrets/scripts/sops-safe-rekey.sh`
+
+This script creates timestamped encrypted backups in `secrets/.backups/` and then runs
+`sops updatekeys --yes` for all host/user secret YAML files.
 
 Example:
 
