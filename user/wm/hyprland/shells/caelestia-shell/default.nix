@@ -374,6 +374,50 @@ let
       # Caelestia actions (e.g. screen recording) execute from the shell process env.
       # Ensure GPU Screen Recorder binaries are resolvable even if the session PATH is incomplete.
       export PATH="/run/wrappers/bin:${lib.makeBinPath [ gpu-screen-recorder gpu-screen-recorder-gtk ]}:$PATH"
+      upstream_runtime="${if useUpstreamQuickshell then "1" else "0"}"
+      hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
+
+      ensure_hyprland_global_submap() {
+        local attempts=0
+
+        [ -x "$hyprctl_bin" ] || return 0
+
+        while [ "$attempts" -lt 50 ]; do
+          if "$hyprctl_bin" -j activeworkspace >/dev/null 2>&1; then
+            "$hyprctl_bin" dispatch submap global >/dev/null 2>&1 || true
+            return 0
+          fi
+          attempts=$((attempts + 1))
+          sleep 0.1
+        done
+
+        return 0
+      }
+
+      launch_shell_once() {
+        if [ "$upstream_runtime" = "1" ]; then
+          if command -v caelestia-shell >/dev/null 2>&1; then
+            caelestia-shell &
+            shell_pid=$!
+            return 0
+          fi
+          return 127
+        fi
+
+        if command -v caelestia >/dev/null 2>&1; then
+          caelestia shell -d &
+          shell_pid=$!
+          return 0
+        fi
+
+        if command -v caelestia-shell >/dev/null 2>&1; then
+          caelestia-shell &
+          shell_pid=$!
+          return 0
+        fi
+
+        return 127
+      }
 
       # Quickshell can occasionally crash in the Hyprland IPC bridge.
       # Keep the shell available by restarting a few times before giving up.
@@ -382,52 +426,50 @@ let
       first_restart_at=0
       restart_count=0
 
-      if command -v caelestia >/dev/null 2>&1; then
-        if command -v caelestia-gamemode-fan-sync >/dev/null 2>&1; then
-          caelestia-gamemode-fan-sync start >/dev/null 2>&1 || true
-        fi
-        ${lib.optionalString (smartSchemeEnabled || manualThemeApply) ''
-        if command -v caelestia-apply-theme >/dev/null 2>&1; then
-          caelestia-apply-theme >/dev/null 2>&1 || true
-        fi
-        ''}
-        while true; do
-          caelestia shell -d &
-          shell_pid=$!
-          wait "$shell_pid"
-          exit_code=$?
-
-          # Manual stop/restart should terminate cleanly without respawn.
-          if [ "$exit_code" -eq 0 ]; then
-            exit 0
-          fi
-
-          now="$(${coreutils}/bin/date +%s)"
-          if [ "$first_restart_at" -eq 0 ] || [ $((now - first_restart_at)) -gt "$restart_window_s" ]; then
-            first_restart_at="$now"
-            restart_count=0
-          fi
-          restart_count=$((restart_count + 1))
-
-          if [ "$restart_count" -ge "$max_restarts" ]; then
-            if command -v notify-send >/dev/null 2>&1; then
-              notify-send "Caelestia shell crashed repeatedly" "Use Super+R (wm-shell-recover) to restart manually." >/dev/null 2>&1 || true
-            fi
-            echo "caelestia-start: shell exited with code $exit_code too often in ${toString 120}s; stopping auto-restart" >&2
-            exit "$exit_code"
-          fi
-
-          sleep 0.5
-        done
+      if command -v caelestia-gamemode-fan-sync >/dev/null 2>&1; then
+        caelestia-gamemode-fan-sync start >/dev/null 2>&1 || true
       fi
 
-      if command -v caelestia-shell >/dev/null 2>&1; then
-        exec caelestia-shell
+      ${lib.optionalString (smartSchemeEnabled || manualThemeApply) ''
+      if command -v caelestia-apply-theme >/dev/null 2>&1; then
+        caelestia-apply-theme >/dev/null 2>&1 || true
       fi
+      ''}
 
-      echo "Neither 'caelestia' nor 'caelestia-shell' is in PATH."
-      echo "Rebuild and verify wmShell=caelestia-shell."
-      exit 1
+      while true; do
+        ensure_hyprland_global_submap
+
+        if ! launch_shell_once; then
+          echo "Neither 'caelestia' nor 'caelestia-shell' is in PATH."
+          echo "Rebuild and verify wmShell=caelestia-shell."
+          exit 1
+        fi
+
+        wait "$shell_pid"
+        exit_code=$?
+
+        # Manual stop/restart should terminate cleanly without respawn.
+        if [ "$exit_code" -eq 0 ]; then
+          exit 0
+        fi
+
+        now="$(${coreutils}/bin/date +%s)"
+        if [ "$first_restart_at" -eq 0 ] || [ $((now - first_restart_at)) -gt "$restart_window_s" ]; then
+          first_restart_at="$now"
+          restart_count=0
+        fi
+        restart_count=$((restart_count + 1))
+
+        if [ "$restart_count" -ge "$max_restarts" ]; then
+          if command -v notify-send >/dev/null 2>&1; then
+            notify-send "Caelestia shell crashed repeatedly" "Use Super+R (wm-shell-recover) to restart manually." >/dev/null 2>&1 || true
+          fi
+          echo "caelestia-start: shell exited with code $exit_code too often in ${toString 120}s; stopping auto-restart" >&2
+          exit "$exit_code"
+        fi
+
+        sleep 0.5
+      done
     '')
 
     (writeShellScriptBin "caelestia-gamemode-fan-sync" ''
