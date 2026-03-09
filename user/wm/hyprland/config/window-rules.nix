@@ -49,7 +49,6 @@
     "match:class ^(org\\.gnome\\.Settings)$, float 1, size 70% 80%, center 1"
     "match:class ^(org\\.pulseaudio\\.pavucontrol|pavucontrol|yad-icon-browser)$, float 1, size 60% 70%, center 1"
     "match:class ^(nwg-look)$, float 1, size 50% 60%, center 1"
-    "match:class ^(naps2)$, match:title ^(?!NAPS2$).+$, float 1, center 1"
     "match:class ^(naps2)$, match:title ^(.+\\(escl:https?://.+\\))$, float 1, size 75% 80%, center 1"
     "match:class ^(naps2)$, match:title ^(Fortschritt Schräglagenkorrektur)$, float 1, size 45% 45%, center 1"
 
