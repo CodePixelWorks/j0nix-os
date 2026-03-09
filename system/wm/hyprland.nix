@@ -83,22 +83,29 @@ let
     if regreetCompositor == "hyprland"
     then "start-hyprland -- -c ${qmlgreetHyprlandConfigPath}"
     else null;
+  startHyprlandSessionScript = pkgs.writeShellScriptBin "start-hyprland-session" ''
+    # Keep user services (shell/overview/autostarts) deterministic across greeters.
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl --user start graphical-session.target >/dev/null 2>&1 || true
+    fi
+
+    if [ "${if useUWSM then "1" else "0"}" = "1" ]; then
+      exec ${lib.getExe pkgs.uwsm} start hyprland.desktop "$@"
+    fi
+
+    exec start-hyprland "$@"
+  '';
   sessionCommandForWMS = wms:
     if wms == "hyprland" then
-      if useUWSM then
-        "${lib.getExe pkgs.uwsm} start hyprland.desktop"
-      else
-        "start-hyprland"
+      lib.getExe startHyprlandSessionScript
     else if wms == "mangowc" then
       "start-mangowc"
     else if wms == "niri" then
       "start-niri"
     else if wms == "gnome" then
       "gnome-session"
-    else if useUWSM then
-      "${lib.getExe pkgs.uwsm} start hyprland.desktop"
     else
-      "start-hyprland";
+      lib.getExe startHyprlandSessionScript;
   userCaseBranches = lib.concatStringsSep "\n" (map (username:
     let
       userCfg = userOverrides.${username} or { };
