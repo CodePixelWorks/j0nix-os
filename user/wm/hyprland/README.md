@@ -5,8 +5,10 @@ Main user-side Hyprland module (`default.nix`) plus shell-specific variants.
 ## Core Responsibilities
 
 - base Hyprland settings
-- startup orchestration via user systemd services (`hyprland-shell`, `hyprland-wallpaper`, `hyprland-startup-apps`)
-- debug quickshell guard handling
+- startup orchestration via Hyprland `exec-once` + app launch policy
+- shell-aware keybind composition
+- window rule composition
+- optional diagnostics/minimizer integration
 
 ## Shell Selection
 
@@ -22,12 +24,28 @@ Modules under `shells/` are selected per user via `settings.userSettings.<name>.
 
 ## Keybind Overview
 
-The module defines a shared base keymap in `user/wm/hyprland/default.nix` and merges shell-specific binds (Caelestia, DMS, etc.) on top.
+The module now composes keybinds from:
+
+- `user/wm/hyprland/config/keybinds.nix` (base + shell-specific bind maps)
+- `user/wm/hyprland/default.nix` (wiring + startup)
+
+Window rules are split into:
+
+- `user/wm/hyprland/config/window-rules.nix`
 
 For the active incident/runbook around Caelestia keybind regressions (`upstream-dev` runtime + greetd variants), see:
 
 - `docs/HYPRLAND_CAELESTIA_KEYBINDS.md`
 - `docs/WM_STARTUP_AND_LAUNCH_FLOW.md`
+
+## User Overrides
+
+The generated Hyprland config sources a user-local file last:
+
+- `~/.config/hypr/user-overrides.conf`
+
+This file is auto-created once by Home Manager activation and then left mutable for manual per-user overrides.  
+Typical use: local binds, monitor tweaks, one-off rules that should not be committed into Nix modules.
 
 ## Optional Minimizer
 
