@@ -282,6 +282,12 @@ run:
 ```
 
 The script keeps encrypted backups and rewrites recipients from your current local keys.
+It enforces:
+
+- `secrets/hosts/*` encrypted for host key only
+- `secrets/users/*` encrypted for user key only
+
+If host files exist, run via `sudo` so `/var/lib/sops-nix/key.txt` is readable.
 ## 9. Wire Syncthing To The Secret
 
 In `settings.nix`, configure Syncthing like this:
