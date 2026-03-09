@@ -27,11 +27,38 @@ Modules under `shells/` are selected per user via `settings.userSettings.<name>.
 The module now composes keybinds from:
 
 - `user/wm/hyprland/config/keybinds.nix` (base + shell-specific bind maps)
+- `user/wm/hyprland/config/fragments.nix` (Hyprland fragment rendering + section layout)
 - `user/wm/hyprland/default.nix` (wiring + startup)
 
 Window rules are split into:
 
 - `user/wm/hyprland/config/window-rules.nix`
+
+## Generated Config Layout
+
+`~/.config/hypr/hyprland.conf` is intentionally thin and only sources include files in a fixed order.
+
+Main include directory:
+
+- `~/.config/hypr/conf.d/00-vars.conf`
+- `~/.config/hypr/conf.d/10-monitors.conf`
+- `~/.config/hypr/conf.d/20-startup.conf`
+- `~/.config/hypr/conf.d/30-input.conf`
+- `~/.config/hypr/conf.d/40-general.conf`
+- `~/.config/hypr/conf.d/50-decoration.conf`
+- `~/.config/hypr/conf.d/60-misc-debug.conf`
+- `~/.config/hypr/conf.d/70-window-rules.conf`
+- `~/.config/hypr/conf.d/80-keybinds.conf`
+
+Shell-scoped generated include:
+
+- `~/.config/hypr/shells/<wmShell>/generated/95-shell.conf`
+
+The user override include is always loaded last:
+
+- `~/.config/hypr/shell-overrides/<wmShell>/user-overrides.conf`
+
+This split avoids cross-shell collisions and keeps sections readable and easier to diff.
 
 For the active incident/runbook around Caelestia keybind regressions (`upstream-dev` runtime + greetd variants), see:
 

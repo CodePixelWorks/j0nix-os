@@ -165,6 +165,8 @@ let
   dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
   userHyprShellOverridesDir = "${config.home.homeDirectory}/.config/hypr/shell-overrides/${selectedShell}";
   userHyprConfigPath = "${userHyprShellOverridesDir}/user-overrides.conf";
+  mainHyprConfigDir = "${config.home.homeDirectory}/.config/hypr/conf.d";
+  shellGeneratedConfigDir = "${config.home.homeDirectory}/.config/hypr/shells/${selectedShell}/generated";
   hyprlandWindowRules = import ./config/window-rules.nix;
   hyprlandKeybinds = import ./config/keybinds.nix {
     inherit
@@ -230,6 +232,47 @@ let
     sleep ${toString keybindDiagnosticsDelaySeconds}
     ${homeBinDir}/wm-hypr-keybind-dump --phase=login-delayed
   '';
+  hyprlandFragments = import ./config/fragments.nix {
+    inherit
+      lib
+      settings
+      profileDetails
+      isCaelestiaShell
+      isDmsShell
+      hyprDmsDir
+      hyprlandWindowRules
+      hyprlandKeybinds
+      shellStartupCommand
+      dmsOverviewEnabled
+      dmsOverviewAutostart
+      homeBinDir
+      keybindDiagnosticsEnable
+      ;
+    mainConfigDir = mainHyprConfigDir;
+    shellConfigDir = shellGeneratedConfigDir;
+    startGraphicalSessionTargetCommand = lib.getExe startGraphicalSessionTargetScript;
+    swwwDaemonCommand = lib.getExe' pkgs.swww "swww-daemon";
+    startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
+    keybindDiagnosticsStartupCommand = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
+  };
+  hyprlandFragmentFiles =
+    lib.mapAttrs'
+      (path: text: lib.nameValuePair path { inherit text; })
+      hyprlandFragments.files;
+  hyprlandMainConfig = ''
+    # ------------------------------------------------------------------
+    # j0nix Hyprland main config
+    # ------------------------------------------------------------------
+    # This file is intentionally thin:
+    # - ordered includes from ~/.config/hypr/conf.d
+    # - shell-scoped generated include
+    # - shell-scoped user override include (loaded last)
+
+    ${lib.concatStringsSep "\n" (map (path: "source = ${path}") hyprlandFragments.includePaths)}
+
+    # User-local shell override (persistent, sourced last on purpose).
+    source = ${userHyprConfigPath}
+  '';
 in {
   j0nix.user.software.packages = with pkgs; [
     swww
@@ -250,102 +293,8 @@ in {
   wayland.windowManager.hyprland = {
     enable = true;
     systemd.enable = false;
-    extraConfig =
-      (lib.optionalString isDmsShell ''
-      # DMS writes these files at runtime to sync compositor visuals.
-      source = ${hyprDmsDir}/colors.conf
-      source = ${hyprDmsDir}/cursor.conf
-      source = ${hyprDmsDir}/outputs.conf
-      source = ${hyprDmsDir}/windowrules.conf
-      source = ${hyprDmsDir}/binds.conf
-      # Backwards compatibility with older DMS layouts.
-      source = ${hyprDmsDir}/layout.conf
-      '')
-      + (hyprlandKeybinds.shellHyprKeybinds.extraConfig or "")
-      + hyprlandKeybinds.caelestiaSubmapConfig
-      + ''
-      # User-local overrides (sourced last on purpose).
-      source = ${userHyprConfigPath}
-      '';
-
-    settings = {
-      "$mainMod" = "SUPER";
-      monitor = (profileDetails.hyprlandMonitors or [ ]) ++ [ ",preferred,auto,1" ];
-      exec-once = [
-        (lib.getExe startGraphicalSessionTargetScript)
-        (lib.getExe' pkgs.swww "swww-daemon")
-        (lib.getExe hyprlandStartupAppsScript)
-      ]
-      ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
-      ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "${homeBinDir}/wm-overview-start" ]
-      ++ lib.optionals keybindDiagnosticsEnable [ (lib.getExe hyprlandKeybindDiagnosticsStartupScript) ];
-
-      input = {
-        kb_layout = settings.keyboardLayout or "de";
-        kb_options = settings.keyboardOptions or "caps:escape";
-        follow_mouse = true;
-        touchpad.natural_scroll = true;
-      };
-
-      general = {
-        gaps_in = 6;
-        gaps_out = 10;
-        border_size = 2;
-        "col.active_border" = "rgba(89b4faff)";
-        "col.inactive_border" = "rgba(313244ff)";
-      };
-
-      "decoration:rounding" = 8;
-      "decoration:active_opacity" = 1.0;
-      "decoration:inactive_opacity" = 0.94;
-      "decoration:fullscreen_opacity" = 1.0;
-      "decoration:blur:enabled" = true;
-      "decoration:blur:size" = 8;
-      "decoration:blur:passes" = 2;
-
-      dwindle = {
-        pseudotile = true;
-        preserve_split = true;
-      };
-
-      binds = {
-        # Keep compositor shortcuts responsive even if a client requests a
-        # shortcuts inhibitor (seen intermittently with shell overlays).
-        disable_keybind_grabbing = true;
-      };
-
-      misc = {
-        vfr = true;
-        vrr = 1;
-        animate_manual_resizes = false;
-        animate_mouse_windowdragging = false;
-        force_default_wallpaper = 0;
-        on_focus_under_fullscreen = 2;
-        allow_session_lock_restore = true;
-        middle_click_paste = false;
-        focus_on_activate = true;
-        session_lock_xray = true;
-        mouse_move_enables_dpms = true;
-        key_press_enables_dpms = true;
-        disable_hyprland_logo = true;
-        disable_splash_rendering = true;
-      };
-
-      debug = {
-        error_position = 1;
-      };
-
-      windowrule = hyprlandWindowRules.default ++ hyprlandWindowRules.extra;
-
-      bind = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.bind;
-      bindi = hyprlandKeybinds.effectiveBindLists.bindi;
-      bindin = hyprlandKeybinds.effectiveBindLists.bindin;
-      binde = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.binde;
-      bindl = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.bindl;
-      bindle = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.bindle;
-      bindr = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.bindr;
-      bindm = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.bindm;
-    };
+    extraConfig = hyprlandMainConfig;
+    settings = { };
 
   };
 
@@ -381,7 +330,11 @@ EOF
     fi
   '';
 
-  xdg.configFile."hypr/hyprland.conf".force = true;
+  xdg.configFile =
+    hyprlandFragmentFiles
+    // {
+      "hypr/hyprland.conf".force = true;
+    };
 
   assertions = [
     {
