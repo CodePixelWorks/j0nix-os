@@ -1,6 +1,7 @@
-{ inputs, lib, pkgs, settings, ... }:
+{ config, inputs, lib, pkgs, settings, ... }:
 let
   preferredTerminal = settings.preferredTerminal or "kitty";
+  homeBinDir = "${config.home.profileDirectory}/bin";
   selectedShell = settings.wmShell or (settings.hyprlandShell or "dank-material-shell");
   useDmsShell = selectedShell == "dank-material-shell";
   dms = (settings.dms or { });
@@ -170,8 +171,8 @@ ${lib.optionalString useDmsShell ''
       Service = {
         Type = "simple";
         ExecCondition = mangowcSessionCheckScript;
-        ExecStart = "${lib.getExe pkgs.bash} -lc 'exec wm-shell-start'";
-        ExecStop = "${lib.getExe pkgs.bash} -lc 'wm-shell-stop >/dev/null 2>&1 || true'";
+        ExecStart = "${homeBinDir}/wm-shell-start";
+        ExecStop = "${homeBinDir}/wm-shell-stop";
         Restart = "on-failure";
         RestartSec = 1;
       };
