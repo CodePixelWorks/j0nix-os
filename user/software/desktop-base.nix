@@ -22,6 +22,19 @@ let
       null;
   fileManagerPackages = lib.filter (pkg: pkg != null) (map fileManagerPackage configuredFileManagers);
 
+  preferredTerminalRaw = settings.preferredTerminal or null;
+  terminalPackage = name:
+    if name == "kitty" then
+      pkgs.kitty
+    else if name == "foot" then
+      pkgs.foot
+    else if builtins.elem name [ "kgx" "gnome-console" "gnome console" ] then
+      if pkgs ? gnome-console then pkgs.gnome-console else null
+    else
+      null;
+  preferredTerminalPackage =
+    if preferredTerminalRaw != null then terminalPackage preferredTerminalRaw else null;
+
   iconThemeCfg = settings.iconTheme or { };
   iconThemeEnabled = iconThemeCfg.enable or true;
   iconThemePackageKey = iconThemeCfg.package or "papirus";
@@ -93,6 +106,7 @@ in
       xdg-utils
     ])
     ++ fileManagerPackages
+    ++ lib.optionals (preferredTerminalPackage != null) [ preferredTerminalPackage ]
     ++ lib.optionals enableUdiskieAutomount [ pkgs.udiskie ]
     ++ lib.optionals syncthingEnabled [ pkgs.syncthing ]
     ++ lib.optionals (pkgs ? fusion360) [ pkgs.fusion360 ]
