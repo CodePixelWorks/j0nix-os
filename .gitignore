@@ -25,3 +25,6 @@ Thumbs.db
 # Logs / temp
 *.log
 tmp/
+
+# SOPS migration/rekey backups
+secrets/.backups/
