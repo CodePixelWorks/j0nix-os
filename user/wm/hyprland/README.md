@@ -5,7 +5,7 @@ Main user-side Hyprland module (`default.nix`) plus shell-specific variants.
 ## Core Responsibilities
 
 - base Hyprland settings
-- startup command dispatch (`noctalia-start`/AGS always, `dms-start` only when `settings.dms.startup.mode = "exec-once"`)
+- startup orchestration via user systemd services (`hyprland-shell`, `hyprland-wallpaper`, `hyprland-startup-apps`)
 - debug quickshell guard handling
 
 ## Shell Selection
