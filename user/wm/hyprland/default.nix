@@ -163,7 +163,6 @@ let
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
   dmsOverviewSettings = dmsSettings.overview or { };
   dmsOverviewEnabled = dmsOverviewSettings.enable or false;
-  dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
   defaultFloatWindowRules = [
     # Do not center every floating window globally: popup/context menus in Flatpak apps
     # can also be floating and would otherwise jump to screen center.
@@ -506,7 +505,6 @@ in {
         "[workspace 2 silent] ${appExec "firefox"}"
         "[workspace 3 silent] ${appExec "${preferredTerminalCmd} btop"}"
       ] ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
-        ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "wm-overview-start" ]
         ++ lib.optionals keybindDiagnosticsEnable [
           "wm-hypr-keybind-dump --phase=login-initial"
           "sh -lc 'sleep ${toString keybindDiagnosticsDelaySeconds}; wm-hypr-keybind-dump --phase=login-delayed'"
