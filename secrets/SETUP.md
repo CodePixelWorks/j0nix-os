@@ -256,7 +256,21 @@ This makes the intent explicit:
 
 The Home Manager layer can inherit the system key, but for a multi-user setup this explicit per-user key is the preferred model.
 
-## 8. Wire Syncthing To The Secret
+## 8. Migrate Existing Mixed Secrets Safely
+
+If older setups mixed system and user secrets in one user file, run:
+
+```bash
+./secrets/scripts/sops-migrate-system-split.sh
+```
+
+Default migration:
+
+- moves `syncthing.gui_password` from `secrets/users/jonas.yaml` to `secrets/hosts/Jonas-PC.yaml`
+- writes encrypted backups to `secrets/.backups/`
+- re-encrypts both files via current `.sops.yaml` recipients
+- verifies both outputs can still be decrypted
+## 9. Wire Syncthing To The Secret
 
 In `settings.nix`, configure Syncthing like this:
 
@@ -270,7 +284,7 @@ programs.syncthing = {
 
 This makes the service use the materialized secret file automatically.
 
-## 9. SSH Secret Keys
+## 10. SSH Secret Keys
 
 The repo is already prepared to use:
 
