@@ -50,6 +50,7 @@
     "match:class ^(org\\.pulseaudio\\.pavucontrol|pavucontrol|yad-icon-browser)$, float 1, size 60% 70%, center 1"
     "match:class ^(nwg-look)$, float 1, size 50% 60%, center 1"
     "match:class ^(naps2)$, match:title ^(.+\\(escl:https?://.+\\))$, float 1, size 75% 80%, center 1"
+    "match:class ^(naps2)$, match:title ^(Fortschritt Schräglagenkorrektur)$, float 1, size 45% 45%, center 1"
 
     # Picture-in-picture windows: keep them floating, pinned and ratio-safe.
     "match:title ^(Picture(-| )in(-| )[Pp]icture)$, float 1, pin 1, keep_aspect_ratio 1, move 100%-w-2% 100%-h-3%"
