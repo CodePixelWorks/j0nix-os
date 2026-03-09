@@ -9,19 +9,12 @@ let
   hyprDmsDir = "${config.home.homeDirectory}/.config/hypr/dms";
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   appExecBackend = (settings.hyprland or { }).appExecBackend or "auto";
-  app2unitExec = lib.getExe pkgs.app2unit;
-  uwsmExec = lib.getExe pkgs.uwsm;
+  launcherPolicy = import ../../../system/lib/app-exec-policy.nix { inherit lib pkgs useUWSM appExecBackend; };
+  app2unitExec = launcherPolicy.app2unitExe;
+  uwsmExec = launcherPolicy.uwsmExe;
   hyprctlExec = lib.getExe' pkgs.hyprland "hyprctl";
   homeBinDir = "${config.home.profileDirectory}/bin";
-  effectiveAppExecBackend =
-    if !useUWSM then "app2unit"
-    else if appExecBackend == "auto" then "app2unit"
-    else appExecBackend;
-  uwsmAppPrefix = "${uwsmExec} app --";
-  appExecPrefix =
-    if effectiveAppExecBackend == "uwsm" then "${uwsmAppPrefix} "
-    else "${app2unitExec} -- ";
-  appExec = cmd: "${appExecPrefix}${cmd}";
+  appExec = launcherPolicy.mkExec;
   launcherAppExec = appExec;
   preferredTerminal = settings.preferredTerminal or "kitty";
   preferredTerminalCmd =
