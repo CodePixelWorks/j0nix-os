@@ -8,14 +8,17 @@ let
   dmsWorkspaceSettings = dmsSettings.workspaces or { };
   hyprDmsDir = "${config.home.homeDirectory}/.config/hypr/dms";
   useUWSM = (settings.hyprland or { }).useUWSM or true;
-  appExecBackend = (settings.hyprland or { }).appExecBackend or "app2unit";
+  appExecBackend = (settings.hyprland or { }).appExecBackend or "auto";
+  app2unitExec = lib.getExe pkgs.app2unit;
+  uwsmExec = lib.getExe pkgs.uwsm;
   effectiveAppExecBackend =
-    # `uwsm app` only works in UWSM-managed sessions; keep a safe fallback for direct sessions.
-    if useUWSM then appExecBackend else "app2unit";
-  uwsmAppPrefix = "${lib.getExe pkgs.uwsm} app --";
+    if !useUWSM then "app2unit"
+    else if appExecBackend == "auto" then "app2unit"
+    else appExecBackend;
+  uwsmAppPrefix = "${uwsmExec} app --";
   appExecPrefix =
     if effectiveAppExecBackend == "uwsm" then "${uwsmAppPrefix} "
-    else "app2unit -- ";
+    else "${app2unitExec} -- ";
   appExec = cmd: "${appExecPrefix}${cmd}";
   launcherAppExec = appExec;
   preferredTerminal = settings.preferredTerminal or "kitty";
@@ -116,8 +119,8 @@ let
       run_hyprctl "binds" binds
       run_hyprctl "devices" devices
       run_hyprctl "layers" layers
-      run_cmd "app2unit probe" app2unit -- true
-      run_cmd "uwsm app probe" ${lib.getExe pkgs.uwsm} app -- true
+      run_cmd "app2unit probe" ${app2unitExec} -- true
+      run_cmd "uwsm app probe" ${uwsmExec} app -- true
     } >"$out_file"
 
     echo "$out_file"
@@ -593,8 +596,8 @@ in {
       message = "settings.dms.workspaces.count must be between 1 and 10";
     }
     {
-      assertion = builtins.elem appExecBackend [ "app2unit" "uwsm" ];
-      message = "settings.hyprland.appExecBackend must be one of: app2unit, uwsm";
+      assertion = builtins.elem appExecBackend [ "auto" "app2unit" "uwsm" ];
+      message = "settings.hyprland.appExecBackend must be one of: auto, app2unit, uwsm";
     }
     {
       assertion = !minimizerEnabled || minimizerCommand != "";
