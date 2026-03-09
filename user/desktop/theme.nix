@@ -42,6 +42,9 @@ in
   dconf.settings = lib.mkIf iconThemeEnabled {
     "org/gnome/desktop/interface" = {
       icon-theme = iconThemeName;
+      font-name = "Cantarell 11";
+      document-font-name = "Cantarell 11";
+      monospace-font-name = "JetBrainsMono Nerd Font 11";
     };
   };
 
