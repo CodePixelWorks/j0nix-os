@@ -599,8 +599,8 @@ in {
       windowrule = defaultFloatWindowRules ++ additionalWindowRules;
 
       bind = if isCaelestiaShell then [ ] else effectiveBindLists.bind;
-      bindi = if isCaelestiaShell then [ ] else effectiveBindLists.bindi;
-      bindin = if isCaelestiaShell then [ ] else effectiveBindLists.bindin;
+      bindi = effectiveBindLists.bindi;
+      bindin = effectiveBindLists.bindin;
       binde = if isCaelestiaShell then [ ] else effectiveBindLists.binde;
       bindl = if isCaelestiaShell then [ ] else effectiveBindLists.bindl;
       bindle = if isCaelestiaShell then [ ] else effectiveBindLists.bindle;
