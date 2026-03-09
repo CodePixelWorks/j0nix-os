@@ -9,9 +9,12 @@ let
   hyprDmsDir = "${config.home.homeDirectory}/.config/hypr/dms";
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   appExecBackend = (settings.hyprland or { }).appExecBackend or "app2unit";
+  effectiveAppExecBackend =
+    # `uwsm app` only works in UWSM-managed sessions; keep a safe fallback for direct sessions.
+    if useUWSM then appExecBackend else "app2unit";
   uwsmAppPrefix = "${lib.getExe pkgs.uwsm} app --";
   appExecPrefix =
-    if appExecBackend == "uwsm" then "${uwsmAppPrefix} "
+    if effectiveAppExecBackend == "uwsm" then "${uwsmAppPrefix} "
     else "app2unit -- ";
   appExec = cmd: "${appExecPrefix}${cmd}";
   launcherAppExec = appExec;
