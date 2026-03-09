@@ -1,0 +1,212 @@
+{
+  lib,
+  settings,
+  profileDetails,
+  isCaelestiaShell,
+  isDmsShell,
+  hyprDmsDir,
+  hyprlandWindowRules,
+  hyprlandKeybinds,
+  shellStartupCommand,
+  dmsOverviewEnabled,
+  dmsOverviewAutostart,
+  homeBinDir,
+  keybindDiagnosticsEnable,
+  startGraphicalSessionTargetCommand,
+  swwwDaemonCommand,
+  startupAppsCommand,
+  keybindDiagnosticsStartupCommand,
+  mainConfigDir,
+  shellConfigDir,
+}:
+let
+  renderLines = key: values:
+    lib.concatStringsSep "\n" (map (value: "${key} = ${value}") values);
+
+  includePaths = [
+    "${mainConfigDir}/00-vars.conf"
+    "${mainConfigDir}/10-monitors.conf"
+    "${mainConfigDir}/20-startup.conf"
+    "${mainConfigDir}/30-input.conf"
+    "${mainConfigDir}/40-general.conf"
+    "${mainConfigDir}/50-decoration.conf"
+    "${mainConfigDir}/60-misc-debug.conf"
+    "${mainConfigDir}/70-window-rules.conf"
+    "${mainConfigDir}/80-keybinds.conf"
+    "${shellConfigDir}/95-shell.conf"
+  ];
+
+  monitorLines = (profileDetails.hyprlandMonitors or [ ]) ++ [ ",preferred,auto,1" ];
+
+  startupLines =
+    [
+      startGraphicalSessionTargetCommand
+      swwwDaemonCommand
+      startupAppsCommand
+    ]
+    ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
+    ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "${homeBinDir}/wm-overview-start" ]
+    ++ lib.optionals keybindDiagnosticsEnable [ keybindDiagnosticsStartupCommand ];
+
+  bindLines =
+    if isCaelestiaShell then
+      ''
+        # Caelestia binds are declared in shell submap config (95-shell.conf).
+      ''
+    else
+      lib.concatStringsSep "\n" (lib.filter (line: line != "") [
+        (renderLines "bind" hyprlandKeybinds.effectiveBindLists.bind)
+        (renderLines "bindi" hyprlandKeybinds.effectiveBindLists.bindi)
+        (renderLines "bindin" hyprlandKeybinds.effectiveBindLists.bindin)
+        (renderLines "binde" hyprlandKeybinds.effectiveBindLists.binde)
+        (renderLines "bindl" hyprlandKeybinds.effectiveBindLists.bindl)
+        (renderLines "bindle" hyprlandKeybinds.effectiveBindLists.bindle)
+        (renderLines "bindr" hyprlandKeybinds.effectiveBindLists.bindr)
+        (renderLines "bindm" hyprlandKeybinds.effectiveBindLists.bindm)
+      ]);
+
+  shellLines = lib.concatStringsSep "\n\n" (lib.filter (line: line != "") [
+    (lib.optionalString isDmsShell ''
+      # DMS runtime-generated Hyprland overlays.
+      source = ${hyprDmsDir}/colors.conf
+      source = ${hyprDmsDir}/cursor.conf
+      source = ${hyprDmsDir}/outputs.conf
+      source = ${hyprDmsDir}/windowrules.conf
+      source = ${hyprDmsDir}/binds.conf
+      source = ${hyprDmsDir}/layout.conf
+    '')
+    (hyprlandKeybinds.shellHyprKeybinds.extraConfig or "")
+    hyprlandKeybinds.caelestiaSubmapConfig
+  ]);
+in
+{
+  inherit includePaths;
+
+  files = {
+    "hypr/conf.d/00-vars.conf" = ''
+      # ------------------------------------------------------------------
+      # j0nix Hyprland
+      # Variables
+      # ------------------------------------------------------------------
+      $mainMod = SUPER
+    '';
+
+    "hypr/conf.d/10-monitors.conf" = ''
+      # ------------------------------------------------------------------
+      # Monitors
+      # ------------------------------------------------------------------
+      ${renderLines "monitor" monitorLines}
+    '';
+
+    "hypr/conf.d/20-startup.conf" = ''
+      # ------------------------------------------------------------------
+      # Startup
+      # ------------------------------------------------------------------
+      ${renderLines "exec-once" startupLines}
+    '';
+
+    "hypr/conf.d/30-input.conf" = ''
+      # ------------------------------------------------------------------
+      # Input
+      # ------------------------------------------------------------------
+      input {
+        kb_layout = ${settings.keyboardLayout or "de"}
+        kb_options = ${settings.keyboardOptions or "caps:escape"}
+        follow_mouse = true
+
+        touchpad {
+          natural_scroll = true
+        }
+      }
+    '';
+
+    "hypr/conf.d/40-general.conf" = ''
+      # ------------------------------------------------------------------
+      # Tiling / Layout Core
+      # ------------------------------------------------------------------
+      general {
+        gaps_in = 6
+        gaps_out = 10
+        border_size = 2
+        col.active_border = rgba(89b4faff)
+        col.inactive_border = rgba(313244ff)
+      }
+
+      dwindle {
+        pseudotile = true
+        preserve_split = true
+      }
+
+      # Keep compositor shortcuts responsive even with client inhibitors.
+      binds {
+        disable_keybind_grabbing = true
+      }
+    '';
+
+    "hypr/conf.d/50-decoration.conf" = ''
+      # ------------------------------------------------------------------
+      # Decoration / Blur / Opacity
+      # ------------------------------------------------------------------
+      decoration {
+        rounding = 8
+        active_opacity = 1.0
+        inactive_opacity = 0.94
+        fullscreen_opacity = 1.0
+
+        blur {
+          enabled = true
+          size = 8
+          passes = 2
+        }
+      }
+    '';
+
+    "hypr/conf.d/60-misc-debug.conf" = ''
+      # ------------------------------------------------------------------
+      # Misc Runtime Behavior
+      # ------------------------------------------------------------------
+      misc {
+        vfr = true
+        vrr = 1
+        animate_manual_resizes = false
+        animate_mouse_windowdragging = false
+        force_default_wallpaper = 0
+        on_focus_under_fullscreen = 2
+        allow_session_lock_restore = true
+        middle_click_paste = false
+        focus_on_activate = true
+        session_lock_xray = true
+        mouse_move_enables_dpms = true
+        key_press_enables_dpms = true
+        disable_hyprland_logo = true
+        disable_splash_rendering = true
+      }
+
+      debug {
+        error_position = 1
+      }
+    '';
+
+    "hypr/conf.d/70-window-rules.conf" = ''
+      # ------------------------------------------------------------------
+      # Window Rules
+      # ------------------------------------------------------------------
+      ${renderLines "windowrule" (hyprlandWindowRules.default ++ hyprlandWindowRules.extra)}
+    '';
+
+    "hypr/conf.d/80-keybinds.conf" = ''
+      # ------------------------------------------------------------------
+      # Keybinds
+      # ------------------------------------------------------------------
+      ${bindLines}
+    '';
+
+    "hypr/shells/${settings.wmShell or (settings.hyprlandShell or "dank-material-shell")}/generated/95-shell.conf" = ''
+      # ------------------------------------------------------------------
+      # Shell-Specific Hyprland Integration
+      # ------------------------------------------------------------------
+      # Generated per selected shell to avoid cross-shell config collisions.
+      ${shellLines}
+    '';
+  };
+}
