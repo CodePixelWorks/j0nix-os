@@ -10,8 +10,9 @@ let
   shellPath = "${homeBinDir}:/run/current-system/sw/bin:${pkgs.coreutils}/bin:${pkgs.procps}/bin:${pkgs.systemd}/bin";
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   appExecBackend = (settings.hyprland or { }).appExecBackend or "auto";
-  app2unitExec = lib.getExe pkgs.app2unit;
-  uwsmExec = lib.getExe pkgs.uwsm;
+  launcherPolicy = import ../../system/lib/app-exec-policy.nix { inherit lib pkgs useUWSM appExecBackend; };
+  app2unitExec = launcherPolicy.app2unitExe;
+  uwsmExec = launcherPolicy.uwsmExe;
   hyprctlExec = lib.getExe' pkgs.hyprland "hyprctl";
   wmShellStartCmd = "${homeBinDir}/wm-shell-start";
   wmShellStopCmd = "${homeBinDir}/wm-shell-stop";
@@ -24,10 +25,7 @@ let
   noctaliaStopCmd = "${homeBinDir}/noctalia-stop";
   dmsStartCmd = "${homeBinDir}/dms-start";
   dmsStopCmd = "${homeBinDir}/dms-stop";
-  effectiveAppExecBackend =
-    if !useUWSM then "app2unit"
-    else if appExecBackend == "auto" then "app2unit"
-    else appExecBackend;
+  effectiveAppExecBackend = launcherPolicy.effectiveBackend;
   dmsStartup = dmsSettings.startup or { };
   dmsStartupMode = dmsStartup.mode or "systemd";
   supportsOverview = builtins.elem selectedShell [ "dank-material-shell" "caelestia-shell" "noctalia-shell" ];
@@ -114,7 +112,7 @@ in
       fi
 
       ${app2unitExec} -- wm-overview-run >/dev/null 2>&1 && exit 0
-      if [ "${appExecBackend}" = "auto" ] && [ "${if useUWSM then "1" else "0"}" = "1" ]; then
+      if [ "${if launcherPolicy.autoFallbackToUwsm then "1" else "0"}" = "1" ]; then
         ${uwsmExec} app -- wm-overview-run >/dev/null 2>&1 && exit 0
       fi
 
