@@ -14,6 +14,7 @@ Recommended layout:
 - `.sops.yaml`
 - `secrets/scripts/sops-safe-rekey.sh`
 - `secrets/scripts/sops-migrate-system-split.sh`
+- `secrets/scripts/sops-autofix-decrypt.sh`
 
 Recommended key model:
 
@@ -49,6 +50,13 @@ To move known system-owned keys from a user file into the host file:
 
 By default this migrates `syncthing.gui_password` from `secrets/users/jonas.yaml` to
 `secrets/hosts/Jonas-PC.yaml`, re-encrypts both files, and keeps encrypted backups.
+
+If decrypt fails during rebuild with `0 successful groups required, got 0`, run:
+
+- `./secrets/scripts/sops-autofix-decrypt.sh`
+
+This re-encrypts host/user files with recipients derived from local key files
+(`~/.config/sops/age/keys.txt` and `/var/lib/sops-nix/key.txt`) and verifies decryptability.
 
 Example:
 
