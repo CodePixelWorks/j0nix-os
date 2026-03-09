@@ -466,8 +466,43 @@ let
     else
       "";
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
-  # `exec-once` is used for both direct Hyprland sessions and UWSM-managed sessions.
   shellStartupCommand = if selectedShell == "none" then null else "wm-shell-start";
+  hyprlandSessionCheckScript = pkgs.writeShellScript "wm-hypr-session-check" ''
+    if [ "''${XDG_CURRENT_DESKTOP:-}" = "Hyprland" ] \
+      || [ "''${XDG_SESSION_DESKTOP:-}" = "hyprland" ] \
+      || [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+      exit 0
+    fi
+
+    if command -v hyprctl >/dev/null 2>&1 && hyprctl instances >/dev/null 2>&1; then
+      exit 0
+    fi
+
+    exit 1
+  '';
+  hyprlandStartupAppsScript = pkgs.writeShellScriptBin "wm-hypr-startup-apps" ''
+    hyprctl_bin="$(command -v hyprctl || true)"
+    [ -n "$hyprctl_bin" ] || exit 0
+
+    launch_on_workspace() {
+      workspace="$1"
+      command="$2"
+      "$hyprctl_bin" dispatch exec "[workspace $workspace silent] $command" >/dev/null 2>&1 || true
+    }
+
+    if ! ${pkgs.procps}/bin/pgrep -x firefox >/dev/null 2>&1; then
+      launch_on_workspace 2 '${launcherAppExec "firefox"}'
+    fi
+
+    if ! ${pkgs.procps}/bin/pgrep -x btop >/dev/null 2>&1; then
+      launch_on_workspace 3 '${launcherAppExec "${preferredTerminalCmd} btop"}'
+    fi
+  '';
+  hyprlandKeybindDiagnosticsStartupScript = pkgs.writeShellScriptBin "wm-hypr-keybind-diagnostics-startup" ''
+    wm-hypr-keybind-dump --phase=login-initial
+    sleep ${toString keybindDiagnosticsDelaySeconds}
+    wm-hypr-keybind-dump --phase=login-delayed
+  '';
 in {
   j0nix.user.software.packages = with pkgs; [
     swww
@@ -505,16 +540,6 @@ in {
     settings = {
       "$mainMod" = "SUPER";
       monitor = (profileDetails.hyprlandMonitors or [ ]) ++ [ ",preferred,auto,1" ];
-
-      exec-once = [
-        "swww-daemon &"
-        "[workspace 2 silent] ${appExec "firefox"}"
-        "[workspace 3 silent] ${appExec "${preferredTerminalCmd} btop"}"
-      ] ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
-        ++ lib.optionals keybindDiagnosticsEnable [
-          "wm-hypr-keybind-dump --phase=login-initial"
-          "sh -lc 'sleep ${toString keybindDiagnosticsDelaySeconds}; wm-hypr-keybind-dump --phase=login-delayed'"
-        ];
 
       input = {
         kb_layout = settings.keyboardLayout or "de";
@@ -584,6 +609,75 @@ in {
     };
 
   };
+
+  systemd.user.services = lib.mkMerge [
+    {
+      hyprland-wallpaper = {
+        Unit = {
+          Description = "Hyprland wallpaper daemon";
+          PartOf = [ "graphical-session.target" ];
+          After = [ "graphical-session.target" ];
+        };
+        Service = {
+          Type = "simple";
+          ExecCondition = hyprlandSessionCheckScript;
+          ExecStart = lib.getExe' pkgs.swww "swww-daemon";
+          Restart = "on-failure";
+          RestartSec = 1;
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
+      };
+
+      hyprland-startup-apps = {
+        Unit = {
+          Description = "Hyprland startup apps";
+          PartOf = [ "graphical-session.target" ];
+          After = [ "graphical-session.target" ];
+        };
+        Service = {
+          Type = "oneshot";
+          ExecCondition = hyprlandSessionCheckScript;
+          ExecStart = lib.getExe hyprlandStartupAppsScript;
+          RemainAfterExit = true;
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
+      };
+    }
+    (lib.mkIf (shellStartupCommand != null) {
+      hyprland-shell = {
+        Unit = {
+          Description = "Hyprland shell startup";
+          PartOf = [ "graphical-session.target" ];
+          After = [ "graphical-session.target" ];
+        };
+        Service = {
+          Type = "simple";
+          ExecCondition = hyprlandSessionCheckScript;
+          ExecStart = "${lib.getExe pkgs.bash} -lc 'exec ${shellStartupCommand}'";
+          ExecStop = "${lib.getExe pkgs.bash} -lc 'wm-shell-stop >/dev/null 2>&1 || true'";
+          Restart = "on-failure";
+          RestartSec = 1;
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
+      };
+    })
+    (lib.mkIf keybindDiagnosticsEnable {
+      hyprland-keybind-diagnostics = {
+        Unit = {
+          Description = "Hyprland keybind diagnostics startup";
+          PartOf = [ "graphical-session.target" ];
+          After = [ "graphical-session.target" ];
+        };
+        Service = {
+          Type = "oneshot";
+          ExecCondition = hyprlandSessionCheckScript;
+          ExecStart = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
+      };
+    })
+  ];
+
   xdg.configFile."hypr/hyprland.conf".force = true;
 
   assertions = [
