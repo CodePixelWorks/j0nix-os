@@ -13,6 +13,14 @@ let
   hasPackage =
     hasSystemPackages
     && (inputs.dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system} ? default);
+  mangowcSessionCheckScript = pkgs.writeShellScript "wm-mangowc-session-check" ''
+    case "''${XDG_CURRENT_DESKTOP:-}:''${XDG_SESSION_DESKTOP:-}" in
+      *mangowc*|*MangoWC*) exit 0 ;;
+    esac
+    exit 1
+  '';
+  wlPasteExe = lib.getExe' pkgs.wl-clipboard "wl-paste";
+  cliphistExe = lib.getExe pkgs.cliphist;
 in
 {
   j0nix.user.software.packages =
@@ -46,8 +54,6 @@ in
     env=QT_QPA_PLATFORMTHEME,gtk3
 
     # Startup
-    exec-once=wm-shell-start
-    exec-once=wl-paste --type text --watch cliphist store
 
     # Appearance
     border_radius=12
@@ -152,6 +158,41 @@ ${lib.optionalString useDmsShell ''
     "mango/dms/colors.conf".text = "";
     "mango/dms/layout.conf".text = "";
     "mango/dms/outputs.conf".text = "";
+  };
+
+  systemd.user.services = {
+    mangowc-shell = {
+      Unit = {
+        Description = "MangoWC shell startup";
+        PartOf = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" ];
+      };
+      Service = {
+        Type = "simple";
+        ExecCondition = mangowcSessionCheckScript;
+        ExecStart = "${lib.getExe pkgs.bash} -lc 'exec wm-shell-start'";
+        ExecStop = "${lib.getExe pkgs.bash} -lc 'wm-shell-stop >/dev/null 2>&1 || true'";
+        Restart = "on-failure";
+        RestartSec = 1;
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
+    };
+
+    mangowc-cliphist = {
+      Unit = {
+        Description = "MangoWC clipboard history watcher";
+        PartOf = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" ];
+      };
+      Service = {
+        Type = "simple";
+        ExecCondition = mangowcSessionCheckScript;
+        ExecStart = "${wlPasteExe} --type text --watch ${cliphistExe} store";
+        Restart = "always";
+        RestartSec = 1;
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
+    };
   };
 
   assertions = [
