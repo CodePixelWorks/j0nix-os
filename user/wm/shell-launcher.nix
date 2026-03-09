@@ -8,10 +8,13 @@ let
   overviewName = "overview";
   overviewSource = inputs.quickshell-overview;
   useUWSM = (settings.hyprland or { }).useUWSM or true;
-  appExecBackend = (settings.hyprland or { }).appExecBackend or "app2unit";
+  appExecBackend = (settings.hyprland or { }).appExecBackend or "auto";
+  app2unitExec = lib.getExe pkgs.app2unit;
+  uwsmExec = lib.getExe pkgs.uwsm;
   effectiveAppExecBackend =
-    # `uwsm app` requires a UWSM session; fallback to app2unit when UWSM is disabled.
-    if useUWSM then appExecBackend else "app2unit";
+    if !useUWSM then "app2unit"
+    else if appExecBackend == "auto" then "app2unit"
+    else appExecBackend;
   dmsStartup = dmsSettings.startup or { };
   dmsStartupMode = dmsStartup.mode or "systemd";
   supportsOverview = builtins.elem selectedShell [ "dank-material-shell" "caelestia-shell" "noctalia-shell" ];
@@ -88,9 +91,13 @@ in
       fi
 
       if [ "${effectiveAppExecBackend}" = "uwsm" ]; then
-        ${lib.getExe pkgs.uwsm} app -- wm-overview-run >/dev/null 2>&1 && exit 0
+        ${uwsmExec} app -- wm-overview-run >/dev/null 2>&1 && exit 0
       fi
-      ${lib.getExe pkgs.app2unit} -- wm-overview-run >/dev/null 2>&1 && exit 0
+
+      ${app2unitExec} -- wm-overview-run >/dev/null 2>&1 && exit 0
+      if [ "${appExecBackend}" = "auto" ] && [ "${if useUWSM then "1" else "0"}" = "1" ]; then
+        ${uwsmExec} app -- wm-overview-run >/dev/null 2>&1 && exit 0
+      fi
 
       nohup wm-overview-run >/dev/null 2>&1 &
       sleep 0.3
