@@ -156,8 +156,6 @@ let
   keepassEnabled = keepassCfg.enable or false;
   keepassWorkspaceCfg = keepassCfg.workspace or { };
   keepassWorkspaceEnable = keepassWorkspaceCfg.enable or true;
-  keepassWorkspaceMode = keepassWorkspaceCfg.mode or (if minimizerEnabled then "minimizer" else "special-workspace");
-  keepassWorkspaceName = keepassWorkspaceCfg.name or "keepass";
   keepassToggleBind = keepassWorkspaceCfg.toggleBind or "$mainMod CTRL, p";
   preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
@@ -165,302 +163,37 @@ let
   dmsOverviewSettings = dmsSettings.overview or { };
   dmsOverviewEnabled = dmsOverviewSettings.enable or false;
   dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
-  defaultFloatWindowRules = [
-    # Do not center every floating window globally: popup/context menus in Flatpak apps
-    # can also be floating and would otherwise jump to screen center.
-    "match:modal 1, float 1, center 1"
-    "match:group 1, float 1, center 1"
-
-    # Common utility windows that are almost always better as floating dialogs.
-    "match:class ^(pavucontrol)$, float 1, center 1"
-    "match:class ^(nm-connection-editor)$, float 1, center 1"
-    "match:class ^(blueman-manager)$, float 1, center 1"
-    "match:class ^(org\\.gnome\\.Calculator)$, float 1, center 1"
-    "match:class ^(zenity)$, float 1, center 1"
-    "match:class ^(yad)$, float 1, center 1"
-    "match:class ^(pinentry.*)$, float 1, center 1"
-    "match:class ^(polkit-gnome-authentication-agent-1)$, float 1, center 1"
-    "match:class ^(org\\.freedesktop\\.secrets)$, float 1, center 1"
-    "match:class ^(org\\.gnome\\.FileRoller)$, float 1, center 1"
-    "match:class ^(qt5ct|qt6ct)$, float 1, center 1"
-    "match:class ^(xdg-desktop-portal-gtk)$, float 1, center 1"
-    "match:class ^(org\\.freedesktop\\.impl\\.portal\\.FileChooser)$, float 1, center 1"
-
-    # Bambu Studio popup dialogs (e.g. filament selection) position themselves;
-    # forcing center breaks the in-window send/print flow. Keep this before generic
-    # title rules in case the parser/runtime applies first-match semantics.
-    "match:class ^(BambuStudio)$, float 1, center 0"
-    "match:title ^(bambu-studio)$, float 1, center 0"
-
-    # Generic dialog-like titles (file choosers, properties, about/preferences dialogs).
-    "match:title ^(Open( File)?|Save( File)?|Select (File|Folder)|Choose (File|Folder)|Properties|Preferences|Settings|About)( .*)?$, float 1, center 1"
-    "match:title ^(Datei öffnen|Datei speichern|Datei auswählen|Ordner auswählen|Eigenschaften|Einstellungen|Über)( .*)?$, float 1, center 1"
-    "match:title ^(Save As|Open Folder|Open Files|Choose Application|Authentication Required|Confirm|Confirmation|Warning|Error|Information)( .*)?$, float 1, center 1"
-    "match:title ^(Speichern unter|Bestätigung|Warnung|Fehler|Information|Authentifizierung erforderlich|Anmeldung|Anmelden)( .*)?$, float 1, center 1"
-    "match:title ^(Sign In|Sign in|Login|Log in|Authenticate|Authentication)( .*)?$, float 1, center 1"
-    "match:title ^(.*(Preferences|Settings|Properties|Dialog|Picker|Chooser).*)$, float 1, center 1"
-    "match:title ^(.*(Einstellungen|Eigenschaften|Auswahl|Dialog|Anmeldung|Anmelden).*)$, float 1, center 1"
-
-    # Duplicate Bambu exceptions after generic rules as well, so they still win if
-    # Hyprland applies last-match semantics for rule actions.
-    "match:class ^(BambuStudio)$, float 1, center 0"
-    "match:title ^(bambu-studio)$, float 1, center 0"
-  ];
-  additionalWindowRules = [
-    # Terminal TUIs: keep nmtui readable and centered.
-    "match:class ^(foot)$, match:title ^(nmtui)$, float 1, size 60% 70%, center 1"
-
-    # Larger settings dialogs benefit from a predictable size.
-    "match:class ^(org\\.gnome\\.Settings)$, float 1, size 70% 80%, center 1"
-    "match:class ^(org\\.pulseaudio\\.pavucontrol|pavucontrol|yad-icon-browser)$, float 1, size 60% 70%, center 1"
-    "match:class ^(nwg-look)$, float 1, size 50% 60%, center 1"
-
-    # Picture-in-picture windows: keep them floating, pinned and ratio-safe.
-    "match:title ^(Picture(-| )in(-| )[Pp]icture)$, float 1, pin 1, keep_aspect_ratio 1, move 100%-w-2% 100%-h-3%"
-
-    # Steam friends list should behave like a utility window.
-    "match:class ^(steam)$, match:title ^(Friends List)$, float 1, center 1"
-
-    # Hide blur artefacts in Fusion overlays.
-    "match:class ^(fusion360\\.exe)$, match:title ^(Fusion360|(Marking Menu))$, no_blur 1"
-
-    # Ueberzugpp helper surfaces should not steal focus.
-    "match:class ^(ueberzugpp_.*)$, float 1, no_initial_focus 1"
-  ];
-  hasValue = value: value != null && value != "";
-  keyboardLayoutToggleBind =
-    lib.optional (hasValue layoutToggleBind) "${layoutToggleBind}, exec, wm-kbd-layout-toggle";
-  dmsOverviewToggleBind =
-    lib.optional (dmsOverviewEnabled && hasValue overviewToggleBind)
-      "${overviewToggleBind}, exec, wm-overview-toggle";
-  dmsOverviewRemoteToggleBind =
-    lib.optional dmsOverviewEnabled "CTRL ALT, SPACE, exec, wm-overview-toggle";
-  baseHyprKeybinds = {
-    bind = [
-      "$mainMod, h, movewindow, l"
-      "$mainMod, j, movewindow, d"
-      "$mainMod, k, movewindow, u"
-      "$mainMod, l, movewindow, r"
-      "CTRL ALT, h, movefocus, l"
-      "CTRL ALT, j, movefocus, d"
-      "CTRL ALT, k, movefocus, u"
-      "CTRL ALT, l, movefocus, r"
-      "$mainMod, left, workspace, -1"
-      "$mainMod, right, workspace, +1"
-      "$mainMod SHIFT, left, movetoworkspace, -1"
-      "$mainMod SHIFT, right, movetoworkspace, +1"
-      "CTRL SHIFT ALT, h, movewindow, l"
-      "CTRL SHIFT ALT, j, movewindow, d"
-      "CTRL SHIFT ALT, k, movewindow, u"
-      "CTRL SHIFT ALT, l, movewindow, r"
-      "$mainMod, mouse_down, workspace, -1"
-      "$mainMod, mouse_up, workspace, +1"
-      "$mainMod CTRL, Backslash, centerwindow, 1"
-    ];
-    binde = [
-      "$mainMod ALT, h, resizeactive, -60 0"
-      "$mainMod ALT, j, resizeactive, 0 60"
-      "$mainMod ALT, k, resizeactive, 0 -60"
-      "$mainMod ALT, l, resizeactive, 60 0"
-      "$mainMod, minus, splitratio, -0.1"
-      "$mainMod, equal, splitratio, 0.1"
-      "$mainMod, Page_Up, workspace, -1"
-      "$mainMod, Page_Down, workspace, +1"
-      "$mainMod ALT, Page_Up, movetoworkspace, -1"
-      "$mainMod ALT, Page_Down, movetoworkspace, +1"
-    ];
-    bindm = [
-      "$mainMod, mouse:272, movewindow"
-      "$mainMod, mouse:273, resizewindow"
-    ];
-    bindl = [
-      ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
-      ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-      "CTRL ALT, m, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-      "CTRL SHIFT ALT, m, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
-      "CTRL, Print, exec, wm-screenshot-full"
-    ];
-    bindle = [
-      ", XF86AudioRaiseVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 3%+"
-      ", XF86AudioLowerVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume @DEFAULT_AUDIO_SINK@ 3%-"
-      "CTRL ALT, equal, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 3%+"
-      "CTRL ALT, minus, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume @DEFAULT_AUDIO_SINK@ 3%-"
-      "CTRL SHIFT ALT, equal, exec, brightnessctl set +5%"
-      "CTRL SHIFT ALT, minus, exec, brightnessctl set 5%-"
-    ];
+  userHyprConfigPath = "${config.home.homeDirectory}/.config/hypr/user-overrides.conf";
+  hyprlandWindowRules = import ./config/window-rules.nix;
+  hyprlandKeybinds = import ./config/keybinds.nix {
+    inherit
+      lib
+      settings
+      isCaelestiaShell
+      hyprctlExec
+      appExec
+      launcherAppExec
+      preferredTerminalCmd
+      preferredFileManager
+      layoutToggleBind
+      dmsOverviewEnabled
+      overviewToggleBind
+      keybindDiagnosticsEnable
+      keepassEnabled
+      keepassWorkspaceEnable
+      keepassToggleBind
+      minimizerEnabled
+      minimizerToggleBind
+      minimizerRestoreBind
+      minimizerMenuBind
+      minimizerToggleCommand
+      minimizerRestoreCommand
+      minimizerMenuCommand
+      workspaceSwitchBinds
+      workspaceMoveBinds
+      remoteWorkspaceSwitchBinds
+      remoteWorkspaceMoveBinds;
   };
-  coreBinds = [
-    "$mainMod, q, killactive,"
-    "CTRL ALT, q, killactive,"
-    "$mainMod, t, togglefloating,"
-    "CTRL ALT, t, togglefloating,"
-    "$mainMod, f, fullscreen, 0"            # actual fullscreen (shell/waybar hidden)
-    "$mainMod SHIFT, f, fullscreen, 1"      # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
-    "CTRL ALT, f, fullscreen, 0"
-    "CTRL SHIFT ALT, f, fullscreen, 1"
-    "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
-    "$mainMod, p, exec, wm-screenshot-full"
-    "$mainMod, r, exec, wm-shell-recover"
-    "$mainMod CTRL, v, layoutmsg, preselect r"
-    "$mainMod CTRL SHIFT, v, layoutmsg, preselect d"
-    "$mainMod SHIFT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
-    "CTRL ALT, return, exec, ${appExec preferredTerminalCmd}"
-    "CTRL ALT, c, centerwindow, 1"
-    "$mainMod SHIFT, q, exit,"
-    "CTRL SHIFT, Print, exec, wm-screenshot-area"
-  ] ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind ++ dmsOverviewRemoteToggleBind
-    ++ lib.optionals keybindDiagnosticsEnable [
-      "$mainMod SHIFT, F12, exec, wm-hypr-keybind-probe super-shift-f12"
-      "CTRL ALT, F12, exec, wm-hypr-keybind-probe ctrl-alt-f12"
-    ]
-    ++ lib.optionals (keepassEnabled && keepassWorkspaceEnable) [
-      "${keepassToggleBind}, exec, keepassxc-toggle"
-    ]
-    ++ lib.optionals minimizerEnabled [
-      "${minimizerToggleBind}, exec, ${minimizerToggleCommand}"
-      "${minimizerRestoreBind}, exec, ${minimizerRestoreCommand}"
-      "${minimizerMenuBind}, exec, ${minimizerMenuCommand}"
-    ];
-  shellHyprKeybinds =
-    if isCaelestiaShell then
-      {
-        # Caelestia exposes many actions via Hyprland "global" dispatch commands.
-        extraConfig = "";
-        bindi = [ ];
-        bind = [
-          "$mainMod, escape, global, caelestia:session"
-          "$mainMod, space, global, caelestia:showall"
-          "CTRL ALT, space, global, caelestia:launcher"
-          "CTRL SHIFT ALT, space, global, caelestia:showall"
-          "CTRL ALT, BackSpace, global, caelestia:lock"
-          "$mainMod, n, global, caelestia:clearNotifs"
-          "$mainMod SHIFT, v, exec, pkill fuzzel || caelestia clipboard"
-          "$mainMod ALT, v, exec, pkill fuzzel || caelestia clipboard -d"
-          "$mainMod, period, exec, pkill fuzzel || caelestia emoji -p"
-          "$mainMod ALT, r, exec, caelestia record -s"
-          "CTRL ALT, r, exec, caelestia record"
-          "$mainMod SHIFT ALT, r, exec, caelestia record -r"
-          "$mainMod SHIFT, s, global, caelestia:screenshotFreeze"
-          "$mainMod SHIFT ALT, s, global, caelestia:screenshot"
-          "$mainMod, b, exec, ${launcherAppExec (settings.preferredBrowser or "chromium")}"
-          "$mainMod, e, exec, ${launcherAppExec preferredFileManager}"
-          "$mainMod, v, exec, ${launcherAppExec (settings.preferredEditor or "nvim")}"
-          "$mainMod, g, exec, ${launcherAppExec "github-desktop"}"
-          "CTRL ALT, v, exec, ${launcherAppExec "pavucontrol"}"
-          "CTRL ALT, Escape, exec, ${launcherAppExec "qps"}"
-          "$mainMod ALT, s, movetoworkspace, special:special"
-          "$mainMod, s, exec, caelestia toggle specialws"
-          "$mainMod CTRL SHIFT, up, movetoworkspace, special:special"
-          "$mainMod CTRL SHIFT, down, movetoworkspace, e+0"
-          "$mainMod CTRL SHIFT, right, movetoworkspace, +1"
-          "$mainMod CTRL SHIFT, left, movetoworkspace, -1"
-          "$mainMod ALT, mouse_down, movetoworkspace, -1"
-          "$mainMod ALT, mouse_up, movetoworkspace, +1"
-          "$mainMod, slash, exec, caelestia shell controlCenter open"
-          "CTRL ALT, slash, exec, caelestia shell controlCenter open"
-          "$mainMod, m, exec, caelestia toggle music"
-          "$mainMod, c, exec, caelestia toggle communication"
-          "$mainMod, y, exec, caelestia toggle todo"
-          "$mainMod, x, exec, caelestia toggle sysmon"
-          "$mainMod SHIFT, c, exec, hyprpicker -a"
-        ];
-        bindl = [
-          ", Print, exec, caelestia screenshot"
-          ", XF86MonBrightnessUp, global, caelestia:brightnessUp"
-          ", XF86MonBrightnessDown, global, caelestia:brightnessDown"
-          "CTRL SUPER, Space, global, caelestia:mediaToggle"
-          ", XF86AudioPlay, global, caelestia:mediaToggle"
-          ", XF86AudioPause, global, caelestia:mediaToggle"
-          "CTRL SUPER, Equal, global, caelestia:mediaNext"
-          ", XF86AudioNext, global, caelestia:mediaNext"
-          "CTRL SUPER, Minus, global, caelestia:mediaPrev"
-          ", XF86AudioPrev, global, caelestia:mediaPrev"
-          ", XF86AudioStop, global, caelestia:mediaStop"
-          ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
-          ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-          "$mainMod SHIFT, m, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-          "CTRL SHIFT ALT, v, exec, sleep 0.5s && ydotool type -d 1 \"$(cliphist list | head -1 | cliphist decode)\""
-          "$mainMod ALT, f12, exec, notify-send -u low -i dialog-information-symbolic 'Test notification' \"Here's a really long message to test truncation and wrapping\\nYou can middle click or flick this notification to dismiss it!\" -a 'Shell' -A \"Test1=I got it!\" -A \"Test2=Another action\""
-          "$mainMod SHIFT, BackSpace, exec, caelestia shell -d"
-          "$mainMod SHIFT, BackSpace, global, caelestia:lock"
-        ];
-        bindle = [
-          ", XF86AudioRaiseVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 3%+"
-          ", XF86AudioLowerVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume @DEFAULT_AUDIO_SINK@ 3%-"
-        ];
-        binde = [
-          "$mainMod, Page_Up, workspace, -1"
-          "$mainMod, Page_Down, workspace, +1"
-          "CTRL ALT, Tab, changegroupactive, f"
-          "CTRL SHIFT ALT, Tab, changegroupactive, b"
-          "$mainMod, minus, splitratio, -0.1"
-          "$mainMod, equal, splitratio, 0.1"
-        ];
-        bindr = [
-          "CTRL SUPER SHIFT, R, exec, qs -c caelestia kill"
-          "CTRL SUPER ALT, R, exec, qs -c caelestia kill; sleep .1; caelestia shell -d"
-        ];
-        bindm = [
-          "Super, mouse:272, movewindow"
-          "Super, mouse:273, resizewindow"
-        ];
-      }
-    else
-      {
-        extraConfig = "";
-      };
-  mergedBindList = key: (baseHyprKeybinds.${key} or [ ]) ++ (shellHyprKeybinds.${key} or [ ]);
-  renderBindLines = key: entries:
-    lib.concatStringsSep "\n" (map (entry: "${key} = ${entry}") entries);
-  # Final merged bind lists rendered through Home Manager Hyprland settings.
-  effectiveBindLists = {
-    bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ remoteWorkspaceSwitchBinds ++ remoteWorkspaceMoveBinds ++ mergedBindList "bind";
-    bindi = mergedBindList "bindi";
-    bindin = mergedBindList "bindin";
-    binde = mergedBindList "binde";
-    bindl = mergedBindList "bindl";
-    bindle = mergedBindList "bindle";
-    bindr = mergedBindList "bindr";
-    bindm = mergedBindList "bindm";
-  };
-  # Keep Caelestia keybind handling aligned with upstream dots:
-  # run all binds inside a persistent "global" submap with launcher catchall interrupts.
-  caelestiaSubmapConfig =
-    if isCaelestiaShell then
-      let
-        launcherLines = [
-          "bindi = Super, Super_L, global, caelestia:launcher"
-          "bindin = Super, catchall, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:272, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:273, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:274, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:275, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:276, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse:277, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse_up, global, caelestia:launcherInterrupt"
-          "bindin = Super, mouse_down, global, caelestia:launcherInterrupt"
-        ];
-        renderedLists =
-          lib.concatStringsSep "\n"
-            (lib.filter (s: s != "") [
-              (renderBindLines "bind" effectiveBindLists.bind)
-              (renderBindLines "bindi" effectiveBindLists.bindi)
-              (renderBindLines "binde" effectiveBindLists.binde)
-              (renderBindLines "bindl" effectiveBindLists.bindl)
-              (renderBindLines "bindle" effectiveBindLists.bindle)
-              (renderBindLines "bindr" effectiveBindLists.bindr)
-              (renderBindLines "bindm" effectiveBindLists.bindm)
-            ]);
-      in
-      ''
-        exec = ${hyprctlExec} dispatch submap global
-        submap = global
-        ${lib.concatStringsSep "\n" launcherLines}
-        ${renderedLists}
-        submap = reset
-      ''
-    else
-      "";
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
   shellStartupCommand =
     if selectedShell == "none" then
@@ -527,8 +260,12 @@ in {
       # Backwards compatibility with older DMS layouts.
       source = ${hyprDmsDir}/layout.conf
       '')
-      + (shellHyprKeybinds.extraConfig or "")
-      + caelestiaSubmapConfig;
+      + (hyprlandKeybinds.shellHyprKeybinds.extraConfig or "")
+      + hyprlandKeybinds.caelestiaSubmapConfig
+      + ''
+      # User-local overrides (sourced last on purpose).
+      source = ${userHyprConfigPath}
+      '';
 
     settings = {
       "$mainMod" = "SUPER";
@@ -597,19 +334,42 @@ in {
         error_position = 1;
       };
 
-      windowrule = defaultFloatWindowRules ++ additionalWindowRules;
+      windowrule = hyprlandWindowRules.default ++ hyprlandWindowRules.extra;
 
-      bind = if isCaelestiaShell then [ ] else effectiveBindLists.bind;
-      bindi = effectiveBindLists.bindi;
-      bindin = effectiveBindLists.bindin;
-      binde = if isCaelestiaShell then [ ] else effectiveBindLists.binde;
-      bindl = if isCaelestiaShell then [ ] else effectiveBindLists.bindl;
-      bindle = if isCaelestiaShell then [ ] else effectiveBindLists.bindle;
-      bindr = if isCaelestiaShell then [ ] else effectiveBindLists.bindr;
-      bindm = if isCaelestiaShell then [ ] else effectiveBindLists.bindm;
+      bind = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.bind;
+      bindi = hyprlandKeybinds.effectiveBindLists.bindi;
+      bindin = hyprlandKeybinds.effectiveBindLists.bindin;
+      binde = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.binde;
+      bindl = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.bindl;
+      bindle = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.bindle;
+      bindr = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.bindr;
+      bindm = if isCaelestiaShell then [ ] else hyprlandKeybinds.effectiveBindLists.bindm;
     };
 
   };
+
+  home.activation.hyprlandUserOverridesInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    cfg_dir="$HOME/.config/hypr"
+    cfg_file="$cfg_dir/user-overrides.conf"
+
+    if [ -L "$cfg_file" ]; then
+      $DRY_RUN_CMD rm -f "$cfg_file"
+    fi
+
+    if [ ! -e "$cfg_file" ]; then
+      $DRY_RUN_CMD mkdir -p "$cfg_dir"
+      $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
+# Local Hyprland overrides for this user.
+# Sourced last from the generated Hyprland config.
+#
+# Examples:
+# bind = SUPER, F2, exec, kitty
+# windowrule = float 1, match:class ^(pavucontrol)$
+# monitor = ,preferred,auto,1
+EOF
+      $DRY_RUN_CMD chmod 0644 "$cfg_file"
+    fi
+  '';
 
   xdg.configFile."hypr/hyprland.conf".force = true;
 
