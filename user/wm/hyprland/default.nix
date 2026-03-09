@@ -462,7 +462,11 @@ let
     else
       "";
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
-  shellStartupCommand = if selectedShell == "none" then null else "wm-shell-start";
+  shellStartupCommand =
+    if selectedShell == "none" then
+      null
+    else
+      appExec "${homeBinDir}/wm-shell-start";
   startGraphicalSessionTargetScript = pkgs.writeShellScriptBin "wm-start-graphical-session-target" ''
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     if [ -S "$runtime_dir/bus" ]; then
@@ -534,7 +538,7 @@ in {
         (lib.getExe' pkgs.swww "swww-daemon")
         (lib.getExe hyprlandStartupAppsScript)
       ]
-      ++ lib.optionals (shellStartupCommand != null) [ "${homeBinDir}/wm-shell-start" ]
+      ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
       ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "${homeBinDir}/wm-overview-start" ]
       ++ lib.optionals keybindDiagnosticsEnable [ (lib.getExe hyprlandKeybindDiagnosticsStartupScript) ];
 
