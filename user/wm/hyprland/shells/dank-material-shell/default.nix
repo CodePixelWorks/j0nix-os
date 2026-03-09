@@ -415,18 +415,18 @@ EOF
 
   # Keep DMS alive across Home Manager reloads triggered by nixos-rebuild.
   home.activation.dmsSystemdReconcile = lib.hm.dag.entryAfter [ "reloadSystemd" "writeBoundary" ] (lib.optionalString (integratedMode && dmsUseSystemd) ''
-    if command -v systemctl >/dev/null 2>&1; then
+    if [ -x "${systemd}/bin/systemctl" ]; then
       resolved_unit=""
       for unit in dank-material-shell.service dank-material-shell dms.service; do
-        if systemctl --user cat "$unit" >/dev/null 2>&1; then
+        if ${systemd}/bin/systemctl --user cat "$unit" >/dev/null 2>&1; then
           resolved_unit="$unit"
           break
         fi
       done
 
       if [ -n "$resolved_unit" ]; then
-        $DRY_RUN_CMD systemctl --user daemon-reload || true
-        $DRY_RUN_CMD systemctl --user restart "$resolved_unit" || $DRY_RUN_CMD systemctl --user start "$resolved_unit" || true
+        $DRY_RUN_CMD ${systemd}/bin/systemctl --user daemon-reload || true
+        $DRY_RUN_CMD ${systemd}/bin/systemctl --user restart "$resolved_unit" || $DRY_RUN_CMD ${systemd}/bin/systemctl --user start "$resolved_unit" || true
       fi
     fi
   '');
