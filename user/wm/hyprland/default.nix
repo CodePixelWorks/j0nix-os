@@ -171,6 +171,7 @@ let
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
   dmsOverviewSettings = dmsSettings.overview or { };
   dmsOverviewEnabled = dmsOverviewSettings.enable or false;
+  dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
   defaultFloatWindowRules = [
     # Do not center every floating window globally: popup/context menus in Flatpak apps
     # can also be floating and would otherwise jump to screen center.
@@ -529,6 +530,13 @@ in {
     settings = {
       "$mainMod" = "SUPER";
       monitor = (profileDetails.hyprlandMonitors or [ ]) ++ [ ",preferred,auto,1" ];
+      exec-once = [
+        (lib.getExe' pkgs.swww "swww-daemon")
+        (lib.getExe hyprlandStartupAppsScript)
+      ]
+      ++ lib.optionals (shellStartupCommand != null) [ "${homeBinDir}/wm-shell-start" ]
+      ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "${homeBinDir}/wm-overview-start" ]
+      ++ lib.optionals keybindDiagnosticsEnable [ (lib.getExe hyprlandKeybindDiagnosticsStartupScript) ];
 
       input = {
         kb_layout = settings.keyboardLayout or "de";
@@ -598,70 +606,6 @@ in {
     };
 
   };
-
-  systemd.user.services = lib.mkMerge [
-    {
-      hyprland-wallpaper = {
-        Unit = {
-          Description = "Hyprland wallpaper daemon";
-          PartOf = [ "graphical-session.target" ];
-          After = [ "graphical-session.target" ];
-        };
-        Service = {
-          Type = "simple";
-          ExecStart = lib.getExe' pkgs.swww "swww-daemon";
-          Restart = "on-failure";
-          RestartSec = 1;
-        };
-        Install.WantedBy = [ "graphical-session.target" ];
-      };
-
-      hyprland-startup-apps = {
-        Unit = {
-          Description = "Hyprland startup apps";
-          PartOf = [ "graphical-session.target" ];
-          After = [ "graphical-session.target" "hyprland-shell.service" ];
-        };
-        Service = {
-          Type = "oneshot";
-          ExecStart = lib.getExe hyprlandStartupAppsScript;
-          RemainAfterExit = true;
-        };
-        Install.WantedBy = [ "graphical-session.target" ];
-      };
-    }
-    (lib.mkIf (shellStartupCommand != null) {
-      hyprland-shell = {
-        Unit = {
-          Description = "Hyprland shell startup";
-          PartOf = [ "graphical-session.target" ];
-          After = [ "graphical-session.target" ];
-        };
-        Service = {
-          Type = "simple";
-          ExecStart = "${homeBinDir}/wm-shell-start";
-          ExecStop = "${homeBinDir}/wm-shell-stop";
-          Restart = "on-failure";
-          RestartSec = 1;
-        };
-        Install.WantedBy = [ "graphical-session.target" ];
-      };
-    })
-    (lib.mkIf keybindDiagnosticsEnable {
-      hyprland-keybind-diagnostics = {
-        Unit = {
-          Description = "Hyprland keybind diagnostics startup";
-          PartOf = [ "graphical-session.target" ];
-          After = [ "graphical-session.target" "hyprland-shell.service" ];
-        };
-        Service = {
-          Type = "oneshot";
-          ExecStart = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
-        };
-        Install.WantedBy = [ "graphical-session.target" ];
-      };
-    })
-  ];
 
   xdg.configFile."hypr/hyprland.conf".force = true;
 
