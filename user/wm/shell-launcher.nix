@@ -4,6 +4,7 @@ let
   dmsSettings = settings.dms or { };
   overviewSettings = dmsSettings.overview or { };
   overviewEnable = overviewSettings.enable or false;
+  overviewAutostart = overviewSettings.autostart or false;
   overviewName = "overview";
   overviewSource = inputs.quickshell-overview;
   dmsStartup = dmsSettings.startup or { };
@@ -72,23 +73,48 @@ in
         exit 1
       fi
 
+      if command -v systemctl >/dev/null 2>&1 && systemctl --user cat wm-overview.service >/dev/null 2>&1; then
+        systemctl --user start wm-overview.service >/dev/null 2>&1 || true
+        systemctl --user --quiet is-active wm-overview.service >/dev/null 2>&1 && exit 0
+      fi
+
       if ${pkgs.procps}/bin/pgrep -f "quickshell.*-c[[:space:]]*${overviewName}" >/dev/null 2>&1; then
         exit 0
       fi
 
+      if [ "${(settings.hyprland or { }).appExecBackend or "app2unit"}" = "uwsm" ]; then
+        ${lib.getExe pkgs.uwsm} app -- wm-overview-run >/dev/null 2>&1 && exit 0
+      else
+        ${lib.getExe pkgs.app2unit} -- wm-overview-run >/dev/null 2>&1 && exit 0
+      fi
+
+      nohup wm-overview-run >/dev/null 2>&1 &
+      sleep 0.3
+      ${pkgs.procps}/bin/pgrep -f "quickshell.*-c[[:space:]]*${overviewName}" >/dev/null 2>&1 && exit 0
+      echo "Failed to launch quickshell-overview"
+      exit 1
+    '')
+    (writeShellScriptBin "wm-overview-run" ''
+      if [ "${if overviewEnable then "1" else "0"}" != "1" ]; then
+        echo "quickshell-overview is disabled (settings.dms.overview.enable = false)"
+        exit 1
+      fi
+
+      if [ "${if supportsOverview then "1" else "0"}" != "1" ]; then
+        echo "quickshell-overview is not available for wmShell=${selectedShell}"
+        exit 1
+      fi
+
       if command -v qs >/dev/null 2>&1; then
-        nohup qs -c ${overviewName} >/dev/null 2>&1 &
-        exit 0
+        exec qs -c ${overviewName}
       fi
 
       if [ -n "${if quickshellBin != null then quickshellBin else ""}" ] && [ -x "${if quickshellBin != null then quickshellBin else "/nonexistent"}" ]; then
-        nohup ${if quickshellBin != null then quickshellBin else "true"} -c ${overviewName} >/dev/null 2>&1 &
-        exit 0
+        exec ${if quickshellBin != null then quickshellBin else "true"} -c ${overviewName}
       fi
 
       if command -v quickshell >/dev/null 2>&1; then
-        nohup quickshell -c ${overviewName} >/dev/null 2>&1 &
-        exit 0
+        exec quickshell -c ${overviewName}
       fi
 
       echo "Neither qs nor quickshell is available in PATH"
@@ -136,6 +162,9 @@ in
       exit 1
     '')
     (writeShellScriptBin "wm-overview-stop" ''
+      if command -v systemctl >/dev/null 2>&1 && systemctl --user cat wm-overview.service >/dev/null 2>&1; then
+        systemctl --user stop wm-overview.service >/dev/null 2>&1 || true
+      fi
       if command -v qs >/dev/null 2>&1; then
         qs kill ${overviewName} >/dev/null 2>&1 && exit 0
       fi
@@ -340,6 +369,22 @@ in
 
   home.file.".config/quickshell/${overviewName}" = lib.mkIf (overviewEnable && supportsOverview) {
     source = config.lib.file.mkOutOfStoreSymlink "${overviewSource}";
+  };
+
+  systemd.user.services = lib.mkIf (overviewEnable && supportsOverview) {
+    wm-overview = {
+      Unit = {
+        Description = "Quickshell Overview";
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        Type = "simple";
+        ExecStart = "${lib.getExe pkgs.bash} -lc 'exec wm-overview-run'";
+        Restart = "on-failure";
+        RestartSec = 1;
+      };
+      Install.WantedBy = lib.optional overviewAutostart "graphical-session.target";
+    };
   };
 
   assertions = [
