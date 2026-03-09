@@ -453,7 +453,7 @@ let
             ]);
       in
       ''
-        exec = hyprctl dispatch submap global
+        exec = ${hyprctlExec} dispatch submap global
         submap = global
         ${lib.concatStringsSep "\n" launcherLines}
         ${renderedLists}
