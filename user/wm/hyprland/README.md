@@ -40,11 +40,12 @@ For the active incident/runbook around Caelestia keybind regressions (`upstream-
 
 ## User Overrides
 
-The generated Hyprland config sources a user-local file last:
+The generated Hyprland config sources a shell-scoped user-local file last:
 
-- `~/.config/hypr/user-overrides.conf`
+- `~/.config/hypr/shell-overrides/<wmShell>/user-overrides.conf`
 
-This file is auto-created once by Home Manager activation and then left mutable for manual per-user overrides.  
+This file is auto-created once by Home Manager activation and then left mutable for manual per-user overrides.
+The old shared path `~/.config/hypr/user-overrides.conf` is migrated automatically on first switch.
 Typical use: local binds, monitor tweaks, one-off rules that should not be committed into Nix modules.
 
 ## Optional Minimizer

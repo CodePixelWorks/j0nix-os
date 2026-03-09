@@ -163,7 +163,8 @@ let
   dmsOverviewSettings = dmsSettings.overview or { };
   dmsOverviewEnabled = dmsOverviewSettings.enable or false;
   dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
-  userHyprConfigPath = "${config.home.homeDirectory}/.config/hypr/user-overrides.conf";
+  userHyprShellOverridesDir = "${config.home.homeDirectory}/.config/hypr/shell-overrides/${selectedShell}";
+  userHyprConfigPath = "${userHyprShellOverridesDir}/user-overrides.conf";
   hyprlandWindowRules = import ./config/window-rules.nix;
   hyprlandKeybinds = import ./config/keybinds.nix {
     inherit
@@ -349,24 +350,33 @@ in {
   };
 
   home.activation.hyprlandUserOverridesInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    cfg_dir="$HOME/.config/hypr"
+    cfg_dir="$HOME/.config/hypr/shell-overrides/${selectedShell}"
     cfg_file="$cfg_dir/user-overrides.conf"
+    legacy_cfg_file="$HOME/.config/hypr/user-overrides.conf"
 
     if [ -L "$cfg_file" ]; then
       $DRY_RUN_CMD rm -f "$cfg_file"
     fi
 
+    $DRY_RUN_CMD mkdir -p "$cfg_dir"
+
     if [ ! -e "$cfg_file" ]; then
-      $DRY_RUN_CMD mkdir -p "$cfg_dir"
-      $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
+      if [ -f "$legacy_cfg_file" ] && [ ! -L "$legacy_cfg_file" ]; then
+        # Migrate existing shared override file to the new shell-scoped location.
+        $DRY_RUN_CMD cp "$legacy_cfg_file" "$cfg_file"
+      else
+        $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
 # Local Hyprland overrides for this user.
 # Sourced last from the generated Hyprland config.
+# This file is shell-scoped:
+#   ~/.config/hypr/shell-overrides/${selectedShell}/user-overrides.conf
 #
 # Examples:
 # bind = SUPER, F2, exec, kitty
 # windowrule = float 1, match:class ^(pavucontrol)$
 # monitor = ,preferred,auto,1
 EOF
+      fi
       $DRY_RUN_CMD chmod 0644 "$cfg_file"
     fi
   '';
