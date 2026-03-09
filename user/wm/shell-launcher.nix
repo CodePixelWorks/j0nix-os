@@ -14,6 +14,7 @@ let
   app2unitExec = launcherPolicy.app2unitExe;
   uwsmExec = launcherPolicy.uwsmExe;
   hyprctlExec = lib.getExe' pkgs.hyprland "hyprctl";
+  systemctlExec = "${pkgs.systemd}/bin/systemctl";
   wmShellStartCmd = "${homeBinDir}/wm-shell-start";
   wmShellStopCmd = "${homeBinDir}/wm-shell-stop";
   wmShellRestartCmd = "${homeBinDir}/wm-shell-restart";
@@ -70,10 +71,10 @@ in
           exec ${caelestiaStartCmd}
           ;;
         dank-material-shell)
-          if [ "${dmsStartupMode}" = "systemd" ] && command -v systemctl >/dev/null 2>&1; then
+          if [ "${dmsStartupMode}" = "systemd" ] && [ -x "${systemctlExec}" ]; then
             for unit in dank-material-shell.service dank-material-shell dms.service; do
-              if systemctl --user cat "$unit" >/dev/null 2>&1; then
-                systemctl --user start "$unit" >/dev/null 2>&1 || true
+              if ${systemctlExec} --user cat "$unit" >/dev/null 2>&1; then
+                ${systemctlExec} --user start "$unit" >/dev/null 2>&1 || true
                 exit 0
               fi
             done
@@ -98,9 +99,9 @@ in
         exit 1
       fi
 
-      if command -v systemctl >/dev/null 2>&1 && systemctl --user cat wm-overview.service >/dev/null 2>&1; then
-        systemctl --user start wm-overview.service >/dev/null 2>&1 || true
-        systemctl --user --quiet is-active wm-overview.service >/dev/null 2>&1 && exit 0
+      if [ -x "${systemctlExec}" ] && ${systemctlExec} --user cat wm-overview.service >/dev/null 2>&1; then
+        ${systemctlExec} --user start wm-overview.service >/dev/null 2>&1 || true
+        ${systemctlExec} --user --quiet is-active wm-overview.service >/dev/null 2>&1 && exit 0
       fi
 
       if ${pkgs.procps}/bin/pgrep -f "quickshell.*-c[[:space:]]*${overviewName}" >/dev/null 2>&1; then
@@ -193,8 +194,8 @@ in
     '')
     (writeShellScriptBin "wm-overview-stop" ''
       export PATH="${shellPath}:$PATH"
-      if command -v systemctl >/dev/null 2>&1 && systemctl --user cat wm-overview.service >/dev/null 2>&1; then
-        systemctl --user stop wm-overview.service >/dev/null 2>&1 || true
+      if [ -x "${systemctlExec}" ] && ${systemctlExec} --user cat wm-overview.service >/dev/null 2>&1; then
+        ${systemctlExec} --user stop wm-overview.service >/dev/null 2>&1 || true
       fi
       if command -v qs >/dev/null 2>&1; then
         qs kill ${overviewName} >/dev/null 2>&1 && exit 0
@@ -333,10 +334,10 @@ in
           exec ${caelestiaStopCmd}
           ;;
         dank-material-shell)
-          if [ "${dmsStartupMode}" = "systemd" ] && command -v systemctl >/dev/null 2>&1; then
+          if [ "${dmsStartupMode}" = "systemd" ] && [ -x "${systemctlExec}" ]; then
             for unit in dank-material-shell.service dank-material-shell dms.service; do
-              if systemctl --user cat "$unit" >/dev/null 2>&1; then
-                systemctl --user stop "$unit" >/dev/null 2>&1 || true
+              if ${systemctlExec} --user cat "$unit" >/dev/null 2>&1; then
+                ${systemctlExec} --user stop "$unit" >/dev/null 2>&1 || true
                 exit 0
               fi
             done
@@ -368,10 +369,10 @@ in
           exec ${wmShellStartCmd}
           ;;
         dank-material-shell)
-          if [ "${dmsStartupMode}" = "systemd" ] && command -v systemctl >/dev/null 2>&1; then
+          if [ "${dmsStartupMode}" = "systemd" ] && [ -x "${systemctlExec}" ]; then
             for unit in dank-material-shell.service dank-material-shell dms.service; do
-              if systemctl --user cat "$unit" >/dev/null 2>&1; then
-                systemctl --user restart "$unit" >/dev/null 2>&1 || systemctl --user start "$unit" >/dev/null 2>&1 || true
+              if ${systemctlExec} --user cat "$unit" >/dev/null 2>&1; then
+                ${systemctlExec} --user restart "$unit" >/dev/null 2>&1 || ${systemctlExec} --user start "$unit" >/dev/null 2>&1 || true
                 exit 0
               fi
             done
