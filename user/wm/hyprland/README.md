@@ -27,6 +27,7 @@ The module defines a shared base keymap in `user/wm/hyprland/default.nix` and me
 For the active incident/runbook around Caelestia keybind regressions (`upstream-dev` runtime + greetd variants), see:
 
 - `docs/HYPRLAND_CAELESTIA_KEYBINDS.md`
+- `docs/WM_STARTUP_AND_LAUNCH_FLOW.md`
 
 ## Optional Minimizer
 
