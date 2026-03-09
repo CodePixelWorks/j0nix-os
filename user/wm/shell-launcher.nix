@@ -7,10 +7,24 @@ let
   overviewAutostart = overviewSettings.autostart or false;
   overviewName = "overview";
   overviewSource = inputs.quickshell-overview;
+  homeBinDir = "${config.home.profileDirectory}/bin";
+  shellPath = "${homeBinDir}:/run/current-system/sw/bin:${pkgs.coreutils}/bin:${pkgs.procps}/bin:${pkgs.systemd}/bin";
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   appExecBackend = (settings.hyprland or { }).appExecBackend or "auto";
   app2unitExec = lib.getExe pkgs.app2unit;
   uwsmExec = lib.getExe pkgs.uwsm;
+  hyprctlExec = lib.getExe' pkgs.hyprland "hyprctl";
+  wmShellStartCmd = "${homeBinDir}/wm-shell-start";
+  wmShellStopCmd = "${homeBinDir}/wm-shell-stop";
+  wmShellRestartCmd = "${homeBinDir}/wm-shell-restart";
+  wmOverviewRunCmd = "${homeBinDir}/wm-overview-run";
+  wmOverviewStartCmd = "${homeBinDir}/wm-overview-start";
+  caelestiaStartCmd = "${homeBinDir}/caelestia-start";
+  caelestiaStopCmd = "${homeBinDir}/caelestia-stop";
+  noctaliaStartCmd = "${homeBinDir}/noctalia-start";
+  noctaliaStopCmd = "${homeBinDir}/noctalia-stop";
+  dmsStartCmd = "${homeBinDir}/dms-start";
+  dmsStopCmd = "${homeBinDir}/dms-stop";
   effectiveAppExecBackend =
     if !useUWSM then "app2unit"
     else if appExecBackend == "auto" then "app2unit"
@@ -36,6 +50,7 @@ in
       exit 1
     '')
     (writeShellScriptBin "wm-shell-start" ''
+      export PATH="${shellPath}:$PATH"
       shell="${selectedShell}"
 
       case "$shell" in
@@ -48,14 +63,14 @@ in
           exec ags
           ;;
         noctalia-shell)
-          exec noctalia-start
+          exec ${noctaliaStartCmd}
           ;;
         caelestia-shell)
-          if command -v hyprctl >/dev/null 2>&1; then
+          if [ -x "${hyprctlExec}" ]; then
             # Keep Caelestia keymaps alive across startup/restart paths.
-            hyprctl dispatch submap global >/dev/null 2>&1 || true
+            ${hyprctlExec} dispatch submap global >/dev/null 2>&1 || true
           fi
-          exec caelestia-start
+          exec ${caelestiaStartCmd}
           ;;
         dank-material-shell)
           if [ "${dmsStartupMode}" = "systemd" ] && command -v systemctl >/dev/null 2>&1; then
@@ -66,7 +81,7 @@ in
               fi
             done
           fi
-          exec dms-start
+          exec ${dmsStartCmd}
           ;;
         *)
           echo "Unknown wmShell: $shell"
@@ -75,6 +90,7 @@ in
       esac
     '')
     (writeShellScriptBin "wm-overview-start" ''
+      export PATH="${shellPath}:$PATH"
       if [ "${if overviewEnable then "1" else "0"}" != "1" ]; then
         echo "quickshell-overview is disabled (settings.dms.overview.enable = false)"
         exit 1
@@ -103,13 +119,14 @@ in
         ${uwsmExec} app -- wm-overview-run >/dev/null 2>&1 && exit 0
       fi
 
-      nohup wm-overview-run >/dev/null 2>&1 &
+      nohup ${wmOverviewRunCmd} >/dev/null 2>&1 &
       sleep 0.3
       ${pkgs.procps}/bin/pgrep -f "quickshell.*-c[[:space:]]*${overviewName}" >/dev/null 2>&1 && exit 0
       echo "Failed to launch quickshell-overview"
       exit 1
     '')
     (writeShellScriptBin "wm-overview-run" ''
+      export PATH="${shellPath}:$PATH"
       if [ "${if overviewEnable then "1" else "0"}" != "1" ]; then
         echo "quickshell-overview is disabled (settings.dms.overview.enable = false)"
         exit 1
@@ -136,6 +153,7 @@ in
       exit 1
     '')
     (writeShellScriptBin "wm-overview-toggle" ''
+      export PATH="${shellPath}:$PATH"
       if [ "${if overviewEnable then "1" else "0"}" != "1" ]; then
         echo "quickshell-overview is disabled (settings.dms.overview.enable = false)"
         exit 1
@@ -148,7 +166,7 @@ in
 
       if command -v qs >/dev/null 2>&1; then
         qs ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
-        wm-overview-start >/dev/null 2>&1 || exit 1
+        ${wmOverviewStartCmd} >/dev/null 2>&1 || exit 1
         sleep 0.3
         qs ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
         echo "Failed to toggle quickshell-overview via qs ipc"
@@ -157,7 +175,7 @@ in
 
       if command -v quickshell >/dev/null 2>&1; then
         quickshell ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
-        wm-overview-start >/dev/null 2>&1 || exit 1
+        ${wmOverviewStartCmd} >/dev/null 2>&1 || exit 1
         sleep 0.3
         quickshell ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
         echo "Failed to toggle quickshell-overview via quickshell ipc"
@@ -166,7 +184,7 @@ in
 
       if [ -n "${if quickshellBin != null then quickshellBin else ""}" ] && [ -x "${if quickshellBin != null then quickshellBin else "/nonexistent"}" ]; then
         ${if quickshellBin != null then quickshellBin else "true"} ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
-        wm-overview-start >/dev/null 2>&1 || exit 1
+        ${wmOverviewStartCmd} >/dev/null 2>&1 || exit 1
         sleep 0.3
         ${if quickshellBin != null then quickshellBin else "true"} ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
         echo "Failed to toggle quickshell-overview via quickshell ipc"
@@ -177,6 +195,7 @@ in
       exit 1
     '')
     (writeShellScriptBin "wm-overview-stop" ''
+      export PATH="${shellPath}:$PATH"
       if command -v systemctl >/dev/null 2>&1 && systemctl --user cat wm-overview.service >/dev/null 2>&1; then
         systemctl --user stop wm-overview.service >/dev/null 2>&1 || true
       fi
@@ -300,6 +319,7 @@ in
       "${pkgs.systemd}/bin/loginctl" poweroff || "${pkgs.systemd}/bin/systemctl" poweroff
     '')
     (writeShellScriptBin "wm-shell-stop" ''
+      export PATH="${shellPath}:$PATH"
       shell="${selectedShell}"
 
       case "$shell" in
@@ -310,10 +330,10 @@ in
           killall -q ags 2>/dev/null || true
           ;;
         noctalia-shell)
-          exec noctalia-stop
+          exec ${noctaliaStopCmd}
           ;;
         caelestia-shell)
-          exec caelestia-stop
+          exec ${caelestiaStopCmd}
           ;;
         dank-material-shell)
           if [ "${dmsStartupMode}" = "systemd" ] && command -v systemctl >/dev/null 2>&1; then
@@ -324,7 +344,7 @@ in
               fi
             done
           fi
-          exec dms-stop
+          exec ${dmsStopCmd}
           ;;
         *)
           echo "Unknown wmShell: $shell"
@@ -333,6 +353,7 @@ in
       esac
     '')
     (writeShellScriptBin "wm-shell-restart" ''
+      export PATH="${shellPath}:$PATH"
       shell="${selectedShell}"
 
       case "$shell" in
@@ -345,9 +366,9 @@ in
           exec ags
           ;;
         noctalia-shell|caelestia-shell)
-          wm-shell-stop >/dev/null 2>&1 || true
+          ${wmShellStopCmd} >/dev/null 2>&1 || true
           sleep 0.2
-          exec wm-shell-start
+          exec ${wmShellStartCmd}
           ;;
         dank-material-shell)
           if [ "${dmsStartupMode}" = "systemd" ] && command -v systemctl >/dev/null 2>&1; then
@@ -358,9 +379,9 @@ in
               fi
             done
           fi
-          wm-shell-stop >/dev/null 2>&1 || true
+          ${wmShellStopCmd} >/dev/null 2>&1 || true
           sleep 0.3
-          exec wm-shell-start
+          exec ${wmShellStartCmd}
           ;;
         *)
           echo "Unknown wmShell: $shell"
@@ -369,16 +390,17 @@ in
       esac
     '')
     (writeShellScriptBin "wm-shell-recover" ''
+      export PATH="${shellPath}:$PATH"
       # Recover from stuck input/layer states before restarting the shell UI.
-      if command -v hyprctl >/dev/null 2>&1; then
+      if [ -x "${hyprctlExec}" ]; then
         if [ "${selectedShell}" = "caelestia-shell" ]; then
-          hyprctl dispatch submap global >/dev/null 2>&1 || true
+          ${hyprctlExec} dispatch submap global >/dev/null 2>&1 || true
         else
-          hyprctl dispatch submap reset >/dev/null 2>&1 || true
+          ${hyprctlExec} dispatch submap reset >/dev/null 2>&1 || true
         fi
       fi
       pkill fuzzel >/dev/null 2>&1 || true
-      exec wm-shell-restart
+      exec ${wmShellRestartCmd}
     '')
   ];
 
@@ -394,7 +416,7 @@ in
       };
       Service = {
         Type = "simple";
-        ExecStart = "${lib.getExe pkgs.bash} -lc 'exec wm-overview-run'";
+        ExecStart = wmOverviewRunCmd;
         Restart = "on-failure";
         RestartSec = 1;
       };
