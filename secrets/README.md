@@ -57,6 +57,14 @@ If decrypt fails during rebuild with `0 successful groups required, got 0`, run:
 
 This re-encrypts host/user files with recipients derived from local key files
 (`~/.config/sops/age/keys.txt` and `/var/lib/sops-nix/key.txt`) and verifies decryptability.
+It enforces a strict mapping:
+
+- `secrets/hosts/*` -> host key recipient only
+- `secrets/users/*` -> user key recipient only
+
+If host secrets exist, run it with permissions that can read `/var/lib/sops-nix/key.txt`:
+
+- `sudo ./secrets/scripts/sops-autofix-decrypt.sh`
 
 Example:
 
