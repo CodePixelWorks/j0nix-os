@@ -1,7 +1,7 @@
 {
   # Profile-scoped system secret defaults. These are machine-facing and should
   # live close to the active profile instead of in the shared central config.
-  defaultSopsFile = null;
+  defaultSopsFile = ../../secrets/hosts/Jonas-PC.yaml;
 
   age = {
     generateKey = true;
@@ -12,7 +12,6 @@
   system = {
     syncthing-gui-password = {
       key = "syncthing/gui_password";
-      sopsFile = ../../secrets/users/jonas.yaml;
       owner = "jonas";
       group = "users";
       mode = "0400";
