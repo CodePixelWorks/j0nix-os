@@ -13,6 +13,7 @@ Recommended layout:
 - `secrets/users/jonas.yaml`
 - `.sops.yaml`
 - `secrets/scripts/sops-safe-rekey.sh`
+- `secrets/scripts/sops-migrate-system-split.sh`
 
 Recommended key model:
 
@@ -41,6 +42,13 @@ When you change recipients in `.sops.yaml`, run:
 
 This script creates timestamped encrypted backups in `secrets/.backups/` and then runs
 `sops updatekeys --yes` for all host/user secret YAML files.
+
+To move known system-owned keys from a user file into the host file:
+
+- `./secrets/scripts/sops-migrate-system-split.sh`
+
+By default this migrates `syncthing.gui_password` from `secrets/users/jonas.yaml` to
+`secrets/hosts/Jonas-PC.yaml`, re-encrypts both files, and keeps encrypted backups.
 
 Example:
 
