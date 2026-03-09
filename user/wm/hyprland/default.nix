@@ -470,6 +470,12 @@ let
       "";
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
   shellStartupCommand = if selectedShell == "none" then null else "wm-shell-start";
+  startGraphicalSessionTargetScript = pkgs.writeShellScriptBin "wm-start-graphical-session-target" ''
+    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+    if [ -S "$runtime_dir/bus" ]; then
+      ${pkgs.systemd}/bin/systemctl --user start graphical-session.target >/dev/null 2>&1 || true
+    fi
+  '';
   hyprlandStartupAppsScript = pkgs.writeShellScriptBin "wm-hypr-startup-apps" ''
     hyprctl_bin="${hyprctlExec}"
     [ -x "$hyprctl_bin" ] || exit 0
@@ -531,6 +537,7 @@ in {
       "$mainMod" = "SUPER";
       monitor = (profileDetails.hyprlandMonitors or [ ]) ++ [ ",preferred,auto,1" ];
       exec-once = [
+        (lib.getExe startGraphicalSessionTargetScript)
         (lib.getExe' pkgs.swww "swww-daemon")
         (lib.getExe hyprlandStartupAppsScript)
       ]
