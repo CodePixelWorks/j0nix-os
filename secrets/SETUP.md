@@ -270,6 +270,18 @@ Default migration:
 - writes encrypted backups to `secrets/.backups/`
 - re-encrypts both files via current `.sops.yaml` recipients
 - verifies both outputs can still be decrypted
+
+If deployment currently fails with:
+
+- `Error getting data key: 0 successful groups required, got 0`
+
+run:
+
+```bash
+./secrets/scripts/sops-autofix-decrypt.sh
+```
+
+The script keeps encrypted backups and rewrites recipients from your current local keys.
 ## 9. Wire Syncthing To The Secret
 
 In `settings.nix`, configure Syncthing like this:
