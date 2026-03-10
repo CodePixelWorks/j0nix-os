@@ -7,6 +7,9 @@
 
       vscodeOverlay = inputs.nix-vscode-extensions.overlays.default;
       localFixesOverlay = final: prev: {
+        bottles-j0nix = final.callPackage ./system/software/pkgs/windows/bottles-j0nix.nix {
+          bottles = prev.bottles;
+        };
         mauiman4 = final.callPackage ./system/software/pkgs/maui/mauiman4.nix { };
         mauikit4 = final.callPackage ./system/software/pkgs/maui/mauikit4.nix { };
         qmlgreet = final.callPackage ./system/software/pkgs/greetd/qmlgreet.nix { };

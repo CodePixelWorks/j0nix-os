@@ -2,6 +2,7 @@
 let
   cfg = (settings.programs or { }).windowsExe or { };
   enabled = cfg.enable or false;
+  bottlesPkg = pkgs.bottles-j0nix or pkgs.bottles;
   setAsDefaultHandler = cfg.setAsDefaultHandler or true;
   bottleName = cfg.bottleName or "Default";
   bottleEnvironment = cfg.environment or "application";
@@ -23,7 +24,7 @@ let
 
   bottleInitScript = pkgs.writeShellApplication {
     name = "winexe-prefix-init";
-    runtimeInputs = with pkgs; [ bottles coreutils gnugrep ];
+    runtimeInputs = [ bottlesPkg pkgs.coreutils pkgs.gnugrep ];
     text = ''
       set -eu
 
@@ -59,7 +60,7 @@ let
 
   runScript = pkgs.writeShellApplication {
     name = "winexe-run";
-    runtimeInputs = [ bottleInitScript pkgs.bottles pkgs.coreutils ];
+    runtimeInputs = [ bottleInitScript bottlesPkg pkgs.coreutils ];
     text = ''
       set -eu
 
@@ -97,7 +98,7 @@ let
 in
 lib.mkIf enabled {
   j0nix.user.software.packages = [
-    pkgs.bottles
+    bottlesPkg
     bottleInitScript
     runScript
   ];
