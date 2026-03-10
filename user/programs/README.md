@@ -29,7 +29,7 @@ Program toggles should be wired through `settings.programs.*`.
 
 Note: Bottles component downloads are runtime/user-state operations and are not part of deterministic Nix build steps.
 `winexe-run` uses `bottles-cli run` with an absolute executable path and the configured default bottle/runner.
-New j0nix-managed bottles are seeded from a Nix-generated template after creation; existing unmanaged bottles are intentionally left untouched to avoid clobbering user state.
+New j0nix-managed bottles are seeded from a Nix-generated template after creation. Existing unmanaged default bottles are migrated once by merging a curated set of safe runtime fields while preserving installed programs, dependencies and other bottle state.
 
 `Windows app packages` are configured via `settings.userSettings.<name>.programs.windowsApps.packages = [ ... ];`.
 The infrastructure separates:
