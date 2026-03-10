@@ -208,8 +208,9 @@ let
 in
 {
   id = "fusion360-proton";
+  kind = "stateful-online";
 
-  packages = [
+  runtimePackages = [
     fusion360ProtonSetup
     fusion360ProtonRun
     fusion360ProtonOpenIdMgr
