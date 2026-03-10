@@ -83,7 +83,6 @@ in
       nextcloud-client
       obsidian
       drawio
-      bottles
       simplescreenrecorder
       gpu-screen-recorder
       gpu-screen-recorder-gtk
@@ -109,6 +108,5 @@ in
     ++ lib.optionals (preferredTerminalPackage != null) [ preferredTerminalPackage ]
     ++ lib.optionals enableUdiskieAutomount [ pkgs.udiskie ]
     ++ lib.optionals syncthingEnabled [ pkgs.syncthing ]
-    ++ lib.optionals (pkgs ? fusion360) [ pkgs.fusion360 ]
     ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) ([ iconThemePackage ] ++ iconThemeFallbackPackages);
 }
