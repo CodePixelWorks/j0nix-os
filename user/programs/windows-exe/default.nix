@@ -10,12 +10,13 @@ let
   autoBootstrapOnLogin = cfg.autoBootstrapOnLogin or true;
   removeWarningPopup = cfg.removeWarningPopup or true;
   yamlFormat = pkgs.formats.yaml { };
-  bottleRunner = if preferredRunner != null then preferredRunner else "soda-9.0-1";
+  fallbackBottleRunner = "soda-9.0-1";
+  desiredBottleRunner = if preferredRunner != null then preferredRunner else fallbackBottleRunner;
   bottleEnvironmentLabel =
     if bottleEnvironment == "application" then "Application"
     else if bottleEnvironment == "gaming" then "Gaming"
     else "Custom";
-  bottleTemplateVersion = "j0nix-default-bottle-v1";
+  bottleTemplateVersion = "j0nix-default-bottle-v2";
 
   bottleTemplateConfig = {
     Arch = "win64";
@@ -101,7 +102,7 @@ let
     };
     Path = "__J0NIX_BOTTLE_NAME__";
     Registry_Rules = [ ];
-    Runner = bottleRunner;
+    Runner = "__J0NIX_BOTTLE_RUNNER__";
     RunnerPath = "";
     Sandbox = {
       share_net = false;
@@ -126,8 +127,38 @@ let
     env = bottleEnvironment;
     uuid = "__J0NIX_TEMPLATE_UUID__";
   };
+  bottleMigrationSafeFields = {
+    DXVK = bottleTemplateConfig.DXVK;
+    Environment = bottleTemplateConfig.Environment;
+    Inherited_Environment_Variables = bottleTemplateConfig.Inherited_Environment_Variables;
+    LatencyFleX = bottleTemplateConfig.LatencyFleX;
+    Limit_System_Environment = bottleTemplateConfig.Limit_System_Environment;
+    NVAPI = bottleTemplateConfig.NVAPI;
+    Name = "__J0NIX_BOTTLE_NAME__";
+    Parameters = {
+      dxvk = bottleTemplateConfig.Parameters.dxvk;
+      dxvk_nvapi = bottleTemplateConfig.Parameters.dxvk_nvapi;
+      renderer = bottleTemplateConfig.Parameters.renderer;
+      sandbox = bottleTemplateConfig.Parameters.sandbox;
+      sync = bottleTemplateConfig.Parameters.sync;
+      use_be_runtime = bottleTemplateConfig.Parameters.use_be_runtime;
+      use_eac_runtime = bottleTemplateConfig.Parameters.use_eac_runtime;
+      use_runtime = bottleTemplateConfig.Parameters.use_runtime;
+      use_steam_runtime = bottleTemplateConfig.Parameters.use_steam_runtime;
+      vkd3d = bottleTemplateConfig.Parameters.vkd3d;
+      wayland = bottleTemplateConfig.Parameters.wayland;
+      winebridge = bottleTemplateConfig.Parameters.winebridge;
+    };
+    Path = "__J0NIX_BOTTLE_NAME__";
+    Runner = "__J0NIX_BOTTLE_RUNNER__";
+    Sandbox = bottleTemplateConfig.Sandbox;
+    VKD3D = bottleTemplateConfig.VKD3D;
+    Windows = bottleTemplateConfig.Windows;
+    Winebridge = bottleTemplateConfig.Winebridge;
+  };
   bottleTemplateConfigFile = yamlFormat.generate "j0nix-default-bottle.yml" bottleTemplateConfig;
   bottleTemplateMetadataFile = yamlFormat.generate "j0nix-default-template.yml" bottleTemplateMetadata;
+  bottleMigrationSafeFieldsFile = yamlFormat.generate "j0nix-default-bottle-safe-fields.yml" bottleMigrationSafeFields;
 
   winexeMimeTypes = [
     "application/x-ms-dos-executable"
@@ -143,7 +174,7 @@ let
 
   bottleInitScript = pkgs.writeShellApplication {
     name = "winexe-prefix-init";
-    runtimeInputs = [ bottlesPkg pkgs.coreutils pkgs.gnugrep ];
+    runtimeInputs = [ bottlesPkg pkgs.coreutils pkgs.gnugrep pkgs.gnused pkgs.yq-go ];
     text = ''
       set -eu
 
@@ -154,30 +185,67 @@ let
       bottle_dir="$bottles_root/$bottle_name"
       template_marker="$bottle_dir/.j0nix-template-version"
       timestamp="$(${pkgs.coreutils}/bin/date --iso-8601=seconds)"
+      fallback_runner=${lib.escapeShellArg fallbackBottleRunner}
+      effective_runner_name="$fallback_runner"
+
+      if [ -n "$runner_name" ] && [ -x "''${XDG_DATA_HOME:-$HOME/.local/share}/bottles/runners/$runner_name/bin/wine" ]; then
+        effective_runner_name="$runner_name"
+      fi
 
       materialize_template_file() {
         src="$1"
         dst="$2"
         ${pkgs.gnused}/bin/sed \
           -e "s#__J0NIX_BOTTLE_NAME__#$bottle_name#g" \
+          -e "s#__J0NIX_BOTTLE_RUNNER__#$effective_runner_name#g" \
           -e "s#__J0NIX_TIMESTAMP__#$timestamp#g" \
           -e "s#__J0NIX_TEMPLATE_CREATED__#$timestamp#g" \
           -e "s#__J0NIX_TEMPLATE_UUID__#${bottleTemplateVersion}#g" \
           "$src" >"$dst"
       }
 
+      migrate_existing_bottle() {
+        current_bottle_file="$bottle_dir/bottle.yml"
+        current_template_file="$bottle_dir/template.yml"
+        tmp_safe="$(mktemp)"
+        tmp_merged="$(mktemp)"
+
+        if [ ! -f "$current_bottle_file" ]; then
+          rm -f "$tmp_safe" "$tmp_merged"
+          return 0
+        fi
+
+        if [ -z "$runner_name" ]; then
+          existing_runner="$(${pkgs.yq-go}/bin/yq -r '.Runner // ""' "$current_bottle_file" 2>/dev/null || true)"
+          if [ -n "$existing_runner" ]; then
+            effective_runner_name="$existing_runner"
+          fi
+        fi
+
+        materialize_template_file ${lib.escapeShellArg bottleMigrationSafeFieldsFile} "$tmp_safe"
+        ${pkgs.yq-go}/bin/yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
+          "$current_bottle_file" "$tmp_safe" >"$tmp_merged"
+        mv "$tmp_merged" "$current_bottle_file"
+
+        materialize_template_file ${lib.escapeShellArg bottleTemplateMetadataFile} "$current_template_file"
+        printf '%s\n' "$timestamp" >"$bottle_dir/.update-timestamp"
+        printf '%s\n' ${lib.escapeShellArg bottleTemplateVersion} >"$template_marker"
+        rm -f "$tmp_safe"
+      }
+
       if [ -d "$bottle_dir" ]; then
         if [ -f "$template_marker" ]; then
           exit 0
         fi
-        echo "note: existing Bottles bottle '$bottle_name' left unchanged (no j0nix template marker found)." >&2
+        echo "Migrating existing Bottles bottle '$bottle_name' to j0nix template baseline"
+        migrate_existing_bottle
         exit 0
       fi
 
       echo "Initializing Bottles bottle '$bottle_name' (environment: $bottle_env)"
       runner_args=()
-      if [ -n "$runner_name" ] && [ -x "''${XDG_DATA_HOME:-$HOME/.local/share}/bottles/runners/$runner_name/bin/wine" ]; then
-        runner_args=(--runner "$runner_name")
+      if [ "$effective_runner_name" != "$fallback_runner" ] && [ -x "''${XDG_DATA_HOME:-$HOME/.local/share}/bottles/runners/$effective_runner_name/bin/wine" ]; then
+        runner_args=(--runner "$effective_runner_name")
       fi
       bottles-cli new --bottle-name "$bottle_name" --environment "$bottle_env" "''${runner_args[@]}" >/dev/null 2>&1 || true
 
