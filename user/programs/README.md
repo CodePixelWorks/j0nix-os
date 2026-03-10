@@ -9,6 +9,8 @@ Common user program configs shared across shells/WMs.
 - `betterdiscord/default.nix`
 - `fastfetch/default.nix`
 - `keepassxc/default.nix`
+- `windows-apps/default.nix`
+- `windows-apps/packages/*.nix`
 - `windows-exe/default.nix`
 - `wlogout/default.nix`
 
@@ -16,6 +18,7 @@ Program toggles should be wired through `settings.programs.*`.
 
 `Windows EXE` integration is configured via `settings.programs.windowsExe.*` and provides:
 - a managed default Bottles bottle (`winexe-prefix-init`)
+- the patched `bottles-j0nix` runtime for consistent runner execution
 - optional preferred runner pin (`runner = "kron4ek-wine-11.2-amd64"`)
 - automatic bottle initialization (`bottles-cli new`) for first use
 - optional auto-bootstrap service on login (`autoBootstrapOnLogin = true`)
@@ -26,6 +29,17 @@ Program toggles should be wired through `settings.programs.*`.
 
 Note: Bottles component downloads are runtime/user-state operations and are not part of deterministic Nix build steps.
 `winexe-run` uses `bottles-cli run` with an absolute executable path and the configured default bottle/runner.
+
+`Windows app packages` are configured via `settings.userSettings.<name>.programs.windowsApps.packages = [ ... ];`.
+The infrastructure separates:
+- immutable Nix-managed runtime/payload artifacts
+- per-app desktop entries and MIME handlers
+- minimal user-session provisioning for mutable bottle/prefix state
+
+Current first-party package:
+- `fusion360-proton`
+
+`Fusion 360` remains a managed exception: installer/runtime wrappers are declarative, but Proton/Wine prefix creation and Autodesk login state are user-state and therefore provisioned via user systemd, not built into the Nix store.
 
 `KeePassXC` is user-scoped via `settings.userSettings.<name>.programs.keepassxc.*` and supports:
 - optional autostart
