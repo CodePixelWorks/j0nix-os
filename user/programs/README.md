@@ -20,7 +20,7 @@ Program toggles should be wired through `settings.programs.*`.
 - a managed default Bottles bottle (`winexe-prefix-init`)
 - the patched `bottles-j0nix` runtime for consistent runner execution
 - optional preferred runner pin (`runner = "kron4ek-wine-11.2-amd64"`)
-- automatic bottle initialization (`bottles-cli new`) for first use
+- automatic bottle creation plus j0nix template seeding for first use
 - optional auto-bootstrap service on login (`autoBootstrapOnLogin = true`)
 - periodic retry timer (`winexe-bottle-bootstrap.timer`) to ensure the default bottle is eventually created
 - optional suppression of Bottles sandbox warning popup (`removeWarningPopup = true`)
@@ -29,6 +29,7 @@ Program toggles should be wired through `settings.programs.*`.
 
 Note: Bottles component downloads are runtime/user-state operations and are not part of deterministic Nix build steps.
 `winexe-run` uses `bottles-cli run` with an absolute executable path and the configured default bottle/runner.
+New j0nix-managed bottles are seeded from a Nix-generated template after creation; existing unmanaged bottles are intentionally left untouched to avoid clobbering user state.
 
 `Windows app packages` are configured via `settings.userSettings.<name>.programs.windowsApps.packages = [ ... ];`.
 The infrastructure separates:
