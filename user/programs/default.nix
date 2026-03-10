@@ -5,8 +5,8 @@
     ./bambulab
     ./betterdiscord
     ./fastfetch
-    ./fusion360
     ./keepassxc
+    ./windows-apps
     ./windows-exe
     ./wlogout
   ];
