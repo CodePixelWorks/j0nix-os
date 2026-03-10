@@ -3,11 +3,7 @@ let
   programsCfg = settings.programs or { };
   cfg = programsCfg.windowsApps or { };
   legacyFusionCfg = programsCfg.fusion360 or { };
-  legacyFusionProtonCfg = legacyFusionCfg.protonInstaller or { };
-  legacyFusionEnabled =
-    (legacyFusionCfg.enable or false)
-    || (legacyFusionProtonCfg.enable or false)
-    || (legacyFusionCfg != { });
+  legacyFusionEnabled = legacyFusionCfg.enable or false;
 
   requestedPackages =
     lib.unique (
@@ -20,8 +16,14 @@ let
   knownPackages = lib.filter (name: builtins.pathExists (definitionPath name)) requestedPackages;
   missingPackages = lib.filter (name: !(builtins.pathExists (definitionPath name))) requestedPackages;
   packageDefs = map (name: import (definitionPath name) { inherit config lib pkgs settings; }) knownPackages;
+  packageKinds = [ "portable" "payload-installer" "stateful-online" ];
 
-  aggregatedPackages = lib.unique (lib.concatMap (def: def.packages or [ ]) packageDefs);
+  aggregatedPackages =
+    lib.unique (
+      lib.concatMap
+        (def: (def.packages or [ ]) ++ (def.payloadPackages or [ ]) ++ (def.runtimePackages or [ ]))
+        packageDefs
+    );
   aggregatedDesktopEntries = lib.mkMerge (map (def: def.desktopEntries or { }) packageDefs);
   aggregatedMimeDefaults = lib.mkMerge (map (def: def.mimeDefaults or { }) packageDefs);
   autoSetupDefs = builtins.filter (def: ((def.autoSetup or { }).enable or false)) packageDefs;
@@ -87,6 +89,21 @@ lib.mkIf (requestedPackages != [ ]) {
     {
       assertion = missingPackages == [ ];
       message = "Unknown Windows app package(s): ${lib.concatStringsSep ", " missingPackages}. Expected definitions under user/programs/windows-apps/packages/<name>.nix";
+    }
+    {
+      assertion = lib.all (def: builtins.elem (def.kind or "stateful-online") packageKinds) packageDefs;
+      message = "Each windows app definition kind must be one of: ${lib.concatStringsSep ", " packageKinds}";
+    }
+    {
+      assertion =
+        lib.all
+          (def:
+            let
+              kind = def.kind or "stateful-online";
+            in
+            kind != "portable" || !((def.autoSetup or { }).enable or false))
+          packageDefs;
+      message = "Portable windows app definitions must not declare autoSetup provisioning.";
     }
   ];
 }
