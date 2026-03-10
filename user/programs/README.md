@@ -7,6 +7,7 @@ Common user program configs shared across shells/WMs.
 - `default.nix`: aggregation entrypoint
 - `alacritty/default.nix`
 - `betterdiscord/default.nix`
+- `element-desktop/default.nix`
 - `fastfetch/default.nix`
 - `keepassxc/default.nix`
 - `windows-apps/default.nix`
@@ -15,6 +16,17 @@ Common user program configs shared across shells/WMs.
 - `wlogout/default.nix`
 
 Program toggles should be wired through `settings.programs.*`.
+
+`Element Desktop` (Matrix client) is configured via `settings.userSettings.<name>.programs.elementDesktop.*` and supports:
+- declarative package installation
+- a managed `~/.config/Element/config.json`
+- optional default homeserver / identity server preconfiguration
+- optional SSO redirect for unauthenticated users
+
+Important limitation:
+- safe declarative "username/password autologin" is not supported
+- the supported production path is Element's normal session persistence
+- if your homeserver uses SSO, `autoLogin.ssoRedirect = true` can skip the manual login picker and redirect unauthenticated users straight into SSO
 
 `Windows EXE` integration is configured via `settings.programs.windowsExe.*` and provides:
 - a managed default Bottles bottle (`winexe-prefix-init`)
