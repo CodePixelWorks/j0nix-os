@@ -4,6 +4,7 @@ let
   enabled = gaming.enable or true;
   launchers = gaming.launchers or { };
   protonCfg = gaming.proton or { };
+  bottlesPkg = pkgs.bottles-j0nix or pkgs.bottles;
   rockstarEnabled = launchers.rockstar or false;
   heroicPkg =
     if pkgs ? heroic then
@@ -28,7 +29,7 @@ lib.mkIf enabled {
 
   j0nix.user.software.packages =
     lib.optionals ((launchers.heroic or true) && heroicPkg != null) [ heroicPkg ]
-    ++ lib.optionals (launchers.bottles or true) [ pkgs.bottles ]
+    ++ lib.optionals (launchers.bottles or true) [ bottlesPkg ]
     ++ lib.optionals (launchers.wineGui or false) [ pkgs.wineWow64Packages.waylandFull ]
     ++ lib.optionals (rockstarEnabled && (pkgs ? protontricks)) [ pkgs.protontricks ];
 }
