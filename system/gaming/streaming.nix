@@ -2,6 +2,9 @@
 let
   gaming = config.j0nix.desktop.gaming or { };
   gamingEnabled = gaming.enable or true;
+  drivers = config.j0nix.desktop.drivers or { };
+  nvidia = drivers.nvidia or { };
+  sunshineUseNvidia = nvidia.enable or false;
   streaming = gaming.streaming or { };
   sunshine = streaming.sunshine or { };
   sunshineEnabled = sunshine.enable or false;
@@ -91,6 +94,22 @@ let
       "resolutions"
       "fps"
     ]);
+  sunshineGraphicsLibraryDirs =
+    [ "/run/opengl-driver/lib" ]
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isx86_64 [ "/run/opengl-driver-32/lib" ];
+  sunshineDriDriverDirs = map (dir: "${dir}/dri") sunshineGraphicsLibraryDirs;
+  sunshineNvidiaEnvironment = {
+    # Sunshine's FFmpeg/NVENC path resolves vendor codecs at runtime. On NixOS,
+    # those driver libraries live under /run/opengl-driver, so expose them
+    # explicitly to the user service instead of relying on login-shell state.
+    LD_LIBRARY_PATH = lib.concatStringsSep ":" sunshineGraphicsLibraryDirs;
+    LIBGL_DRIVERS_PATH = lib.concatStringsSep ":" sunshineDriDriverDirs;
+    LIBVA_DRIVERS_PATH = lib.concatStringsSep ":" sunshineDriDriverDirs;
+    GBM_BACKEND = "nvidia-drm";
+    __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+    LIBVA_DRIVER_NAME = "nvidia";
+    NVD_BACKEND = "direct";
+  };
   sunshineExecutable =
     if sunshineCapSysAdmin then
       "${config.security.wrapperDir}/sunshine"
@@ -166,6 +185,8 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
   # Apply a dedicated service-priority profile on top of the upstream user unit.
   # This mirrors the useful part of common Sunshine tuning gists without forcing
   # an extreme RT priority that can starve a daily-driver desktop.
+  systemd.user.services.sunshine.environment = lib.mkIf sunshineUseNvidia sunshineNvidiaEnvironment;
+
   systemd.user.services.sunshine.serviceConfig = sunshineServicePriorityConfig // {
     ExecStart = lib.mkForce "${sunshineLaunchWrapper}";
   };
