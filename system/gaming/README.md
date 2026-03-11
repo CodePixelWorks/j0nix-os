@@ -26,6 +26,12 @@ Per-user launchers and helpers belong in `user/gaming/`.
 - `j0nix.desktop.gaming.steam.steamRun` installs `steam-run`.
 - `j0nix.desktop.gaming.proton.provider` selects preferred compat provider (`cachyos` or `ge`).
 
+## Sunshine Note
+
+- `j0nix.desktop.gaming.streaming.sunshine.capSysAdmin = true` enables KMS/DRM capture for lower-latency Sunshine capture paths.
+- `j0nix.desktop.gaming.streaming.sunshine.performance.mode = "aggressive"` applies a higher-priority Sunshine user service profile (`Nice`, I/O priority, and a moderate RT scheduler setting).
+- When Sunshine is enabled, the active desktop users are also granted `render` and `input` group access unless explicitly disabled in `j0nix.desktop.gaming.streaming.sunshine.performance.*`.
+
 ## Steam Optional Launch Wrappers
 
 From `user/gaming/tools.nix`, these helpers are available for per-game Steam launch options:
