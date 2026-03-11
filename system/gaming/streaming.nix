@@ -137,6 +137,7 @@ let
       headless_mode=${lib.escapeShellArg (if sunshineVirtualOutputConfig != null then (sunshineVirtualOutputConfig.mode or "2880x1800@60") else "2880x1800@60")}
       headless_position=${lib.escapeShellArg (if sunshineVirtualOutputConfig != null then (sunshineVirtualOutputConfig.position or "10000x10000") else "10000x10000")}
       headless_scale=${lib.escapeShellArg (toString (if sunshineVirtualOutputConfig != null then (sunshineVirtualOutputConfig.scale or 1) else 1))}
+      headless_index=""
 
       if [ -n "$headless_name" ] && [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -x "$hyprctl_bin" ]; then
         if ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$headless_name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
@@ -150,6 +151,10 @@ let
         fi
 
         "$hyprctl_bin" keyword monitor "$headless_name,$headless_mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
+        headless_index="$("$hyprctl_bin" -j monitors all | "$jq_bin" -r --arg name "$headless_name" 'to_entries[] | select(.value.name == $name) | .key' | head -n1)"
+        if [ -n "$headless_index" ]; then
+          printf 'output_name = %s\n' "$headless_index" >>"$tmp_config"
+        fi
 
       fi
     ''}
@@ -171,7 +176,6 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
   services.sunshine.applications.apps = lib.mkAfter (lib.optionals sunshineVirtualDisplayEnabled [
     {
       name = sunshineVirtualAppName;
-      output = sunshineVirtualOutputName;
       cmd = "";
       "auto-detach" = true;
     }
