@@ -8,7 +8,7 @@ let
   cleanupLegacyDesktop = protonCfg.cleanupLegacyDesktop or true;
   payloadsCfg = protonCfg.payloads or { };
   defaultFusionInstaller = {
-    mode = "runtime-download"; # "runtime-download" | "fetchurl" | "requireFile"
+    mode = "manual"; # "manual" | "runtime-download" | "fetchurl" | "requireFile"
     fileName = "FusionClientInstaller.exe";
     url = "https://dl.appstreaming.autodesk.com/production/installers/Fusion%20Admin%20Install.exe";
     hash = null;
@@ -55,7 +55,7 @@ let
       }
     else
       {
-        mode = "runtime-download";
+        mode = fusionInstaller.mode;
         path = "";
         url = fusionInstaller.url;
         fileName = fusionInstaller.fileName;
@@ -71,7 +71,7 @@ let
       }
     else
       {
-        mode = "runtime-download";
+        mode = webView2Installer.mode;
         path = "";
         url = webView2Installer.url;
         fileName = webView2Installer.fileName;
@@ -153,6 +153,7 @@ let
       fusion360::ensure_payload() {
         local spec="$1"
         local out="$2"
+        local manual_source="''${3:-}"
         if [ -s "$out" ]; then
           return 0
         fi
@@ -163,6 +164,16 @@ let
 
         if [ "$mode" = "store" ]; then
           cp "$store_path" "$out"
+        elif [ "$mode" = "manual" ]; then
+          if [ -z "$manual_source" ]; then
+            echo "Fusion installer erforderlich. Nutze: fusion360-setup /pfad/zum/installer.exe" >&2
+            return 1
+          fi
+          if [ ! -f "$manual_source" ]; then
+            echo "Fusion installer nicht gefunden: $manual_source" >&2
+            return 1
+          fi
+          cp "$manual_source" "$out"
         else
           curl -L "$url" -o "$out"
         fi
@@ -211,12 +222,13 @@ let
   };
 
   fusion360ProtonSetup = pkgs.writeShellApplication {
-    name = "fusion360-proton-setup";
+    name = "fusion360-setup";
     runtimeInputs = [ fusion360ProtonLib ];
     text = ''
       set -euo pipefail
       # shellcheck disable=SC1091
       source "${fusion360ProtonLib}/bin/fusion360-proton-lib"
+      installer_path="''${1:-}"
 
       fusion360::ensure_proton
       fusion360::ensure_dirs
@@ -231,7 +243,7 @@ let
 
       cd "$HOME"
 
-      fusion360::ensure_payload "$FUSION360_INSTALLER_SPEC" "$FUSION360_DOWNLOADS/FusionClientInstaller.exe"
+      fusion360::ensure_payload "$FUSION360_INSTALLER_SPEC" "$FUSION360_DOWNLOADS/FusionClientInstaller.exe" "$installer_path"
       fusion360::ensure_payload "$FUSION360_WEBVIEW2_SPEC" "$FUSION360_DOWNLOADS/WebView2installer.exe"
 
       echo "Initialisiere Proton-Prefix..."
@@ -298,7 +310,7 @@ let
       exe="$(fusion360::find_fusion_exe || true)"
       if [ -z "$exe" ]; then
         echo "Fusion 360 executable nicht gefunden im Prefix: $FUSION360_WINEPREFIX" >&2
-        echo "Führe zuerst 'fusion360-proton-setup' aus." >&2
+        echo "Führe zuerst 'fusion360-setup /pfad/zum/installer.exe' aus." >&2
         exit 1
       fi
 
@@ -318,7 +330,7 @@ let
       url="''${1:-}"
       exe="$(fusion360::find_identity_manager || true)"
       if [ -z "$exe" ]; then
-        echo "AdskIdentityManager.exe nicht gefunden. Führe zuerst 'fusion360-proton-setup' aus." >&2
+        echo "Führe zuerst 'fusion360-setup /pfad/zum/installer.exe' aus." >&2
         exit 1
       fi
 
@@ -342,17 +354,17 @@ in
   ];
 
   autoSetup = {
-    enable = true;
+    enable = fusionInstaller.mode != "manual";
     description = "Setup Autodesk Fusion 360 via Proton";
-    command = "${config.home.profileDirectory}/bin/fusion360-proton-setup";
+    command = "${config.home.profileDirectory}/bin/fusion360-setup";
   };
 
   desktopEntries = {
-    "fusion360-proton-setup" = {
+    "fusion360-setup" = {
       name = "Fusion 360 Setup (Proton)";
       genericName = "Fusion 360 Installer";
       comment = "Prepare and install Autodesk Fusion 360 via Proton";
-      exec = "fusion360-proton-setup";
+      exec = "fusion360-setup";
       terminal = true;
       categories = [ "Graphics" "Engineering" ];
     };
@@ -384,8 +396,8 @@ in
 
   assertions = [
     {
-      assertion = builtins.elem fusionInstaller.mode [ "runtime-download" "fetchurl" "requireFile" ];
-      message = "settings.programs.fusion360.protonInstaller.payloads.fusionInstaller.mode must be one of: runtime-download, fetchurl, requireFile";
+      assertion = builtins.elem fusionInstaller.mode [ "manual" "runtime-download" "fetchurl" "requireFile" ];
+      message = "settings.programs.fusion360.protonInstaller.payloads.fusionInstaller.mode must be one of: manual, runtime-download, fetchurl, requireFile";
     }
     {
       assertion = builtins.elem webView2Installer.mode [ "runtime-download" "fetchurl" "requireFile" ];
@@ -393,7 +405,7 @@ in
     }
     {
       assertion =
-        fusionInstaller.mode == "runtime-download"
+        builtins.elem fusionInstaller.mode [ "manual" "runtime-download" ]
         || (fusionInstaller.hash != null && fusionInstaller.hash != "");
       message = "Fusion 360 installer payloads using fetchurl/requireFile must define hash.";
     }
