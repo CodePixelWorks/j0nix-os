@@ -58,6 +58,23 @@ let
       configuredHeadlessOutputMap.${sunshineVirtualOutputName}
     else
       null;
+  defaultHeadlessMode =
+    if sunshineVirtualOutputConfig != null then
+      sunshineVirtualOutputConfig.mode or "2880x1800@60"
+    else
+      "2880x1800@60";
+  defaultHeadlessPosition =
+    if sunshineVirtualOutputConfig != null then
+      sunshineVirtualOutputConfig.position or "10000x10000"
+    else
+      "10000x10000";
+  defaultHeadlessScale =
+    toString (
+      if sunshineVirtualOutputConfig != null then
+        sunshineVirtualOutputConfig.scale or 1
+      else
+        1
+    );
   settingsFormat = pkgs.formats.keyValue { };
   sunshineServicePriorityConfig =
     if sunshinePerfMode == "aggressive" then
@@ -124,6 +141,46 @@ let
       "${config.security.wrapperDir}/sunshine"
     else
       lib.getExe config.services.sunshine.package;
+  sunshineHeadlessPrepScript = pkgs.writeShellScript "sunshine-headless-prep" ''
+    set -eu
+
+    hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
+    headless_name=${lib.escapeShellArg (if sunshineVirtualOutputName != null then sunshineVirtualOutputName else "")}
+    default_mode=${lib.escapeShellArg defaultHeadlessMode}
+    headless_position=${lib.escapeShellArg defaultHeadlessPosition}
+    headless_scale=${lib.escapeShellArg defaultHeadlessScale}
+
+    if [ -z "$headless_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ]; then
+      exit 0
+    fi
+
+    width="''${SUNSHINE_CLIENT_WIDTH:-}"
+    height="''${SUNSHINE_CLIENT_HEIGHT:-}"
+    fps="''${SUNSHINE_CLIENT_FPS:-}"
+
+    if [ -n "$width" ] && [ -n "$height" ]; then
+      mode="''${width}x''${height}@''${fps:-60}"
+    else
+      mode="$default_mode"
+    fi
+
+    "$hyprctl_bin" keyword monitor "$headless_name,$mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
+  '';
+  sunshineHeadlessUndoScript = pkgs.writeShellScript "sunshine-headless-undo" ''
+    set -eu
+
+    hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
+    headless_name=${lib.escapeShellArg (if sunshineVirtualOutputName != null then sunshineVirtualOutputName else "")}
+    default_mode=${lib.escapeShellArg defaultHeadlessMode}
+    headless_position=${lib.escapeShellArg defaultHeadlessPosition}
+    headless_scale=${lib.escapeShellArg defaultHeadlessScale}
+
+    if [ -z "$headless_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ]; then
+      exit 0
+    fi
+
+    "$hyprctl_bin" keyword monitor "$headless_name,$default_mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
+  '';
   sunshineLaunchWrapper = pkgs.writeShellScript "sunshine-j0nix-launch" ''
     set -eu
 
@@ -137,9 +194,9 @@ let
 
     ${lib.optionalString sunshineVirtualDisplayEnabled ''
       headless_name=${lib.escapeShellArg (if sunshineVirtualOutputName != null then sunshineVirtualOutputName else "")}
-      headless_mode=${lib.escapeShellArg (if sunshineVirtualOutputConfig != null then (sunshineVirtualOutputConfig.mode or "2880x1800@60") else "2880x1800@60")}
-      headless_position=${lib.escapeShellArg (if sunshineVirtualOutputConfig != null then (sunshineVirtualOutputConfig.position or "10000x10000") else "10000x10000")}
-      headless_scale=${lib.escapeShellArg (toString (if sunshineVirtualOutputConfig != null then (sunshineVirtualOutputConfig.scale or 1) else 1))}
+      headless_mode=${lib.escapeShellArg defaultHeadlessMode}
+      headless_position=${lib.escapeShellArg defaultHeadlessPosition}
+      headless_scale=${lib.escapeShellArg defaultHeadlessScale}
       headless_index=""
 
       if [ -n "$headless_name" ] && [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -x "$hyprctl_bin" ]; then
@@ -207,6 +264,12 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
           cmd = "";
           "auto-detach" = true;
           "image-path" = "desktop.png";
+          "prep-cmd" = [
+            {
+              do = lib.getExe' sunshineHeadlessPrepScript "sunshine-headless-prep";
+              undo = lib.getExe' sunshineHeadlessUndoScript "sunshine-headless-undo";
+            }
+          ];
         }
       ]
     );
