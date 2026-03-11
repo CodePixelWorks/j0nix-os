@@ -93,7 +93,7 @@ let
       xdg-utils
       jq
       winetricks
-      wineWow64Packages.staging
+      wineWow64Packages.waylandFull
     ];
     text = ''
       set -euo pipefail
@@ -140,6 +140,14 @@ let
           "$FUSION360_DOWNLOADS" \
           "$FUSION360_LOGS" \
           "$FUSION360_INSTALL_ROOT/resources"
+      }
+
+      fusion360::require_prefix_layout() {
+        if [ ! -d "$FUSION360_WINEPREFIX/drive_c/windows/system32" ]; then
+          echo "Wine-Prefix wurde nicht korrekt initialisiert: $FUSION360_WINEPREFIX" >&2
+          echo "Prüfe $FUSION360_LOGS/wineboot.log" >&2
+          exit 1
+        fi
       }
 
       fusion360::ensure_payload() {
@@ -202,7 +210,11 @@ let
       fusion360::proton_run wineboot -u >/dev/null 2>&1 || true
 
       echo "Initialisiere Wine-Prefix..."
-      WINEPREFIX="$FUSION360_WINEPREFIX" wineboot -u >> "$FUSION360_LOGS/wineboot.log" 2>&1 || true
+      if ! WINEPREFIX="$FUSION360_WINEPREFIX" wineboot -u >> "$FUSION360_LOGS/wineboot.log" 2>&1; then
+        echo "wineboot ist fehlgeschlagen. Prüfe $FUSION360_LOGS/wineboot.log" >&2
+        exit 1
+      fi
+      fusion360::require_prefix_layout
 
       mkdir -p "$FUSION360_WINEPREFIX/dosdevices"
       [ -L "$FUSION360_WINEPREFIX/dosdevices/g:" ] || ln -s / "$FUSION360_WINEPREFIX/dosdevices/g:"
@@ -231,8 +243,13 @@ let
       echo "Starte Fusion-Installer (2/2)..."
       WINEPREFIX="$FUSION360_WINEPREFIX" timeout -k 5m 2m wine "$FUSION360_DOWNLOADS/FusionClientInstaller.exe" --quiet >> "$FUSION360_LOGS/fusion-installer-pass2.log" 2>&1 || true
 
+      if [ -z "$(fusion360::find_fusion_exe || true)" ]; then
+        echo "Fusion 360 wurde nicht installiert. Prüfe $FUSION360_LOGS/fusion-installer-pass1.log und $FUSION360_LOGS/fusion-installer-pass2.log" >&2
+        exit 1
+      fi
+
       echo
-      echo "Fertig (best effort)."
+      echo "Fertig."
       echo "Launcher: Autodesk Fusion 360 (Proton)"
       echo "Logs: $FUSION360_LOGS"
       echo "Starten mit: fusion360-proton-run"
