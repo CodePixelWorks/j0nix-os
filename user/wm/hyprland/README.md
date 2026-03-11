@@ -138,6 +138,10 @@ Behavior:
 
 - `SUPER+,`
 
+## Headless Outputs
+
+`settings.hyprland.headlessOutputs` declares virtual Hyprland outputs. j0nix creates them at session start with `wm-headless-output-ensure` before `graphical-session.target` is started, so session-bound services such as Sunshine can target them reliably.
+
 ## Caelestia App Binds
 
 - `SUPER+E`: open preferred file manager
