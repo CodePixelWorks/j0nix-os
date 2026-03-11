@@ -108,7 +108,7 @@ let
   coreBinds = [
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
-    "$mainMod, F1, exec, ${keybindHelpCommand}"
+    "$mainMod, comma, exec, ${keybindHelpCommand}"
     "$mainMod, f, fullscreen, 0"            # actual fullscreen (shell/waybar hidden)
     "$mainMod SHIFT, f, fullscreen, 1"      # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
     "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
@@ -277,7 +277,7 @@ let
       (mkHelp "Windows" "SUPER+SHIFT+F" "Maximize-like fullscreen while keeping shell bars visible")
       (mkHelp "Windows" "SUPER+Return" "Open the preferred terminal")
       (mkHelp "Windows" "SUPER+SHIFT+L" "Lock the current session")
-      (mkHelp "Help" "SUPER+F1" "Open the Hyprland keybind reference")
+      (mkHelp "Help" "SUPER+," "Open the Hyprland keybind reference")
       (mkHelp "Layout" "SUPER+-" "Decrease the current split ratio")
       (mkHelp "Layout" "SUPER+=" "Increase the current split ratio")
       (mkHelp "Layout" "SUPER+CTRL+V" "Legacy alias: preselect a split to the right")
