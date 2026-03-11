@@ -21,7 +21,9 @@ let
   aggregatedPackages =
     lib.unique (
       lib.concatMap
-        (def: (def.packages or [ ]) ++ (def.payloadPackages or [ ]) ++ (def.runtimePackages or [ ]))
+        # Payload artifacts are referenced directly by app setup/runtime code and
+        # are not valid `home.packages` entries when they are plain files.
+        (def: (def.packages or [ ]) ++ (def.runtimePackages or [ ]))
         packageDefs
     );
   aggregatedDesktopEntries = lib.mkMerge (map (def: def.desktopEntries or { }) packageDefs);
