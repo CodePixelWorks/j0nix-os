@@ -60,6 +60,24 @@
           addRenderGroup = true;
           addInputGroup = true;
         };
+        virtualDisplay = {
+          enable = true;
+          outputName = "SUNSHINE-HEADLESS";
+          capture = "wlr"; # Hyprland virtual outputs need wlroots capture instead of KMS
+          resolutions = [
+            "2880x1800"
+            "2560x1600"
+            "1920x1200"
+            "1920x1080"
+            "1600x900"
+            "1280x720"
+          ];
+          fps = [
+            60
+            90
+            120
+          ];
+        };
       };
     };
 
