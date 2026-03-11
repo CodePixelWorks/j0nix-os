@@ -23,8 +23,6 @@
   minimizerMenuCommand,
   workspaceSwitchBinds,
   workspaceMoveBinds,
-  remoteWorkspaceSwitchBinds,
-  remoteWorkspaceMoveBinds,
 }:
 let
   hasValue = value: value != null && value != "";
@@ -61,8 +59,6 @@ let
   ];
   mkMainBind = modifiers: key: dispatcher: argument:
     "$mainMod${lib.optionalString (modifiers != "") " ${modifiers}"}, ${key}, ${dispatcher}, ${argument}";
-  mkRemoteBind = modifiers: key: dispatcher: argument:
-    "${modifiers}, ${key}, ${dispatcher}, ${argument}";
   mkHelp = section: binding: description: {
     inherit section binding description;
   };
@@ -71,14 +67,10 @@ let
   dmsOverviewToggleBind =
     lib.optional (dmsOverviewEnabled && hasValue overviewToggleBind)
       "${overviewToggleBind}, exec, wm-overview-toggle";
-  dmsOverviewRemoteToggleBind =
-    lib.optional dmsOverviewEnabled "CTRL ALT, SPACE, exec, wm-overview-toggle";
   mainFocusBinds = map (entry: mkMainBind "" entry.key "movefocus" entry.direction) directionalKeys;
   mainMoveBinds = map (entry: mkMainBind "SHIFT" entry.key "movewindow" entry.direction) directionalKeys;
   mainResizeBinds = map (entry: mkMainBind "ALT" entry.key "resizeactive" entry.resizeDelta) directionalKeys;
   mainSplitBinds = map (entry: mkMainBind "CTRL" entry.key "layoutmsg" "preselect ${entry.direction}") directionalKeys;
-  remoteFocusBinds = map (entry: mkRemoteBind "CTRL ALT" entry.key "movefocus" entry.direction) directionalKeys;
-  remoteMoveBinds = map (entry: mkRemoteBind "CTRL SHIFT ALT" entry.key "movewindow" entry.direction) directionalKeys;
 
   baseHyprKeybinds = {
     bind = [
@@ -89,7 +81,7 @@ let
       "$mainMod, mouse_down, workspace, -1"
       "$mainMod, mouse_up, workspace, +1"
       "$mainMod CTRL, Backslash, centerwindow, 1"
-    ] ++ mainFocusBinds ++ mainMoveBinds ++ remoteFocusBinds ++ remoteMoveBinds;
+    ] ++ mainFocusBinds ++ mainMoveBinds;
     binde = mainResizeBinds ++ [
       "$mainMod, minus, splitratio, -0.1"
       "$mainMod, equal, splitratio, 0.1"
@@ -105,45 +97,31 @@ let
     bindl = [
       ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
       ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-      "CTRL ALT, m, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-      "CTRL SHIFT ALT, m, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
       "CTRL, Print, exec, wm-screenshot-full"
     ];
     bindle = [
       ", XF86AudioRaiseVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 3%+"
       ", XF86AudioLowerVolume, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume @DEFAULT_AUDIO_SINK@ 3%-"
-      "CTRL ALT, equal, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 3%+"
-      "CTRL ALT, minus, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume @DEFAULT_AUDIO_SINK@ 3%-"
-      "CTRL SHIFT ALT, equal, exec, brightnessctl set +5%"
-      "CTRL SHIFT ALT, minus, exec, brightnessctl set 5%-"
     ];
   };
 
   coreBinds = [
     "$mainMod, q, killactive,"
-    "CTRL ALT, q, killactive,"
     "$mainMod, t, togglefloating,"
-    "CTRL ALT, t, togglefloating,"
     "$mainMod, F1, exec, ${keybindHelpCommand}"
-    "CTRL ALT, F1, exec, ${keybindHelpCommand}"
     "$mainMod, f, fullscreen, 0"            # actual fullscreen (shell/waybar hidden)
     "$mainMod SHIFT, f, fullscreen, 1"      # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
-    "CTRL ALT, f, fullscreen, 0"
-    "CTRL SHIFT ALT, f, fullscreen, 1"
     "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
     "$mainMod, p, exec, wm-screenshot-full"
     "$mainMod, r, exec, wm-shell-recover"
     "$mainMod CTRL, v, layoutmsg, preselect r"
     "$mainMod CTRL SHIFT, v, layoutmsg, preselect d"
     "$mainMod SHIFT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
-    "CTRL ALT, return, exec, ${appExec preferredTerminalCmd}"
-    "CTRL ALT, c, centerwindow, 1"
     "$mainMod SHIFT, q, exit,"
     "CTRL SHIFT, Print, exec, wm-screenshot-area"
-  ] ++ mainSplitBinds ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind ++ dmsOverviewRemoteToggleBind
+  ] ++ mainSplitBinds ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind
     ++ lib.optionals keybindDiagnosticsEnable [
       "$mainMod SHIFT, F12, exec, wm-hypr-keybind-probe super-shift-f12"
-      "CTRL ALT, F12, exec, wm-hypr-keybind-probe ctrl-alt-f12"
     ]
     ++ lib.optionals (keepassEnabled && keepassWorkspaceEnable) [
       "${keepassToggleBind}, exec, keepassxc-toggle"
@@ -163,9 +141,6 @@ let
         bind = [
           "$mainMod, escape, global, caelestia:session"
           "$mainMod, space, global, caelestia:showall"
-          "CTRL ALT, space, global, caelestia:launcher"
-          "CTRL SHIFT ALT, space, global, caelestia:showall"
-          "CTRL ALT, BackSpace, global, caelestia:lock"
           "$mainMod, n, global, caelestia:clearNotifs"
           "$mainMod SHIFT, v, exec, pkill fuzzel || caelestia clipboard"
           "$mainMod ALT, v, exec, pkill fuzzel || caelestia clipboard -d"
@@ -190,7 +165,6 @@ let
           "$mainMod ALT, mouse_down, movetoworkspace, -1"
           "$mainMod ALT, mouse_up, movetoworkspace, +1"
           "$mainMod, slash, exec, caelestia shell controlCenter open"
-          "CTRL ALT, slash, exec, caelestia shell controlCenter open"
           "$mainMod, m, exec, caelestia toggle music"
           "$mainMod, c, exec, caelestia toggle communication"
           "$mainMod, y, exec, caelestia toggle todo"
@@ -248,7 +222,7 @@ let
     lib.concatStringsSep "\n" (map (entry: "${key} = ${entry}") entries);
 
   effectiveBindLists = {
-    bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ remoteWorkspaceSwitchBinds ++ remoteWorkspaceMoveBinds ++ mergedBindList "bind";
+    bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ mergedBindList "bind";
     bindi = mergedBindList "bindi";
     bindin = mergedBindList "bindin";
     binde = mergedBindList "binde";
@@ -304,7 +278,6 @@ let
       (mkHelp "Windows" "SUPER+Return" "Open the preferred terminal")
       (mkHelp "Windows" "SUPER+SHIFT+L" "Lock the current session")
       (mkHelp "Help" "SUPER+F1" "Open the Hyprland keybind reference")
-      (mkHelp "Help" "CTRL+ALT+F1" "Open the Hyprland keybind reference (remote fallback)")
       (mkHelp "Layout" "SUPER+-" "Decrease the current split ratio")
       (mkHelp "Layout" "SUPER+=" "Increase the current split ratio")
       (mkHelp "Layout" "SUPER+CTRL+V" "Legacy alias: preselect a split to the right")
@@ -324,26 +297,8 @@ let
         (mkHelp "Windows" "SUPER+SHIFT+${lib.toUpper entry.key}" "Move the active window ${entry.label}")
         (mkHelp "Layout" "SUPER+ALT+${lib.toUpper entry.key}" "Resize the active window: ${entry.resizeLabel}")
         (mkHelp "Layout" "SUPER+CTRL+${lib.toUpper entry.key}" "Preselect the next split ${entry.label}")
-        (mkHelp "Remote" "CTRL+ALT+${lib.toUpper entry.key}" "Focus the window ${entry.label}")
-        (mkHelp "Remote" "CTRL+SHIFT+ALT+${lib.toUpper entry.key}" "Move the active window ${entry.label}")
       ])
       directionalKeys)
-    ++ [
-      (mkHelp "Remote" "CTRL+ALT+Q" "Close the active window")
-      (mkHelp "Remote" "CTRL+ALT+T" "Toggle floating for the active window")
-      (mkHelp "Remote" "CTRL+ALT+F" "Fullscreen the active window")
-      (mkHelp "Remote" "CTRL+SHIFT+ALT+F" "Maximize-like fullscreen while keeping shell bars visible")
-      (mkHelp "Remote" "CTRL+ALT+Return" "Open the preferred terminal")
-      (mkHelp "Remote" "CTRL+ALT+C" "Center the active window")
-      (mkHelp "Remote" "CTRL+ALT+1..0" "Jump directly to a numbered workspace")
-      (mkHelp "Remote" "CTRL+SHIFT+ALT+1..0" "Send the active window to a numbered workspace")
-      (mkHelp "Remote" "CTRL+ALT+M" "Mute the default audio output")
-      (mkHelp "Remote" "CTRL+SHIFT+ALT+M" "Mute the default microphone")
-      (mkHelp "Remote" "CTRL+ALT+=" "Raise volume")
-      (mkHelp "Remote" "CTRL+ALT+-" "Lower volume")
-      (mkHelp "Remote" "CTRL+SHIFT+ALT+=" "Increase brightness")
-      (mkHelp "Remote" "CTRL+SHIFT+ALT+-" "Decrease brightness")
-    ]
     ++ lib.optionals keepassEnabled [
       (mkHelp "Apps" "SUPER+CTRL+P" "Toggle KeePassXC via special workspace or minimizer mode")
     ]
@@ -358,9 +313,6 @@ let
       (mkHelp "Caelestia" "SUPER+E" "Open the preferred file manager")
       (mkHelp "Caelestia" "SUPER+V" "Open the preferred editor")
       (mkHelp "Caelestia" "SUPER+M/C/Y/X" "Toggle special workspaces for music, communication, todo, or sysmon")
-      (mkHelp "Caelestia" "CTRL+ALT+Space" "Open the shell launcher")
-      (mkHelp "Caelestia" "CTRL+ALT+/" "Open the control center")
-      (mkHelp "Caelestia" "CTRL+ALT+BackSpace" "Lock the current session")
     ];
 in
 {
