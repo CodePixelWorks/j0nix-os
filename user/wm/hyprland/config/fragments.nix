@@ -13,7 +13,6 @@
   homeBinDir,
   keybindDiagnosticsEnable,
   sessionEnvImportCommand,
-  headlessOutputsEnsureCommand,
   startGraphicalSessionTargetCommand,
   swwwDaemonCommand,
   startupAppsCommand,
@@ -44,7 +43,6 @@ let
     [
       sessionEnvImportCommand
     ]
-    ++ lib.optionals (headlessOutputsEnsureCommand != null) [ headlessOutputsEnsureCommand ]
     ++ [
       startGraphicalSessionTargetCommand
       swwwDaemonCommand
