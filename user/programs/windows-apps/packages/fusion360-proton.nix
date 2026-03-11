@@ -173,11 +173,39 @@ let
       }
 
       fusion360::find_fusion_exe() {
-        find "$FUSION360_WINEPREFIX" \
-          \( -iname Fusion360.exe -o -iname FusionLauncher.exe \) \
-          2>/dev/null \
-          | grep -E '/Autodesk/|/Fusion/' \
-          | head -n 1
+        local exe
+        exe="$(find "$FUSION360_WINEPREFIX" -iname Fusion360.exe 2>/dev/null | grep -E '/Autodesk/|/Fusion/' | head -n 1 || true)"
+        if [ -n "$exe" ]; then
+          printf '%s\n' "$exe"
+          return 0
+        fi
+
+        find "$FUSION360_WINEPREFIX" -iname FusionLauncher.exe 2>/dev/null | grep -E '/Autodesk/|/Fusion/' | head -n 1
+      }
+
+      fusion360::run_installer_until_fusion_present() {
+        local log_file="$1"
+        local timeout_seconds="$2"
+
+        WINEPREFIX="$FUSION360_WINEPREFIX" wine "$FUSION360_DOWNLOADS/FusionClientInstaller.exe" --quiet >> "$log_file" 2>&1 &
+        local installer_pid=$!
+
+        for _ in $(seq 1 "$timeout_seconds"); do
+          if [ -n "$(fusion360::find_fusion_exe || true)" ]; then
+            WINEPREFIX="$FUSION360_WINEPREFIX" wineserver -k >/dev/null 2>&1 || true
+            wait "$installer_pid" >/dev/null 2>&1 || true
+            return 0
+          fi
+          if ! kill -0 "$installer_pid" >/dev/null 2>&1; then
+            wait "$installer_pid" >/dev/null 2>&1 || true
+            break
+          fi
+          sleep 1
+        done
+
+        WINEPREFIX="$FUSION360_WINEPREFIX" wineserver -k >/dev/null 2>&1 || true
+        wait "$installer_pid" >/dev/null 2>&1 || true
+        [ -n "$(fusion360::find_fusion_exe || true)" ]
       }
     '';
   };
@@ -239,9 +267,11 @@ let
       WINEPREFIX="$FUSION360_WINEPREFIX" wine "$FUSION360_DOWNLOADS/WebView2installer.exe" /silent /install >> "$FUSION360_LOGS/webview2.log" 2>&1 || true
 
       echo "Starte Fusion-Installer (1/2)..."
-      WINEPREFIX="$FUSION360_WINEPREFIX" timeout -k 10m 9m wine "$FUSION360_DOWNLOADS/FusionClientInstaller.exe" --quiet >> "$FUSION360_LOGS/fusion-installer-pass1.log" 2>&1 || true
-      echo "Starte Fusion-Installer (2/2)..."
-      WINEPREFIX="$FUSION360_WINEPREFIX" timeout -k 5m 2m wine "$FUSION360_DOWNLOADS/FusionClientInstaller.exe" --quiet >> "$FUSION360_LOGS/fusion-installer-pass2.log" 2>&1 || true
+      fusion360::run_installer_until_fusion_present "$FUSION360_LOGS/fusion-installer-pass1.log" 540 || true
+      if [ -z "$(fusion360::find_fusion_exe || true)" ]; then
+        echo "Starte Fusion-Installer (2/2)..."
+        fusion360::run_installer_until_fusion_present "$FUSION360_LOGS/fusion-installer-pass2.log" 120 || true
+      fi
 
       if [ -z "$(fusion360::find_fusion_exe || true)" ]; then
         echo "Fusion 360 wurde nicht installiert. Prüfe $FUSION360_LOGS/fusion-installer-pass1.log und $FUSION360_LOGS/fusion-installer-pass2.log" >&2
