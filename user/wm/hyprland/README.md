@@ -110,13 +110,15 @@ Behavior:
 
 - `SUPER+Q`: close active window
 - `SUPER+T`: toggle floating
+- `SUPER+F1`: open the generated Hyprland keybind reference popup
 - `SUPER+F`: fullscreen (mode `0`, hides shell/waybar)
 - `SUPER+SHIFT+F`: maximize-like fullscreen (mode `1`, keeps shell/waybar)
 - `SUPER+Return`: open preferred terminal
 - `SUPER+SHIFT+L`: lock screen (`hyprlock` fallback to `loginctl lock-session`)
 - `SUPER+B`: open preferred browser
 - `SUPER+SHIFT+Q`: exit Hyprland session
-- `SUPER+H/J/K/L`: Vim-style window movement (`left/down/up/right`)
+- `SUPER+H/J/K/L`: Vim-style focus movement (`left/down/up/right`)
+- `SUPER+SHIFT+H/J/K/L`: move the active window (`left/down/up/right`)
 - `SUPER+ALT+H/J/K/L`: resize the active window (`shrink width / grow height / shrink height / grow width`)
 - `SUPER+CTRL+H/J/K/L`: preselect the next split direction directly (`left/down/up/right`)
 - `SUPER+CTRL+L`: quick vertical split for the next tiled window (side-by-side)
@@ -135,6 +137,7 @@ Behavior:
 
 These exist because `SUPER` (Windows key) is often unreliable through Moonlight/KVM/remote sessions.
 
+- `CTRL+ALT+F1`: open the generated Hyprland keybind reference popup
 - `CTRL+ALT+Q`: close active window
 - `CTRL+ALT+T`: toggle floating
 - `CTRL+ALT+F`: fullscreen (mode `0`)
@@ -151,6 +154,13 @@ These exist because `SUPER` (Windows key) is often unreliable through Moonlight/
 - `CTRL+ALT+-`: volume down
 - `CTRL+SHIFT+ALT+=`: brightness up (`brightnessctl`)
 - `CTRL+SHIFT+ALT+-`: brightness down (`brightnessctl`)
+
+## Keybind Reference Popup
+
+`wm-keybinds-show` opens a searchable popup list of the active Hyprland keybind set, inspired by tools like `hyprKCS` but generated directly from the j0nix keybind definitions. It is available via:
+
+- `SUPER+F1`
+- `CTRL+ALT+F1` (remote fallback)
 
 ## Shell-Specific Launcher / Overview Fallbacks
 
