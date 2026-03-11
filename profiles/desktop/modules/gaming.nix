@@ -52,6 +52,14 @@
       sunshine = {
         enable = true;
         openFirewall = true;
+        capSysAdmin = true;
+        autoStart = true;
+        performance = {
+          mode = "aggressive"; # "balanced" | "aggressive"
+          cpuRealtimePriority = 20; # keep high, but below pathological RT values like 99
+          addRenderGroup = true;
+          addInputGroup = true;
+        };
       };
     };
 
