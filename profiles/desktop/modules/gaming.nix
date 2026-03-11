@@ -59,6 +59,10 @@
           cpuRealtimePriority = 20; # keep high, but below pathological RT values like 99
           addRenderGroup = true;
           addInputGroup = true;
+          network = {
+            enable = true;
+            mode = "aggressive"; # "balanced" | "aggressive"
+          };
         };
         virtualDisplay = {
           enable = true;
