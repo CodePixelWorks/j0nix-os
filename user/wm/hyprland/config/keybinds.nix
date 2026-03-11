@@ -21,12 +21,12 @@
   minimizerToggleCommand,
   minimizerRestoreCommand,
   minimizerMenuCommand,
+  keybindHelpCommand,
   workspaceSwitchBinds,
   workspaceMoveBinds,
 }:
 let
   hasValue = value: value != null && value != "";
-  keybindHelpCommand = appExec "wm-keybinds-show";
   directionalKeys = [
     {
       key = "h";
@@ -59,9 +59,6 @@ let
   ];
   mkMainBind = modifiers: key: dispatcher: argument:
     "$mainMod${lib.optionalString (modifiers != "") " ${modifiers}"}, ${key}, ${dispatcher}, ${argument}";
-  mkHelp = section: binding: description: {
-    inherit section binding description;
-  };
   keyboardLayoutToggleBind =
     lib.optional (hasValue layoutToggleBind) "${layoutToggleBind}, exec, wm-kbd-layout-toggle";
   dmsOverviewToggleBind =
@@ -268,53 +265,7 @@ let
       ''
     else
       "";
-
-  helpEntries =
-    [
-      (mkHelp "Windows" "SUPER+Q" "Close the active window")
-      (mkHelp "Windows" "SUPER+T" "Toggle floating for the active window")
-      (mkHelp "Windows" "SUPER+F" "Fullscreen the active window")
-      (mkHelp "Windows" "SUPER+SHIFT+F" "Maximize-like fullscreen while keeping shell bars visible")
-      (mkHelp "Windows" "SUPER+Return" "Open the preferred terminal")
-      (mkHelp "Windows" "SUPER+SHIFT+L" "Lock the current session")
-      (mkHelp "Help" "SUPER+," "Open the Hyprland keybind reference")
-      (mkHelp "Layout" "SUPER+-" "Decrease the current split ratio")
-      (mkHelp "Layout" "SUPER+=" "Increase the current split ratio")
-      (mkHelp "Layout" "SUPER+CTRL+V" "Legacy alias: preselect a split to the right")
-      (mkHelp "Layout" "SUPER+CTRL+SHIFT+V" "Legacy alias: preselect a split downward")
-      (mkHelp "Workspaces" "SUPER+Left/Right" "Switch to the previous or next workspace")
-      (mkHelp "Workspaces" "SUPER+SHIFT+Left/Right" "Move the active window to the previous or next workspace")
-      (mkHelp "Workspaces" "SUPER+1..0" "Jump directly to a numbered workspace")
-      (mkHelp "Workspaces" "SUPER+SHIFT+1..0" "Send the active window to a numbered workspace")
-      (mkHelp "Workspaces" "SUPER+MouseWheel" "Cycle workspaces relative to the current one")
-      (mkHelp "System" "SUPER+P" "Take a full screenshot")
-      (mkHelp "System" "CTRL+SHIFT+Print" "Take an area screenshot")
-      (mkHelp "System" "SUPER+R" "Restart the desktop shell/session helpers")
-    ]
-    ++ lib.flatten (map
-      (entry: [
-        (mkHelp "Windows" "SUPER+${lib.toUpper entry.key}" "Focus the window ${entry.label}")
-        (mkHelp "Windows" "SUPER+SHIFT+${lib.toUpper entry.key}" "Move the active window ${entry.label}")
-        (mkHelp "Layout" "SUPER+ALT+${lib.toUpper entry.key}" "Resize the active window: ${entry.resizeLabel}")
-        (mkHelp "Layout" "SUPER+CTRL+${lib.toUpper entry.key}" "Preselect the next split ${entry.label}")
-      ])
-      directionalKeys)
-    ++ lib.optionals keepassEnabled [
-      (mkHelp "Apps" "SUPER+CTRL+P" "Toggle KeePassXC via special workspace or minimizer mode")
-    ]
-    ++ lib.optionals minimizerEnabled [
-      (mkHelp "Apps" "SUPER+CTRL+M" "Toggle the Hyprland minimizer for the configured app")
-      (mkHelp "Apps" "SUPER+CTRL+SHIFT+M" "Restore the last minimized app")
-      (mkHelp "Apps" "SUPER+CTRL+C" "Open the minimizer menu or toggle the configured app")
-    ]
-    ++ lib.optionals isCaelestiaShell [
-      (mkHelp "Caelestia" "SUPER+Space" "Open the shell app overview")
-      (mkHelp "Caelestia" "SUPER+B" "Open the preferred browser")
-      (mkHelp "Caelestia" "SUPER+E" "Open the preferred file manager")
-      (mkHelp "Caelestia" "SUPER+V" "Open the preferred editor")
-      (mkHelp "Caelestia" "SUPER+M/C/Y/X" "Toggle special workspaces for music, communication, todo, or sysmon")
-    ];
 in
 {
-  inherit shellHyprKeybinds effectiveBindLists caelestiaSubmapConfig helpEntries;
+  inherit shellHyprKeybinds effectiveBindLists caelestiaSubmapConfig;
 }
