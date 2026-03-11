@@ -22,15 +22,17 @@ let
   fusionInstaller = defaultFusionInstaller // (payloadsCfg.fusionInstaller or { });
   webView2Installer = defaultWebView2Installer // (payloadsCfg.webview2Installer or { });
 
+  mkStoreName = payload: lib.strings.sanitizeDerivationName (payload.fileName or "payload.exe");
+
   mkPayloadPackage = payload:
     if payload.mode == "fetchurl" then
       pkgs.fetchurl {
         inherit (payload) url hash;
-        name = payload.fileName;
+        name = mkStoreName payload;
       }
     else if payload.mode == "requireFile" then
       pkgs.requireFile {
-        name = payload.fileName;
+        name = mkStoreName payload;
         inherit (payload) url hash;
       }
     else
