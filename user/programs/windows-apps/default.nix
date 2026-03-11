@@ -26,6 +26,7 @@ let
     );
   aggregatedDesktopEntries = lib.mkMerge (map (def: def.desktopEntries or { }) packageDefs);
   aggregatedMimeDefaults = lib.mkMerge (map (def: def.mimeDefaults or { }) packageDefs);
+  aggregatedAssertions = lib.concatMap (def: def.assertions or [ ]) packageDefs;
   autoSetupDefs = builtins.filter (def: ((def.autoSetup or { }).enable or false)) packageDefs;
 
   serviceNameOf = def: "windows-app-setup-${def.id}";
@@ -105,5 +106,5 @@ lib.mkIf (requestedPackages != [ ]) {
           packageDefs;
       message = "Portable windows app definitions must not declare autoSetup provisioning.";
     }
-  ];
+  ] ++ aggregatedAssertions;
 }
