@@ -12,6 +12,8 @@
   dmsOverviewAutostart,
   homeBinDir,
   keybindDiagnosticsEnable,
+  sessionEnvImportCommand,
+  headlessOutputsEnsureCommand,
   startGraphicalSessionTargetCommand,
   swwwDaemonCommand,
   startupAppsCommand,
@@ -40,6 +42,10 @@ let
 
   startupLines =
     [
+      sessionEnvImportCommand
+    ]
+    ++ lib.optionals (headlessOutputsEnsureCommand != null) [ headlessOutputsEnsureCommand ]
+    ++ [
       startGraphicalSessionTargetCommand
       swwwDaemonCommand
       startupAppsCommand
