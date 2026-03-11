@@ -1,4 +1,4 @@
-{ config, lib, pkgs, settings, ... }:
+{ config, lib, pkgs, settings, inputs, ... }:
 let
   profileDetails = settings.profileDetails or { hyprlandMonitors = [ ]; };
   selectedShell = settings.wmShell or (settings.hyprlandShell or "dank-material-shell");
@@ -150,6 +150,21 @@ let
     if minimizerIsDenis then "${minimizerCommand} --restore-last" else minimizerToggleCommand;
   minimizerMenuCommand =
     if minimizerIsDenis then "${minimizerCommand} --menu" else minimizerToggleCommand;
+  hasHyprKcsPackage =
+    (inputs ? hyprkcs)
+    && (inputs.hyprkcs ? packages)
+    && (builtins.hasAttr pkgs.stdenv.hostPlatform.system inputs.hyprkcs.packages)
+    && (inputs.hyprkcs.packages.${pkgs.stdenv.hostPlatform.system} ? default);
+  hyprKcsPackage =
+    if hasHyprKcsPackage then
+      inputs.hyprkcs.packages.${pkgs.stdenv.hostPlatform.system}.default
+    else
+      null;
+  keybindHelpCommand =
+    if hasHyprKcsPackage then
+      appExec (lib.getExe' hyprKcsPackage "hyprkcs")
+    else
+      "false";
   keepassCfg = ((settings.programs or { }).keepassxc or { });
   keepassEnabled = keepassCfg.enable or false;
   keepassWorkspaceCfg = keepassCfg.workspace or { };
@@ -190,33 +205,10 @@ let
       minimizerToggleCommand
       minimizerRestoreCommand
       minimizerMenuCommand
+      keybindHelpCommand
       workspaceSwitchBinds
       workspaceMoveBinds;
   };
-  keybindHelpJson = pkgs.writeText "hyprland-keybinds.json" (builtins.toJSON hyprlandKeybinds.helpEntries);
-  keybindHelpScript = pkgs.writeShellScriptBin "wm-keybinds-show" ''
-    set -eu
-
-    keybinds_json=${lib.escapeShellArg keybindHelpJson}
-
-    if [ -z "''${WAYLAND_DISPLAY:-}" ]; then
-      exec ${pkgs.jq}/bin/jq -r '.[] | [.section, .binding, .description] | @tsv' "$keybinds_json"
-    fi
-
-    ${pkgs.jq}/bin/jq -r '.[] | [.section, .binding, .description] | join("|")' "$keybinds_json" \
-      | exec ${pkgs.yad}/bin/yad \
-          --list \
-          --title="Hyprland Keybinds" \
-          --text="Search by binding. This list is generated from the active j0nix Hyprland keybind set." \
-          --window-icon="preferences-desktop-keyboard-shortcuts" \
-          --center \
-          --width=1240 \
-          --height=760 \
-          --search-column=2 \
-          --column="Section" \
-          --column="Binding" \
-          --column="Action"
-  '';
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
   shellStartupCommand =
     if selectedShell == "none" then
@@ -307,9 +299,7 @@ in {
     keybindDiagnosticsScript
     keybindDiagnosticsProbeScript
   ]
-  ++ [
-    keybindHelpScript
-  ]
+  ++ lib.optionals hasHyprKcsPackage [ hyprKcsPackage ]
   ++ lib.optional (installRawQuickshell && (pkgs ? quickshell)) pkgs.quickshell
   ++ lib.optionals (minimizerEnabled && minimizerPackage != null) [ minimizerPackage ];
 
@@ -387,6 +377,10 @@ EOF
     {
       assertion = keybindDiagnosticsDelaySeconds >= 0;
       message = "settings.hyprland.debug.keybindDiagnostics.delaySeconds must be >= 0.";
+    }
+    {
+      assertion = hasHyprKcsPackage;
+      message = "Hyprland keybind help requires inputs.hyprkcs.packages.<system>.default to be available.";
     }
   ];
 }
