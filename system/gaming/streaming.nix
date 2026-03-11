@@ -8,6 +8,8 @@ let
   streaming = gaming.streaming or { };
   sunshine = streaming.sunshine or { };
   sunshineEnabled = sunshine.enable or false;
+  steam = gaming.steam or { };
+  steamEnabled = steam.enable or false;
   sunshineOpenFirewall = sunshine.openFirewall or true;
   sunshineCapSysAdmin = sunshine.capSysAdmin or true;
   sunshineAutoStart = sunshine.autoStart or true;
@@ -162,6 +164,26 @@ let
 
     exec ${sunshineExecutable} "$tmp_config"
   '';
+  sunshineBaseApps =
+    [
+      {
+        name = "Desktop";
+        "image-path" = "desktop.png";
+      }
+    ]
+    ++ lib.optionals steamEnabled [
+      {
+        name = "Steam Big Picture";
+        detached = [ "setsid steam steam://open/bigpicture" ];
+        "prep-cmd" = [
+          {
+            do = "";
+            undo = "setsid steam steam://close/bigpicture";
+          }
+        ];
+        "image-path" = "steam.png";
+      }
+    ];
 in
 lib.mkIf (gamingEnabled && sunshineEnabled) {
   services.sunshine = {
@@ -174,13 +196,20 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     };
   };
 
-  services.sunshine.applications.apps = lib.mkAfter (lib.optionals sunshineVirtualDisplayEnabled [
-    {
-      name = sunshineVirtualAppName;
-      cmd = "";
-      "auto-detach" = true;
-    }
-  ]);
+  services.sunshine.applications.env.PATH = lib.mkDefault "$(PATH):$(HOME)/.local/bin";
+
+  services.sunshine.applications.apps =
+    lib.mkAfter (
+      sunshineBaseApps
+      ++ lib.optionals sunshineVirtualDisplayEnabled [
+        {
+          name = sunshineVirtualAppName;
+          cmd = "";
+          "auto-detach" = true;
+          "image-path" = "desktop.png";
+        }
+      ]
+    );
 
   # Sunshine benefits from direct render-node access and reliable virtual input
   # permissions for low-latency capture and controller/keyboard injection.
