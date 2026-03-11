@@ -28,6 +28,9 @@ let
   sunshineVirtualOutputName = sunshineVirtualDisplay.outputName or null;
   sunshineVirtualAppName = sunshineVirtualDisplay.appName or "Mac Display";
   sunshineVirtualCapture = sunshineVirtualDisplay.capture or "wlr";
+  sunshineUsesWaylandCapture =
+    sunshineVirtualDisplayEnabled && builtins.elem sunshineVirtualCapture [ "wlr" "wl" "wayland" ];
+  sunshineNeedsPrivilegedWrapper = sunshineCapSysAdmin && !sunshineUsesWaylandCapture;
   sunshineVirtualResolutions = sunshineVirtualDisplay.resolutions or [
     "2880x1800"
     "2560x1600"
@@ -111,7 +114,7 @@ let
     NVD_BACKEND = "direct";
   };
   sunshineExecutable =
-    if sunshineCapSysAdmin then
+    if sunshineNeedsPrivilegedWrapper then
       "${config.security.wrapperDir}/sunshine"
     else
       lib.getExe config.services.sunshine.package;
@@ -158,7 +161,7 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
   services.sunshine = {
     enable = true;
     openFirewall = sunshineOpenFirewall;
-    capSysAdmin = sunshineCapSysAdmin;
+    capSysAdmin = sunshineNeedsPrivilegedWrapper;
     autoStart = sunshineAutoStart;
     settings = lib.optionalAttrs sunshineVirtualDisplayEnabled {
       capture = sunshineVirtualCapture;
