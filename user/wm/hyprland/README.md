@@ -118,8 +118,11 @@ Behavior:
 - `SUPER+SHIFT+Q`: exit Hyprland session
 - `SUPER+H/J/K/L`: Vim-style window movement (`left/down/up/right`)
 - `SUPER+ALT+H/J/K/L`: resize the active window (`shrink width / grow height / shrink height / grow width`)
-- `SUPER+CTRL+V`: preselect a vertical split for the next tiled window (side-by-side)
-- `SUPER+CTRL+SHIFT+V`: preselect a horizontal split for the next tiled window (stacked)
+- `SUPER+CTRL+H/J/K/L`: preselect the next split direction directly (`left/down/up/right`)
+- `SUPER+CTRL+L`: quick vertical split for the next tiled window (side-by-side)
+- `SUPER+CTRL+J`: quick horizontal split for the next tiled window (stacked)
+- `SUPER+CTRL+V`: legacy alias for a vertical split (`right`)
+- `SUPER+CTRL+SHIFT+V`: legacy alias for a horizontal split (`down`)
 - `CTRL+ALT+H/J/K/L`: Vim-style focus movement (`left/down/up/right`, remote-friendly fallback)
 - `SUPER+Left/Right`: switch relative workspace (`-1/+1`)
 - `SUPER+SHIFT+Left/Right`: move window to relative workspace (`-1/+1`, currently follows)
