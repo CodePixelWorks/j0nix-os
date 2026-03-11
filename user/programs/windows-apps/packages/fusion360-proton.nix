@@ -5,13 +5,78 @@ let
   protonCfg = fusionCfg.protonInstaller or { };
   protonVersion = protonCfg.protonVersion or "GE-Proton10-32";
   installRoot = protonCfg.installRoot or "$HOME/.autodesk_fusion";
-  fusionInstallerUrl =
-    protonCfg.fusionInstallerUrl
-    or "https://dl.appstreaming.autodesk.com/production/installers/Fusion%20Admin%20Install.exe";
-  webView2InstallerUrl =
-    protonCfg.webview2InstallerUrl
-    or "https://github.com/aedancullen/webview2-evergreen-standalone-installer-archive/releases/download/109.0.1518.78/MicrosoftEdgeWebView2RuntimeInstallerX64.exe";
   cleanupLegacyDesktop = protonCfg.cleanupLegacyDesktop or true;
+  payloadsCfg = protonCfg.payloads or { };
+  defaultFusionInstaller = {
+    mode = "runtime-download"; # "runtime-download" | "fetchurl" | "requireFile"
+    fileName = "FusionClientInstaller.exe";
+    url = "https://dl.appstreaming.autodesk.com/production/installers/Fusion%20Admin%20Install.exe";
+    hash = null;
+  };
+  defaultWebView2Installer = {
+    mode = "runtime-download";
+    fileName = "WebView2installer.exe";
+    url = "https://github.com/aedancullen/webview2-evergreen-standalone-installer-archive/releases/download/109.0.1518.78/MicrosoftEdgeWebView2RuntimeInstallerX64.exe";
+    hash = null;
+  };
+  fusionInstaller = defaultFusionInstaller // (payloadsCfg.fusionInstaller or { });
+  webView2Installer = defaultWebView2Installer // (payloadsCfg.webview2Installer or { });
+
+  mkPayloadPackage = payload:
+    if payload.mode == "fetchurl" then
+      pkgs.fetchurl {
+        inherit (payload) url hash;
+        name = payload.fileName;
+      }
+    else if payload.mode == "requireFile" then
+      pkgs.requireFile {
+        name = payload.fileName;
+        inherit (payload) url hash;
+      }
+    else
+      null;
+
+  fusionInstallerPackage = mkPayloadPackage fusionInstaller;
+  webView2InstallerPackage = mkPayloadPackage webView2Installer;
+  payloadPackages = lib.filter (pkg: pkg != null) [
+    fusionInstallerPackage
+    webView2InstallerPackage
+  ];
+
+  fusionInstallerRuntimeSpec =
+    if fusionInstallerPackage != null then
+      {
+        mode = "store";
+        path = fusionInstallerPackage;
+        url = fusionInstaller.url;
+        fileName = fusionInstaller.fileName;
+      }
+    else
+      {
+        mode = "runtime-download";
+        path = "";
+        url = fusionInstaller.url;
+        fileName = fusionInstaller.fileName;
+      };
+
+  webView2InstallerRuntimeSpec =
+    if webView2InstallerPackage != null then
+      {
+        mode = "store";
+        path = webView2InstallerPackage;
+        url = webView2Installer.url;
+        fileName = webView2Installer.fileName;
+      }
+    else
+      {
+        mode = "runtime-download";
+        path = "";
+        url = webView2Installer.url;
+        fileName = webView2Installer.fileName;
+      };
+
+  fusionInstallerRuntimeFile = pkgs.writeText "fusion360-installer-runtime.json" (builtins.toJSON fusionInstallerRuntimeSpec);
+  webView2InstallerRuntimeFile = pkgs.writeText "fusion360-webview2-runtime.json" (builtins.toJSON webView2InstallerRuntimeSpec);
 
   fusion360ProtonLib = pkgs.writeShellApplication {
     name = "fusion360-proton-lib";
@@ -24,6 +89,7 @@ let
       gnused
       procps
       xdg-utils
+      jq
       winetricks
       wineWow64Packages.staging
     ];
@@ -32,8 +98,8 @@ let
 
       export FUSION360_PROTON_VERSION="''${FUSION360_PROTON_VERSION:-${protonVersion}}"
       export FUSION360_INSTALL_ROOT="''${FUSION360_INSTALL_ROOT:-${installRoot}}"
-      export FUSION360_INSTALLER_URL="''${FUSION360_INSTALLER_URL:-${fusionInstallerUrl}}"
-      export FUSION360_WEBVIEW2_URL="''${FUSION360_WEBVIEW2_URL:-${webView2InstallerUrl}}"
+      export FUSION360_INSTALLER_SPEC=${lib.escapeShellArg (toString fusionInstallerRuntimeFile)}
+      export FUSION360_WEBVIEW2_SPEC=${lib.escapeShellArg (toString webView2InstallerRuntimeFile)}
 
       export FUSION360_STEAM_DIR="''${FUSION360_STEAM_DIR:-$HOME/.local/share/Steam}"
       export FUSION360_PROTON_DIR="$FUSION360_STEAM_DIR/compatibilitytools.d/$FUSION360_PROTON_VERSION"
@@ -74,13 +140,22 @@ let
           "$FUSION360_INSTALL_ROOT/resources"
       }
 
-      fusion360::download() {
-        local url="$1"
+      fusion360::ensure_payload() {
+        local spec="$1"
         local out="$2"
         if [ -s "$out" ]; then
           return 0
         fi
-        curl -L "$url" -o "$out"
+        local mode url store_path
+        mode="$(${pkgs.jq}/bin/jq -r '.mode' "$spec")"
+        url="$(${pkgs.jq}/bin/jq -r '.url' "$spec")"
+        store_path="$(${pkgs.jq}/bin/jq -r '.path' "$spec")"
+
+        if [ "$mode" = "store" ]; then
+          cp "$store_path" "$out"
+        else
+          curl -L "$url" -o "$out"
+        fi
       }
 
       fusion360::find_identity_manager() {
@@ -118,8 +193,8 @@ let
 
       cd "$HOME"
 
-      fusion360::download "$FUSION360_INSTALLER_URL" "$FUSION360_DOWNLOADS/FusionClientInstaller.exe"
-      fusion360::download "$FUSION360_WEBVIEW2_URL" "$FUSION360_DOWNLOADS/WebView2installer.exe"
+      fusion360::ensure_payload "$FUSION360_INSTALLER_SPEC" "$FUSION360_DOWNLOADS/FusionClientInstaller.exe"
+      fusion360::ensure_payload "$FUSION360_WEBVIEW2_SPEC" "$FUSION360_DOWNLOADS/WebView2installer.exe"
 
       echo "Initialisiere Proton-Prefix..."
       fusion360::proton_run wineboot -u >/dev/null 2>&1 || true
@@ -210,6 +285,7 @@ in
   id = "fusion360-proton";
   kind = "stateful-online";
 
+  payloadPackages = payloadPackages;
   runtimePackages = [
     fusion360ProtonSetup
     fusion360ProtonRun
@@ -256,4 +332,27 @@ in
   mimeDefaults = {
     "x-scheme-handler/adskidmgr" = [ "adskidmgr-opener.desktop" ];
   };
+
+  assertions = [
+    {
+      assertion = builtins.elem fusionInstaller.mode [ "runtime-download" "fetchurl" "requireFile" ];
+      message = "settings.programs.fusion360.protonInstaller.payloads.fusionInstaller.mode must be one of: runtime-download, fetchurl, requireFile";
+    }
+    {
+      assertion = builtins.elem webView2Installer.mode [ "runtime-download" "fetchurl" "requireFile" ];
+      message = "settings.programs.fusion360.protonInstaller.payloads.webView2Installer.mode must be one of: runtime-download, fetchurl, requireFile";
+    }
+    {
+      assertion =
+        fusionInstaller.mode == "runtime-download"
+        || (fusionInstaller.hash != null && fusionInstaller.hash != "");
+      message = "Fusion 360 installer payloads using fetchurl/requireFile must define hash.";
+    }
+    {
+      assertion =
+        webView2Installer.mode == "runtime-download"
+        || (webView2Installer.hash != null && webView2Installer.hash != "");
+      message = "WebView2 payloads using fetchurl/requireFile must define hash.";
+    }
+  ];
 }
