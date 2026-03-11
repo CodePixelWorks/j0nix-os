@@ -373,6 +373,11 @@
       inputs.hyprland.follows = "hyprland";
     };
 
+    hyprkcs = {
+      url = "github:kosa12/hyprKCS";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     hyprland-minimizer-orteip = {
       url = "github:0rteip/hyprland_minimizer";
       flake = false;

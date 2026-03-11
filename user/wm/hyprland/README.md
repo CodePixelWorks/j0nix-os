@@ -134,7 +134,7 @@ Behavior:
 
 ## Keybind Reference Popup
 
-`wm-keybinds-show` opens a searchable popup list of the active Hyprland keybind set, inspired by tools like `hyprKCS` but generated directly from the j0nix keybind definitions. It is available via:
+`SUPER+,` now launches `hyprKCS`, which parses the active Hyprland configuration tree directly and provides the graphical search/editor UI from the upstream project.
 
 - `SUPER+,`
 
