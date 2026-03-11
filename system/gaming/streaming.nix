@@ -44,10 +44,11 @@ let
     90
     120
   ];
-  sunshineVirtualResolutionsValue =
-    "[${lib.concatStringsSep ", " sunshineVirtualResolutions}]";
-  sunshineVirtualFpsValue =
-    "[${lib.concatStringsSep ", " (map toString sunshineVirtualFps)}]";
+  sunshineNvidiaPackageLibDirs =
+    lib.optionals sunshineUseNvidia [
+      "${config.hardware.nvidia.package}/lib"
+      "${config.hardware.nvidia.package}/lib64"
+    ];
   configuredHeadlessOutputs = (settings.hyprland or { }).headlessOutputs or [ ];
   configuredHeadlessOutputMap = lib.listToAttrs (map (output: lib.nameValuePair output.name output) configuredHeadlessOutputs);
   sunshineVirtualOutputConfig =
@@ -98,8 +99,11 @@ let
       "fps"
     ]);
   sunshineGraphicsLibraryDirs =
-    [ "/run/opengl-driver/lib" ]
-    ++ lib.optionals pkgs.stdenv.hostPlatform.isx86_64 [ "/run/opengl-driver-32/lib" ];
+    lib.unique (
+      sunshineNvidiaPackageLibDirs
+      ++ [ "/run/opengl-driver/lib" ]
+      ++ lib.optionals pkgs.stdenv.hostPlatform.isx86_64 [ "/run/opengl-driver-32/lib" ]
+    );
   sunshineDriDriverDirs = map (dir: "${dir}/dri") sunshineGraphicsLibraryDirs;
   sunshineNvidiaEnvironment = {
     # Sunshine's FFmpeg/NVENC path resolves vendor codecs at runtime. On NixOS,
@@ -130,9 +134,6 @@ let
     ${pkgs.coreutils}/bin/install -m 600 "$base_config" "$tmp_config"
 
     ${lib.optionalString sunshineVirtualDisplayEnabled ''
-      printf '\nresolutions = %s\n' ${lib.escapeShellArg sunshineVirtualResolutionsValue} >>"$tmp_config"
-      printf 'fps = %s\n' ${lib.escapeShellArg sunshineVirtualFpsValue} >>"$tmp_config"
-
       headless_name=${lib.escapeShellArg (if sunshineVirtualOutputName != null then sunshineVirtualOutputName else "")}
       headless_mode=${lib.escapeShellArg (if sunshineVirtualOutputConfig != null then (sunshineVirtualOutputConfig.mode or "2880x1800@60") else "2880x1800@60")}
       headless_position=${lib.escapeShellArg (if sunshineVirtualOutputConfig != null then (sunshineVirtualOutputConfig.position or "10000x10000") else "10000x10000")}
