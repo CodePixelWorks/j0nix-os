@@ -58,6 +58,12 @@ Its payloads can now be sourced in three ways under `settings.programs.fusion360
 - `fetchurl`: pin the installer as a fixed-output Nix artifact with `url` + `hash`
 - `requireFile`: require a locally supplied proprietary installer file with `fileName` + `hash`
 
+For `requireFile` payloads kept under `windows_executables/`, stage the file into the Nix store once before rebuilding:
+```bash
+cp "windows_executables/Fusion Client Downloader.exe" /tmp/Fusion-Client-Downloader.exe
+nix-store --add-fixed sha256 /tmp/Fusion-Client-Downloader.exe
+```
+
 `KeePassXC` is user-scoped via `settings.userSettings.<name>.programs.keepassxc.*` and supports:
 - optional autostart
 - optional startup database path
