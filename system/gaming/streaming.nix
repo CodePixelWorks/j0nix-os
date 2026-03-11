@@ -123,7 +123,8 @@ let
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     tmp_config="$runtime_dir/sunshine-j0nix.conf"
     base_config=${lib.escapeShellArg sunshineDynamicConfigFile}
-    cp "$base_config" "$tmp_config"
+    rm -f "$tmp_config"
+    ${pkgs.coreutils}/bin/install -m 600 "$base_config" "$tmp_config"
 
     ${lib.optionalString sunshineVirtualDisplayEnabled ''
       printf '\nresolutions = %s\n' ${lib.escapeShellArg sunshineVirtualResolutionsValue} >>"$tmp_config"
