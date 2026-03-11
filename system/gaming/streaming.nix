@@ -13,6 +13,9 @@ let
   sunshineCpuRealtimePriority = sunshinePerf.cpuRealtimePriority or 20;
   sunshineAddRenderGroup = sunshinePerf.addRenderGroup or true;
   sunshineAddInputGroup = sunshinePerf.addInputGroup or true;
+  sunshineNetworkPerf = sunshinePerf.network or { };
+  sunshineNetworkPerfEnable = sunshineNetworkPerf.enable or true;
+  sunshineNetworkPerfMode = sunshineNetworkPerf.mode or sunshinePerfMode;
   sunshineExtraGroups =
     lib.unique (
       lib.optionals sunshineAddRenderGroup [ "render" ]
@@ -59,6 +62,28 @@ let
         Nice = -10;
         IOSchedulingClass = "best-effort";
         IOSchedulingPriority = 0;
+      };
+  sunshineNetworkSysctlFragment =
+    if sunshineNetworkPerfMode == "aggressive" then
+      {
+        # Sunshine/Moonlight use bursty UDP traffic. Slightly larger default socket
+        # buffers and a wider softirq receive budget reduce drops/jitter during
+        # high-bitrate 120 Hz LAN sessions without pushing to pathological values.
+        "net.core.rmem_default" = 524288;
+        "net.core.wmem_default" = 524288;
+        "net.ipv4.udp_rmem_min" = 262144;
+        "net.ipv4.udp_wmem_min" = 262144;
+        "net.core.netdev_budget" = 600;
+        "net.core.netdev_budget_usecs" = 8000;
+      }
+    else
+      {
+        "net.core.rmem_default" = 262144;
+        "net.core.wmem_default" = 262144;
+        "net.ipv4.udp_rmem_min" = 131072;
+        "net.ipv4.udp_wmem_min" = 131072;
+        "net.core.netdev_budget" = 400;
+        "net.core.netdev_budget_usecs" = 4000;
       };
   sunshineDynamicConfigFile =
     settingsFormat.generate "sunshine-j0nix-base.conf" (builtins.removeAttrs config.services.sunshine.settings [ "output_name" ]);
@@ -125,6 +150,11 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
   # permissions for low-latency capture and controller/keyboard injection.
   j0nix.desktop.accounts.baseExtraGroups = lib.mkAfter sunshineExtraGroups;
 
+  # Route Sunshine-specific network tuning through the shared sysctl collector so
+  # it composes cleanly with the generic network-performance and gaming roles.
+  j0nix.desktop.sysctl.extraFragments =
+    lib.mkAfter (lib.optional sunshineNetworkPerfEnable sunshineNetworkSysctlFragment);
+
   # Apply a dedicated service-priority profile on top of the upstream user unit.
   # This mirrors the useful part of common Sunshine tuning gists without forcing
   # an extreme RT priority that can starve a daily-driver desktop.
@@ -160,6 +190,14 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     {
       assertion = builtins.isBool sunshineAddInputGroup;
       message = "j0nix.desktop.gaming.streaming.sunshine.performance.addInputGroup must be a boolean";
+    }
+    {
+      assertion = builtins.isBool sunshineNetworkPerfEnable;
+      message = "j0nix.desktop.gaming.streaming.sunshine.performance.network.enable must be a boolean";
+    }
+    {
+      assertion = builtins.elem sunshineNetworkPerfMode [ "balanced" "aggressive" ];
+      message = "j0nix.desktop.gaming.streaming.sunshine.performance.network.mode must be one of: balanced, aggressive";
     }
     {
       assertion = !sunshineVirtualDisplayEnabled || builtins.elem sunshineVirtualCapture [ "wlr" "wl" "wayland" ];
