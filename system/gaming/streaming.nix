@@ -261,7 +261,6 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
       ++ lib.optionals sunshineVirtualDisplayEnabled [
         {
           name = sunshineVirtualAppName;
-          cmd = "";
           "auto-detach" = true;
           "image-path" = "desktop.png";
           "prep-cmd" = [
