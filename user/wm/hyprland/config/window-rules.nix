@@ -49,6 +49,7 @@
     "match:class ^(org\\.gnome\\.Settings)$, float 1, size 70% 80%, center 1"
     "match:class ^(org\\.pulseaudio\\.pavucontrol|pavucontrol|yad-icon-browser)$, float 1, size 60% 70%, center 1"
     "match:class ^(nwg-look)$, float 1, size 50% 60%, center 1"
+    "match:class ^(wineboot\\.exe)$, match:title ^(Wine)$, float 1, center 1"
     "match:class ^(naps2)$, match:title negative:^NAPS2.*, float 1, center 1"
 
     # Picture-in-picture windows: keep them floating, pinned and ratio-safe.
