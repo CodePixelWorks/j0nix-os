@@ -24,6 +24,7 @@ let
   sunshineVirtualDisplay = sunshine.virtualDisplay or { };
   sunshineVirtualDisplayEnabled = sunshineVirtualDisplay.enable or false;
   sunshineVirtualOutputName = sunshineVirtualDisplay.outputName or null;
+  sunshineVirtualAppName = sunshineVirtualDisplay.appName or "Mac Display";
   sunshineVirtualCapture = sunshineVirtualDisplay.capture or "wlr";
   sunshineVirtualResolutions = sunshineVirtualDisplay.resolutions or [
     "2880x1800"
@@ -132,10 +133,6 @@ let
 
         "$hyprctl_bin" keyword monitor "$headless_name,$headless_mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
 
-        # Sunshine expects the Unix display id here. For wlroots/Hyprland
-        # outputs this is the output identifier/name, not the array index from
-        # `hyprctl -j monitors all`.
-        printf '\noutput_name = %s\n' "$headless_name" >>"$tmp_config"
       fi
     ''}
 
@@ -152,6 +149,15 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
       capture = sunshineVirtualCapture;
     };
   };
+
+  services.sunshine.applications.apps = lib.mkAfter (lib.optionals sunshineVirtualDisplayEnabled [
+    {
+      name = sunshineVirtualAppName;
+      output = sunshineVirtualOutputName;
+      cmd = "";
+      "auto-detach" = true;
+    }
+  ]);
 
   # Sunshine benefits from direct render-node access and reliable virtual input
   # permissions for low-latency capture and controller/keyboard injection.
@@ -221,6 +227,10 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     {
       assertion = !sunshineVirtualDisplayEnabled || sunshineVirtualOutputName != null;
       message = "j0nix.desktop.gaming.streaming.sunshine.virtualDisplay.outputName must be set when virtualDisplay is enabled.";
+    }
+    {
+      assertion = !sunshineVirtualDisplayEnabled || sunshineVirtualAppName != "";
+      message = "j0nix.desktop.gaming.streaming.sunshine.virtualDisplay.appName must not be empty when virtualDisplay is enabled.";
     }
     {
       assertion = !sunshineVirtualDisplayEnabled || sunshineVirtualOutputConfig != null;
