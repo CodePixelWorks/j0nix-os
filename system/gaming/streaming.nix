@@ -10,7 +10,6 @@ let
   sunshineAutoStart = sunshine.autoStart or true;
   sunshinePerf = sunshine.performance or { };
   sunshinePerfMode = sunshinePerf.mode or "aggressive";
-  sunshineCpuRealtimePriority = sunshinePerf.cpuRealtimePriority or 20;
   sunshineAddRenderGroup = sunshinePerf.addRenderGroup or true;
   sunshineAddInputGroup = sunshinePerf.addInputGroup or true;
   sunshineNetworkPerf = sunshinePerf.network or { };
@@ -57,10 +56,6 @@ let
         Nice = -20;
         IOSchedulingClass = "best-effort";
         IOSchedulingPriority = 0;
-        CPUSchedulingPolicy = "rr";
-        CPUSchedulingPriority = sunshineCpuRealtimePriority;
-        LimitRTPRIO = "infinity";
-        LimitRTTIME = "infinity";
       }
     else
       {
@@ -191,10 +186,6 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     {
       assertion = builtins.elem sunshinePerfMode [ "balanced" "aggressive" ];
       message = "j0nix.desktop.gaming.streaming.sunshine.performance.mode must be one of: balanced, aggressive";
-    }
-    {
-      assertion = sunshineCpuRealtimePriority >= 1 && sunshineCpuRealtimePriority <= 99;
-      message = "j0nix.desktop.gaming.streaming.sunshine.performance.cpuRealtimePriority must be between 1 and 99";
     }
     {
       assertion = builtins.isBool sunshineAddRenderGroup;
