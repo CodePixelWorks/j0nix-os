@@ -102,16 +102,6 @@ let
     fi
 
     launch_keepassxc() {
-      if has_process; then
-        if [ -n "$db_path" ]; then
-          if [ "${if keyFileSecretPath != null then "1" else "0"}" = "1" ]; then
-            exec ${keepassxcBin} --keyfile ${lib.escapeShellArg keyFilePath} "$db_path"
-          fi
-          exec ${keepassxcBin} "$db_path"
-        fi
-        exec ${keepassxcBin}
-      fi
-
       if [ "${if autoUnlockMode == "strict" then "1" else "0"}" = "1" ]; then
         exec ${keepassxcBin} ${lib.optionalString effectiveStartMinimized "--minimized"}
       fi
