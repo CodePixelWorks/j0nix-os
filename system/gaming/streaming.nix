@@ -38,6 +38,10 @@ let
     90
     120
   ];
+  sunshineVirtualResolutionsValue =
+    "[${lib.concatStringsSep ", " sunshineVirtualResolutions}]";
+  sunshineVirtualFpsValue =
+    "[${lib.concatStringsSep ", " (map toString sunshineVirtualFps)}]";
   configuredHeadlessOutputs = (settings.hyprland or { }).headlessOutputs or [ ];
   configuredHeadlessOutputMap = lib.listToAttrs (map (output: lib.nameValuePair output.name output) configuredHeadlessOutputs);
   sunshineVirtualOutputConfig =
@@ -86,7 +90,11 @@ let
         "net.core.netdev_budget_usecs" = 4000;
       };
   sunshineDynamicConfigFile =
-    settingsFormat.generate "sunshine-j0nix-base.conf" (builtins.removeAttrs config.services.sunshine.settings [ "output_name" ]);
+    settingsFormat.generate "sunshine-j0nix-base.conf" (builtins.removeAttrs config.services.sunshine.settings [
+      "output_name"
+      "resolutions"
+      "fps"
+    ]);
   sunshineExecutable =
     if sunshineCapSysAdmin then
       "${config.security.wrapperDir}/sunshine"
@@ -103,6 +111,9 @@ let
     cp "$base_config" "$tmp_config"
 
     ${lib.optionalString sunshineVirtualDisplayEnabled ''
+      printf '\nresolutions = %s\n' ${lib.escapeShellArg sunshineVirtualResolutionsValue} >>"$tmp_config"
+      printf 'fps = %s\n' ${lib.escapeShellArg sunshineVirtualFpsValue} >>"$tmp_config"
+
       headless_name=${lib.escapeShellArg (if sunshineVirtualOutputName != null then sunshineVirtualOutputName else "")}
       headless_mode=${lib.escapeShellArg (if sunshineVirtualOutputConfig != null then (sunshineVirtualOutputConfig.mode or "2880x1800@60") else "2880x1800@60")}
       headless_position=${lib.escapeShellArg (if sunshineVirtualOutputConfig != null then (sunshineVirtualOutputConfig.position or "10000x10000") else "10000x10000")}
@@ -141,8 +152,6 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     autoStart = sunshineAutoStart;
     settings = lib.optionalAttrs sunshineVirtualDisplayEnabled {
       capture = sunshineVirtualCapture;
-      resolutions = sunshineVirtualResolutions;
-      fps = sunshineVirtualFps;
     };
   };
 
@@ -202,6 +211,14 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     {
       assertion = !sunshineVirtualDisplayEnabled || builtins.elem sunshineVirtualCapture [ "wlr" "wl" "wayland" ];
       message = "j0nix.desktop.gaming.streaming.sunshine.virtualDisplay.capture must be one of: wlr, wl, wayland";
+    }
+    {
+      assertion = !sunshineVirtualDisplayEnabled || builtins.all (mode: builtins.match "^[0-9]+x[0-9]+$" mode != null) sunshineVirtualResolutions;
+      message = "j0nix.desktop.gaming.streaming.sunshine.virtualDisplay.resolutions must contain WIDTHxHEIGHT strings such as 2880x1800";
+    }
+    {
+      assertion = !sunshineVirtualDisplayEnabled || builtins.all (fps: fps > 0) sunshineVirtualFps;
+      message = "j0nix.desktop.gaming.streaming.sunshine.virtualDisplay.fps must contain positive integers";
     }
     {
       assertion = !sunshineVirtualDisplayEnabled || sunshineVirtualOutputName != null;
