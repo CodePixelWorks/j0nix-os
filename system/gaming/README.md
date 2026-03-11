@@ -30,6 +30,7 @@ Per-user launchers and helpers belong in `user/gaming/`.
 
 - `j0nix.desktop.gaming.streaming.sunshine.capSysAdmin = true` enables KMS/DRM capture for lower-latency Sunshine capture paths.
 - `j0nix.desktop.gaming.streaming.sunshine.performance.mode = "aggressive"` applies a higher-priority Sunshine user service profile (`Nice`, I/O priority, and a moderate RT scheduler setting).
+- `j0nix.desktop.gaming.streaming.sunshine.performance.network` appends Sunshine-specific UDP/socket sysctls via the central collector. `aggressive` increases default socket buffers plus the softirq receive budget; `balanced` keeps milder values.
 - When Sunshine is enabled, the active desktop users are also granted `render` and `input` group access unless explicitly disabled in `j0nix.desktop.gaming.streaming.sunshine.performance.*`.
 - `j0nix.desktop.gaming.streaming.sunshine.virtualDisplay` integrates with `settings.hyprland.headlessOutputs` and switches Sunshine to wlroots capture (`capture = wlr`) so Hyprland headless outputs such as `2880x1800` can be streamed directly.
 
