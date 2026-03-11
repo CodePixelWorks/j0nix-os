@@ -33,7 +33,7 @@ Per-user launchers and helpers belong in `user/gaming/`.
 - `j0nix.desktop.gaming.streaming.sunshine.performance.network` appends Sunshine-specific UDP/socket sysctls via the central collector. `aggressive` increases default socket buffers plus the softirq receive budget; `balanced` keeps milder values.
 - When Sunshine is enabled, the active desktop users are also granted `render` and `input` group access unless explicitly disabled in `j0nix.desktop.gaming.streaming.sunshine.performance.*`.
 - On NVIDIA systems, the Sunshine user service exports `/run/opengl-driver/lib` and the DRI driver paths explicitly so NVENC/VAAPI can resolve the host driver codecs under NixOS.
-- `j0nix.desktop.gaming.streaming.sunshine.virtualDisplay` integrates with `settings.hyprland.headlessOutputs`, switches Sunshine to wlroots capture (`capture = wlr`), and publishes a dedicated Moonlight app entry for the headless output (for example `Mac Display`).
+- `j0nix.desktop.gaming.streaming.sunshine.virtualDisplay` integrates with `settings.hyprland.headlessOutputs`, switches Sunshine to wlroots capture (`capture = wlr`), and publishes a dedicated Moonlight app entry for the headless output (for example `Mac Display`). In that mode the module intentionally skips the privileged `cap_sys_admin` wrapper, because wlroots capture does not need it and the wrapper interferes with NVIDIA/CUDA userspace library resolution.
 
 ## Steam Optional Launch Wrappers
 
