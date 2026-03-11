@@ -132,12 +132,10 @@ let
 
         "$hyprctl_bin" keyword monitor "$headless_name,$headless_mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
 
-        headless_display_id="$("$hyprctl_bin" -j monitors all | "$jq_bin" -r --arg name "$headless_name" 'to_entries | map(select(.value.name == $name)) | if length > 0 then .[0].key else empty end')"
-        if [ -n "$headless_display_id" ]; then
-          printf '\noutput_name = %s\n' "$headless_display_id" >>"$tmp_config"
-        else
-          echo "warning: could not resolve headless Hyprland output '$headless_name' for Sunshine; falling back to Sunshine default display" >&2
-        fi
+        # Sunshine expects the Unix display id here. For wlroots/Hyprland
+        # outputs this is the output identifier/name, not the array index from
+        # `hyprctl -j monitors all`.
+        printf '\noutput_name = %s\n' "$headless_name" >>"$tmp_config"
       fi
     ''}
 
