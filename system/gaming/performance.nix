@@ -84,6 +84,8 @@ lib.mkIf enabled {
       general = {
         # Negative nice gives game processes more CPU priority.
         renice = gamemodeRenice;
+        # Highest best-effort I/O priority for game and streaming workloads.
+        ioprio = 0;
       };
     } // lib.optionalAttrs autoPerformanceMode {
       custom = {
