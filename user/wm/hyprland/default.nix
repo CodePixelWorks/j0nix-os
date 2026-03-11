@@ -338,7 +338,6 @@ let
     mainConfigDir = mainHyprConfigDir;
     shellConfigDir = shellGeneratedConfigDir;
     sessionEnvImportCommand = lib.getExe importSessionEnvScript;
-    headlessOutputsEnsureCommand = if headlessOutputs != [ ] then lib.getExe headlessOutputsEnsureScript else null;
     startGraphicalSessionTargetCommand = lib.getExe startGraphicalSessionTargetScript;
     swwwDaemonCommand = lib.getExe' pkgs.swww "swww-daemon";
     startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
@@ -424,11 +423,41 @@ EOF
     fi
   '';
 
+  home.activation.hyprlandHeadlessOutputsReload = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+    ${lib.optionalString (headlessOutputs != [ ]) ''
+    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+    if [ -S "$runtime_dir/bus" ]; then
+      ${pkgs.systemd}/bin/systemctl --user daemon-reload >/dev/null 2>&1 || true
+      ${pkgs.systemd}/bin/systemctl --user restart hyprland-headless-outputs.service >/dev/null 2>&1 || true
+    fi
+    ''}
+  '';
+
   xdg.configFile =
     hyprlandFragmentFiles
     // {
       "hypr/hyprland.conf".force = true;
     };
+
+  systemd.user.services.hyprland-headless-outputs = lib.mkIf (headlessOutputs != [ ]) {
+    Unit = {
+      Description = "Ensure Hyprland headless outputs";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+      Wants = [ "graphical-session.target" ];
+    };
+
+    Install = {
+      WantedBy = [ "graphical-session.target" ];
+    };
+
+    Service = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = lib.getExe headlessOutputsEnsureScript;
+      ExecStop = lib.getExe headlessOutputsRemoveScript;
+    };
+  };
 
   assertions = [
     {
