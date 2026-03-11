@@ -66,6 +66,7 @@
         };
         virtualDisplay = {
           enable = true;
+          appName = "Mac Display";
           outputName = "SUNSHINE-HEADLESS";
           capture = "wlr"; # Hyprland virtual outputs need wlroots capture instead of KMS
           resolutions = [
