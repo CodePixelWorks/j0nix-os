@@ -140,7 +140,7 @@ Behavior:
 
 ## Headless Outputs
 
-`settings.hyprland.headlessOutputs` declares virtual Hyprland outputs. j0nix creates them at session start with `wm-headless-output-ensure` before `graphical-session.target` is started, so session-bound services such as Sunshine can target them reliably.
+`settings.hyprland.headlessOutputs` declares virtual Hyprland outputs. j0nix materializes them through the user service `hyprland-headless-outputs.service`, and Home Manager restarts that service on rebuilds in an active session. `wm-headless-output-ensure` remains available as the manual fallback command.
 
 ## Caelestia App Binds
 
