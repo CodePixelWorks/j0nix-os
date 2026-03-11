@@ -590,6 +590,26 @@
         "type": "github"
       }
     },
+    "hyprkcs": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1772290115,
+        "narHash": "sha256-LMYMsNhize996/UQ4qEs06thCwju6jsAYrSprwG/2Sw=",
+        "owner": "kosa12",
+        "repo": "hyprKCS",
+        "rev": "a2b621dd838cdb36d1283054b7114e51570cd56a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kosa12",
+        "repo": "hyprKCS",
+        "type": "github"
+      }
+    },
     "hyprland": {
       "inputs": {
         "aquamarine": "aquamarine",
@@ -1262,6 +1282,7 @@
         "dank-material-shell": "dank-material-shell",
         "home-manager": "home-manager",
         "hypr-dynamic-cursors": "hypr-dynamic-cursors",
+        "hyprkcs": "hyprkcs",
         "hyprland": "hyprland",
         "hyprland-minimizer-orteip": "hyprland-minimizer-orteip",
         "hyprland-plugins": "hyprland-plugins",
