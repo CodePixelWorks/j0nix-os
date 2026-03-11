@@ -197,6 +197,30 @@ let
       remoteWorkspaceSwitchBinds
       remoteWorkspaceMoveBinds;
   };
+  keybindHelpJson = pkgs.writeText "hyprland-keybinds.json" (builtins.toJSON hyprlandKeybinds.helpEntries);
+  keybindHelpScript = pkgs.writeShellScriptBin "wm-keybinds-show" ''
+    set -eu
+
+    keybinds_json=${lib.escapeShellArg keybindHelpJson}
+
+    if [ -z "''${WAYLAND_DISPLAY:-}" ]; then
+      exec ${pkgs.jq}/bin/jq -r '.[] | [.section, .binding, .description] | @tsv' "$keybinds_json"
+    fi
+
+    ${pkgs.jq}/bin/jq -r '.[] | [.section, .binding, .description] | join("|")' "$keybinds_json" \
+      | exec ${pkgs.yad}/bin/yad \
+          --list \
+          --title="Hyprland Keybinds" \
+          --text="Search by binding. This list is generated from the active j0nix Hyprland keybind set." \
+          --window-icon="preferences-desktop-keyboard-shortcuts" \
+          --center \
+          --width=1240 \
+          --height=760 \
+          --search-column=2 \
+          --column="Section" \
+          --column="Binding" \
+          --column="Action"
+  '';
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
   shellStartupCommand =
     if selectedShell == "none" then
@@ -286,6 +310,9 @@ in {
   ++ lib.optionals keybindDiagnosticsEnable [
     keybindDiagnosticsScript
     keybindDiagnosticsProbeScript
+  ]
+  ++ [
+    keybindHelpScript
   ]
   ++ lib.optional (installRawQuickshell && (pkgs ? quickshell)) pkgs.quickshell
   ++ lib.optionals (minimizerEnabled && minimizerPackage != null) [ minimizerPackage ];
