@@ -35,6 +35,9 @@ let
   workspaceMoveBinds = map (pair: "$mainMod SHIFT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
   hyprlandCfg = settings.hyprland or { };
   hyprlandDebug = hyprlandCfg.debug or { };
+  headlessOutputs = hyprlandCfg.headlessOutputs or [ ];
+  headlessOutputNames = map (output: output.name or "") headlessOutputs;
+  headlessOutputsJson = pkgs.writeText "hyprland-headless-outputs.json" (builtins.toJSON headlessOutputs);
   keybindDiagnosticsCfg = hyprlandDebug.keybindDiagnostics or { };
   keybindDiagnosticsEnable = keybindDiagnosticsCfg.enable or false;
   keybindDiagnosticsDelaySeconds = keybindDiagnosticsCfg.delaySeconds or 8;
@@ -215,6 +218,78 @@ let
       null
     else
       appExec "${homeBinDir}/wm-shell-start";
+  importSessionEnvScript = pkgs.writeShellScriptBin "wm-import-session-env" ''
+    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+    if [ -S "$runtime_dir/bus" ]; then
+      ${pkgs.systemd}/bin/systemctl --user import-environment \
+        DISPLAY \
+        WAYLAND_DISPLAY \
+        XDG_CURRENT_DESKTOP \
+        XDG_RUNTIME_DIR \
+        XDG_SESSION_DESKTOP \
+        XDG_SESSION_TYPE \
+        HYPRLAND_INSTANCE_SIGNATURE >/dev/null 2>&1 || true
+      ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd \
+        DISPLAY \
+        WAYLAND_DISPLAY \
+        XDG_CURRENT_DESKTOP \
+        XDG_RUNTIME_DIR \
+        XDG_SESSION_DESKTOP \
+        XDG_SESSION_TYPE \
+        HYPRLAND_INSTANCE_SIGNATURE >/dev/null 2>&1 || true
+    fi
+  '';
+  headlessOutputsEnsureScript = pkgs.writeShellScriptBin "wm-headless-output-ensure" ''
+    set -eu
+
+    hyprctl_bin="${hyprctlExec}"
+    jq_bin="${pkgs.jq}/bin/jq"
+    outputs_json=${lib.escapeShellArg headlessOutputsJson}
+
+    [ -x "$hyprctl_bin" ] || exit 0
+
+    ensure_output() {
+      name="$1"
+      mode="$2"
+      position="$3"
+      scale="$4"
+
+      if ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
+        "$hyprctl_bin" output create headless "$name" >/dev/null 2>&1 || true
+        for _ in $(seq 1 50); do
+          if "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
+            break
+          fi
+          sleep 0.1
+        done
+      fi
+
+      "$hyprctl_bin" keyword monitor "$name,$mode,$position,$scale" >/dev/null 2>&1 || true
+    }
+
+    "$jq_bin" -c '.[]' "$outputs_json" | while IFS= read -r output; do
+      name="$(printf '%s' "$output" | "$jq_bin" -r '.name')"
+      mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
+      position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "10000x10000"')"
+      scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
+      [ -n "$name" ] || continue
+      ensure_output "$name" "$mode" "$position" "$scale"
+    done
+  '';
+  headlessOutputsRemoveScript = pkgs.writeShellScriptBin "wm-headless-output-remove" ''
+    set -eu
+
+    hyprctl_bin="${hyprctlExec}"
+    jq_bin="${pkgs.jq}/bin/jq"
+    outputs_json=${lib.escapeShellArg headlessOutputsJson}
+
+    [ -x "$hyprctl_bin" ] || exit 0
+
+    "$jq_bin" -r '.[].name // empty' "$outputs_json" | while IFS= read -r name; do
+      [ -n "$name" ] || continue
+      "$hyprctl_bin" output remove "$name" >/dev/null 2>&1 || true
+    done
+  '';
   startGraphicalSessionTargetScript = pkgs.writeShellScriptBin "wm-start-graphical-session-target" ''
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     if [ -S "$runtime_dir/bus" ]; then
@@ -262,6 +337,8 @@ let
       ;
     mainConfigDir = mainHyprConfigDir;
     shellConfigDir = shellGeneratedConfigDir;
+    sessionEnvImportCommand = lib.getExe importSessionEnvScript;
+    headlessOutputsEnsureCommand = if headlessOutputs != [ ] then lib.getExe headlessOutputsEnsureScript else null;
     startGraphicalSessionTargetCommand = lib.getExe startGraphicalSessionTargetScript;
     swwwDaemonCommand = lib.getExe' pkgs.swww "swww-daemon";
     startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
@@ -298,6 +375,10 @@ in {
   ++ lib.optionals keybindDiagnosticsEnable [
     keybindDiagnosticsScript
     keybindDiagnosticsProbeScript
+  ]
+  ++ lib.optionals (headlessOutputs != [ ]) [
+    headlessOutputsEnsureScript
+    headlessOutputsRemoveScript
   ]
   ++ lib.optionals hasHyprKcsPackage [ hyprKcsPackage ]
   ++ lib.optional (installRawQuickshell && (pkgs ? quickshell)) pkgs.quickshell
@@ -377,6 +458,14 @@ EOF
     {
       assertion = keybindDiagnosticsDelaySeconds >= 0;
       message = "settings.hyprland.debug.keybindDiagnostics.delaySeconds must be >= 0.";
+    }
+    {
+      assertion = lib.all (name: name != "") headlessOutputNames;
+      message = "settings.hyprland.headlessOutputs entries must have a non-empty name.";
+    }
+    {
+      assertion = (builtins.length headlessOutputNames) == (builtins.length (lib.unique headlessOutputNames));
+      message = "settings.hyprland.headlessOutputs names must be unique.";
     }
     {
       assertion = hasHyprKcsPackage;
