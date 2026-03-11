@@ -125,7 +125,6 @@ Behavior:
 - `SUPER+CTRL+J`: quick horizontal split for the next tiled window (stacked)
 - `SUPER+CTRL+V`: legacy alias for a vertical split (`right`)
 - `SUPER+CTRL+SHIFT+V`: legacy alias for a horizontal split (`down`)
-- `CTRL+ALT+H/J/K/L`: Vim-style focus movement (`left/down/up/right`, remote-friendly fallback)
 - `SUPER+Left/Right`: switch relative workspace (`-1/+1`)
 - `SUPER+SHIFT+Left/Right`: move window to relative workspace (`-1/+1`, currently follows)
 - `SUPER+1..0`: switch workspace
@@ -133,41 +132,11 @@ Behavior:
 - `SUPER+CTRL+c`: center active window
 - `SUPER+CTRL+P`: toggle KeePassXC (special workspace or minimizer mode)
 
-## Remote / Moonlight Fallback Binds
-
-These exist because `SUPER` (Windows key) is often unreliable through Moonlight/KVM/remote sessions.
-
-- `CTRL+ALT+F1`: open the generated Hyprland keybind reference popup
-- `CTRL+ALT+Q`: close active window
-- `CTRL+ALT+T`: toggle floating
-- `CTRL+ALT+F`: fullscreen (mode `0`)
-- `CTRL+SHIFT+ALT+F`: maximize-like fullscreen (mode `1`)
-- `CTRL+ALT+Return`: open preferred terminal
-- `CTRL+ALT+C`: center active window
-- `CTRL+ALT+H/J/K/L`: move focus
-- `CTRL+SHIFT+ALT+H/J/K/L`: move window
-- `CTRL+ALT+1..0`: switch workspace
-- `CTRL+SHIFT+ALT+1..0`: move window to workspace
-- `CTRL+ALT+M`: mute output
-- `CTRL+SHIFT+ALT+M`: mute microphone
-- `CTRL+ALT+=`: volume up
-- `CTRL+ALT+-`: volume down
-- `CTRL+SHIFT+ALT+=`: brightness up (`brightnessctl`)
-- `CTRL+SHIFT+ALT+-`: brightness down (`brightnessctl`)
-
 ## Keybind Reference Popup
 
 `wm-keybinds-show` opens a searchable popup list of the active Hyprland keybind set, inspired by tools like `hyprKCS` but generated directly from the j0nix keybind definitions. It is available via:
 
 - `SUPER+F1`
-- `CTRL+ALT+F1` (remote fallback)
-
-## Shell-Specific Launcher / Overview Fallbacks
-
-- `Caelestia`: `CTRL+ALT+Space` opens launcher, `CTRL+SHIFT+ALT+Space` opens "show all"
-- `Caelestia`: `CTRL+ALT+/` opens control center
-- `Caelestia`: `CTRL+ALT+BackSpace` locks session
-- `DMS` overview enabled: `CTRL+ALT+Space` toggles DMS overview
 
 ## Caelestia App Binds
 

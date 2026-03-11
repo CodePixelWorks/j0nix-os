@@ -33,8 +33,6 @@ let
     workspaceCount;
   workspaceSwitchBinds = map (pair: "$mainMod, ${pair.key}, workspace, ${pair.workspace}") workspaceKeyPairs;
   workspaceMoveBinds = map (pair: "$mainMod SHIFT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
-  remoteWorkspaceSwitchBinds = map (pair: "CTRL ALT, ${pair.key}, workspace, ${pair.workspace}") workspaceKeyPairs;
-  remoteWorkspaceMoveBinds = map (pair: "CTRL SHIFT ALT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
   hyprlandCfg = settings.hyprland or { };
   hyprlandDebug = hyprlandCfg.debug or { };
   keybindDiagnosticsCfg = hyprlandDebug.keybindDiagnostics or { };
@@ -193,9 +191,7 @@ let
       minimizerRestoreCommand
       minimizerMenuCommand
       workspaceSwitchBinds
-      workspaceMoveBinds
-      remoteWorkspaceSwitchBinds
-      remoteWorkspaceMoveBinds;
+      workspaceMoveBinds;
   };
   keybindHelpJson = pkgs.writeText "hyprland-keybinds.json" (builtins.toJSON hyprlandKeybinds.helpEntries);
   keybindHelpScript = pkgs.writeShellScriptBin "wm-keybinds-show" ''
