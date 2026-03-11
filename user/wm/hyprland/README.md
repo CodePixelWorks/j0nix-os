@@ -110,7 +110,7 @@ Behavior:
 
 - `SUPER+Q`: close active window
 - `SUPER+T`: toggle floating
-- `SUPER+F1`: open the generated Hyprland keybind reference popup
+- `SUPER+,`: open the generated Hyprland keybind reference popup
 - `SUPER+F`: fullscreen (mode `0`, hides shell/waybar)
 - `SUPER+SHIFT+F`: maximize-like fullscreen (mode `1`, keeps shell/waybar)
 - `SUPER+Return`: open preferred terminal
@@ -136,7 +136,7 @@ Behavior:
 
 `wm-keybinds-show` opens a searchable popup list of the active Hyprland keybind set, inspired by tools like `hyprKCS` but generated directly from the j0nix keybind definitions. It is available via:
 
-- `SUPER+F1`
+- `SUPER+,`
 
 ## Caelestia App Binds
 
