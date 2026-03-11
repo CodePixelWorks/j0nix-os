@@ -53,16 +53,12 @@ Current first-party package:
 - `fusion360-proton`
 
 `Fusion 360` remains a managed exception: installer/runtime wrappers are declarative, but Proton/Wine prefix creation and Autodesk login state are user-state and therefore provisioned via user systemd, not built into the Nix store.
-Its payloads can now be sourced in three ways under `settings.programs.fusion360.protonInstaller.payloads.*`:
+Its payloads can now be sourced in four ways under `settings.programs.fusion360.protonInstaller.payloads.*`:
+- `manual`: run `fusion360-setup /path/to/installer.exe` and provide the proprietary installer explicitly
 - `runtime-download`: keep the current first-run download behavior
 - `fetchurl`: pin the installer as a fixed-output Nix artifact with `url` + `hash`
 - `requireFile`: require a locally supplied proprietary installer file with `fileName` + `hash`
-
-For `requireFile` payloads kept under `windows_executables/`, stage the file into the Nix store once before rebuilding:
-```bash
-cp "windows_executables/Fusion Client Downloader.exe" /tmp/Fusion-Client-Downloader.exe
-nix-store --add-fixed sha256 /tmp/Fusion-Client-Downloader.exe
-```
+The default j0nix path is now `manual`, so Fusion setup is an explicit operator action instead of an automatic login-time job.
 
 `KeePassXC` is user-scoped via `settings.userSettings.<name>.programs.keepassxc.*` and supports:
 - optional autostart
