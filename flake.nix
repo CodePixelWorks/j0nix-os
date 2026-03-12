@@ -10,6 +10,9 @@
         bottles-j0nix = final.callPackage ./system/software/pkgs/windows/bottles-j0nix.nix {
           bottles = prev.bottles;
         };
+        gparted-j0nix = final.callPackage ./system/software/pkgs/storage/gparted-j0nix.nix {
+          gparted = prev.gparted;
+        };
         mauiman4 = final.callPackage ./system/software/pkgs/maui/mauiman4.nix { };
         mauikit4 = final.callPackage ./system/software/pkgs/maui/mauikit4.nix { };
         qmlgreet = final.callPackage ./system/software/pkgs/greetd/qmlgreet.nix { };

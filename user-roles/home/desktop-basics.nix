@@ -6,7 +6,7 @@ let
     (pkgs.evince or null)
     (pkgs.loupe or null)
     (pkgs.gnome-calculator or null)
-    (pkgs.gparted or null)
+    (pkgs.gparted-j0nix or pkgs.gparted or null)
     (pkgs.pavucontrol or null)
   ];
 in
