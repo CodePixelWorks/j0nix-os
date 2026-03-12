@@ -28,7 +28,7 @@ let
   workspaceCfg = cfg.workspace or { };
   workspaceEnable = workspaceCfg.enable or true;
   workspaceMode = workspaceCfg.mode or (if minimizerEnabled then "minimizer" else "special-workspace");
-  workspaceName = workspaceCfg.name or "keepass";
+  workspaceName = workspaceCfg.name or "passwords";
   workspaceUsesSpecial = workspaceEnable && workspaceMode == "special-workspace";
   workspaceUsesMinimizer = workspaceEnable && workspaceMode == "minimizer";
 

@@ -192,8 +192,27 @@ let
   keepassWorkspaceEnable = keepassWorkspaceCfg.enable or true;
   minimizerEnabled = ((hyprlandCfg.minimizer or { }).enable or false);
   keepassWorkspaceMode = keepassWorkspaceCfg.mode or (if minimizerEnabled then "minimizer" else "special-workspace");
-  keepassWorkspaceName = keepassWorkspaceCfg.name or "keepass";
+  keepassWorkspaceName = keepassWorkspaceCfg.name or "passwords";
   keepassSpecialWorkspaceEnabled = keepassEnabled && keepassWorkspaceEnable && keepassWorkspaceMode == "special-workspace";
+  specialWorkspaceIcons = [
+    {
+      name = "discord";
+      icon = "forum";
+    }
+    {
+      name = "media";
+      icon = "music_note";
+    }
+    {
+      name = "sysmon";
+      icon = "monitoring";
+    }
+  ] ++ lib.optionals keepassSpecialWorkspaceEnabled [
+    {
+      name = keepassWorkspaceName;
+      icon = "password";
+    }
+  ];
   preferredTerminal = settings.preferredTerminal or "kitty";
   materialIconFontDefault = "Material Symbols Rounded";
   materialIconFontAllowed = [
@@ -267,15 +286,10 @@ let
     paths = {
       wallpaperDir = configuredWallpaperDir;
     };
-  } // lib.optionalAttrs keepassSpecialWorkspaceEnabled {
+  } // {
     bar = {
       workspaces = {
-        specialWorkspaceIcons = [
-          {
-            name = keepassWorkspaceName;
-            icon = "password";
-          }
-        ];
+        specialWorkspaceIcons = specialWorkspaceIcons;
       };
     };
   };
