@@ -22,6 +22,7 @@ Program toggles should be wired through `settings.programs.*`.
 - a managed `~/.config/Element/config.json`
 - optional default homeserver / identity server preconfiguration
 - optional SSO redirect for unauthenticated users
+- a wrapped launcher that forces `--password-store=gnome-libsecret` so Electron uses the Secret Service backend reliably on this setup
 
 Important limitation:
 - safe declarative "username/password autologin" is not supported
