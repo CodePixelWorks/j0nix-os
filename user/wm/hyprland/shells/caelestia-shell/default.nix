@@ -57,6 +57,13 @@ let
       quickshellInput.rev
     else
       null;
+  cpptraceWithLibunwind = pkgs.cpptrace.overrideAttrs (old: {
+    buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.libunwind ];
+    propagatedBuildInputs = (old.propagatedBuildInputs or [ ]) ++ [ pkgs.libunwind ];
+    cmakeFlags =
+      (old.cmakeFlags or [ ])
+      ++ [ (lib.cmakeBool "CPPTRACE_UNWIND_WITH_LIBUNWIND" true) ];
+  });
   upstreamQuickshellFromSource =
     if useUpstreamQuickshell && quickshellSource != null then
       pkgs.quickshell.overrideAttrs (old: {
@@ -68,6 +75,7 @@ let
             "unstable-dev";
         src = quickshellSource;
         buildInputs = (old.buildInputs or [ ]) ++ [
+          cpptraceWithLibunwind
           pkgs.libsysprof-capture
           pkgs.polkit
         ];
