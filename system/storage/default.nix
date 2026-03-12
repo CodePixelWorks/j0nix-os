@@ -60,6 +60,10 @@ let
           "${pkgs.coreutils}/bin/chown ${lib.escapeShellArg chownTarget} ${lib.escapeShellArg m.mountPoint}"
         ++ lib.optional ((m.mode or null) != null)
           "${pkgs.coreutils}/bin/chmod ${lib.escapeShellArg m.mode} ${lib.escapeShellArg m.mountPoint}";
+      execScript = pkgs.writeShellScript serviceName ''
+        set -eu
+        ${lib.concatStringsSep "\n" commands}
+      '';
     in
     {
       name = serviceName;
@@ -72,7 +76,7 @@ let
         serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;
-          ExecStart = lib.concatStringsSep " && " commands;
+          ExecStart = execScript;
         };
       };
     };
