@@ -191,6 +191,18 @@ let
     ${lib.concatStringsSep "\n    " (map (spec: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg spec} >/dev/null 2>&1 || true") configuredPhysicalMonitors)}
     "$hyprctl_bin" keyword monitor "$headless_name,$default_mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
   '';
+  sunshineHeadlessPrepCommand =
+    lib.escapeShellArgs [
+      pkgs.runtimeShell
+      "-lc"
+      (lib.getExe' sunshineHeadlessPrepScript "sunshine-headless-prep")
+    ];
+  sunshineHeadlessUndoCommand =
+    lib.escapeShellArgs [
+      pkgs.runtimeShell
+      "-lc"
+      (lib.getExe' sunshineHeadlessUndoScript "sunshine-headless-undo")
+    ];
   sunshineLaunchWrapper = pkgs.writeShellScript "sunshine-j0nix-launch" ''
     set -eu
 
@@ -272,8 +284,8 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
           "working-dir" = "/tmp";
           "prep-cmd" = [
             {
-              do = lib.getExe' sunshineHeadlessPrepScript "sunshine-headless-prep";
-              undo = lib.getExe' sunshineHeadlessUndoScript "sunshine-headless-undo";
+              do = sunshineHeadlessPrepCommand;
+              undo = sunshineHeadlessUndoCommand;
             }
           ];
         }
