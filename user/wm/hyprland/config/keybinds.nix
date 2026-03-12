@@ -22,6 +22,7 @@
   minimizerRestoreCommand,
   minimizerMenuCommand,
   keybindHelpCommand,
+  toggleableOutputBindLines,
   workspaceSwitchBinds,
   workspaceMoveBinds,
 }:
@@ -117,6 +118,7 @@ let
     "$mainMod SHIFT, q, exit,"
     "CTRL SHIFT, Print, exec, wm-screenshot-area"
   ] ++ mainSplitBinds ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind
+    ++ toggleableOutputBindLines
     ++ lib.optionals keybindDiagnosticsEnable [
       "$mainMod SHIFT, F12, exec, wm-hypr-keybind-probe super-shift-f12"
     ]
