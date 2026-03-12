@@ -16,7 +16,7 @@ in
       enable = true;
       open = false;
       gsp = false;
-      persistenced = true;
+      persistenced = false;
       package = "latest"; # "production" | "latest" | "beta"
     };
 
