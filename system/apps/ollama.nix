@@ -24,11 +24,10 @@ lib.mkIf enabled {
   services.ollama.enable = true;
 
   systemd.services.ollama.serviceConfig.SupplementaryGroups = [ "users" ];
+  systemd.services.ollama.serviceConfig.PermissionsStartOnly = lib.mkForce true;
 
   systemd.services.ollama.preStart = lib.mkIf (hasValue modelsPath) ''
-    umask 0002
-    ${lib.getExe' pkgs.coreutils "mkdir"} -p ${lib.escapeShellArg modelsPath}
-    ${lib.getExe' pkgs.coreutils "chmod"} 2775 ${lib.escapeShellArg modelsPath}
+    ${lib.getExe' pkgs.coreutils "install"} -d -m 2775 -o ollama -g users ${lib.escapeShellArg modelsPath}
   '';
 
   systemd.services.ollama.environment =
