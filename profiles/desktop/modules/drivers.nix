@@ -15,6 +15,8 @@ in
     nvidia = {
       enable = true;
       open = false;
+      gsp = false;
+      persistenced = true;
       package = "production"; # "production" | "latest" | "beta"
     };
 
