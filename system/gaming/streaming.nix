@@ -57,6 +57,8 @@ let
     ];
   configuredHeadlessOutputs = (settings.hyprland or { }).headlessOutputs or [ ];
   configuredHeadlessOutputMap = lib.listToAttrs (map (output: lib.nameValuePair output.name output) configuredHeadlessOutputs);
+  configuredPhysicalMonitors = ((settings.profileDetails or { hyprlandMonitors = [ ]; }).hyprlandMonitors or [ ]);
+  configuredPhysicalMonitorNames = map (spec: builtins.head (lib.splitString "," spec)) configuredPhysicalMonitors;
   sunshineVirtualOutputConfig =
     if sunshineVirtualDisplayEnabled && sunshineVirtualOutputName != null && builtins.hasAttr sunshineVirtualOutputName configuredHeadlessOutputMap then
       configuredHeadlessOutputMap.${sunshineVirtualOutputName}
@@ -151,7 +153,7 @@ let
     hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
     headless_name=${lib.escapeShellArg (if sunshineVirtualOutputName != null then sunshineVirtualOutputName else "")}
     default_mode=${lib.escapeShellArg defaultHeadlessMode}
-    headless_position=${lib.escapeShellArg defaultHeadlessPosition}
+    stream_position='0x0'
     headless_scale=${lib.escapeShellArg defaultHeadlessScale}
 
     if [ -z "$headless_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ]; then
@@ -168,7 +170,8 @@ let
       mode="$default_mode"
     fi
 
-    "$hyprctl_bin" keyword monitor "$headless_name,$mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
+    ${lib.concatStringsSep "\n    " (map (name: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg "${name},disable"} >/dev/null 2>&1 || true") configuredPhysicalMonitorNames)}
+    "$hyprctl_bin" keyword monitor "$headless_name,$mode,$stream_position,$headless_scale" >/dev/null 2>&1 || true
   '';
   sunshineHeadlessUndoScript = pkgs.writeShellScript "sunshine-headless-undo" ''
     set -eu
@@ -183,6 +186,7 @@ let
       exit 0
     fi
 
+    ${lib.concatStringsSep "\n    " (map (spec: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg spec} >/dev/null 2>&1 || true") configuredPhysicalMonitors)}
     "$hyprctl_bin" keyword monitor "$headless_name,$default_mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
   '';
   sunshineLaunchWrapper = pkgs.writeShellScript "sunshine-j0nix-launch" ''
@@ -201,7 +205,6 @@ let
       headless_mode=${lib.escapeShellArg defaultHeadlessMode}
       headless_position=${lib.escapeShellArg defaultHeadlessPosition}
       headless_scale=${lib.escapeShellArg defaultHeadlessScale}
-      headless_index=""
 
       if [ -n "$headless_name" ] && [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -x "$hyprctl_bin" ]; then
         if ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$headless_name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
@@ -215,11 +218,6 @@ let
         fi
 
         "$hyprctl_bin" keyword monitor "$headless_name,$headless_mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
-        headless_index="$("$hyprctl_bin" -j monitors all | "$jq_bin" -r --arg name "$headless_name" 'to_entries[] | select(.value.name == $name) | .key' | head -n1)"
-        if [ -n "$headless_index" ]; then
-          printf 'output_name = %s\n' "$headless_index" >>"$tmp_config"
-        fi
-
       fi
     ''}
 
