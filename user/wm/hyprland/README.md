@@ -160,9 +160,11 @@ Current default TV setup:
 - `SUPER+CTRL+2`: toggle monitor `2`
 - `SUPER+CTRL+SHIFT+2`: restore monitor `2` and move its saved workspaces back
 - `SUPER+ALT+1`: move the active workspace to monitor `1`
-- `SUPER+ALT+SHIFT+1`: move all workspaces from the focused monitor to monitor `1`
+- `SUPER+CTRL+ALT+1`: move all normal workspaces from the focused monitor to monitor `1`
 - `SUPER+ALT+2`: move the active workspace to monitor `2`
+- `SUPER+CTRL+ALT+2`: move all normal workspaces from the focused monitor to monitor `2`
 - `SUPER+ALT+3`: move the active workspace to monitor `3`
+- `SUPER+CTRL+ALT+3`: move all normal workspaces from the focused monitor to monitor `3`
 
 Runtime commands:
 
@@ -175,7 +177,7 @@ Runtime commands:
 - `wm-monitor-workspace-to DP-3`
 - `wm-monitor-focused-workspaces-to DP-3`
 
-The toggle layer saves the output's workspace/focus state before disabling it, moves those workspaces onto the configured fallback monitor, and restores them when the output comes back. The same workspace handoff logic is also exposed through the numeric `SUPER+ALT+<number>` and `SUPER+ALT+SHIFT+<number>` monitor binds.
+The toggle layer saves the output's workspace/focus state before disabling it, moves those workspaces onto the configured fallback monitor, and restores them when the output comes back. The same workspace handoff logic is also exposed through the numeric `SUPER+ALT+<number>` and `SUPER+CTRL+ALT+<number>` monitor binds. The “move all” variant only targets normal numbered workspaces (`id > 0`) and leaves special workspaces alone.
 
 Monitor tooling:
 
