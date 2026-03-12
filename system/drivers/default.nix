@@ -20,6 +20,8 @@ in {
     nvidia = {
       enable = lib.mkOption { type = lib.types.bool; default = false; };
       open = lib.mkOption { type = lib.types.bool; default = false; };
+      gsp = lib.mkOption { type = lib.types.bool; default = false; };
+      persistenced = lib.mkOption { type = lib.types.bool; default = true; };
       package = lib.mkOption {
         type = lib.types.enum [ "production" "latest" "beta" ];
         default = "production";
