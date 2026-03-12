@@ -110,7 +110,7 @@ let
     "$mainMod, f, fullscreen, 0"            # actual fullscreen (shell/waybar hidden)
     "$mainMod SHIFT, f, fullscreen, 1"      # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
     "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
-    "$mainMod, p, exec, wm-screenshot-full"
+    "$mainMod SHIFT, p, exec, wm-screenshot-full"
     "$mainMod, r, exec, wm-shell-recover"
     "$mainMod CTRL, v, layoutmsg, preselect r"
     "$mainMod CTRL SHIFT, v, layoutmsg, preselect d"
