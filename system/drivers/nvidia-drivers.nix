@@ -25,7 +25,7 @@ lib.mkMerge [
       powerManagement.finegrained = false;
       open = cfg.open or false;
       gsp.enable = cfg.gsp or false;
-      nvidiaPersistenced = cfg.persistenced or true;
+      nvidiaPersistenced = cfg.persistenced;
       nvidiaSettings = true;
       package = selectedPackage;
     };
