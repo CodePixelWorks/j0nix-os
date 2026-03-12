@@ -365,6 +365,32 @@ let
       "$hyprctl_bin" output remove "$name" >/dev/null 2>&1 || true
     done
   '';
+  toggleableOutputsDefaultsScript = pkgs.writeShellScriptBin "wm-monitor-apply-defaults" ''
+    set -eu
+
+    hyprctl_bin="${hyprctlExec}"
+    jq_bin="${pkgs.jq}/bin/jq"
+    outputs_json=${lib.escapeShellArg toggleableOutputsJson}
+
+    [ -x "$hyprctl_bin" ] || exit 0
+    [ -x "$jq_bin" ] || exit 0
+
+    "$jq_bin" -c '.[]' "$outputs_json" | while IFS= read -r output; do
+      name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
+      enabled_by_default="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
+      mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
+      position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "auto"')"
+      scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
+
+      [ -n "$name" ] || continue
+
+      if [ "$enabled_by_default" = "1" ]; then
+        "$hyprctl_bin" keyword monitor "$name,$mode,$position,$scale" >/dev/null 2>&1 || true
+      else
+        "$hyprctl_bin" keyword monitor "$name,disable" >/dev/null 2>&1 || true
+      fi
+    done
+  '';
   monitorStateScript = pkgs.writeShellScriptBin "wm-monitor" ''
     set -eu
 
@@ -745,7 +771,6 @@ let
       shellStartupCommand
       dmsOverviewEnabled
       dmsOverviewAutostart
-      toggleableOutputs
       homeBinDir
       keybindDiagnosticsEnable
       ;
@@ -754,6 +779,7 @@ let
     sessionEnvImportCommand = lib.getExe importSessionEnvScript;
     startGraphicalSessionTargetCommand = lib.getExe startGraphicalSessionTargetScript;
     swwwDaemonCommand = lib.getExe' pkgs.swww "swww-daemon";
+    toggleableOutputsDefaultsCommand = lib.optionalString (toggleableOutputs != [ ]) (lib.getExe toggleableOutputsDefaultsScript);
     startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
     keybindDiagnosticsStartupCommand = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
   };
@@ -794,6 +820,7 @@ in {
     headlessOutputsRemoveScript
   ]
   ++ lib.optionals (toggleableOutputs != [ ]) [
+    toggleableOutputsDefaultsScript
     monitorStateScript
     monitorOnScript
     monitorOffScript
