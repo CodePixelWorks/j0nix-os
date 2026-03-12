@@ -38,6 +38,9 @@ let
   headlessOutputs = hyprlandCfg.headlessOutputs or [ ];
   headlessOutputNames = map (output: output.name or "") headlessOutputs;
   headlessOutputsJson = pkgs.writeText "hyprland-headless-outputs.json" (builtins.toJSON headlessOutputs);
+  toggleableOutputs = hyprlandCfg.toggleableOutputs or [ ];
+  toggleableOutputNames = map (output: output.name or "") toggleableOutputs;
+  toggleableOutputsJson = pkgs.writeText "hyprland-toggleable-outputs.json" (builtins.toJSON toggleableOutputs);
   keybindDiagnosticsCfg = hyprlandDebug.keybindDiagnostics or { };
   keybindDiagnosticsEnable = keybindDiagnosticsCfg.enable or false;
   keybindDiagnosticsDelaySeconds = keybindDiagnosticsCfg.delaySeconds or 8;
@@ -332,6 +335,7 @@ let
       shellStartupCommand
       dmsOverviewEnabled
       dmsOverviewAutostart
+      toggleableOutputs
       homeBinDir
       keybindDiagnosticsEnable
       ;
@@ -495,6 +499,14 @@ EOF
     {
       assertion = (builtins.length headlessOutputNames) == (builtins.length (lib.unique headlessOutputNames));
       message = "settings.hyprland.headlessOutputs names must be unique.";
+    }
+    {
+      assertion = lib.all (name: name != "") toggleableOutputNames;
+      message = "settings.hyprland.toggleableOutputs entries must have a non-empty name.";
+    }
+    {
+      assertion = (builtins.length toggleableOutputNames) == (builtins.length (lib.unique toggleableOutputNames));
+      message = "settings.hyprland.toggleableOutputs names must be unique.";
     }
     {
       assertion = hasHyprKcsPackage;
