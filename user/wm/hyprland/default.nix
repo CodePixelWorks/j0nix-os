@@ -39,8 +39,22 @@ let
   headlessOutputNames = map (output: output.name or "") headlessOutputs;
   headlessOutputsJson = pkgs.writeText "hyprland-headless-outputs.json" (builtins.toJSON headlessOutputs);
   toggleableOutputs = hyprlandCfg.toggleableOutputs or [ ];
-  toggleableOutputNames = map (output: output.name or "") toggleableOutputs;
-  toggleableOutputsJson = pkgs.writeText "hyprland-toggleable-outputs.json" (builtins.toJSON toggleableOutputs);
+  toggleableOutputsWithBindings =
+    builtins.genList
+      (idx:
+        let
+          output = builtins.elemAt toggleableOutputs idx;
+          bindIndex = output.bindIndex or (idx + 1);
+        in
+        output
+        // {
+          inherit bindIndex;
+          bindKey = if bindIndex == 10 then "0" else toString bindIndex;
+        })
+      (builtins.length toggleableOutputs);
+  toggleableOutputNames = map (output: output.name or "") toggleableOutputsWithBindings;
+  toggleableOutputBindIndices = map (output: output.bindIndex) toggleableOutputsWithBindings;
+  toggleableOutputsJson = pkgs.writeText "hyprland-toggleable-outputs.json" (builtins.toJSON toggleableOutputsWithBindings);
   monitorToolsCfg = hyprlandCfg.monitorTools or { };
   installHyprdynamicmonitors = monitorToolsCfg.installHyprdynamicmonitors or true;
   installNwgDisplays = monitorToolsCfg.installNwgDisplays or true;
@@ -186,16 +200,23 @@ let
       (output:
         let
           binds = output.binds or { };
+          bindKey = output.bindKey or "";
           outputNameArg = lib.escapeShellArg output.name;
           hasBind = bind: bind != null && bind != "";
           mkBind = bind: command:
             lib.optional (hasBind bind) "${bind}, exec, ${command}";
         in
-        (mkBind (binds.toggle or null) "${homeBinDir}/wm-monitor-toggle ${outputNameArg}")
+        [
+          "$mainMod CTRL, ${bindKey}, exec, ${homeBinDir}/wm-monitor-toggle ${outputNameArg}"
+          "$mainMod CTRL SHIFT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-restore ${outputNameArg}"
+          "$mainMod ALT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-workspace-to ${outputNameArg}"
+          "$mainMod ALT SHIFT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-focused-workspaces-to ${outputNameArg}"
+        ]
+        ++ (mkBind (binds.toggle or null) "${homeBinDir}/wm-monitor-toggle ${outputNameArg}")
         ++ (mkBind (binds.on or null) "${homeBinDir}/wm-monitor-on ${outputNameArg}")
         ++ (mkBind (binds.off or null) "${homeBinDir}/wm-monitor-off ${outputNameArg}")
         ++ (mkBind (binds.restore or null) "${homeBinDir}/wm-monitor-restore ${outputNameArg}"))
-      toggleableOutputs;
+      toggleableOutputsWithBindings;
   preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
@@ -330,7 +351,7 @@ let
     mkdir -p "$state_dir"
 
     usage() {
-      echo "usage: wm-monitor <on|off|toggle|restore|status|config> <output-name>" >&2
+      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list|config> [output-name]" >&2
       exit 2
     }
 
@@ -383,17 +404,63 @@ let
       "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name" "$target_monitor" >/dev/null 2>&1 || true
     }
 
+    get_monitor_active_workspace() {
+      local name="$1"
+      "$hyprctl_bin" -j monitors | "$jq_bin" -r --arg name "$name" '.[] | select(.name == $name) | .activeWorkspace.name // empty'
+    }
+
+    get_focused_monitor() {
+      "$hyprctl_bin" -j monitors | "$jq_bin" -r '.[] | select(.focused == true) | .name // empty'
+    }
+
     focus_monitor() {
       local name="$1"
       [ -n "$name" ] || return 0
       "$hyprctl_bin" dispatch focusmonitor "$name" >/dev/null 2>&1 || true
     }
 
+    move_monitor_workspaces_to_target() {
+      local source_monitor="$1"
+      local target_monitor="$2"
+      local active_workspace=""
+
+      [ -n "$source_monitor" ] || return 0
+      [ -n "$target_monitor" ] || return 0
+      [ "$source_monitor" = "$target_monitor" ] && return 0
+
+      active_workspace="$(get_monitor_active_workspace "$source_monitor")"
+
+      while IFS= read -r workspace_name; do
+        [ -n "$workspace_name" ] || continue
+        [ "$workspace_name" = "$active_workspace" ] && continue
+        move_workspace "$workspace_name" "$target_monitor"
+      done < <(
+        "$hyprctl_bin" -j workspaces \
+          | "$jq_bin" -r --arg output "$source_monitor" '.[] | select(.monitor == $output and (.name // "") != "") | .name'
+      )
+
+      if [ -n "$active_workspace" ]; then
+        move_workspace "$active_workspace" "$target_monitor"
+      fi
+
+      focus_monitor "$target_monitor"
+    }
+
+    move_active_workspace_to_output() {
+      local target_monitor="$1"
+      local workspace_name
+
+      workspace_name="$("$hyprctl_bin" -j activeworkspace | "$jq_bin" -r '.name // empty')"
+      [ -n "$workspace_name" ] || return 0
+      move_workspace "$workspace_name" "$target_monitor"
+      focus_monitor "$target_monitor"
+    }
+
     disable_output() {
       local output_json="$1"
       local name="$2"
       local prefix="$3"
-      local handoff_enabled target_monitor output_mode output_position output_scale active_workspace focused_monitor
+      local handoff_enabled target_monitor output_mode output_position output_scale
 
       handoff_enabled="$(get_output_field "$output_json" 'if (.workspaceHandoff.enable // false) then "1" else "0" end')"
       target_monitor="$(get_output_field "$output_json" '.workspaceHandoff.targetMonitor // ""')"
@@ -410,18 +477,7 @@ let
         save_output_state "$name" "$prefix"
 
         if [ "$handoff_enabled" = "1" ] && [ -n "$target_monitor" ]; then
-          active_workspace="$(cat "$prefix.active-workspace" 2>/dev/null || true)"
-          while IFS=$'\t' read -r workspace_name _; do
-            [ -n "$workspace_name" ] || continue
-            [ "$workspace_name" = "$active_workspace" ] && continue
-            move_workspace "$workspace_name" "$target_monitor"
-          done <"$prefix.workspaces"
-
-          if [ -n "$active_workspace" ]; then
-            move_workspace "$active_workspace" "$target_monitor"
-          fi
-
-          focus_monitor "$target_monitor"
+          move_monitor_workspaces_to_target "$name" "$target_monitor"
         fi
       fi
 
@@ -492,6 +548,19 @@ let
       echo "$name $active $state"
     }
 
+    monitor_list() {
+      "$jq_bin" -r '.[] | [.bindIndex, .name, (.description // "")] | @tsv' "$outputs_json" \
+        | while IFS=$'\t' read -r bind_index name description; do
+            [ -n "$name" ] || continue
+            if output_is_active "$name"; then
+              active="active"
+            else
+              active="disabled"
+            fi
+            printf '%s\t%s\t%s\t%s\n' "$bind_index" "$name" "$description" "$active"
+          done
+    }
+
     run_config_tool() {
       case ${lib.escapeShellArg defaultMonitorTool} in
         hyprdynamicmonitors)
@@ -511,7 +580,11 @@ let
       config)
         exec ${homeBinDir}/wm-monitor-config
         ;;
-      on|off|toggle|restore|status)
+      list)
+        monitor_list
+        exit 0
+        ;;
+      on|off|toggle|restore|status|workspace-to|focused-workspaces-to)
         require_output_name
         output_json="$(load_output_config "$output_name")" || {
           echo "Unknown toggleable output: $output_name" >&2
@@ -544,6 +617,12 @@ let
       status)
         monitor_status "$output_json" "$output_name" "$prefix"
         ;;
+      workspace-to)
+        move_active_workspace_to_output "$output_name"
+        ;;
+      focused-workspaces-to)
+        move_monitor_workspaces_to_target "$(get_focused_monitor)" "$output_name"
+        ;;
     esac
   '';
   monitorOnScript = pkgs.writeShellScriptBin "wm-monitor-on" ''exec ${lib.getExe monitorStateScript} on "$@"'';
@@ -551,6 +630,9 @@ let
   monitorToggleScript = pkgs.writeShellScriptBin "wm-monitor-toggle" ''exec ${lib.getExe monitorStateScript} toggle "$@"'';
   monitorRestoreScript = pkgs.writeShellScriptBin "wm-monitor-restore" ''exec ${lib.getExe monitorStateScript} restore "$@"'';
   monitorStatusScript = pkgs.writeShellScriptBin "wm-monitor-status" ''exec ${lib.getExe monitorStateScript} status "$@"'';
+  monitorWorkspaceToScript = pkgs.writeShellScriptBin "wm-monitor-workspace-to" ''exec ${lib.getExe monitorStateScript} workspace-to "$@"'';
+  monitorFocusedWorkspacesToScript = pkgs.writeShellScriptBin "wm-monitor-focused-workspaces-to" ''exec ${lib.getExe monitorStateScript} focused-workspaces-to "$@"'';
+  monitorListScript = pkgs.writeShellScriptBin "wm-monitor-list" ''exec ${lib.getExe monitorStateScript} list "$@"'';
   monitorConfigScript = pkgs.writeShellScriptBin "wm-monitor-config" ''
     case ${lib.escapeShellArg defaultMonitorTool} in
       hyprdynamicmonitors)
@@ -668,6 +750,9 @@ in {
     monitorToggleScript
     monitorRestoreScript
     monitorStatusScript
+    monitorWorkspaceToScript
+    monitorFocusedWorkspacesToScript
+    monitorListScript
     monitorConfigScript
     monitorConfigTuiScript
     monitorConfigGuiScript
@@ -820,6 +905,14 @@ EOF
     {
       assertion = (builtins.length toggleableOutputNames) == (builtins.length (lib.unique toggleableOutputNames));
       message = "settings.hyprland.toggleableOutputs names must be unique.";
+    }
+    {
+      assertion = lib.all (index: index >= 1 && index <= 10) toggleableOutputBindIndices;
+      message = "settings.hyprland.toggleableOutputs bindIndex values must be between 1 and 10.";
+    }
+    {
+      assertion = (builtins.length toggleableOutputBindIndices) == (builtins.length (lib.unique toggleableOutputBindIndices));
+      message = "settings.hyprland.toggleableOutputs bindIndex values must be unique.";
     }
     {
       assertion = builtins.elem defaultMonitorTool [ "hyprdynamicmonitors" "nwg-displays" ];
