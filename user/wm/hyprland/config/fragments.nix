@@ -10,12 +10,12 @@
   shellStartupCommand,
   dmsOverviewEnabled,
   dmsOverviewAutostart,
-  toggleableOutputs,
   homeBinDir,
   keybindDiagnosticsEnable,
   sessionEnvImportCommand,
   startGraphicalSessionTargetCommand,
   swwwDaemonCommand,
+  toggleableOutputsDefaultsCommand,
   startupAppsCommand,
   keybindDiagnosticsStartupCommand,
   mainConfigDir,
@@ -24,16 +24,7 @@
 let
   renderLines = key: values:
     lib.concatStringsSep "\n" (map (value: "${key} = ${value}") values);
-  monitorNameFromSpec = spec: builtins.head (lib.splitString "," spec);
-  toggleableOutputMap = lib.listToAttrs (map (output: lib.nameValuePair output.name output) toggleableOutputs);
-  staticMonitorLines = lib.filter (spec: !(builtins.hasAttr (monitorNameFromSpec spec) toggleableOutputMap)) (profileDetails.hyprlandMonitors or [ ]);
-  toggleableMonitorLines = map
-    (output:
-      if output.enabledByDefault or true then
-        "${output.name},${output.mode or "preferred"},${output.position or "auto"},${toString (output.scale or 1)}"
-      else
-        "${output.name},disable")
-    toggleableOutputs;
+  staticMonitorLines = profileDetails.hyprlandMonitors or [ ];
 
   includePaths = [
     "${mainConfigDir}/00-vars.conf"
@@ -48,7 +39,7 @@ let
     "${shellConfigDir}/95-shell.conf"
   ];
 
-  monitorLines = staticMonitorLines ++ toggleableMonitorLines ++ [ ",preferred,auto,1" ];
+  monitorLines = staticMonitorLines ++ [ ",preferred,auto,1" ];
 
   startupLines =
     [
@@ -57,6 +48,7 @@ let
     ++ [
       startGraphicalSessionTargetCommand
       swwwDaemonCommand
+      toggleableOutputsDefaultsCommand
       startupAppsCommand
     ]
     ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
