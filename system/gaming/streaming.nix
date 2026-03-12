@@ -149,7 +149,7 @@ let
       "${config.security.wrapperDir}/sunshine"
     else
       lib.getExe config.services.sunshine.package;
-  sunshineHeadlessPrepScript = pkgs.writeShellScript "sunshine-headless-prep" ''
+  sunshineHeadlessPrepScript = pkgs.writeShellScriptBin "sunshine-headless-prep" ''
     set -eu
 
     hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
@@ -175,7 +175,7 @@ let
     ${lib.concatStringsSep "\n    " (map (name: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg "${name},disable"} >/dev/null 2>&1 || true") configuredPhysicalMonitorNames)}
     "$hyprctl_bin" keyword monitor "$headless_name,$mode,$stream_position,$headless_scale" >/dev/null 2>&1 || true
   '';
-  sunshineHeadlessUndoScript = pkgs.writeShellScript "sunshine-headless-undo" ''
+  sunshineHeadlessUndoScript = pkgs.writeShellScriptBin "sunshine-headless-undo" ''
     set -eu
 
     hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
@@ -191,18 +191,8 @@ let
     ${lib.concatStringsSep "\n    " (map (spec: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg spec} >/dev/null 2>&1 || true") configuredPhysicalMonitors)}
     "$hyprctl_bin" keyword monitor "$headless_name,$default_mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
   '';
-  sunshineHeadlessPrepCommand =
-    lib.escapeShellArgs [
-      pkgs.runtimeShell
-      "-lc"
-      (lib.getExe' sunshineHeadlessPrepScript "sunshine-headless-prep")
-    ];
-  sunshineHeadlessUndoCommand =
-    lib.escapeShellArgs [
-      pkgs.runtimeShell
-      "-lc"
-      (lib.getExe' sunshineHeadlessUndoScript "sunshine-headless-undo")
-    ];
+  sunshineHeadlessPrepCommand = lib.getExe sunshineHeadlessPrepScript;
+  sunshineHeadlessUndoCommand = lib.getExe sunshineHeadlessUndoScript;
   sunshineLaunchWrapper = pkgs.writeShellScript "sunshine-j0nix-launch" ''
     set -eu
 
