@@ -153,12 +153,18 @@ let
     set -eu
 
     hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
+    jq_bin="${pkgs.jq}/bin/jq"
+    coreutils_bin="${pkgs.coreutils}/bin"
     headless_name=${lib.escapeShellArg (if sunshineVirtualOutputName != null then sunshineVirtualOutputName else "")}
     default_mode=${lib.escapeShellArg defaultHeadlessMode}
     stream_position='0x0'
     headless_scale=${lib.escapeShellArg defaultHeadlessScale}
+    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$("$coreutils_bin"/id -u)}"
+    state_dir="$runtime_dir/sunshine-j0nix"
+    workspace_state="$state_dir/headless-workspaces.tsv"
+    active_state="$state_dir/headless-active-workspace"
 
-    if [ -z "$headless_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ]; then
+    if [ -z "$headless_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ] || [ ! -x "$jq_bin" ]; then
       exit 0
     fi
 
@@ -172,24 +178,89 @@ let
       mode="$default_mode"
     fi
 
-    ${lib.concatStringsSep "\n    " (map (name: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg "${name},disable"} >/dev/null 2>&1 || true") configuredPhysicalMonitorNames)}
     "$hyprctl_bin" keyword monitor "$headless_name,$mode,$stream_position,$headless_scale" >/dev/null 2>&1 || true
+    "$coreutils_bin"/mkdir -p "$state_dir"
+    "$hyprctl_bin" -j workspaces | "$jq_bin" -r '.[] | select(.id > 0) | [.name, .monitor] | @tsv' > "$workspace_state.tmp"
+    "$coreutils_bin"/mv "$workspace_state.tmp" "$workspace_state"
+    "$hyprctl_bin" -j activeworkspace | "$jq_bin" -r '.name // empty' > "$active_state"
+
+    move_workspace_to_headless() {
+      local workspace_name="$1"
+      [ -n "$workspace_name" ] || return 0
+      "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name" "$headless_name" >/dev/null 2>&1 || true
+    }
+
+    active_workspace=""
+    if [ -f "$active_state" ]; then
+      IFS= read -r active_workspace < "$active_state" || true
+    fi
+
+    if [ -f "$workspace_state" ]; then
+      while IFS=$'\t' read -r workspace_name monitor_name; do
+        [ -n "$workspace_name" ] || continue
+        [ "$workspace_name" = "$active_workspace" ] && continue
+        [ "$monitor_name" = "$headless_name" ] && continue
+        move_workspace_to_headless "$workspace_name"
+      done < "$workspace_state"
+    fi
+
+    if [ -n "$active_workspace" ]; then
+      move_workspace_to_headless "$active_workspace"
+    fi
+
+    ${lib.concatStringsSep "\n    " (map (name: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg "${name},disable"} >/dev/null 2>&1 || true") configuredPhysicalMonitorNames)}
   '';
   sunshineHeadlessUndoScript = pkgs.writeShellScriptBin "sunshine-headless-undo" ''
     set -eu
 
     hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
+    coreutils_bin="${pkgs.coreutils}/bin"
     headless_name=${lib.escapeShellArg (if sunshineVirtualOutputName != null then sunshineVirtualOutputName else "")}
     default_mode=${lib.escapeShellArg defaultHeadlessMode}
     headless_position=${lib.escapeShellArg defaultHeadlessPosition}
     headless_scale=${lib.escapeShellArg defaultHeadlessScale}
+    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$("$coreutils_bin"/id -u)}"
+    state_dir="$runtime_dir/sunshine-j0nix"
+    workspace_state="$state_dir/headless-workspaces.tsv"
+    active_state="$state_dir/headless-active-workspace"
 
     if [ -z "$headless_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ]; then
       exit 0
     fi
 
     ${lib.concatStringsSep "\n    " (map (spec: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg spec} >/dev/null 2>&1 || true") configuredPhysicalMonitors)}
+
+    active_workspace=""
+    if [ -f "$active_state" ]; then
+      IFS= read -r active_workspace < "$active_state" || true
+    fi
+
+    restore_workspace_monitor() {
+      local workspace_name="$1"
+      local monitor_name="$2"
+      [ -n "$workspace_name" ] || return 0
+      [ -n "$monitor_name" ] || return 0
+      "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name" "$monitor_name" >/dev/null 2>&1 || true
+    }
+
+    if [ -f "$workspace_state" ]; then
+      while IFS=$'\t' read -r workspace_name monitor_name; do
+        [ -n "$workspace_name" ] || continue
+        [ "$workspace_name" = "$active_workspace" ] && continue
+        restore_workspace_monitor "$workspace_name" "$monitor_name"
+      done < "$workspace_state"
+
+      if [ -n "$active_workspace" ]; then
+        while IFS=$'\t' read -r workspace_name monitor_name; do
+          [ "$workspace_name" = "$active_workspace" ] || continue
+          restore_workspace_monitor "$workspace_name" "$monitor_name"
+          break
+        done < "$workspace_state"
+      fi
+    fi
+
     "$hyprctl_bin" keyword monitor "$headless_name,$default_mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
+    "$coreutils_bin"/rm -f "$workspace_state" "$active_state"
   '';
   sunshineHeadlessPrepCommand = lib.getExe sunshineHeadlessPrepScript;
   sunshineHeadlessUndoCommand = lib.getExe sunshineHeadlessUndoScript;
