@@ -45,6 +45,7 @@ let
   installHyprdynamicmonitors = monitorToolsCfg.installHyprdynamicmonitors or true;
   installNwgDisplays = monitorToolsCfg.installNwgDisplays or true;
   defaultMonitorTool = monitorToolsCfg.default or "hyprdynamicmonitors";
+  monitorToolsAutoStart = monitorToolsCfg.autoStart or true;
   keybindDiagnosticsCfg = hyprlandDebug.keybindDiagnostics or { };
   keybindDiagnosticsEnable = keybindDiagnosticsCfg.enable or false;
   keybindDiagnosticsDelaySeconds = keybindDiagnosticsCfg.delaySeconds or 8;
@@ -537,7 +538,7 @@ let
   monitorConfigScript = pkgs.writeShellScriptBin "wm-monitor-config" ''
     case ${lib.escapeShellArg defaultMonitorTool} in
       hyprdynamicmonitors)
-        exec ${lib.getExe pkgs.hyprdynamicmonitors} "$@"
+        exec ${lib.getExe pkgs.hyprdynamicmonitors} tui "$@"
         ;;
       nwg-displays)
         exec ${lib.getExe pkgs.nwg-displays} "$@"
@@ -547,6 +548,12 @@ let
         exit 1
         ;;
     esac
+  '';
+  monitorConfigTuiScript = pkgs.writeShellScriptBin "wm-monitor-config-tui" ''
+    exec ${lib.getExe pkgs.hyprdynamicmonitors} tui "$@"
+  '';
+  monitorConfigGuiScript = pkgs.writeShellScriptBin "wm-monitor-config-gui" ''
+    exec ${lib.getExe pkgs.nwg-displays} "$@"
   '';
   startGraphicalSessionTargetScript = pkgs.writeShellScriptBin "wm-start-graphical-session-target" ''
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
@@ -646,6 +653,8 @@ in {
     monitorRestoreScript
     monitorStatusScript
     monitorConfigScript
+    monitorConfigTuiScript
+    monitorConfigGuiScript
   ]
   ++ lib.optionals installHyprdynamicmonitors [ pkgs.hyprdynamicmonitors ]
   ++ lib.optionals installNwgDisplays [ pkgs.nwg-displays ]
@@ -729,6 +738,28 @@ EOF
     };
   };
 
+  systemd.user.services.hyprdynamicmonitors = lib.mkIf (installHyprdynamicmonitors && monitorToolsAutoStart) {
+    Unit = {
+      Description = "Hyprland dynamic monitor profile daemon";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+      Wants = [ "graphical-session.target" ];
+      ConditionPathExists = "%h/.config/hyprdynamicmonitors/config.toml";
+    };
+
+    Install = {
+      WantedBy = [ "graphical-session.target" ];
+    };
+
+    Service = {
+      Type = "simple";
+      ExecStartPre = "${lib.getExe pkgs.hyprdynamicmonitors} prepare";
+      ExecStart = "${lib.getExe pkgs.hyprdynamicmonitors} run";
+      Restart = "on-failure";
+      RestartSec = 2;
+    };
+  };
+
   assertions = [
     {
       assertion = !(installRawQuickshell && isDmsShell);
@@ -777,6 +808,10 @@ EOF
     {
       assertion = builtins.elem defaultMonitorTool [ "hyprdynamicmonitors" "nwg-displays" ];
       message = "settings.hyprland.monitorTools.default must be one of: hyprdynamicmonitors, nwg-displays.";
+    }
+    {
+      assertion = builtins.isBool monitorToolsAutoStart;
+      message = "settings.hyprland.monitorTools.autoStart must be a boolean.";
     }
     {
       assertion = lib.all
