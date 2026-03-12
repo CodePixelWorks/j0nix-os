@@ -31,6 +31,7 @@ let
   } // lib.optionalAttrs (hasValue colorTheme) {
     "workbench.colorTheme" = colorTheme;
   };
+  seededUserSettingsFile = pkgs.writeText "vscode-seeded-settings.json" (builtins.toJSON seededUserSettings);
 
   mkExtFromId = set: extId:
     let
@@ -58,7 +59,6 @@ in {
 
   # Seed VSCode settings once so the file stays writable in the UI.
   home.activation.vscodeSeedUserSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    seeded_settings_json='${lib.escapeShellArg (builtins.toJSON seededUserSettings)}'
     for settings_file in \
       "$HOME/.config/Code/User/settings.json" \
       "$HOME/.config/VSCodium/User/settings.json" \
@@ -74,8 +74,8 @@ in {
 ${builtins.toJSON seededUserSettings}
 EOF
         $DRY_RUN_CMD chmod 644 "$settings_file"
-      elif [ -n "$seeded_settings_json" ]; then
-        SETTINGS_FILE="$settings_file" SEEDED_SETTINGS_JSON="$seeded_settings_json" \
+      else
+        SETTINGS_FILE="$settings_file" SEEDED_SETTINGS_FILE="${seededUserSettingsFile}" \
           $DRY_RUN_CMD ${pkgs.python3}/bin/python <<'PY'
 import json
 import os
@@ -84,7 +84,7 @@ import re
 import sys
 
 path = pathlib.Path(os.environ["SETTINGS_FILE"])
-seeded = json.loads(os.environ["SEEDED_SETTINGS_JSON"])
+seeded = json.loads(pathlib.Path(os.environ["SEEDED_SETTINGS_FILE"]).read_text())
 raw = path.read_text(encoding="utf-8-sig")
 
 def strip_jsonc(text: str) -> str:
