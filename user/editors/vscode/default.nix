@@ -81,10 +81,11 @@ import json
 import os
 import pathlib
 import re
+import sys
 
 path = pathlib.Path(os.environ["SETTINGS_FILE"])
 seeded = json.loads(os.environ["SEEDED_SETTINGS_JSON"])
-raw = path.read_text()
+raw = path.read_text(encoding="utf-8-sig")
 
 def strip_jsonc(text: str) -> str:
     out = []
@@ -124,7 +125,11 @@ def strip_jsonc(text: str) -> str:
         i += 1
     return re.sub(r",(\s*[}\]])", r"\1", "".join(out))
 
-current = json.loads(strip_jsonc(raw)) if raw.strip() else {}
+try:
+    current = json.loads(strip_jsonc(raw)) if raw.strip() else {}
+except json.JSONDecodeError as exc:
+    print(f"warning: skipping VSCode settings merge for {path}: {exc}", file=sys.stderr)
+    raise SystemExit(0)
 changed = False
 for key, value in seeded.items():
     if key not in current:
