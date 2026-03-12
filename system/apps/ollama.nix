@@ -1,4 +1,4 @@
-{ lib, settings, ... }:
+{ lib, pkgs, settings, ... }:
 let
   userOverrides = settings.userSettings or { };
   ollamaUsers = lib.filter
@@ -23,6 +23,13 @@ in
 lib.mkIf enabled {
   services.ollama.enable = true;
 
+  systemd.services.ollama.serviceConfig.SupplementaryGroups = [ "users" ];
+
+  systemd.services.ollama.preStart = lib.mkIf (hasValue modelsPath) ''
+    umask 0002
+    ${lib.getExe' pkgs.coreutils "mkdir"} -p ${lib.escapeShellArg modelsPath}
+    ${lib.getExe' pkgs.coreutils "chmod"} 2775 ${lib.escapeShellArg modelsPath}
+  '';
 
   systemd.services.ollama.environment =
     lib.mkIf (serviceEnv != { })
