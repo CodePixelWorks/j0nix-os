@@ -67,7 +67,7 @@
           enable = true;
           appName = "Mac Display";
           outputName = "SUNSHINE-HEADLESS";
-          capture = "wlr"; # Hyprland virtual outputs need wlroots capture instead of KMS
+          capture = "auto"; # Let Sunshine choose the least-broken capture path for the current driver stack.
           resolutions = [
             "2880x1800"
             "2560x1600"
