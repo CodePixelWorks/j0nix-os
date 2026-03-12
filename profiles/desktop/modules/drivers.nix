@@ -17,7 +17,7 @@ in
       open = false;
       gsp = false;
       persistenced = true;
-      package = "production"; # "production" | "latest" | "beta"
+      package = "latest"; # "production" | "latest" | "beta"
     };
 
     nvidiaPrime = {
