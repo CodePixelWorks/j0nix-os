@@ -60,6 +60,10 @@ let
   installNwgDisplays = monitorToolsCfg.installNwgDisplays or true;
   defaultMonitorTool = monitorToolsCfg.default or "hyprdynamicmonitors";
   monitorToolsAutoStart = monitorToolsCfg.autoStart or true;
+  hyprdynamicmonitorsServiceEnabled =
+    installHyprdynamicmonitors
+    && monitorToolsAutoStart
+    && toggleableOutputs == [ ];
   keybindDiagnosticsCfg = hyprlandDebug.keybindDiagnostics or { };
   keybindDiagnosticsEnable = keybindDiagnosticsCfg.enable or false;
   keybindDiagnosticsDelaySeconds = keybindDiagnosticsCfg.delaySeconds or 8;
@@ -813,6 +817,18 @@ EOF
     ''}
   '';
 
+  home.activation.hyprdynamicmonitorsSync = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+    if [ -S "$runtime_dir/bus" ]; then
+      ${pkgs.systemd}/bin/systemctl --user daemon-reload >/dev/null 2>&1 || true
+      if [ "${if hyprdynamicmonitorsServiceEnabled then "1" else "0"}" = "1" ]; then
+        ${pkgs.systemd}/bin/systemctl --user start hyprdynamicmonitors.service >/dev/null 2>&1 || true
+      else
+        ${pkgs.systemd}/bin/systemctl --user stop hyprdynamicmonitors.service >/dev/null 2>&1 || true
+      fi
+    fi
+  '';
+
   xdg.configFile =
     hyprlandFragmentFiles
     // {
@@ -839,7 +855,7 @@ EOF
     };
   };
 
-  systemd.user.services.hyprdynamicmonitors = lib.mkIf (installHyprdynamicmonitors && monitorToolsAutoStart) {
+  systemd.user.services.hyprdynamicmonitors = lib.mkIf hyprdynamicmonitorsServiceEnabled {
     Unit = {
       Description = "Hyprland dynamic monitor profile daemon";
       PartOf = [ "graphical-session.target" ];
