@@ -244,7 +244,7 @@ let
         in
         [
           "$mainMod ALT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-workspace-to ${outputNameArg}"
-          "$mainMod ALT SHIFT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-focused-workspaces-to ${outputNameArg}"
+          "$mainMod CTRL ALT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-focused-workspaces-to ${outputNameArg}"
         ])
       outputBindingsWithKeys;
   preferredFileManager = settings.preferredFileManager or "nautilus";
@@ -429,7 +429,7 @@ let
       local prefix="$2"
 
       "$hyprctl_bin" -j workspaces \
-        | "$jq_bin" -r --arg output "$name" '.[] | select(.monitor == $output and (.name // "") != "") | [.name, .monitor] | @tsv' >"$prefix.workspaces.tmp"
+        | "$jq_bin" -r --arg output "$name" '.[] | select(.monitor == $output and (.id // -1) > 0 and (.name // "") != "") | [.name, .monitor] | @tsv' >"$prefix.workspaces.tmp"
       mv -f "$prefix.workspaces.tmp" "$prefix.workspaces"
       "$hyprctl_bin" -j monitors \
         | "$jq_bin" -r --arg output "$name" '.[] | select(.name == $output) | .activeWorkspace.name // empty' >"$prefix.active-workspace"
@@ -477,7 +477,7 @@ let
         move_workspace "$workspace_name" "$target_monitor"
       done < <(
         "$hyprctl_bin" -j workspaces \
-          | "$jq_bin" -r --arg output "$source_monitor" '.[] | select(.monitor == $output and (.name // "") != "") | .name'
+          | "$jq_bin" -r --arg output "$source_monitor" '.[] | select(.monitor == $output and (.id // -1) > 0 and (.name // "") != "") | .name'
       )
 
       if [ -n "$active_workspace" ]; then
