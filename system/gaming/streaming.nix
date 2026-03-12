@@ -215,6 +215,9 @@ let
     ${lib.concatStringsSep "\n    " (map (name: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg "${name},disable"} >/dev/null 2>&1 || true") configuredPhysicalMonitorNames)}
     "$hyprctl_bin" keyword monitor "$headless_name,$mode,$stream_position,$headless_scale" >/dev/null 2>&1 || true
     "$hyprctl_bin" dispatch focusmonitor "$headless_name" >/dev/null 2>&1 || true
+    if command -v wm-shell-restart-detached >/dev/null 2>&1; then
+      wm-shell-restart-detached >/dev/null 2>&1 || true
+    fi
   '';
   sunshineHeadlessUndoScript = pkgs.writeShellScriptBin "sunshine-headless-undo" ''
     set -eu
@@ -273,6 +276,9 @@ let
     "$hyprctl_bin" keyword monitor "$headless_name,$default_mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
     if [ -n "$focused_monitor" ]; then
       "$hyprctl_bin" dispatch focusmonitor "$focused_monitor" >/dev/null 2>&1 || true
+    fi
+    if command -v wm-shell-restart-detached >/dev/null 2>&1; then
+      wm-shell-restart-detached >/dev/null 2>&1 || true
     fi
     "$coreutils_bin"/rm -f "$workspace_state" "$active_state" "$focused_monitor_state"
   '';
