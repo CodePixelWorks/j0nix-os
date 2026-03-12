@@ -1,6 +1,6 @@
 { lib, pkgs, ... }:
 {
-  j0nix.user.software.packages = [ pkgs.lxqt.lxqt-policykit ];
+  j0nix.user.software.packages = [ pkgs.hyprpolkitagent ];
 
   systemd.user.services.polkit-authentication-agent = {
     Unit = {
@@ -10,7 +10,7 @@
     };
 
     Service = {
-      ExecStart = lib.getExe pkgs.lxqt.lxqt-policykit;
+      ExecStart = lib.getExe pkgs.hyprpolkitagent;
       Restart = "on-failure";
       RestartSec = 1;
     };
