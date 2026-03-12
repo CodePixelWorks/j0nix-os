@@ -10,6 +10,7 @@
     pciutils
     usbutils
     ntfs3g
+    xfsprogs
     inetutils
     lsof
     lm_sensors
