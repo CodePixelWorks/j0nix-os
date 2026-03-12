@@ -31,6 +31,12 @@ in
       default = [ "wheel" "networkmanager" "audio" "video" "gamemode" ];
     };
 
+    additionalExtraGroups = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Extra groups appended on top of the base desktop account groups.";
+    };
+
     dockerUsers = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -51,9 +57,11 @@ in
       isNormalUser = true;
       shell = pkgs.${shellForUser username};
       description = username;
-      extraGroups =
+      extraGroups = lib.unique (
         cfg.baseExtraGroups
-        ++ lib.optionals (builtins.elem username cfg.dockerUsers) [ "docker" ];
+        ++ cfg.additionalExtraGroups
+        ++ lib.optionals (builtins.elem username cfg.dockerUsers) [ "docker" ]
+      );
     });
 
     # HM activation scripts call `systemctl`; make it available inside the
