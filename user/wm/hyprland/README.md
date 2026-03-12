@@ -194,6 +194,7 @@ If `~/.config/hyprdynamicmonitors/config.toml` exists, j0nix starts the `hyprdyn
 
 - `SUPER+E`: open preferred file manager
 - `SUPER+V`: open preferred editor
+- `SUPER+N` / `SUPER+SHIFT+N`: clear Caelestia notifications
 - `SUPER+SHIFT+V`: Caelestia clipboard
 - `SUPER+ALT+V`: Caelestia clipboard delete
 
