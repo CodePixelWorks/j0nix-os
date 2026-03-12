@@ -380,6 +380,12 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
   # This mirrors the useful part of common Sunshine tuning gists without forcing
   # an extreme RT priority that can starve a daily-driver desktop.
   systemd.user.services.sunshine.environment = lib.mkIf sunshineUseNvidia sunshineNvidiaEnvironment;
+  systemd.user.services.sunshine.preStart = lib.mkIf sunshineVirtualDisplayEnabled ''
+    ${sunshineHeadlessUndoCommand} >/dev/null 2>&1 || true
+  '';
+  systemd.user.services.sunshine.postStop = lib.mkIf sunshineVirtualDisplayEnabled ''
+    ${sunshineHeadlessUndoCommand} >/dev/null 2>&1 || true
+  '';
 
   systemd.user.services.sunshine.serviceConfig = sunshineServicePriorityConfig // {
     ExecStart = lib.mkForce "${sunshineLaunchWrapper}";
