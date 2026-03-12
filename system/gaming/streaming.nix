@@ -28,7 +28,8 @@ let
   sunshineVirtualDisplay = sunshine.virtualDisplay or { };
   sunshineVirtualDisplayEnabled = sunshineVirtualDisplay.enable or false;
   sunshineVirtualOutputName = sunshineVirtualDisplay.outputName or null;
-  sunshineVirtualAppName = sunshineVirtualDisplay.appName or "Mac Display";
+  sunshineVirtualAppName = sunshineVirtualDisplay.appName or "Adaptive Display";
+  sunshineVirtualAppIcon = "${../../icons/sunshine/adaptive-display.svg}";
   sunshineVirtualCaptureRaw = sunshineVirtualDisplay.capture or "auto";
   sunshineVirtualCaptureAuto = builtins.elem sunshineVirtualCaptureRaw [ null "" "auto" ];
   sunshineVirtualCapture = if sunshineVirtualCaptureAuto then null else sunshineVirtualCaptureRaw;
@@ -157,6 +158,7 @@ let
     coreutils_bin="${pkgs.coreutils}/bin"
     headless_name=${lib.escapeShellArg (if sunshineVirtualOutputName != null then sunshineVirtualOutputName else "")}
     default_mode=${lib.escapeShellArg defaultHeadlessMode}
+    staging_position=${lib.escapeShellArg defaultHeadlessPosition}
     stream_position='0x0'
     headless_scale=${lib.escapeShellArg defaultHeadlessScale}
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$("$coreutils_bin"/id -u)}"
@@ -179,7 +181,7 @@ let
       mode="$default_mode"
     fi
 
-    "$hyprctl_bin" keyword monitor "$headless_name,$mode,$stream_position,$headless_scale" >/dev/null 2>&1 || true
+    "$hyprctl_bin" keyword monitor "$headless_name,$mode,$staging_position,$headless_scale" >/dev/null 2>&1 || true
     "$coreutils_bin"/mkdir -p "$state_dir"
     "$hyprctl_bin" -j workspaces | "$jq_bin" -r '.[] | select((.name // "") != "" and (.monitor // "") != "") | [.name, .monitor] | @tsv' > "$workspace_state.tmp"
     "$coreutils_bin"/mv "$workspace_state.tmp" "$workspace_state"
@@ -211,6 +213,7 @@ let
     fi
 
     ${lib.concatStringsSep "\n    " (map (name: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg "${name},disable"} >/dev/null 2>&1 || true") configuredPhysicalMonitorNames)}
+    "$hyprctl_bin" keyword monitor "$headless_name,$mode,$stream_position,$headless_scale" >/dev/null 2>&1 || true
     "$hyprctl_bin" dispatch focusmonitor "$headless_name" >/dev/null 2>&1 || true
   '';
   sunshineHeadlessUndoScript = pkgs.writeShellScriptBin "sunshine-headless-undo" ''
@@ -352,7 +355,7 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
         {
           name = sunshineVirtualAppName;
           "auto-detach" = true;
-          "image-path" = "desktop.png";
+          "image-path" = sunshineVirtualAppIcon;
           "working-dir" = "/tmp";
           "prep-cmd" = [
             {
