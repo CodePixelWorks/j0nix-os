@@ -38,6 +38,45 @@ let
       };
     };
   };
+
+  mountUnitName = mountPoint: "${utils.escapeSystemdPath (lib.removeSuffix "/" mountPoint)}.mount";
+  hasPermissionOverrides = m:
+    (m.owner or null) != null
+    || (m.group or null) != null
+    || (m.mode or null) != null;
+  mkPermissionFixService = m:
+    let
+      serviceName = "j0nix-mount-permissions-${utils.escapeSystemdPath (lib.removeSuffix "/" m.mountPoint)}";
+      mountUnit = mountUnitName m.mountPoint;
+      owner = m.owner or null;
+      group = m.group or null;
+      chownTarget =
+        if owner != null && group != null then "${owner}:${group}"
+        else if owner != null then owner
+        else if group != null then ":${group}"
+        else null;
+      commands =
+        lib.optional (chownTarget != null)
+          "${pkgs.coreutils}/bin/chown ${lib.escapeShellArg chownTarget} ${lib.escapeShellArg m.mountPoint}"
+        ++ lib.optional ((m.mode or null) != null)
+          "${pkgs.coreutils}/bin/chmod ${lib.escapeShellArg m.mode} ${lib.escapeShellArg m.mountPoint}";
+    in
+    {
+      name = serviceName;
+      value = {
+        description = "Apply ownership and mode overrides to ${m.mountPoint}";
+        after = [ mountUnit ];
+        bindsTo = [ mountUnit ];
+        partOf = [ mountUnit ];
+        wantedBy = [ mountUnit ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          ExecStart = lib.concatStringsSep " && " commands;
+        };
+      };
+    };
+  permissionFixServices = map mkPermissionFixService (lib.filter hasPermissionOverrides enabledManagedMounts);
 in
 {
   options.j0nix.desktop.storage.mounts = lib.mkOption {
@@ -53,6 +92,18 @@ in
         options = lib.mkOption {
           type = lib.types.listOf lib.types.str;
           default = [ ];
+        };
+        owner = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+        };
+        group = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+        };
+        mode = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
         };
         gvfsShow = lib.mkOption { type = lib.types.bool; default = false; };
         gvfsName = lib.mkOption { type = lib.types.str; default = ""; };
@@ -84,7 +135,7 @@ in
 
     # Source of truth is `j0nix.desktop.storage.mounts`; rebuild guard logic is handled by a shared helper.
     systemd.units = mkMountRebuildGuards cfg.mounts;
-    systemd.services = builtins.listToAttrs (map mkLazyUnmountService lazyUnmountMounts);
+    systemd.services = builtins.listToAttrs ((map mkLazyUnmountService lazyUnmountMounts) ++ permissionFixServices);
 
     assertions =
       map (m: {
