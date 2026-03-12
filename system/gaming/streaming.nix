@@ -163,6 +163,7 @@ let
     state_dir="$runtime_dir/sunshine-j0nix"
     workspace_state="$state_dir/headless-workspaces.tsv"
     active_state="$state_dir/headless-active-workspace"
+    focused_monitor_state="$state_dir/headless-focused-monitor"
 
     if [ -z "$headless_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ] || [ ! -x "$jq_bin" ]; then
       exit 0
@@ -180,9 +181,10 @@ let
 
     "$hyprctl_bin" keyword monitor "$headless_name,$mode,$stream_position,$headless_scale" >/dev/null 2>&1 || true
     "$coreutils_bin"/mkdir -p "$state_dir"
-    "$hyprctl_bin" -j workspaces | "$jq_bin" -r '.[] | select(.id > 0) | [.name, .monitor] | @tsv' > "$workspace_state.tmp"
+    "$hyprctl_bin" -j workspaces | "$jq_bin" -r '.[] | select((.name // "") != "" and (.monitor // "") != "") | [.name, .monitor] | @tsv' > "$workspace_state.tmp"
     "$coreutils_bin"/mv "$workspace_state.tmp" "$workspace_state"
     "$hyprctl_bin" -j activeworkspace | "$jq_bin" -r '.name // empty' > "$active_state"
+    "$hyprctl_bin" -j monitors | "$jq_bin" -r '.[] | select(.focused == true) | .name // empty' > "$focused_monitor_state"
 
     move_workspace_to_headless() {
       local workspace_name="$1"
@@ -209,6 +211,7 @@ let
     fi
 
     ${lib.concatStringsSep "\n    " (map (name: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg "${name},disable"} >/dev/null 2>&1 || true") configuredPhysicalMonitorNames)}
+    "$hyprctl_bin" dispatch focusmonitor "$headless_name" >/dev/null 2>&1 || true
   '';
   sunshineHeadlessUndoScript = pkgs.writeShellScriptBin "sunshine-headless-undo" ''
     set -eu
@@ -223,6 +226,7 @@ let
     state_dir="$runtime_dir/sunshine-j0nix"
     workspace_state="$state_dir/headless-workspaces.tsv"
     active_state="$state_dir/headless-active-workspace"
+    focused_monitor_state="$state_dir/headless-focused-monitor"
 
     if [ -z "$headless_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ]; then
       exit 0
@@ -233,6 +237,10 @@ let
     active_workspace=""
     if [ -f "$active_state" ]; then
       IFS= read -r active_workspace < "$active_state" || true
+    fi
+    focused_monitor=""
+    if [ -f "$focused_monitor_state" ]; then
+      IFS= read -r focused_monitor < "$focused_monitor_state" || true
     fi
 
     restore_workspace_monitor() {
@@ -260,7 +268,10 @@ let
     fi
 
     "$hyprctl_bin" keyword monitor "$headless_name,$default_mode,$headless_position,$headless_scale" >/dev/null 2>&1 || true
-    "$coreutils_bin"/rm -f "$workspace_state" "$active_state"
+    if [ -n "$focused_monitor" ]; then
+      "$hyprctl_bin" dispatch focusmonitor "$focused_monitor" >/dev/null 2>&1 || true
+    fi
+    "$coreutils_bin"/rm -f "$workspace_state" "$active_state" "$focused_monitor_state"
   '';
   sunshineHeadlessPrepCommand = lib.getExe sunshineHeadlessPrepScript;
   sunshineHeadlessUndoCommand = lib.getExe sunshineHeadlessUndoScript;
