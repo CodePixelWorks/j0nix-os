@@ -175,7 +175,7 @@ Monitor tooling:
 - `wm-monitor-config-tui`: force `hyprdynamicmonitors tui`
 - `wm-monitor-config-gui`: open `nwg-displays`
 
-If `~/.config/hyprdynamicmonitors/config.toml` exists, j0nix also starts the `hyprdynamicmonitors` user service automatically with the graphical session.
+If `~/.config/hyprdynamicmonitors/config.toml` exists, j0nix starts the `hyprdynamicmonitors` user service automatically only when there are no declarative `toggleableOutputs`. Once toggleable outputs are configured, the manual `wm-monitor-*` layer becomes the source of truth and `hyprdynamicmonitors` stays available as an on-demand tool instead of a competing background daemon.
 
 ## Caelestia App Binds
 
