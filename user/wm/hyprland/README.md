@@ -98,7 +98,7 @@ Per-user toggle under `settings.userSettings.<name>.programs.keepassxc`:
 - `workspace.enable`
 - `workspace.mode` (`special-workspace` | `minimizer`)
 - `workspace.name` (used as `special:<name>` when mode is `special-workspace`)
-- `workspace.toggleBind` (default: `SUPER+CTRL+P`)
+- `workspace.toggleBind` (default: `SUPER+P`)
 - `autoUnlock.mode` (`strict` | `balanced` | `convenient` | `full-auto`)
 
 Behavior:
@@ -131,7 +131,7 @@ Behavior:
 - `SUPER+1..0`: switch workspace
 - `SUPER+SHIFT+1..0`: move window to workspace (with following it)
 - `SUPER+CTRL+c`: center active window
-- `SUPER+CTRL+P`: toggle KeePassXC (special workspace or minimizer mode)
+- `SUPER+P`: toggle KeePassXC (special workspace or minimizer mode)
 
 ## Keybind Reference Popup
 
@@ -216,7 +216,7 @@ Notes for implementation:
 - Some binds are added conditionally based on the active per-user `wmShell`, `settings.dms.overview.enable`, and related toggles.
 - Additional shell-specific media, screenshot, and workflow binds are defined in the selected shell block inside `user/wm/hyprland/default.nix`.
 - Generic screenshot helpers are always available:
-  - `Win+P`: fullscreen screenshot via `wm-screenshot-full`
+  - `Win+Shift+P`: fullscreen screenshot via `wm-screenshot-full`
   - `Ctrl+Print`: fullscreen screenshot via `wm-screenshot-full` (intended as the game-safe fallback)
   - `Ctrl+Shift+Print`: area screenshot via `wm-screenshot-area`
   - Files are saved to `~/Pictures/Screenshots`
