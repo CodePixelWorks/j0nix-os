@@ -29,9 +29,13 @@ let
   sunshineVirtualDisplayEnabled = sunshineVirtualDisplay.enable or false;
   sunshineVirtualOutputName = sunshineVirtualDisplay.outputName or null;
   sunshineVirtualAppName = sunshineVirtualDisplay.appName or "Mac Display";
-  sunshineVirtualCapture = sunshineVirtualDisplay.capture or "wlr";
+  sunshineVirtualCaptureRaw = sunshineVirtualDisplay.capture or "auto";
+  sunshineVirtualCaptureAuto = builtins.elem sunshineVirtualCaptureRaw [ null "" "auto" ];
+  sunshineVirtualCapture = if sunshineVirtualCaptureAuto then null else sunshineVirtualCaptureRaw;
   sunshineUsesWaylandCapture =
-    sunshineVirtualDisplayEnabled && builtins.elem sunshineVirtualCapture [ "wlr" "wl" "wayland" ];
+    sunshineVirtualDisplayEnabled
+    && sunshineVirtualCapture != null
+    && builtins.elem sunshineVirtualCapture [ "wlr" "wl" "wayland" ];
   sunshineNeedsPrivilegedWrapper = sunshineCapSysAdmin && !sunshineUsesWaylandCapture;
   sunshineVirtualResolutions = sunshineVirtualDisplay.resolutions or [
     "2880x1800"
@@ -248,9 +252,11 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     openFirewall = sunshineOpenFirewall;
     capSysAdmin = sunshineNeedsPrivilegedWrapper;
     autoStart = sunshineAutoStart;
-    settings = lib.optionalAttrs sunshineVirtualDisplayEnabled {
-      capture = sunshineVirtualCapture;
-    };
+    settings = lib.optionalAttrs sunshineVirtualDisplayEnabled (
+      lib.optionalAttrs (sunshineVirtualCapture != null) {
+        capture = sunshineVirtualCapture;
+      }
+    );
   };
 
   services.sunshine.applications.env.PATH = lib.mkDefault "$(PATH):$(HOME)/.local/bin";
@@ -325,8 +331,8 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
       message = "j0nix.desktop.gaming.streaming.sunshine.performance.network.mode must be one of: balanced, aggressive";
     }
     {
-      assertion = !sunshineVirtualDisplayEnabled || builtins.elem sunshineVirtualCapture [ "wlr" "wl" "wayland" ];
-      message = "j0nix.desktop.gaming.streaming.sunshine.virtualDisplay.capture must be one of: wlr, wl, wayland";
+      assertion = !sunshineVirtualDisplayEnabled || sunshineVirtualCaptureAuto || builtins.elem sunshineVirtualCapture [ "wlr" "wl" "wayland" "kms" "x11" "nvfbc" ];
+      message = "j0nix.desktop.gaming.streaming.sunshine.virtualDisplay.capture must be auto, empty, or one of: wlr, wl, wayland, kms, x11, nvfbc";
     }
     {
       assertion = !sunshineVirtualDisplayEnabled || builtins.all (mode: builtins.match "^[0-9]+x[0-9]+$" mode != null) sunshineVirtualResolutions;
