@@ -18,6 +18,7 @@ let
   wmShellStartCmd = "${homeBinDir}/wm-shell-start";
   wmShellStopCmd = "${homeBinDir}/wm-shell-stop";
   wmShellRestartCmd = "${homeBinDir}/wm-shell-restart";
+  wmShellRestartDetachedCmd = "${homeBinDir}/wm-shell-restart-detached";
   wmOverviewRunCmd = "${homeBinDir}/wm-overview-run";
   wmOverviewStartCmd = "${homeBinDir}/wm-overview-start";
   caelestiaStartCmd = "${homeBinDir}/caelestia-start";
@@ -386,6 +387,11 @@ in
           exit 1
           ;;
       esac
+    '')
+    (writeShellScriptBin "wm-shell-restart-detached" ''
+      export PATH="${shellPath}:$PATH"
+
+      nohup ${wmShellRestartCmd} >/dev/null 2>&1 &
     '')
     (writeShellScriptBin "wm-shell-recover" ''
       export PATH="${shellPath}:$PATH"
