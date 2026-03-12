@@ -21,10 +21,13 @@ let
       OLLAMA_MODELS = modelsPath;
     } // filteredExtraEnv);
   effectiveHost = if hasValue host then host else "127.0.0.1:11434";
+  effectiveModelsPath = if hasValue modelsPath then modelsPath else "/var/lib/ollama/models";
   syncModelsScript = pkgs.writeShellScriptBin "ollama-sync-models" ''
     set -eu
 
     export OLLAMA_HOST=${lib.escapeShellArg effectiveHost}
+    export OLLAMA_MODELS=${lib.escapeShellArg effectiveModelsPath}
+    export HOME=/var/lib/ollama
 
     for _ in $(seq 1 60); do
       if ${lib.getExe config.services.ollama.package} list >/dev/null 2>&1; then
