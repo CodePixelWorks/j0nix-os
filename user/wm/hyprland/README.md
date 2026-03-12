@@ -98,7 +98,7 @@ Per-user toggle under `settings.userSettings.<name>.programs.keepassxc`:
 - `workspace.enable`
 - `workspace.mode` (`special-workspace` | `minimizer`)
 - `workspace.name` (used as `special:<name>` when mode is `special-workspace`, default: `passwords`)
-- `workspace.toggleBind` (default: `SUPER+P`)
+- `workspace.toggleBind` (default: `SUPER+SHIFT+P`)
 - `autoUnlock.mode` (`strict` | `balanced` | `convenient` | `full-auto`)
 
 Behavior:
@@ -126,12 +126,15 @@ Behavior:
 - `SUPER+CTRL+J`: quick horizontal split for the next tiled window (stacked)
 - `SUPER+CTRL+V`: legacy alias for a vertical split (`right`)
 - `SUPER+CTRL+SHIFT+V`: legacy alias for a horizontal split (`down`)
+- `SUPER+P`: fullscreen screenshot
+- `SUPER+-`: decrease the split ratio
+- `SUPER++`: increase the split ratio
 - `SUPER+Left/Right`: switch relative workspace (`-1/+1`)
 - `SUPER+SHIFT+Left/Right`: move window to relative workspace (`-1/+1`, currently follows)
 - `SUPER+1..0`: switch workspace
-- `SUPER+SHIFT+1..0`: move window to workspace (with following it)
+- `SUPER+SHIFT+1..0`: move the active window to workspace `1..10`
 - `SUPER+CTRL+c`: center active window
-- `SUPER+P`: toggle KeePassXC (special workspace or minimizer mode)
+- `SUPER+SHIFT+P`: toggle KeePassXC (special workspace or minimizer mode)
 
 ## Keybind Reference Popup
 
@@ -198,7 +201,7 @@ If `~/.config/hyprdynamicmonitors/config.toml` exists, j0nix starts the `hyprdyn
 - `SUPER+C`: toggle special workspace `discord`
 - `SUPER+M`: toggle special workspace `media`
 - `SUPER+X`: toggle special workspace `sysmon`
-- `SUPER+P`: toggle special workspace `passwords` (KeePassXC)
+- `SUPER+SHIFT+P`: toggle special workspace `passwords` (KeePassXC)
 - `SUPER+SHIFT+V`: Caelestia clipboard
 - `SUPER+ALT+V`: Caelestia clipboard delete
 
@@ -220,7 +223,7 @@ Notes for implementation:
 - Some binds are added conditionally based on the active per-user `wmShell`, `settings.dms.overview.enable`, and related toggles.
 - Additional shell-specific media, screenshot, and workflow binds are defined in the selected shell block inside `user/wm/hyprland/default.nix`.
 - Generic screenshot helpers are always available:
-  - `Win+Shift+P`: fullscreen screenshot via `wm-screenshot-full`
+  - `Win+P`: fullscreen screenshot via `wm-screenshot-full`
   - `Ctrl+Print`: fullscreen screenshot via `wm-screenshot-full` (intended as the game-safe fallback)
   - `Ctrl+Shift+Print`: area screenshot via `wm-screenshot-area`
   - Files are saved to `~/Pictures/Screenshots`
