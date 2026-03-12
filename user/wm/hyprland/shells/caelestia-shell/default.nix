@@ -318,8 +318,24 @@ let
       runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
       state_dir="$runtime_dir/caelestia-shell"
       supervisor_pid_file="$state_dir/supervisor.pid"
+      supervisor_lock_file="$state_dir/supervisor.lock"
+      flock_bin="${pkgs.util-linux}/bin/flock"
 
       mkdir -p "$state_dir"
+
+      exec 9>"$supervisor_lock_file"
+      if ! "$flock_bin" -n 9; then
+        exit 0
+      fi
+
+      shell_processes_running() {
+        if command -v qs >/dev/null 2>&1 && qs ipc -c caelestia call shell ping >/dev/null 2>&1; then
+          return 0
+        fi
+        ${procps}/bin/pgrep -f 'quickshell.*-c[[:space:]]*caelestia' >/dev/null 2>&1 && return 0
+        ${procps}/bin/pgrep -f '/share/caelestia-shell' >/dev/null 2>&1 && return 0
+        return 1
+      }
 
       if [ -f "$supervisor_pid_file" ]; then
         existing_pid="$(${coreutils}/bin/cat "$supervisor_pid_file" 2>/dev/null || true)"
@@ -338,11 +354,7 @@ let
       }
       trap cleanup_supervisor_state EXIT INT TERM
 
-      if command -v qs >/dev/null 2>&1 && qs ipc -c caelestia call shell ping >/dev/null 2>&1; then
-        exit 0
-      fi
-
-      if ${procps}/bin/pgrep -f "quickshell.*-c[[:space:]]*caelestia" >/dev/null 2>&1; then
+      if shell_processes_running; then
         exit 0
       fi
 
@@ -628,6 +640,28 @@ let
       runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
       state_dir="$runtime_dir/caelestia-shell"
       supervisor_pid_file="$state_dir/supervisor.pid"
+      supervisor_lock_file="$state_dir/supervisor.lock"
+
+      shell_processes_running() {
+        ${procps}/bin/pgrep -f '/bin/caelestia-start' >/dev/null 2>&1 && return 0
+        ${procps}/bin/pgrep -f 'quickshell.*-c[[:space:]]*caelestia' >/dev/null 2>&1 && return 0
+        ${procps}/bin/pgrep -f '/share/caelestia-shell' >/dev/null 2>&1 && return 0
+        return 1
+      }
+
+      wait_for_shell_shutdown() {
+        local attempts=0
+
+        while [ "$attempts" -lt 50 ]; do
+          if ! shell_processes_running; then
+            return 0
+          fi
+          attempts=$((attempts + 1))
+          sleep 0.1
+        done
+
+        return 0
+      }
 
       if [ -f "$supervisor_pid_file" ]; then
         supervisor_pid="$(${coreutils}/bin/cat "$supervisor_pid_file" 2>/dev/null || true)"
@@ -645,15 +679,22 @@ let
         caelestia-gamemode-fan-sync stop >/dev/null 2>&1 || true
       fi
       if command -v caelestia >/dev/null 2>&1; then
-        caelestia shell quit >/dev/null 2>&1 && exit 0 || true
+        caelestia shell quit >/dev/null 2>&1 || true
       fi
       if command -v caelestia-shell >/dev/null 2>&1; then
-        ${procps}/bin/pkill -x caelestia-shell >/dev/null 2>&1 && exit 0 || true
+        ${procps}/bin/pkill -x caelestia-shell >/dev/null 2>&1 || true
       fi
       if command -v qs >/dev/null 2>&1; then
-        qs kill caelestia >/dev/null 2>&1 && exit 0 || true
+        qs kill caelestia >/dev/null 2>&1 || true
       fi
-      ${procps}/bin/pkill -f "quickshell.*-c[[:space:]]*caelestia" >/dev/null 2>&1 || true
+      if command -v quickshell >/dev/null 2>&1; then
+        quickshell kill caelestia >/dev/null 2>&1 || true
+      fi
+      ${procps}/bin/pkill -f '/share/caelestia-shell' >/dev/null 2>&1 || true
+      ${procps}/bin/pkill -f 'quickshell.*-c[[:space:]]*caelestia' >/dev/null 2>&1 || true
+      ${procps}/bin/pkill -f '/bin/caelestia-start' >/dev/null 2>&1 || true
+      wait_for_shell_shutdown
+      rm -f "$supervisor_pid_file" "$supervisor_lock_file"
     '')
 
     (writeShellScriptBin "caelestia-apply-theme" ''
