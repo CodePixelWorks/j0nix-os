@@ -180,6 +180,8 @@ Runtime commands:
 
 The toggle layer saves the output's workspace/focus state before disabling it, moves those workspaces onto the configured fallback monitor, and restores them when the output comes back. The same workspace handoff logic is also exposed through the numeric `SUPER+ALT+<number>` and `SUPER+CTRL+ALT+<number>` monitor binds. The “move all” variant only targets normal numbered workspaces (`id > 0`) and leaves special workspaces alone.
 
+Toggleable outputs are applied once at session startup through `wm-monitor-apply-defaults`. They are intentionally no longer hardcoded into `10-monitors.conf`, so a later Hyprland config reload does not silently force a runtime-enabled monitor like the TV back to `disable`.
+
 Monitor tooling:
 
 - `wm-monitor-config`: open the default monitor tool (`hyprdynamicmonitors` TUI by default)
