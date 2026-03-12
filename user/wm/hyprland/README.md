@@ -146,15 +146,23 @@ Behavior:
 
 `settings.hyprland.toggleableOutputs` declares physical outputs that should be manageable at runtime even if Hyprland still sees the connector when the screen itself is powered off.
 
+`settings.hyprland.outputBindings` declares the global numeric monitor map used by the workspace-move binds and the monitor picker list.
+
 Current default TV setup:
 
+- `outputBindings` maps:
+  - `1` -> `DP-1` (Primary PC Monitor)
+  - `2` -> `DP-3` (Living Room TV)
+  - `3` -> `SUNSHINE-HEADLESS` (Adaptive Display)
 - `DP-3` is declared as a toggleable output
-- it uses `bindIndex = 1`
+- `DP-3` uses `bindIndex = 2`
 - it starts disabled by default
-- `SUPER+CTRL+1`: toggle monitor `1`
-- `SUPER+CTRL+SHIFT+1`: restore monitor `1` and move its saved workspaces back
+- `SUPER+CTRL+2`: toggle monitor `2`
+- `SUPER+CTRL+SHIFT+2`: restore monitor `2` and move its saved workspaces back
 - `SUPER+ALT+1`: move the active workspace to monitor `1`
 - `SUPER+ALT+SHIFT+1`: move all workspaces from the focused monitor to monitor `1`
+- `SUPER+ALT+2`: move the active workspace to monitor `2`
+- `SUPER+ALT+3`: move the active workspace to monitor `3`
 
 Runtime commands:
 
