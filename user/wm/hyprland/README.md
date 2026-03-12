@@ -149,19 +149,25 @@ Behavior:
 Current default TV setup:
 
 - `DP-3` is declared as a toggleable output
+- it uses `bindIndex = 1`
 - it starts disabled by default
-- `SUPER+CTRL+O`: toggle the TV output
-- `SUPER+CTRL+SHIFT+O`: restore the TV output and move its saved workspaces back
+- `SUPER+CTRL+1`: toggle monitor `1`
+- `SUPER+CTRL+SHIFT+1`: restore monitor `1` and move its saved workspaces back
+- `SUPER+ALT+1`: move the active workspace to monitor `1`
+- `SUPER+ALT+SHIFT+1`: move all workspaces from the focused monitor to monitor `1`
 
 Runtime commands:
 
+- `wm-monitor-list`
 - `wm-monitor-toggle DP-3`
 - `wm-monitor-on DP-3`
 - `wm-monitor-off DP-3`
 - `wm-monitor-restore DP-3`
 - `wm-monitor-status DP-3`
+- `wm-monitor-workspace-to DP-3`
+- `wm-monitor-focused-workspaces-to DP-3`
 
-The toggle layer saves the output's workspace/focus state before disabling it, moves those workspaces onto the configured fallback monitor, and restores them when the output comes back.
+The toggle layer saves the output's workspace/focus state before disabling it, moves those workspaces onto the configured fallback monitor, and restores them when the output comes back. The same workspace handoff logic is also exposed through the numeric `SUPER+ALT+<number>` and `SUPER+ALT+SHIFT+<number>` monitor binds.
 
 Monitor tooling:
 
