@@ -58,6 +58,11 @@
     # Steam friends list should behave like a utility window.
     "match:class ^(steam)$, match:title ^(Friends List)$, float 1, center 1"
 
+    # Route dedicated workflow apps onto their shell special workspaces.
+    "match:class ^(discord|Discord|vesktop|Vesktop|equibop|Equibop|ArmCord|armcord|WebCord|webcord|element-desktop|Element)$, workspace special:discord"
+    "match:class ^(spotify|Spotify|feishin|Feishin|supersonic|Supersonic|cider|Cider|com\\.github\\.th_ch\\.youtube_music)$, workspace special:media"
+    "match:class ^(KeePassXC|org\\.keepassxc\\.KeePassXC)$, workspace special:passwords"
+
     # Hide blur artefacts in Fusion overlays.
     "match:class ^(fusion360\\.exe)$, match:title ^(Fusion360|(Marking Menu))$, no_blur 1"
 
