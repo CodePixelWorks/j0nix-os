@@ -97,7 +97,7 @@ When enabled:
 Per-user toggle under `settings.userSettings.<name>.programs.keepassxc`:
 - `workspace.enable`
 - `workspace.mode` (`special-workspace` | `minimizer`)
-- `workspace.name` (used as `special:<name>` when mode is `special-workspace`)
+- `workspace.name` (used as `special:<name>` when mode is `special-workspace`, default: `passwords`)
 - `workspace.toggleBind` (default: `SUPER+P`)
 - `autoUnlock.mode` (`strict` | `balanced` | `convenient` | `full-auto`)
 
@@ -195,6 +195,10 @@ If `~/.config/hyprdynamicmonitors/config.toml` exists, j0nix starts the `hyprdyn
 - `SUPER+E`: open preferred file manager
 - `SUPER+V`: open preferred editor
 - `SUPER+N` / `SUPER+SHIFT+N`: clear Caelestia notifications
+- `SUPER+C`: toggle special workspace `discord`
+- `SUPER+M`: toggle special workspace `media`
+- `SUPER+X`: toggle special workspace `sysmon`
+- `SUPER+P`: toggle special workspace `passwords` (KeePassXC)
 - `SUPER+SHIFT+V`: Caelestia clipboard
 - `SUPER+ALT+V`: Caelestia clipboard delete
 
