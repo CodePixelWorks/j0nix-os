@@ -486,6 +486,17 @@ let
       "$hyprctl_bin" dispatch focusmonitor "$name" >/dev/null 2>&1 || true
     }
 
+    activate_workspace_on_monitor() {
+      local monitor_name="$1"
+      local workspace_name="$2"
+
+      [ -n "$monitor_name" ] || return 0
+      [ -n "$workspace_name" ] || return 0
+
+      focus_monitor "$monitor_name"
+      "$hyprctl_bin" dispatch workspace "$workspace_name" >/dev/null 2>&1 || true
+    }
+
     move_monitor_workspaces_to_target() {
       local source_monitor="$1"
       local target_monitor="$2"
@@ -508,9 +519,10 @@ let
 
       if [ -n "$active_workspace" ]; then
         move_workspace "$active_workspace" "$target_monitor"
+        activate_workspace_on_monitor "$target_monitor" "$active_workspace"
+      else
+        focus_monitor "$target_monitor"
       fi
-
-      focus_monitor "$target_monitor"
     }
 
     move_active_workspace_to_output() {
@@ -520,7 +532,7 @@ let
       workspace_name="$("$hyprctl_bin" -j activeworkspace | "$jq_bin" -r '.name // empty')"
       [ -n "$workspace_name" ] || return 0
       move_workspace "$workspace_name" "$target_monitor"
-      focus_monitor "$target_monitor"
+      activate_workspace_on_monitor "$target_monitor" "$workspace_name"
     }
 
     disable_output() {
@@ -574,6 +586,9 @@ let
 
         if [ -n "$active_workspace" ]; then
           move_workspace "$active_workspace" "$name"
+          activate_workspace_on_monitor "$name" "$active_workspace"
+        else
+          focus_monitor "$name"
         fi
       fi
 
