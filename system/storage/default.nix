@@ -43,7 +43,9 @@ let
   hasPermissionOverrides = m:
     (m.owner or null) != null
     || (m.group or null) != null
-    || (m.mode or null) != null;
+    || (m.mode or null) != null
+    || (m.aclEntries or [ ]) != [ ]
+    || (m.defaultAclEntries or [ ]) != [ ];
   mkPermissionFixService = m:
     let
       serviceName = "j0nix-mount-permissions-${utils.escapeSystemdPath (lib.removeSuffix "/" m.mountPoint)}";
@@ -59,7 +61,11 @@ let
         lib.optional (chownTarget != null)
           "${pkgs.coreutils}/bin/chown ${lib.escapeShellArg chownTarget} ${lib.escapeShellArg m.mountPoint}"
         ++ lib.optional ((m.mode or null) != null)
-          "${pkgs.coreutils}/bin/chmod ${lib.escapeShellArg m.mode} ${lib.escapeShellArg m.mountPoint}";
+          "${pkgs.coreutils}/bin/chmod ${lib.escapeShellArg m.mode} ${lib.escapeShellArg m.mountPoint}"
+        ++ lib.optional ((m.aclEntries or [ ]) != [ ])
+          "${pkgs.acl}/bin/setfacl -m ${lib.escapeShellArg (lib.concatStringsSep "," m.aclEntries)} ${lib.escapeShellArg m.mountPoint}"
+        ++ lib.optional ((m.defaultAclEntries or [ ]) != [ ])
+          "${pkgs.acl}/bin/setfacl -d -m ${lib.escapeShellArg (lib.concatStringsSep "," m.defaultAclEntries)} ${lib.escapeShellArg m.mountPoint}";
       execScript = pkgs.writeShellScript serviceName ''
         set -eu
         ${lib.concatStringsSep "\n" commands}
@@ -108,6 +114,14 @@ in
         mode = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
+        };
+        aclEntries = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+        };
+        defaultAclEntries = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
         };
         gvfsShow = lib.mkOption { type = lib.types.bool; default = false; };
         gvfsName = lib.mkOption { type = lib.types.str; default = ""; };
