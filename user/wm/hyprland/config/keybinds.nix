@@ -165,9 +165,8 @@ let
           "$mainMod ALT, mouse_down, movetoworkspace, -1"
           "$mainMod ALT, mouse_up, movetoworkspace, +1"
           "$mainMod, slash, exec, caelestia shell controlCenter open"
-          "$mainMod, m, exec, caelestia toggle music"
-          "$mainMod, c, exec, caelestia toggle communication"
-          "$mainMod, y, exec, caelestia toggle todo"
+          "$mainMod, m, exec, caelestia toggle media"
+          "$mainMod, c, exec, caelestia toggle discord"
           "$mainMod, x, exec, caelestia toggle sysmon"
           "$mainMod SHIFT, c, exec, hyprpicker -a"
         ];
