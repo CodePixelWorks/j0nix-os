@@ -34,8 +34,10 @@ let
   sunshineVirtualCapture = if sunshineVirtualCaptureAuto then null else sunshineVirtualCaptureRaw;
   sunshineUsesWaylandCapture =
     sunshineVirtualDisplayEnabled
-    && sunshineVirtualCapture != null
-    && builtins.elem sunshineVirtualCapture [ "wlr" "wl" "wayland" ];
+    && (
+      sunshineVirtualCapture == null
+      || builtins.elem sunshineVirtualCapture [ "wlr" "wl" "wayland" ]
+    );
   sunshineNeedsPrivilegedWrapper = sunshineCapSysAdmin && !sunshineUsesWaylandCapture;
   sunshineVirtualResolutions = sunshineVirtualDisplay.resolutions or [
     "2880x1800"
@@ -267,6 +269,7 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
           name = sunshineVirtualAppName;
           "auto-detach" = true;
           "image-path" = "desktop.png";
+          "working-dir" = "/tmp";
           "prep-cmd" = [
             {
               do = lib.getExe' sunshineHeadlessPrepScript "sunshine-headless-prep";
