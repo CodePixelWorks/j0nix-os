@@ -372,8 +372,13 @@ let
     jq_bin="${pkgs.jq}/bin/jq"
     outputs_json=${lib.escapeShellArg toggleableOutputsJson}
     bindings_json=${lib.escapeShellArg outputBindingsJson}
-    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
-    state_dir="$runtime_dir/hyprland-monitor-state"
+    runtime_dir="''${XDG_RUNTIME_DIR:-}"
+    if [ -n "$runtime_dir" ] && [ -d "$runtime_dir" ] && [ -w "$runtime_dir" ]; then
+      state_dir="$runtime_dir/hyprland-monitor-state"
+    else
+      state_home="''${XDG_STATE_HOME:-$HOME/.local/state}"
+      state_dir="$state_home/hyprland-monitor-state"
+    fi
     command="''${1:-}"
     output_name="''${2:-}"
 
