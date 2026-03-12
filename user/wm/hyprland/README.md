@@ -121,6 +121,7 @@ Behavior:
 - `SUPER+SHIFT+H/J/K/L`: move the active window (`left/down/up/right`)
 - `SUPER+ALT+H/J/K/L`: resize the active window (`shrink width / grow height / shrink height / grow width`)
 - `SUPER+CTRL+H/J/K/L`: preselect the next split direction directly (`left/down/up/right`)
+- `SUPER+CTRL+BackSpace`: switch keyboard layout
 - `SUPER+CTRL+L`: quick vertical split for the next tiled window (side-by-side)
 - `SUPER+CTRL+J`: quick horizontal split for the next tiled window (stacked)
 - `SUPER+CTRL+V`: legacy alias for a vertical split (`right`)
