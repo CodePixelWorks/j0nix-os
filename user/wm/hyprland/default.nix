@@ -214,7 +214,7 @@ let
   keepassEnabled = keepassCfg.enable or false;
   keepassWorkspaceCfg = keepassCfg.workspace or { };
   keepassWorkspaceEnable = keepassWorkspaceCfg.enable or true;
-  keepassToggleBind = keepassWorkspaceCfg.toggleBind or "$mainMod, p";
+  keepassToggleBind = keepassWorkspaceCfg.toggleBind or "$mainMod SHIFT, p";
   toggleableOutputBindLines =
     lib.concatMap
       (output:

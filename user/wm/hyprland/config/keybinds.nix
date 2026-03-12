@@ -83,6 +83,7 @@ let
     binde = mainResizeBinds ++ [
       "$mainMod, minus, splitratio, -0.1"
       "$mainMod, equal, splitratio, 0.1"
+      "$mainMod, plus, splitratio, 0.1"
       "$mainMod, Page_Up, workspace, -1"
       "$mainMod, Page_Down, workspace, +1"
       "$mainMod ALT, Page_Up, movetoworkspace, -1"
@@ -110,7 +111,7 @@ let
     "$mainMod, f, fullscreen, 0"            # actual fullscreen (shell/waybar hidden)
     "$mainMod SHIFT, f, fullscreen, 1"      # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
     "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
-    "$mainMod SHIFT, p, exec, wm-screenshot-full"
+    "$mainMod, p, exec, wm-screenshot-full"
     "$mainMod, r, exec, wm-shell-recover"
     "$mainMod CTRL, v, layoutmsg, preselect r"
     "$mainMod CTRL SHIFT, v, layoutmsg, preselect d"
@@ -201,6 +202,7 @@ let
           "CTRL SHIFT ALT, Tab, changegroupactive, b"
           "$mainMod, minus, splitratio, -0.1"
           "$mainMod, equal, splitratio, 0.1"
+          "$mainMod, plus, splitratio, 0.1"
         ];
         bindr = [
           "CTRL SUPER SHIFT, R, exec, qs -c caelestia kill"
