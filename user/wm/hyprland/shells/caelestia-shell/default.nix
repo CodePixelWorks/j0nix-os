@@ -315,6 +315,29 @@ let
   shellScriptPackages = with pkgs; [
     (writeShellScriptBin "caelestia-start" ''
       # Keep shell startup idempotent when wm-shell-start is triggered multiple times.
+      runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+      state_dir="$runtime_dir/caelestia-shell"
+      supervisor_pid_file="$state_dir/supervisor.pid"
+
+      mkdir -p "$state_dir"
+
+      if [ -f "$supervisor_pid_file" ]; then
+        existing_pid="$(${coreutils}/bin/cat "$supervisor_pid_file" 2>/dev/null || true)"
+        if [ -n "''${existing_pid:-}" ] && ${procps}/bin/kill -0 "$existing_pid" >/dev/null 2>&1; then
+          exit 0
+        fi
+        rm -f "$supervisor_pid_file"
+      fi
+
+      echo $$ >"$supervisor_pid_file"
+      cleanup_supervisor_state() {
+        current_pid="$(${coreutils}/bin/cat "$supervisor_pid_file" 2>/dev/null || true)"
+        if [ "''${current_pid:-}" = "$$" ]; then
+          rm -f "$supervisor_pid_file"
+        fi
+      }
+      trap cleanup_supervisor_state EXIT INT TERM
+
       if command -v qs >/dev/null 2>&1 && qs ipc -c caelestia call shell ping >/dev/null 2>&1; then
         exit 0
       fi
@@ -602,6 +625,22 @@ let
     '')
 
     (writeShellScriptBin "caelestia-stop" ''
+      runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+      state_dir="$runtime_dir/caelestia-shell"
+      supervisor_pid_file="$state_dir/supervisor.pid"
+
+      if [ -f "$supervisor_pid_file" ]; then
+        supervisor_pid="$(${coreutils}/bin/cat "$supervisor_pid_file" 2>/dev/null || true)"
+        if [ -n "''${supervisor_pid:-}" ]; then
+          ${procps}/bin/kill "$supervisor_pid" >/dev/null 2>&1 || true
+          for _ in $(seq 1 20); do
+            ${procps}/bin/kill -0 "$supervisor_pid" >/dev/null 2>&1 || break
+            sleep 0.1
+          done
+        fi
+        rm -f "$supervisor_pid_file"
+      fi
+
       if command -v caelestia-gamemode-fan-sync >/dev/null 2>&1; then
         caelestia-gamemode-fan-sync stop >/dev/null 2>&1 || true
       fi
