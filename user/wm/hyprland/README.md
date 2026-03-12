@@ -142,6 +142,35 @@ Behavior:
 
 `settings.hyprland.headlessOutputs` declares virtual Hyprland outputs. j0nix materializes them through the user service `hyprland-headless-outputs.service`, and Home Manager restarts that service on rebuilds in an active session. `wm-headless-output-ensure` remains available as the manual fallback command.
 
+## Toggleable Outputs
+
+`settings.hyprland.toggleableOutputs` declares physical outputs that should be manageable at runtime even if Hyprland still sees the connector when the screen itself is powered off.
+
+Current default TV setup:
+
+- `DP-3` is declared as a toggleable output
+- it starts disabled by default
+- `SUPER+CTRL+O`: toggle the TV output
+- `SUPER+CTRL+SHIFT+O`: restore the TV output and move its saved workspaces back
+
+Runtime commands:
+
+- `wm-monitor-toggle DP-3`
+- `wm-monitor-on DP-3`
+- `wm-monitor-off DP-3`
+- `wm-monitor-restore DP-3`
+- `wm-monitor-status DP-3`
+
+The toggle layer saves the output's workspace/focus state before disabling it, moves those workspaces onto the configured fallback monitor, and restores them when the output comes back.
+
+Monitor tooling:
+
+- `wm-monitor-config`: open the default monitor tool (`hyprdynamicmonitors` TUI by default)
+- `wm-monitor-config-tui`: force `hyprdynamicmonitors tui`
+- `wm-monitor-config-gui`: open `nwg-displays`
+
+If `~/.config/hyprdynamicmonitors/config.toml` exists, j0nix also starts the `hyprdynamicmonitors` user service automatically with the graphical session.
+
 ## Caelestia App Binds
 
 - `SUPER+E`: open preferred file manager
