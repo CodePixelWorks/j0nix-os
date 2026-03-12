@@ -141,6 +141,7 @@ let
           "$mainMod, escape, global, caelestia:session"
           "$mainMod, space, global, caelestia:showall"
           "$mainMod, n, global, caelestia:clearNotifs"
+          "$mainMod SHIFT, n, global, caelestia:clearNotifs"
           "$mainMod SHIFT, v, exec, pkill fuzzel || caelestia clipboard"
           "$mainMod ALT, v, exec, pkill fuzzel || caelestia clipboard -d"
           "$mainMod, period, exec, pkill fuzzel || caelestia emoji -p"
