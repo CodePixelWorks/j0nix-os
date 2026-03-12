@@ -28,6 +28,6 @@ Recommended modern baseline roles:
 Roles should append into central aggregators (e.g. `j0nix.software.*`, `j0nix.user.software.*`, `j0nix.desktop.sysctl.extraFragments`) instead of writing directly to final package/sysctl outputs.
 
 Example split:
-- `desktop-basics` owns general day-to-day applications such as a GUI text editor, archive manager, PDF/image viewer and calculator
+- `desktop-basics` owns general day-to-day applications such as a GUI text editor, archive manager, PDF/image viewer, calculator and basic disk-management tooling
 - `network-performance` owns shared TCP/sysctl throughput/latency tuning
 - `gaming` and `remote-work` can stay purpose-focused and only add workload-specific deltas
