@@ -36,8 +36,23 @@ let
   hyprlandCfg = settings.hyprland or { };
   hyprlandDebug = hyprlandCfg.debug or { };
   headlessOutputs = hyprlandCfg.headlessOutputs or [ ];
+  headlessOutputsWithBindings = map
+    (output:
+      if output ? bindIndex then
+        output // { bindKey = if output.bindIndex == 10 then "0" else toString output.bindIndex; }
+      else
+        output)
+    headlessOutputs;
   headlessOutputNames = map (output: output.name or "") headlessOutputs;
   headlessOutputsJson = pkgs.writeText "hyprland-headless-outputs.json" (builtins.toJSON headlessOutputs);
+  outputBindings = hyprlandCfg.outputBindings or [ ];
+  outputBindingsWithKeys = map
+    (binding:
+      binding // { bindKey = if binding.bindIndex == 10 then "0" else toString binding.bindIndex; })
+    outputBindings;
+  outputBindingNames = map (binding: binding.name or "") outputBindingsWithKeys;
+  outputBindingIndices = map (binding: binding.bindIndex) outputBindingsWithKeys;
+  outputBindingsJson = pkgs.writeText "hyprland-output-bindings.json" (builtins.toJSON outputBindingsWithKeys);
   toggleableOutputs = hyprlandCfg.toggleableOutputs or [ ];
   toggleableOutputsWithBindings =
     builtins.genList
@@ -53,8 +68,9 @@ let
         })
       (builtins.length toggleableOutputs);
   toggleableOutputNames = map (output: output.name or "") toggleableOutputsWithBindings;
-  toggleableOutputBindIndices = map (output: output.bindIndex) toggleableOutputsWithBindings;
-  toggleableOutputsJson = pkgs.writeText "hyprland-toggleable-outputs.json" (builtins.toJSON toggleableOutputsWithBindings);
+  managedOutputsWithBindings = toggleableOutputsWithBindings ++ (builtins.filter (output: output ? bindIndex) headlessOutputsWithBindings);
+  managedOutputBindIndices = map (output: output.bindIndex) managedOutputsWithBindings;
+  toggleableOutputsJson = pkgs.writeText "hyprland-toggleable-outputs.json" (builtins.toJSON managedOutputsWithBindings);
   monitorToolsCfg = hyprlandCfg.monitorTools or { };
   installHyprdynamicmonitors = monitorToolsCfg.installHyprdynamicmonitors or true;
   installNwgDisplays = monitorToolsCfg.installNwgDisplays or true;
@@ -213,14 +229,24 @@ let
         [
           "$mainMod CTRL, ${bindKey}, exec, ${homeBinDir}/wm-monitor-toggle ${outputNameArg}"
           "$mainMod CTRL SHIFT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-restore ${outputNameArg}"
-          "$mainMod ALT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-workspace-to ${outputNameArg}"
-          "$mainMod ALT SHIFT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-focused-workspaces-to ${outputNameArg}"
         ]
         ++ (mkBind (binds.toggle or null) "${homeBinDir}/wm-monitor-toggle ${outputNameArg}")
         ++ (mkBind (binds.on or null) "${homeBinDir}/wm-monitor-on ${outputNameArg}")
         ++ (mkBind (binds.off or null) "${homeBinDir}/wm-monitor-off ${outputNameArg}")
         ++ (mkBind (binds.restore or null) "${homeBinDir}/wm-monitor-restore ${outputNameArg}"))
-      toggleableOutputsWithBindings;
+      managedOutputsWithBindings;
+  workspaceOutputBindLines =
+    lib.concatMap
+      (output:
+        let
+          bindKey = output.bindKey or "";
+          outputNameArg = lib.escapeShellArg output.name;
+        in
+        [
+          "$mainMod ALT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-workspace-to ${outputNameArg}"
+          "$mainMod ALT SHIFT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-focused-workspaces-to ${outputNameArg}"
+        ])
+      outputBindingsWithKeys;
   preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
@@ -257,9 +283,9 @@ let
       minimizerRestoreCommand
       minimizerMenuCommand
       keybindHelpCommand
-      toggleableOutputBindLines
       workspaceSwitchBinds
       workspaceMoveBinds;
+      toggleableOutputBindLines = toggleableOutputBindLines ++ workspaceOutputBindLines;
   };
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
   shellStartupCommand =
@@ -345,6 +371,7 @@ let
     hyprctl_bin="${hyprctlExec}"
     jq_bin="${pkgs.jq}/bin/jq"
     outputs_json=${lib.escapeShellArg toggleableOutputsJson}
+    bindings_json=${lib.escapeShellArg outputBindingsJson}
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     state_dir="$runtime_dir/hyprland-monitor-state"
     command="''${1:-}"
@@ -370,6 +397,11 @@ let
     load_output_config() {
       local name="$1"
       "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name)' "$outputs_json"
+    }
+
+    load_output_binding() {
+      local name="$1"
+      "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name)' "$bindings_json"
     }
 
     require_output_name() {
@@ -553,7 +585,7 @@ let
     }
 
     monitor_list() {
-      "$jq_bin" -r '.[] | [.bindIndex, .name, (.description // "")] | @tsv' "$outputs_json" \
+      "$jq_bin" -r '.[] | [.bindIndex, .name, (.description // "")] | @tsv' "$bindings_json" \
         | while IFS=$'\t' read -r bind_index name description; do
             [ -n "$name" ] || continue
             if output_is_active "$name"; then
@@ -588,13 +620,22 @@ let
         monitor_list
         exit 0
         ;;
-      on|off|toggle|restore|status|workspace-to|focused-workspaces-to)
+      on|off|toggle|restore|status)
         require_output_name
         output_json="$(load_output_config "$output_name")" || {
-          echo "Unknown toggleable output: $output_name" >&2
+          echo "Unknown managed output: $output_name" >&2
           exit 1
         }
         prefix="$(state_prefix "$output_name")"
+        ;;
+      workspace-to|focused-workspaces-to)
+        require_output_name
+        if [ -s "$bindings_json" ]; then
+          load_output_binding "$output_name" >/dev/null 2>&1 || {
+            echo "Unknown output binding: $output_name" >&2
+            exit 1
+          }
+        fi
         ;;
       *)
         usage
@@ -915,6 +956,22 @@ EOF
       message = "settings.hyprland.headlessOutputs names must be unique.";
     }
     {
+      assertion = lib.all (name: name != "") outputBindingNames;
+      message = "settings.hyprland.outputBindings entries must have a non-empty name.";
+    }
+    {
+      assertion = (builtins.length outputBindingNames) == (builtins.length (lib.unique outputBindingNames));
+      message = "settings.hyprland.outputBindings names must be unique.";
+    }
+    {
+      assertion = lib.all (index: index >= 1 && index <= 10) outputBindingIndices;
+      message = "settings.hyprland.outputBindings bindIndex values must be between 1 and 10.";
+    }
+    {
+      assertion = (builtins.length outputBindingIndices) == (builtins.length (lib.unique outputBindingIndices));
+      message = "settings.hyprland.outputBindings bindIndex values must be unique.";
+    }
+    {
       assertion = lib.all (name: name != "") toggleableOutputNames;
       message = "settings.hyprland.toggleableOutputs entries must have a non-empty name.";
     }
@@ -923,12 +980,12 @@ EOF
       message = "settings.hyprland.toggleableOutputs names must be unique.";
     }
     {
-      assertion = lib.all (index: index >= 1 && index <= 10) toggleableOutputBindIndices;
-      message = "settings.hyprland.toggleableOutputs bindIndex values must be between 1 and 10.";
+      assertion = lib.all (index: index >= 1 && index <= 10) managedOutputBindIndices;
+      message = "Managed output bindIndex values must be between 1 and 10.";
     }
     {
-      assertion = (builtins.length toggleableOutputBindIndices) == (builtins.length (lib.unique toggleableOutputBindIndices));
-      message = "settings.hyprland.toggleableOutputs bindIndex values must be unique.";
+      assertion = (builtins.length managedOutputBindIndices) == (builtins.length (lib.unique managedOutputBindIndices));
+      message = "Managed output bindIndex values must be unique.";
     }
     {
       assertion = builtins.elem defaultMonitorTool [ "hyprdynamicmonitors" "nwg-displays" ];
