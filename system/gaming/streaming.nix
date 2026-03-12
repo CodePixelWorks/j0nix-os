@@ -375,7 +375,7 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
 
   # Sunshine benefits from direct render-node access and reliable virtual input
   # permissions for low-latency capture and controller/keyboard injection.
-  j0nix.desktop.accounts.baseExtraGroups = lib.mkAfter sunshineExtraGroups;
+  j0nix.desktop.accounts.additionalExtraGroups = lib.mkAfter sunshineExtraGroups;
 
   # Route Sunshine-specific network tuning through the shared sysctl collector so
   # it composes cleanly with the generic network-performance and gaming roles.
