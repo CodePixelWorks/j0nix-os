@@ -1,6 +1,7 @@
 { config, lib, pkgs, settings, ... }:
 let
   userOverrides = settings.userSettings or { };
+  nvidiaEnabled = ((config.j0nix.desktop.drivers or { }).nvidia or { }).enable or false;
   ollamaUsers = lib.filter
     (username:
       let cfg = (((userOverrides.${username} or { }).programs or { }).ollama or { });
@@ -43,6 +44,7 @@ let
 in
 lib.mkIf enabled {
   services.ollama.enable = true;
+  services.ollama.package = lib.mkIf nvidiaEnabled pkgs.ollama-cuda;
 
   systemd.services.ollama.serviceConfig.SupplementaryGroups = [ "users" ];
   systemd.services.ollama.serviceConfig.PermissionsStartOnly = lib.mkForce true;
