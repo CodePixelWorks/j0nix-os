@@ -65,7 +65,7 @@
         };
         virtualDisplay = {
           enable = true;
-          appName = "Mac Display";
+          appName = "Adaptive Display";
           outputName = "SUNSHINE-HEADLESS";
           capture = "auto"; # Let Sunshine choose the least-broken capture path for the current driver stack.
           resolutions = [
