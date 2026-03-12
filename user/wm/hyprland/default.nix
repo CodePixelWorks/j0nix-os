@@ -181,6 +181,21 @@ let
   keepassWorkspaceCfg = keepassCfg.workspace or { };
   keepassWorkspaceEnable = keepassWorkspaceCfg.enable or true;
   keepassToggleBind = keepassWorkspaceCfg.toggleBind or "$mainMod CTRL, p";
+  toggleableOutputBindLines =
+    lib.concatMap
+      (output:
+        let
+          binds = output.binds or { };
+          outputNameArg = lib.escapeShellArg output.name;
+          hasBind = bind: bind != null && bind != "";
+          mkBind = bind: command:
+            lib.optional (hasBind bind) "${bind}, exec, ${command}";
+        in
+        (mkBind (binds.toggle or null) "${homeBinDir}/wm-monitor-toggle ${outputNameArg}")
+        ++ (mkBind (binds.on or null) "${homeBinDir}/wm-monitor-on ${outputNameArg}")
+        ++ (mkBind (binds.off or null) "${homeBinDir}/wm-monitor-off ${outputNameArg}")
+        ++ (mkBind (binds.restore or null) "${homeBinDir}/wm-monitor-restore ${outputNameArg}"))
+      toggleableOutputs;
   preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
@@ -217,6 +232,7 @@ let
       minimizerRestoreCommand
       minimizerMenuCommand
       keybindHelpCommand
+      toggleableOutputBindLines
       workspaceSwitchBinds
       workspaceMoveBinds;
   };
