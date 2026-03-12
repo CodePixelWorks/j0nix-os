@@ -46,9 +46,18 @@ let
     };
 
   configFile = (pkgs.formats.json { }).generate "element-config.json" (lib.recursiveUpdate baseConfig (cfg.extraConfig or { }));
+  elementDesktopPkg = pkgs.symlinkJoin {
+    name = "${pkgs.element-desktop.pname}-j0nix-${pkgs.element-desktop.version}";
+    paths = [ pkgs.element-desktop ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      wrapProgram "$out/bin/element-desktop" \
+        --add-flags "--password-store=gnome-libsecret"
+    '';
+  };
 in
 lib.mkIf enabled {
-  j0nix.user.software.packages = [ pkgs.element-desktop ];
+  j0nix.user.software.packages = [ elementDesktopPkg ];
 
   xdg.configFile."Element/config.json".source = configFile;
 
