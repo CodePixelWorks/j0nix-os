@@ -155,8 +155,6 @@ let
       (
         for _ in $(seq 1 80); do
           if ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e "$keepass_client_filter" >/dev/null 2>&1; then
-            ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
-            ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(org\\.keepassxc\\.KeePassXC)$" >/dev/null 2>&1 || true
             ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspacesilent "special:${workspaceName}" >/dev/null 2>&1 || true
             exit 0
           fi
