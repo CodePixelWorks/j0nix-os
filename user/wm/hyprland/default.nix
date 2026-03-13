@@ -53,6 +53,23 @@ let
   outputBindingNames = map (binding: binding.name or "") outputBindingsWithKeys;
   outputBindingIndices = map (binding: binding.bindIndex) outputBindingsWithKeys;
   outputBindingsJson = pkgs.writeText "hyprland-output-bindings.json" (builtins.toJSON outputBindingsWithKeys);
+  initialOutputStates =
+    let configured = hyprlandCfg.initialOutputStates or [ ];
+    in
+      if configured != [ ] then
+        configured
+      else
+        map
+          (output: {
+            name = output.name or "";
+            enabledByDefault = output.enabledByDefault or true;
+            mode = output.mode or "preferred";
+            position = output.position or "auto";
+            scale = output.scale or 1;
+          })
+          toggleableOutputs;
+  initialOutputStateNames = map (output: output.name or "") initialOutputStates;
+  initialOutputStatesJson = pkgs.writeText "hyprland-initial-output-states.json" (builtins.toJSON initialOutputStates);
   toggleableOutputs = hyprlandCfg.toggleableOutputs or [ ];
   toggleableOutputsWithBindings =
     builtins.genList
@@ -365,12 +382,12 @@ let
       "$hyprctl_bin" output remove "$name" >/dev/null 2>&1 || true
     done
   '';
-  toggleableOutputsDefaultsScript = pkgs.writeShellScriptBin "wm-monitor-apply-defaults" ''
+  initialOutputStatesScript = pkgs.writeShellScriptBin "wm-monitor-apply-defaults" ''
     set -eu
 
     hyprctl_bin="${hyprctlExec}"
     jq_bin="${pkgs.jq}/bin/jq"
-    outputs_json=${lib.escapeShellArg toggleableOutputsJson}
+    outputs_json=${lib.escapeShellArg initialOutputStatesJson}
 
     [ -x "$hyprctl_bin" ] || exit 0
     [ -x "$jq_bin" ] || exit 0
@@ -794,7 +811,7 @@ let
     sessionEnvImportCommand = lib.getExe importSessionEnvScript;
     startGraphicalSessionTargetCommand = lib.getExe startGraphicalSessionTargetScript;
     swwwDaemonCommand = lib.getExe' pkgs.swww "swww-daemon";
-    toggleableOutputsDefaultsCommand = lib.optionalString (toggleableOutputs != [ ]) (lib.getExe toggleableOutputsDefaultsScript);
+    toggleableOutputsDefaultsCommand = lib.optionalString (initialOutputStates != [ ]) (lib.getExe initialOutputStatesScript);
     startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
     keybindDiagnosticsStartupCommand = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
   };
@@ -834,8 +851,8 @@ in {
     headlessOutputsEnsureScript
     headlessOutputsRemoveScript
   ]
-  ++ lib.optionals (toggleableOutputs != [ ]) [
-    toggleableOutputsDefaultsScript
+  ++ lib.optionals (initialOutputStates != [ ]) [
+    initialOutputStatesScript
     monitorStateScript
     monitorOnScript
     monitorOffScript
@@ -1005,6 +1022,14 @@ EOF
     {
       assertion = lib.all (name: name != "") outputBindingNames;
       message = "settings.hyprland.outputBindings entries must have a non-empty name.";
+    }
+    {
+      assertion = lib.all (name: name != "") initialOutputStateNames;
+      message = "settings.hyprland.initialOutputStates entries must have a non-empty name.";
+    }
+    {
+      assertion = (builtins.length initialOutputStateNames) == (builtins.length (lib.unique initialOutputStateNames));
+      message = "settings.hyprland.initialOutputStates names must be unique.";
     }
     {
       assertion = (builtins.length outputBindingNames) == (builtins.length (lib.unique outputBindingNames));
