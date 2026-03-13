@@ -238,8 +238,6 @@ let
       "$startup_bin" >/dev/null 2>&1 || true
     fi
 
-    focus_keepass
-    "$hyprctl_bin" dispatch movetoworkspacesilent ${lib.escapeShellArg "special:${workspaceName}"} >/dev/null 2>&1 || true
     "$hyprctl_bin" dispatch togglespecialworkspace ${lib.escapeShellArg workspaceName} >/dev/null 2>&1 || true
     focus_keepass
   '';
