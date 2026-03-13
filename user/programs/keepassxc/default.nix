@@ -41,6 +41,16 @@ let
   effectiveStartMinimized = startMinimized && !(workspaceEnable && workspaceMode == "special-workspace") && !minimizerEnabled;
 
   databasePath = cfg.databasePath or null;
+  databaseBasename =
+    if hasValue databasePath then
+      builtins.baseNameOf databasePath
+    else
+      "";
+  databaseTitleHint =
+    if databaseBasename != "" then
+      lib.removeSuffix ".kdbx" databaseBasename
+    else
+      "";
   keyFileSecretName = cfg.keyFileSecretName or null;
   keyFileTargetName = cfg.keyFileTargetName or "startup.key";
 
@@ -199,6 +209,11 @@ let
           or ((.initialClass // "") | test("keepassxc"; "i"))
         )
     '
+    locked_title_regex='^(KeePassXC|Unlock Database.*|Quick Unlock.*|Database Locked.*|Datenbank entsperren.*|Schnellentsperrung.*|Datenbank gesperrt.*)$'
+    database_title_regex='${lib.concatStringsSep "|" (lib.filter (value: value != "") [
+      (lib.escapeRegex databaseBasename)
+      (lib.escapeRegex databaseTitleHint)
+    ])}'
 
     if [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
       exec "$startup_bin"
@@ -212,10 +227,53 @@ let
       "$pgrep_bin" -u "$("$id_bin" -u)" -f '/keepassxc($| )|/.keepassxc-wrapped($| )' >/dev/null 2>&1
     }
 
+    special_workspace_visible() {
+      "$hyprctl_bin" monitors -j | "$jq_bin" -e '
+        any(
+          .[];
+          ((.specialWorkspace.name // "") == "special:${workspaceName}")
+          or ((.specialWorkspace.name // "") == "${workspaceName}")
+        )
+      ' >/dev/null 2>&1
+    }
+
+    ensure_workspace_visible() {
+      special_workspace_visible \
+        || "$hyprctl_bin" dispatch togglespecialworkspace ${lib.escapeShellArg workspaceName} >/dev/null 2>&1 \
+        || true
+    }
+
+    client_title() {
+      "$hyprctl_bin" clients -j | "$jq_bin" -r "[ $keepass_client_filter ][0].title // \"\""
+    }
+
+    client_looks_locked() {
+      title="$(client_title)"
+      [ -n "$title" ] || return 1
+      printf '%s\n' "$title" | ${pkgs.gnugrep}/bin/grep -Eiq "$locked_title_regex" && return 0
+      if [ -n "$database_title_regex" ]; then
+        printf '%s\n' "$title" | ${pkgs.gnugrep}/bin/grep -Eiq "$database_title_regex" || return 0
+      fi
+      return 1
+    }
+
     focus_keepass() {
       "$hyprctl_bin" dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 \
         || "$hyprctl_bin" dispatch focuswindow "class:^(org\\.keepassxc\\.KeePassXC)$" >/dev/null 2>&1 \
         || true
+    }
+
+    restart_keepass() {
+      ${pkgs.procps}/bin/pkill -u "$("$id_bin" -u)" -f '/keepassxc($| )|/.keepassxc-wrapped($| )' >/dev/null 2>&1 || true
+      for _ in $(seq 1 50); do
+        has_process || break
+        sleep 0.1
+      done
+      "$startup_bin" >/dev/null 2>&1 &
+      for _ in $(seq 1 80); do
+        has_client && break
+        sleep 0.1
+      done
     }
 
     if [ "${if workspaceEnable && workspaceMode == "minimizer" then "1" else "0"}" = "1" ] && [ "${if minimizerEnabled then "1" else "0"}" = "1" ]; then
@@ -226,16 +284,26 @@ let
       fi
     fi
 
+    if has_client && client_looks_locked; then
+      ensure_workspace_visible
+      restart_keepass
+      focus_keepass
+      exit 0
+    fi
+
+    if ! has_client && has_process; then
+      ensure_workspace_visible
+      restart_keepass
+      focus_keepass
+      exit 0
+    fi
+
     if ! has_client; then
       "$startup_bin" >/dev/null 2>&1 &
       for _ in $(seq 1 80); do
         has_client && break
         sleep 0.1
       done
-    fi
-
-    if ! has_client && has_process; then
-      "$startup_bin" >/dev/null 2>&1 || true
     fi
 
     "$hyprctl_bin" dispatch togglespecialworkspace ${lib.escapeShellArg workspaceName} >/dev/null 2>&1 || true
