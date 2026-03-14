@@ -5,8 +5,9 @@ let
   provider = cfg.provider or "flatpak";
 
   vuescanFlatpakAppId = "com.hamrick.VueScan";
+  vuescanFlatpakBranch = "stable";
   vuescanFlatpakWrapper = pkgs.writeShellScriptBin "vuescan" ''
-    exec flatpak run ${vuescanFlatpakAppId} "$@"
+    exec flatpak run --branch=${vuescanFlatpakBranch} ${vuescanFlatpakAppId} "$@"
   '';
 in
 lib.mkIf enabled {
