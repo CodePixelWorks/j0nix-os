@@ -45,7 +45,14 @@ stdenv.mkDerivation (finalAttrs: {
     qt6.qtwayland
   ];
 
+  cmakeFlags = [
+    "-DPLUGINDIR=${placeholder "out"}/${qt6.qtbase.qtPluginPrefix}"
+  ];
+
   postPatch = ''
+    substituteInPlace CMakeLists.txt \
+      --replace-fail 'find_package(Qt6 6.9 CONFIG REQUIRED COMPONENTS BuildInternals Core Widgets)' \
+                     'find_package(Qt6 6.9 CONFIG REQUIRED COMPONENTS BuildInternals Core Widgets GuiPrivate WidgetsPrivate)'
     substituteInPlace common/config/ConfigManager.cpp \
       --replace-fail '/etc' '${placeholder "out"}/etc'
     substituteInPlace common/common.cpp \
