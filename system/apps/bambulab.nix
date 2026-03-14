@@ -6,9 +6,6 @@ let
 in
 {
   config = {
-    # Keep Flatpak available system-wide, but Bambu itself is handled via the AppImage provider.
-    services.flatpak.enable = true;
-
     j0nix.desktop.sysctl.extraFragments = [
       {
         # Bambu/related wrappers require unprivileged user namespaces.
@@ -16,6 +13,13 @@ in
         "user.max_user_namespaces" = 1048576;
       }
     ];
+
+    j0nix.desktop.apps.flatpak.entries = if provider == "flatpak" then [
+      {
+        appId = "com.bambulab.BambuStudio";
+        remote = "flathub";
+      }
+    ] else [ ];
 
     assertions = [
       {
