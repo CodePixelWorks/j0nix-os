@@ -26,7 +26,7 @@ stdenv.mkDerivation (finalAttrs: {
     owner = "Bali10050";
     repo = "Darkly";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-zv3lNrSup1LHR4qs5uAuOUKF/7E+fyzdfvljXcZ/SoA=";
+    hash = "sha256-PEy2ae8mEA39DOvpr9yBWDxta0wDm2acHQtjQ4yMiz0=";
   };
 
   nativeBuildInputs = [
