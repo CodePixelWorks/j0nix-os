@@ -9,6 +9,7 @@ let
     if platformTheme == "qtengine" then "hyprqt6engine" else platformTheme;
   qtScheme = caelestiaThemeCfg.scheme or (settings.theme or "catppuccin");
   qtFlavour = caelestiaThemeCfg.flavour or "mocha";
+  qtMode = settings.colorSchemePreference or (caelestiaThemeCfg.mode or "dark");
   useDarklyStyle =
     resolvedPlatformTheme == "hyprqt6engine"
     && qtScheme == "catppuccin"
@@ -26,7 +27,7 @@ let
     else
       null;
   qtStyleOverride =
-    if useDarklyStyle then
+    if useDarklyStyle && qtMode == "dark" then
       "Darkly"
     else if resolvedPlatformTheme == "hyprqt6engine" then
       "Fusion"
