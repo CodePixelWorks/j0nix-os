@@ -34,6 +34,7 @@ in
     ../../system/apps/bambulab.nix
     ../../system/apps/ollama.nix
     ../../system/apps/syncthing.nix
+    ../../system/apps/vuescan.nix
     ../../system/software
     ../../user-roles/system
     ../../system/accounts
@@ -42,6 +43,7 @@ in
     ../../system/boot
     ../../system/locale
     ../../system/fonts
+
     ../../system/printing
     ../../system/scanning
     ../../system/kernel
