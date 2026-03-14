@@ -43,7 +43,7 @@ let
         accent = [ "mauve" ];
         shade = "dark";
         size = "compact";
-        tweaks = [ ];
+        tweaks = [ "black" ];
       }
     else
       pkgs.gnome-themes-extra;
@@ -181,8 +181,8 @@ let
     headerbar,
     .titlebar,
     toolbarview {
-      min-height: 34px;
-      padding: 0 4px;
+      min-height: 32px;
+      padding: 0 3px;
     }
 
     button,
@@ -195,9 +195,9 @@ let
     list row,
     preferencespage row,
     actionrow {
-      min-height: 26px;
-      padding: 2px 8px;
-      border-radius: 10px;
+      min-height: 24px;
+      padding: 1px 7px;
+      border-radius: 9px;
     }
   '';
   gtkCss = if useCatppuccinGtk then compactGtkCss else fallbackGtkCss;
