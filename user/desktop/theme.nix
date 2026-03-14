@@ -27,7 +27,7 @@ let
   caelestiaThemeCfg = caelestiaCfg.theme or { };
   gtkScheme = caelestiaThemeCfg.scheme or (settings.theme or "catppuccin");
   gtkFlavour = caelestiaThemeCfg.flavour or "mocha";
-  gtkMode = caelestiaThemeCfg.mode or "dark";
+  gtkMode = settings.colorSchemePreference or (caelestiaThemeCfg.mode or "dark");
   darkGtk = gtkMode != "light";
   useCatppuccinGtk = gtkScheme == "catppuccin" && gtkFlavour == "mocha" && darkGtk;
   gtkThemeName =
@@ -246,6 +246,10 @@ in
   };
 
   assertions = [
+    {
+      assertion = builtins.elem gtkMode [ "light" "dark" ];
+      message = "settings.colorSchemePreference must be either \"light\" or \"dark\".";
+    }
     {
       assertion = (!iconThemeEnabled) || (iconThemePackage != null);
       message = "settings.iconTheme.package must be one of: colloid, papirus, adwaita, breeze";
