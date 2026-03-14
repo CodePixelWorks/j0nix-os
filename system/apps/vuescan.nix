@@ -1,7 +1,10 @@
 { lib, settings, ... }:
 let
   cfg = (settings.programs or { }).vuescan or { };
-  enabled = cfg.enable or false;
+  userSettings = builtins.attrValues (settings.userSettings or { });
+  userEnabled =
+    lib.any (userCfg: (((userCfg.programs or { }).vuescan or { }).enable or false)) userSettings;
+  enabled = (cfg.enable or false) || userEnabled;
   provider = cfg.provider or "flatpak";
 in
 {
