@@ -47,6 +47,7 @@ let
     XDG_CURRENT_DESKTOP = "Hyprland";
     XDG_SESSION_TYPE = "wayland";
     XDG_SESSION_DESKTOP = "Hyprland";
+    COLORSCHEME_PREFERENCE = settings.colorSchemePreference or "dark";
     _JAVA_AWT_WM_NONREPARENTING = "1";
     APP2UNIT_SLICES = sessionEnvCfg.app2unitSlices or "a=app-graphical.slice b=background-graphical.slice s=session-graphical.slice";
   };
