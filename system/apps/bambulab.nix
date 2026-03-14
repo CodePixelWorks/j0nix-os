@@ -18,6 +18,7 @@ in
       {
         appId = "com.bambulab.BambuStudio";
         remote = "flathub";
+        branch = "stable";
       }
     ] else [ ];
 

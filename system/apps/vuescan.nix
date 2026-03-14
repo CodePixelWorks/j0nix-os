@@ -10,6 +10,7 @@ in
       {
         appId = "com.hamrick.VueScan";
         remote = "flathub";
+        branch = "stable";
       }
     ];
 
