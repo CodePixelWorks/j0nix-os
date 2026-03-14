@@ -274,6 +274,7 @@ in
     source = gtk3CssFile;
     force = true;
   };
+  xdg.configFile."gtk-3.0/settings.ini".force = true;
   xdg.configFile."gtk-4.0/gtk.css" = lib.mkMerge [
     {
       force = true;
@@ -282,6 +283,7 @@ in
       source = gtk4CssFile;
     })
   ];
+  xdg.configFile."gtk-4.0/settings.ini".force = true;
   xdg.configFile."gtk-4.0/gtk-dark.css" = {
     source = gtk4DarkCssFile;
     force = true;
