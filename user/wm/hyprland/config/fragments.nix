@@ -11,6 +11,7 @@
   dmsOverviewEnabled,
   dmsOverviewAutostart,
   homeBinDir,
+  sessionEnvLines,
   keybindDiagnosticsEnable,
   sessionEnvImportCommand,
   startGraphicalSessionTargetCommand,
@@ -27,6 +28,7 @@ let
 
   includePaths = [
     "${mainConfigDir}/00-vars.conf"
+    "${mainConfigDir}/05-env.conf"
     "${mainConfigDir}/10-monitors.conf"
     "${mainConfigDir}/20-startup.conf"
     "${mainConfigDir}/30-input.conf"
@@ -94,6 +96,13 @@ in
       # Variables
       # ------------------------------------------------------------------
       $mainMod = SUPER
+    '';
+
+    "hypr/conf.d/05-env.conf" = ''
+      # ------------------------------------------------------------------
+      # Session Environment
+      # ------------------------------------------------------------------
+      ${lib.concatStringsSep "\n" sessionEnvLines}
     '';
 
     "hypr/conf.d/10-monitors.conf" = ''
