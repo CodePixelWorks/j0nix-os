@@ -32,18 +32,18 @@ let
   useCatppuccinGtk = gtkScheme == "catppuccin" && gtkFlavour == "mocha" && darkGtk;
   gtkThemeName =
     if useCatppuccinGtk then
-      "Catppuccin-Mocha-Compact-Mauve-Dark"
+      "Catppuccin-Mauve-Dark-Compact"
     else if darkGtk then
       "Adwaita-dark"
     else
       "Adwaita";
   gtkThemePackage =
     if useCatppuccinGtk then
-      pkgs.catppuccin-gtk.override {
-        accents = [ "mauve" ];
+      pkgs.magnetic-catppuccin-gtk.override {
+        accent = [ "mauve" ];
+        shade = "dark";
         size = "compact";
-        tweaks = [ "rimless" ];
-        variant = "mocha";
+        tweaks = [ ];
       }
     else
       pkgs.gnome-themes-extra;
