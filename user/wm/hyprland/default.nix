@@ -36,6 +36,15 @@ let
   hyprlandCfg = settings.hyprland or { };
   hyprlandDebug = hyprlandCfg.debug or { };
   headlessOutputs = hyprlandCfg.headlessOutputs or [ ];
+  headlessOutputIsEnabledByDefault =
+    name:
+      let
+        matchingState = lib.findFirst (state: (state.name or "") == name) null (hyprlandCfg.initialOutputStates or [ ]);
+      in
+        if matchingState != null then
+          matchingState.enabledByDefault or true
+        else
+          true;
   headlessOutputsWithBindings = map
     (output:
       if output ? bindIndex then
@@ -44,6 +53,7 @@ let
         output)
     headlessOutputs;
   headlessOutputNames = map (output: output.name or "") headlessOutputs;
+  headlessOutputsAutoEnsure = builtins.any (output: headlessOutputIsEnabledByDefault (output.name or "")) headlessOutputs;
   headlessOutputsJson = pkgs.writeText "hyprland-headless-outputs.json" (builtins.toJSON headlessOutputs);
   outputBindings = hyprlandCfg.outputBindings or [ ];
   outputBindingsWithKeys = map
@@ -415,6 +425,7 @@ let
     jq_bin="${pkgs.jq}/bin/jq"
     outputs_json=${lib.escapeShellArg toggleableOutputsJson}
     bindings_json=${lib.escapeShellArg outputBindingsJson}
+    headless_outputs_json=${lib.escapeShellArg headlessOutputsJson}
     runtime_dir="''${XDG_RUNTIME_DIR:-}"
     if [ -n "$runtime_dir" ] && [ -d "$runtime_dir" ] && [ -w "$runtime_dir" ]; then
       state_dir="$runtime_dir/hyprland-monitor-state"
@@ -450,6 +461,11 @@ let
     load_output_binding() {
       local name="$1"
       "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name)' "$bindings_json"
+    }
+
+    output_is_headless() {
+      local name="$1"
+      "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' "$headless_outputs_json" >/dev/null 2>&1
     }
 
     require_output_name() {
@@ -590,6 +606,16 @@ let
       output_position="$(get_output_field "$output_json" '.position // "auto"')"
       output_scale="$(get_output_field "$output_json" '(.scale // 1) | tostring')"
       focus_on_enable="$(get_output_field "$output_json" 'if (.focusOnEnable // false) then "1" else "0" end')"
+
+       if output_is_headless "$name" && ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
+        "$hyprctl_bin" output create headless "$name" >/dev/null 2>&1 || true
+        for _ in $(seq 1 50); do
+          if "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
+            break
+          fi
+          sleep 0.1
+        done
+      fi
 
       "$hyprctl_bin" keyword monitor "$name,$output_mode,$output_position,$output_scale" >/dev/null 2>&1 || true
 
@@ -790,11 +816,26 @@ let
     sleep ${toString keybindDiagnosticsDelaySeconds}
     ${homeBinDir}/wm-hypr-keybind-dump --phase=login-delayed
   '';
+  managedStaticMonitorNames = lib.unique (toggleableOutputNames ++ headlessOutputNames);
+  monitorNameFromLine =
+    line:
+      let
+        match = builtins.match "[[:space:]]*([^,[:space:]]+)[[:space:]]*,.*" line;
+      in
+        if match == null then line else builtins.elemAt match 0;
+  filteredProfileDetails = profileDetails // {
+    hyprlandMonitors =
+      builtins.filter
+        (line: !(builtins.elem (monitorNameFromLine line) managedStaticMonitorNames))
+        (profileDetails.hyprlandMonitors or [ ]);
+  };
   hyprlandFragments = import ./config/fragments.nix {
     inherit
       lib
       settings
-      profileDetails
+      ;
+    profileDetails = filteredProfileDetails;
+    inherit
       isCaelestiaShell
       isDmsShell
       hyprDmsDir
@@ -811,7 +852,6 @@ let
     sessionEnvImportCommand = lib.getExe importSessionEnvScript;
     startGraphicalSessionTargetCommand = lib.getExe startGraphicalSessionTargetScript;
     swwwDaemonCommand = lib.getExe' pkgs.swww "swww-daemon";
-    toggleableOutputsDefaultsCommand = lib.optionalString (initialOutputStates != [ ]) (lib.getExe initialOutputStatesScript);
     startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
     keybindDiagnosticsStartupCommand = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
   };
@@ -913,11 +953,21 @@ EOF
   '';
 
   home.activation.hyprlandHeadlessOutputsReload = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
-    ${lib.optionalString (headlessOutputs != [ ]) ''
+    ${lib.optionalString headlessOutputsAutoEnsure ''
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     if [ -S "$runtime_dir/bus" ]; then
       ${pkgs.systemd}/bin/systemctl --user daemon-reload >/dev/null 2>&1 || true
       ${pkgs.systemd}/bin/systemctl --user restart hyprland-headless-outputs.service >/dev/null 2>&1 || true
+    fi
+    ''}
+  '';
+
+  home.activation.hyprlandInitialOutputStatesReload = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+    ${lib.optionalString (initialOutputStates != [ ]) ''
+    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+    if [ -S "$runtime_dir/bus" ]; then
+      ${pkgs.systemd}/bin/systemctl --user daemon-reload >/dev/null 2>&1 || true
+      ${pkgs.systemd}/bin/systemctl --user restart hyprland-initial-output-states.service >/dev/null 2>&1 || true
     fi
     ''}
   '';
@@ -940,7 +990,7 @@ EOF
       "hypr/hyprland.conf".force = true;
     };
 
-  systemd.user.services.hyprland-headless-outputs = lib.mkIf (headlessOutputs != [ ]) {
+  systemd.user.services.hyprland-headless-outputs = lib.mkIf headlessOutputsAutoEnsure {
     Unit = {
       Description = "Ensure Hyprland headless outputs";
       PartOf = [ "graphical-session.target" ];
@@ -957,6 +1007,26 @@ EOF
       RemainAfterExit = true;
       ExecStart = lib.getExe headlessOutputsEnsureScript;
       ExecStop = lib.getExe headlessOutputsRemoveScript;
+    };
+  };
+
+  systemd.user.services.hyprland-initial-output-states = lib.mkIf (initialOutputStates != [ ]) {
+    Unit = {
+      Description = "Apply initial Hyprland output states";
+      PartOf = [ "graphical-session.target" ];
+      After =
+        [ "graphical-session.target" ]
+        ++ lib.optionals headlessOutputsAutoEnsure [ "hyprland-headless-outputs.service" ];
+      Wants =
+        [ "graphical-session.target" ]
+        ++ lib.optionals headlessOutputsAutoEnsure [ "hyprland-headless-outputs.service" ];
+    };
+
+    Install.WantedBy = [ "graphical-session.target" ];
+
+    Service = {
+      Type = "oneshot";
+      ExecStart = lib.getExe initialOutputStatesScript;
     };
   };
 

@@ -15,7 +15,6 @@
   sessionEnvImportCommand,
   startGraphicalSessionTargetCommand,
   swwwDaemonCommand,
-  toggleableOutputsDefaultsCommand,
   startupAppsCommand,
   keybindDiagnosticsStartupCommand,
   mainConfigDir,
@@ -48,7 +47,6 @@ let
     ++ [
       startGraphicalSessionTargetCommand
       swwwDaemonCommand
-      toggleableOutputsDefaultsCommand
       startupAppsCommand
     ]
     ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
