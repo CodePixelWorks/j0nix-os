@@ -20,7 +20,7 @@ stdenv.mkDerivation (finalAttrs: {
     owner = "hyprwm";
     repo = "hyprqt6engine";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-Nw0xP54+85alddbU8lFebA3KY1vz8WkujDY9bA5K0MI=";
+    hash = "sha256-WSUMQmfVlpz31o2Tgfue0jnVRCeTrRi3Cy6s2/o8hzQ=";
   };
 
   nativeBuildInputs = [
