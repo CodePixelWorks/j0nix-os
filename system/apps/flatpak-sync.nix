@@ -20,13 +20,14 @@ let
     ${pkgs.flatpak}/bin/flatpak remote-add --if-not-exists --system \
       flathub https://flathub.org/repo/flathub.flatpakrepo
 
-    ${pkgs.jq}/bin/jq -r '.[] | [.remote, .appId] | @tsv' ${entriesJson} | \
-    while IFS=$'\t' read -r remote appId; do
+    ${pkgs.jq}/bin/jq -r '.[] | [.remote, .appId, .branch] | @tsv' ${entriesJson} | \
+    while IFS=$'\t' read -r remote appId branch; do
       [ -n "$appId" ] || continue
-      if ! ${pkgs.flatpak}/bin/flatpak info --system "$appId" >/dev/null 2>&1; then
-        ${pkgs.flatpak}/bin/flatpak install --system --noninteractive "$remote" "$appId"
+      ref="app/$appId/$(uname -m)/$branch"
+      if ! ${pkgs.flatpak}/bin/flatpak info --system "$ref" >/dev/null 2>&1; then
+        ${pkgs.flatpak}/bin/flatpak install --system --noninteractive "$remote" "$ref"
       fi
-      printf '%s\n' "$appId" >> ${desiredFile}
+      printf '%s\n' "$ref" >> ${desiredFile}
     done
 
     ${pkgs.coreutils}/bin/sort -u -o ${desiredFile} ${desiredFile}
@@ -38,10 +39,10 @@ let
     mkdir -p ${stateDir}
     touch ${trackedFile} ${desiredFile}
 
-    while IFS= read -r appId; do
-      [ -n "$appId" ] || continue
-      if ! ${pkgs.gnugrep}/bin/grep -Fxq "$appId" ${desiredFile}; then
-        ${pkgs.flatpak}/bin/flatpak uninstall --system --noninteractive --delete-data "$appId" || true
+    while IFS= read -r ref; do
+      [ -n "$ref" ] || continue
+      if ! ${pkgs.gnugrep}/bin/grep -Fxq "$ref" ${desiredFile}; then
+        ${pkgs.flatpak}/bin/flatpak uninstall --system --noninteractive --delete-data "$ref" || true
       fi
     done < ${trackedFile}
 
@@ -60,6 +61,11 @@ in
           type = lib.types.str;
           default = "flathub";
           description = "Flatpak remote to use for installs.";
+        };
+        branch = lib.mkOption {
+          type = lib.types.str;
+          default = "stable";
+          description = "Flatpak branch to install, typically stable.";
         };
       };
     });
