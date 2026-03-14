@@ -29,24 +29,26 @@ let
   gtkFlavour = caelestiaThemeCfg.flavour or "mocha";
   gtkMode = caelestiaThemeCfg.mode or "dark";
   darkGtk = gtkMode != "light";
-  gtkThemeName = if darkGtk then "Adwaita-dark" else "Adwaita";
-  gtkThemePackage = pkgs.gnome-themes-extra;
-  gtkPalette =
-    if gtkScheme == "catppuccin" && gtkFlavour == "mocha" then
-      {
-        accent = "#cba6f7";
-        accentHover = "#b4befe";
-        accentPressed = "#f5c2e7";
-        window = "#11111b";
-        surface = "#1e1e2e";
-        surfaceElevated = "#181825";
-        header = "#181825";
-        border = "#45475a";
-        text = "#cdd6f4";
-        textMuted = "#a6adc8";
-        selectionText = "#11111b";
-      }
+  useCatppuccinGtk = gtkScheme == "catppuccin" && gtkFlavour == "mocha" && darkGtk;
+  gtkThemeName =
+    if useCatppuccinGtk then
+      "Catppuccin-Mocha-Compact-Mauve-Dark"
     else if darkGtk then
+      "Adwaita-dark"
+    else
+      "Adwaita";
+  gtkThemePackage =
+    if useCatppuccinGtk then
+      pkgs.catppuccin-gtk.override {
+        accents = [ "mauve" ];
+        size = "compact";
+        tweaks = [ "rimless" ];
+        variant = "mocha";
+      }
+    else
+      pkgs.gnome-themes-extra;
+  gtkPalette =
+    if darkGtk then
       {
         accent = "#a78bfa";
         accentHover = "#c4b5fd";
@@ -74,7 +76,7 @@ let
         textMuted = "#5b21b6";
         selectionText = "#faf5ff";
       };
-  gtkCss = ''
+  fallbackGtkCss = ''
     @define-color accent_color ${gtkPalette.accent};
     @define-color accent_bg_color ${gtkPalette.accent};
     @define-color accent_fg_color ${gtkPalette.selectionText};
@@ -175,6 +177,30 @@ let
       color: @selection_fg_color;
     }
   '';
+  compactGtkCss = ''
+    headerbar,
+    .titlebar,
+    toolbarview {
+      min-height: 34px;
+      padding: 0 4px;
+    }
+
+    button,
+    entry,
+    spinbutton,
+    combobox,
+    dropdown,
+    menuitem,
+    tab,
+    list row,
+    preferencespage row,
+    actionrow {
+      min-height: 26px;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+  '';
+  gtkCss = if useCatppuccinGtk then compactGtkCss else fallbackGtkCss;
 in
 {
   home.sessionVariables = lib.optionalAttrs iconThemeEnabled {
