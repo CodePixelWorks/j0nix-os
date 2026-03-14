@@ -321,8 +321,17 @@ in {
   xdg.portal = {
     enable = true;
     xdgOpenUsePortal = true;
+    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
     config = {
-      hyprland.default = [ "hyprland" ];
+      common.default = [ "gtk" ];
+      hyprland = {
+        default = [
+          "hyprland"
+          "gtk"
+        ];
+        "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
+        "org.freedesktop.impl.portal.Settings" = [ "gtk" ];
+      };
     };
   };
 } // lib.optionalAttrs useDankMaterialShell {
