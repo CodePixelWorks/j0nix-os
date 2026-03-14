@@ -1,4 +1,4 @@
-{ lib, pkgs, settings, ... }:
+{ config, lib, pkgs, settings, ... }:
 let
   iconThemeCfg = settings.iconTheme or { };
   iconThemeEnabled = iconThemeCfg.enable or true;
@@ -200,7 +200,14 @@ let
       border-radius: 9px;
     }
   '';
-  gtkCss = if useCatppuccinGtk then compactGtkCss else fallbackGtkCss;
+  gtk3Css =
+    if useCatppuccinGtk then
+      ''
+        @import url("file://${gtkThemePackage}/share/themes/${gtkThemeName}/gtk-3.0/gtk.css");
+      ''
+      + compactGtkCss
+    else
+      fallbackGtkCss;
   xsettingsdConfig = ''
     Net/ThemeName "${gtkThemeName}"
     Net/IconThemeName "${iconThemeName}"
@@ -226,7 +233,7 @@ in
     QT_ICON_THEME_NAME = iconThemeName;
   };
 
-  gtk = lib.mkIf (iconThemeEnabled && iconThemePackage != null) {
+  gtk = lib.mkIf (iconThemeEnabled && iconThemePackage != null) ({
     enable = true;
     theme = {
       name = gtkThemeName;
@@ -243,13 +250,19 @@ in
     gtk4.extraConfig = {
       gtk-application-prefer-dark-theme = darkGtk;
     };
-    gtk3.extraCss = gtkCss;
-    gtk4.extraCss = gtkCss;
-  };
+    gtk3.extraCss = gtk3Css;
+  } // lib.optionalAttrs (!useCatppuccinGtk) {
+    gtk4.extraCss = fallbackGtkCss;
+  });
 
   xdg.configFile."gtk-3.0/gtk.css".force = true;
-  xdg.configFile."gtk-4.0/gtk.css".force = true;
+  xdg.configFile."gtk-4.0/gtk.css".force = !useCatppuccinGtk;
   xdg.configFile."xsettingsd/xsettingsd.conf".text = xsettingsdConfig;
+
+  home.activation.cleanGtk4UserCss = lib.hm.dag.entryAfter [ "writeBoundary" ] (lib.optionalString useCatppuccinGtk ''
+    rm -f ${lib.escapeShellArg config.home.homeDirectory}/.config/gtk-4.0/gtk.css
+    rm -f ${lib.escapeShellArg config.home.homeDirectory}/.config/gtk-4.0/gtk-dark.css
+  '');
 
   systemd.user.services.xsettingsd = {
     Unit = {
