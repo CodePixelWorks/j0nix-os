@@ -207,7 +207,6 @@ in
     XDG_ICON_THEME = iconThemeName;
     GTK_ICON_THEME = iconThemeName;
     QT_ICON_THEME_NAME = iconThemeName;
-    GTK_THEME = gtkThemeName;
   };
 
   gtk = lib.mkIf (iconThemeEnabled && iconThemePackage != null) {
