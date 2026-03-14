@@ -8,6 +8,56 @@ Repo-managed seeding currently only ensures these keys exist (without overwritin
 - `services.smartScheme`
 - `paths.wallpaperDir` (when a wallpaper path is configured)
 
+## Theme Ownership
+
+Caelestia can manage more than its own shell colours. The upstream CLI also has theme writers for GTK and Qt.
+That matters for this repo because desktop theming is already managed separately in:
+
+- `user/desktop/theme.nix` for GTK
+- `user/desktop/qt-theme.nix` for Qt/KDE
+
+Operational rule:
+- Caelestia should own shell theming.
+- j0nix should own desktop toolkit theming.
+
+If both layers write GTK/Qt state, the last writer wins and the session becomes nondeterministic.
+
+## GTK Conflict Findings
+
+Root cause of the recent GTK regressions:
+
+- `settings.ini`, `gsettings`, and `GTK_THEME` were correct.
+- The breakage came from `~/.config/gtk-3.0/gtk.css` and `~/.config/gtk-4.0/gtk.css` being rewritten after login.
+- Those rewrites were not coming from Home Manager. They were coming from the upstream `caelestia` CLI theme application path.
+
+Observed behavior:
+
+- GTK3/GTK4 session settings still pointed at the intended Catppuccin theme.
+- After login, `gtk.css` became a regular file again instead of staying repo-managed.
+- The rewritten CSS pulled in old local overrides such as `thunar.css`, which changed spacing and colours.
+
+Practical implication:
+
+- `GTK_THEME` is not sufficient to explain or fix the issue on its own.
+- The real ownership bug is a second writer touching GTK user config after login.
+- Any "restore after login" workaround is a defensive patch, not the clean architectural fix.
+
+## Upstream CLI Behavior
+
+The upstream `caelestia` CLI theme code currently writes:
+
+- `~/.config/gtk-3.0/gtk.css`
+- `~/.config/gtk-3.0/thunar.css`
+- `~/.config/gtk-4.0/gtk.css`
+- `~/.config/gtk-4.0/thunar.css`
+
+This is controlled by the shell config's theme block. Upstream defaults effectively treat GTK theming as enabled unless explicitly disabled.
+
+Repo guidance:
+
+- when j0nix manages GTK/Qt, Caelestia's GTK/Qt theme writers should be disabled explicitly in `shell.json`
+- otherwise Caelestia will keep competing with repo-managed desktop theming
+
 ## j0nix Theme Wiring
 
 Use `settings.programs.caelestia.theme` to pin a default CLI-managed scheme:
