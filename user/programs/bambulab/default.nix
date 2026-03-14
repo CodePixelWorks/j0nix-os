@@ -4,8 +4,9 @@ let
   bambuCfg = programsCfg.bambulab or { };
   provider = bambuCfg.provider or "appimage";
   bambuAppImagePackage = pkgs.callPackage ./appimage-package.nix { };
+  bambuFlatpakBranch = "stable";
   bambuFlatpakWrapper = pkgs.writeShellScriptBin "bambu-studio" ''
-    exec flatpak run com.bambulab.BambuStudio "$@"
+    exec flatpak run --branch=${bambuFlatpakBranch} com.bambulab.BambuStudio "$@"
   '';
   bambuDesktopEntry = {
     name = "Bambu Studio";
