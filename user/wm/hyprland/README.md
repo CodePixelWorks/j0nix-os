@@ -74,7 +74,7 @@ Source-of-truth:
 - `settings.hyprland.sessionEnv.app2unitSlices`
 - `settings.hyprland.sessionEnv.extra`
 
-If `qtPlatformTheme` is set to `qtengine`, `qt6ct`, or `qt5ct`, the matching package is also installed through `user/desktop/qt-theme.nix`. Leave it at `null` until the requested package exists in the active package set.
+If `qtPlatformTheme` is set to `hyprqt6engine`, `qt6ct`, or `qt5ct`, the matching package is also installed through `user/desktop/qt-theme.nix`. `qtengine` remains accepted as a compatibility alias and resolves to `hyprqt6engine`.
 
 The module also imports these variables into the systemd user manager during session startup so `app2unit`/D-Bus launched apps inherit the same toolkit/backend environment as direct Hyprland launches.
 
