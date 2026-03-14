@@ -3,7 +3,6 @@ let
   desktopBasics = lib.filter (pkg: pkg != null) [
     (pkgs.gnome-text-editor or null)
     (pkgs.file-roller or null)
-    (pkgs.evince or null)
     (if (pkgs ? kdePackages) && (pkgs.kdePackages ? okular) then pkgs.kdePackages.okular else pkgs.okular or null)
     (pkgs.loupe or null)
     (pkgs.gnome-calculator or null)
