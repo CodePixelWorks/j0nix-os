@@ -210,6 +210,7 @@ let
       fallbackGtkCss;
   gtk3CssFile = pkgs.writeText "j0nix-gtk-3.css" gtk3Css;
   gtk4CssFile = pkgs.writeText "j0nix-gtk-4.css" fallbackGtkCss;
+  gtk4DarkCssFile = pkgs.writeText "j0nix-gtk-4-dark.css" "";
   xsettingsdConfig = ''
     Net/ThemeName "${gtkThemeName}"
     Net/IconThemeName "${iconThemeName}"
@@ -273,8 +274,16 @@ in
     source = gtk3CssFile;
     force = true;
   };
-  xdg.configFile."gtk-4.0/gtk.css" = lib.mkIf (!useCatppuccinGtk) {
-    source = gtk4CssFile;
+  xdg.configFile."gtk-4.0/gtk.css" = lib.mkMerge [
+    {
+      force = true;
+    }
+    (lib.mkIf (!useCatppuccinGtk) {
+      source = gtk4CssFile;
+    })
+  ];
+  xdg.configFile."gtk-4.0/gtk-dark.css" = {
+    source = gtk4DarkCssFile;
     force = true;
   };
   xdg.configFile."xsettingsd/xsettingsd.conf".text = xsettingsdConfig;
