@@ -208,6 +208,8 @@ let
       + compactGtkCss
     else
       fallbackGtkCss;
+  gtk3CssFile = pkgs.writeText "j0nix-gtk-3.css" gtk3Css;
+  gtk4CssFile = pkgs.writeText "j0nix-gtk-4.css" fallbackGtkCss;
   xsettingsdConfig = ''
     Net/ThemeName "${gtkThemeName}"
     Net/IconThemeName "${iconThemeName}"
@@ -219,6 +221,20 @@ let
     ${pkgs.glib}/bin/gsettings set org.gnome.desktop.interface gtk-theme '${gtkThemeName}'
     ${pkgs.glib}/bin/gsettings set org.gnome.desktop.interface icon-theme '${iconThemeName}'
     ${pkgs.glib}/bin/gsettings set org.gnome.desktop.interface color-scheme '${if darkGtk then "prefer-dark" else "default"}'
+  '';
+  restoreGtkCss = pkgs.writeShellScript "gtk-css-restore" ''
+    set -eu
+
+    home_dir=${lib.escapeShellArg config.home.homeDirectory}
+
+    ${pkgs.coreutils}/bin/mkdir -p "$home_dir/.config/gtk-3.0" "$home_dir/.config/gtk-4.0"
+    ${pkgs.coreutils}/bin/ln -sfn ${gtk3CssFile} "$home_dir/.config/gtk-3.0/gtk.css"
+
+    ${lib.optionalString useCatppuccinGtk ''
+      ${pkgs.coreutils}/bin/rm -f "$home_dir/.config/gtk-4.0/gtk.css" "$home_dir/.config/gtk-4.0/gtk-dark.css"
+    ''}${lib.optionalString (!useCatppuccinGtk) ''
+      ${pkgs.coreutils}/bin/ln -sfn ${gtk4CssFile} "$home_dir/.config/gtk-4.0/gtk.css"
+    ''}
   '';
 in
 {
@@ -251,13 +267,16 @@ in
     gtk4.extraConfig = {
       gtk-application-prefer-dark-theme = darkGtk;
     };
-    gtk3.extraCss = gtk3Css;
-  } // lib.optionalAttrs (!useCatppuccinGtk) {
-    gtk4.extraCss = fallbackGtkCss;
   });
 
-  xdg.configFile."gtk-3.0/gtk.css".force = true;
-  xdg.configFile."gtk-4.0/gtk.css".force = !useCatppuccinGtk;
+  xdg.configFile."gtk-3.0/gtk.css" = {
+    source = gtk3CssFile;
+    force = true;
+  };
+  xdg.configFile."gtk-4.0/gtk.css" = lib.mkIf (!useCatppuccinGtk) {
+    source = gtk4CssFile;
+    force = true;
+  };
   xdg.configFile."xsettingsd/xsettingsd.conf".text = xsettingsdConfig;
 
   home.activation.cleanGtk4UserCss = lib.hm.dag.entryAfter [ "writeBoundary" ] (lib.optionalString useCatppuccinGtk ''
@@ -287,6 +306,19 @@ in
     Service = {
       Type = "oneshot";
       ExecStart = applyGtkTheme;
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  systemd.user.services.gtk-css-restore = {
+    Unit = {
+      Description = "Restore managed GTK user CSS after session startup";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" "gtk-theme-apply.service" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.bash}/bin/bash -lc 'sleep 8; exec ${restoreGtkCss}'";
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };
