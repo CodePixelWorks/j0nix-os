@@ -34,7 +34,32 @@ let
   workspaceSwitchBinds = map (pair: "$mainMod, ${pair.key}, workspace, ${pair.workspace}") workspaceKeyPairs;
   workspaceMoveBinds = map (pair: "$mainMod SHIFT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
   hyprlandCfg = settings.hyprland or { };
+  sessionEnvCfg = hyprlandCfg.sessionEnv or { };
   hyprlandDebug = hyprlandCfg.debug or { };
+  sessionEnvBase = {
+    QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
+    QT_AUTO_SCREEN_SCALE_FACTOR = "1";
+    GDK_BACKEND = "wayland,x11";
+    QT_QPA_PLATFORM = "wayland;xcb";
+    SDL_VIDEODRIVER = "wayland,x11,windows";
+    CLUTTER_BACKEND = "wayland";
+    ELECTRON_OZONE_PLATFORM_HINT = "auto";
+    XDG_CURRENT_DESKTOP = "Hyprland";
+    XDG_SESSION_TYPE = "wayland";
+    XDG_SESSION_DESKTOP = "Hyprland";
+    _JAVA_AWT_WM_NONREPARENTING = "1";
+    APP2UNIT_SLICES = sessionEnvCfg.app2unitSlices or "a=app-graphical.slice b=background-graphical.slice s=session-graphical.slice";
+  };
+  sessionEnv =
+    sessionEnvBase
+    // lib.optionalAttrs ((sessionEnvCfg.qtPlatformTheme or null) != null) {
+      QT_QPA_PLATFORMTHEME = sessionEnvCfg.qtPlatformTheme;
+    }
+    // (sessionEnvCfg.extra or { });
+  sessionEnvLines = lib.mapAttrsToList (name: value: "env = ${name},${toString value}") sessionEnv;
+  importedSessionEnvNames = builtins.attrNames sessionEnv;
+  importSessionEnvArgs = lib.concatStringsSep " \\\n        " (map lib.escapeShellArg importedSessionEnvNames);
+  uwsmEnvText = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg (toString value)}") sessionEnv) + "\n";
   headlessOutputs = hyprlandCfg.headlessOutputs or [ ];
   headlessOutputIsEnabledByDefault =
     name:
@@ -326,19 +351,15 @@ let
       ${pkgs.systemd}/bin/systemctl --user import-environment \
         DISPLAY \
         WAYLAND_DISPLAY \
-        XDG_CURRENT_DESKTOP \
         XDG_RUNTIME_DIR \
-        XDG_SESSION_DESKTOP \
-        XDG_SESSION_TYPE \
-        HYPRLAND_INSTANCE_SIGNATURE >/dev/null 2>&1 || true
+        HYPRLAND_INSTANCE_SIGNATURE \
+        ${importSessionEnvArgs} >/dev/null 2>&1 || true
       ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd \
         DISPLAY \
         WAYLAND_DISPLAY \
-        XDG_CURRENT_DESKTOP \
         XDG_RUNTIME_DIR \
-        XDG_SESSION_DESKTOP \
-        XDG_SESSION_TYPE \
-        HYPRLAND_INSTANCE_SIGNATURE >/dev/null 2>&1 || true
+        HYPRLAND_INSTANCE_SIGNATURE \
+        ${importSessionEnvArgs} >/dev/null 2>&1 || true
     fi
   '';
   headlessOutputsEnsureScript = pkgs.writeShellScriptBin "wm-headless-output-ensure" ''
@@ -845,6 +866,7 @@ let
       dmsOverviewEnabled
       dmsOverviewAutostart
       homeBinDir
+      sessionEnvLines
       keybindDiagnosticsEnable
       ;
     mainConfigDir = mainHyprConfigDir;
@@ -986,6 +1008,9 @@ EOF
 
   xdg.configFile =
     hyprlandFragmentFiles
+    // lib.optionalAttrs useUWSM {
+      "uwsm/env".text = uwsmEnvText;
+    }
     // {
       "hypr/hyprland.conf".force = true;
     };
@@ -1064,6 +1089,14 @@ EOF
     {
       assertion = builtins.elem appExecBackend [ "auto" "app2unit" "uwsm" ];
       message = "settings.hyprland.appExecBackend must be one of: auto, app2unit, uwsm";
+    }
+    {
+      assertion = builtins.isAttrs (sessionEnvCfg.extra or { });
+      message = "settings.hyprland.sessionEnv.extra must be an attribute set of environment variables.";
+    }
+    {
+      assertion = (sessionEnvCfg.qtPlatformTheme or null) == null || builtins.isString sessionEnvCfg.qtPlatformTheme;
+      message = "settings.hyprland.sessionEnv.qtPlatformTheme must be a string or null.";
     }
     {
       assertion = !minimizerEnabled || minimizerCommand != "";
