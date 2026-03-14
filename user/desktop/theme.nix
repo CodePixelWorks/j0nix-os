@@ -231,6 +231,9 @@ in
     gtk4.extraCss = gtkCss;
   };
 
+  xdg.configFile."gtk-3.0/gtk.css".force = true;
+  xdg.configFile."gtk-4.0/gtk.css".force = true;
+
   dconf.settings = lib.mkIf iconThemeEnabled {
     "org/gnome/desktop/interface" = {
       color-scheme = if darkGtk then "prefer-dark" else "default";
