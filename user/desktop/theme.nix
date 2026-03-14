@@ -181,8 +181,8 @@ let
     headerbar,
     .titlebar,
     toolbarview {
-      min-height: 32px;
-      padding: 0 3px;
+      min-height: 36px;
+      padding: 0 6px;
     }
 
     button,
@@ -195,9 +195,9 @@ let
     list row,
     preferencespage row,
     actionrow {
-      min-height: 24px;
-      padding: 1px 7px;
-      border-radius: 9px;
+      min-height: 28px;
+      padding: 3px 10px;
+      border-radius: 7px;
     }
   '';
   gtk3Css =
