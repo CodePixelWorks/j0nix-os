@@ -201,8 +201,25 @@ let
     }
   '';
   gtkCss = if useCatppuccinGtk then compactGtkCss else fallbackGtkCss;
+  xsettingsdConfig = ''
+    Net/ThemeName "${gtkThemeName}"
+    Net/IconThemeName "${iconThemeName}"
+    Gtk/ApplicationPreferDarkTheme ${if darkGtk then "1" else "0"}
+  '';
+  applyGtkTheme = pkgs.writeShellScript "gtk-theme-apply" ''
+    set -eu
+
+    ${pkgs.glib}/bin/gsettings set org.gnome.desktop.interface gtk-theme '${gtkThemeName}'
+    ${pkgs.glib}/bin/gsettings set org.gnome.desktop.interface icon-theme '${iconThemeName}'
+    ${pkgs.glib}/bin/gsettings set org.gnome.desktop.interface color-scheme '${if darkGtk then "prefer-dark" else "default"}'
+  '';
 in
 {
+  j0nix.user.software.packages = lib.unique (
+    [ gtkThemePackage pkgs.xsettingsd ]
+    ++ lib.optional (iconThemeEnabled && iconThemePackage != null) iconThemePackage
+  );
+
   home.sessionVariables = lib.optionalAttrs iconThemeEnabled {
     XDG_ICON_THEME = iconThemeName;
     GTK_ICON_THEME = iconThemeName;
@@ -232,6 +249,33 @@ in
 
   xdg.configFile."gtk-3.0/gtk.css".force = true;
   xdg.configFile."gtk-4.0/gtk.css".force = true;
+  xdg.configFile."xsettingsd/xsettingsd.conf".text = xsettingsdConfig;
+
+  systemd.user.services.xsettingsd = {
+    Unit = {
+      Description = "XSettings daemon";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.xsettingsd}/bin/xsettingsd -c %h/.config/xsettingsd/xsettingsd.conf";
+      Restart = "on-failure";
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  systemd.user.services.gtk-theme-apply = {
+    Unit = {
+      Description = "Apply the GTK theme preference to the live session";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" "xsettingsd.service" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = applyGtkTheme;
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
 
   dconf.settings = lib.mkIf iconThemeEnabled {
     "org/gnome/desktop/interface" = {
