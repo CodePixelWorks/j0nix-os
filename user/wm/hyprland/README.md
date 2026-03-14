@@ -41,6 +41,7 @@ Window rules are split into:
 Main include directory:
 
 - `~/.config/hypr/conf.d/00-vars.conf`
+- `~/.config/hypr/conf.d/05-env.conf`
 - `~/.config/hypr/conf.d/10-monitors.conf`
 - `~/.config/hypr/conf.d/20-startup.conf`
 - `~/.config/hypr/conf.d/30-input.conf`
@@ -59,6 +60,21 @@ The user override include is always loaded last:
 - `~/.config/hypr/shell-overrides/<wmShell>/user-overrides.conf`
 
 This split avoids cross-shell collisions and keeps sections readable and easier to diff.
+
+## Session Environment
+
+Hyprland now generates two environment entrypoints from the same declarative source:
+
+- `~/.config/hypr/conf.d/05-env.conf`
+- `~/.config/uwsm/env` (when `settings.hyprland.useUWSM = true`)
+
+Source-of-truth:
+
+- `settings.hyprland.sessionEnv.qtPlatformTheme`
+- `settings.hyprland.sessionEnv.app2unitSlices`
+- `settings.hyprland.sessionEnv.extra`
+
+The module also imports these variables into the systemd user manager during session startup so `app2unit`/D-Bus launched apps inherit the same toolkit/backend environment as direct Hyprland launches.
 
 For the active incident/runbook around Caelestia keybind regressions (`upstream-dev` runtime + greetd variants), see:
 
