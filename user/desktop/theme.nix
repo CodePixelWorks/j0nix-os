@@ -230,6 +230,7 @@ in
   home.sessionVariables = lib.optionalAttrs iconThemeEnabled {
     XDG_ICON_THEME = iconThemeName;
     GTK_ICON_THEME = iconThemeName;
+    GTK_THEME = gtkThemeName;
     QT_ICON_THEME_NAME = iconThemeName;
   };
 
