@@ -2,10 +2,17 @@
 let
   hyprlandCfg = settings.hyprland or { };
   sessionEnvCfg = hyprlandCfg.sessionEnv or { };
+  caelestiaThemeCfg = ((settings.programs or { }).caelestia or { }).theme or { };
   platformTheme = sessionEnvCfg.qtPlatformTheme or null;
   hasValue = value: value != null && value != "";
   resolvedPlatformTheme =
     if platformTheme == "qtengine" then "hyprqt6engine" else platformTheme;
+  qtScheme = caelestiaThemeCfg.scheme or (settings.theme or "catppuccin");
+  qtFlavour = caelestiaThemeCfg.flavour or "mocha";
+  useCatppuccinKvantum =
+    resolvedPlatformTheme == "hyprqt6engine"
+    && qtScheme == "catppuccin"
+    && qtFlavour == "mocha";
 
   qtThemePackage =
     if resolvedPlatformTheme == null then
@@ -18,22 +25,48 @@ let
       if pkgs ? qt5ct then pkgs.qt5ct else null
     else
       null;
+  qtStyleOverride =
+    if useCatppuccinKvantum then
+      "kvantum"
+    else if resolvedPlatformTheme == "hyprqt6engine" then
+      "Fusion"
+    else
+      null;
+  qtExtraPackages = lib.optionals useCatppuccinKvantum [
+    pkgs.qt6Packages.qtstyleplugin-kvantum
+    pkgs.libsForQt5.qtstyleplugin-kvantum
+    (pkgs.catppuccin-kvantum.override {
+      accent = "mauve";
+      variant = "mocha";
+    })
+  ];
 in
 {
-  j0nix.user.software.packages = lib.optional (qtThemePackage != null) qtThemePackage;
+  j0nix.user.software.packages =
+    lib.optional (qtThemePackage != null) qtThemePackage
+    ++ qtExtraPackages;
 
   home.sessionVariables = lib.optionalAttrs (hasValue resolvedPlatformTheme) {
     QT_QPA_PLATFORMTHEME = resolvedPlatformTheme;
-  } // lib.optionalAttrs (resolvedPlatformTheme == "hyprqt6engine") {
-    QT_STYLE_OVERRIDE = "Fusion";
+  } // lib.optionalAttrs (hasValue qtStyleOverride) {
+    QT_STYLE_OVERRIDE = qtStyleOverride;
+  } // lib.optionalAttrs useCatppuccinKvantum {
+    KVANTUM_THEME = "catppuccin-mocha-mauve";
   };
 
   xdg.configFile."hypr/hyprqt6engine.conf" = lib.mkIf (resolvedPlatformTheme == "hyprqt6engine") {
     text = ''
       theme {
         icon_theme=${settings.iconTheme.name or ""}
-        style=Fusion
+        style=${if qtStyleOverride != null then qtStyleOverride else "Fusion"}
       }
+    '';
+  };
+
+  xdg.configFile."Kvantum/kvantum.kvconfig" = lib.mkIf useCatppuccinKvantum {
+    text = ''
+      [General]
+      theme=catppuccin-mocha-mauve
     '';
   };
 
