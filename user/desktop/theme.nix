@@ -32,7 +32,7 @@ let
   useCatppuccinGtk = gtkScheme == "catppuccin" && gtkFlavour == "mocha" && darkGtk;
   gtkThemeName =
     if useCatppuccinGtk then
-      "Catppuccin-Mauve-Dark-Compact"
+      "Catppuccin-GTK-Mauve-Dark-Compact"
     else if darkGtk then
       "Adwaita-dark"
     else
