@@ -6,7 +6,12 @@ let
 in
 {
   config = lib.mkIf enabled {
-    services.flatpak.enable = provider == "flatpak";
+    j0nix.desktop.apps.flatpak.entries = [
+      {
+        appId = "com.hamrick.VueScan";
+        remote = "flathub";
+      }
+    ];
 
     assertions = [
       {
