@@ -290,6 +290,10 @@ let
     services = {
       smartScheme = smartSchemeEnabled;
     };
+    theme = {
+      enableGtk = false;
+      enableQt = false;
+    };
   } // lib.optionalAttrs (configuredWallpaperDir != null && configuredWallpaperDir != "") {
     paths = {
       wallpaperDir = configuredWallpaperDir;
@@ -945,6 +949,9 @@ EOF
                 | .reboot = ["system-reboot-safe"]
               )
             | .services = ((.services // {}) | .smartScheme = ${if smartSchemeEnabled then "true" else "false"})
+            | .theme = (.theme // {})
+            | .theme.enableGtk = false
+            | .theme.enableQt = false
             | .appearance = (.appearance // {})
             | .appearance.font = (.appearance.font // {})
             | .appearance.font.family = (.appearance.font.family // {})
