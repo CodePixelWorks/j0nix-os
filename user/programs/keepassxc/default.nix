@@ -79,11 +79,64 @@ let
   sshAgentCfg = ((settings.dev or { }).ssh or { }).agent or { };
   keyringSupported = (keyringCfg.enable or false) || ((sshAgentCfg.provider or "openssh") == "gnome-keyring");
 
+  launchScript = pkgs.writeShellScriptBin "keepassxc-launch" ''
+    set -eu
+
+    db_path=${lib.escapeShellArg (if databasePath != null then databasePath else "")}
+
+    if [ "${if autoUnlockMode == "strict" then "1" else "0"}" = "1" ]; then
+      exec ${keepassxcBin} ${lib.optionalString effectiveStartMinimized "--minimized"}
+    fi
+
+    if [ -z "$db_path" ]; then
+      echo "warning: keepassxc.databasePath is unset; falling back to plain KeepassXC startup" >&2
+      exec ${keepassxcBin} ${lib.optionalString effectiveStartMinimized "--minimized"}
+    fi
+
+    base_args=()
+    if [ "${if effectiveStartMinimized then "1" else "0"}" = "1" ]; then
+      base_args+=(--minimized)
+    fi
+    if [ "${if keyFileSecretPath != null then "1" else "0"}" = "1" ]; then
+      base_args+=(--keyfile ${lib.escapeShellArg keyFilePath})
+    fi
+    base_args+=("$db_path")
+
+    if [ "${if autoUnlockMode == "balanced" then "1" else "0"}" = "1" ]; then
+      exec ${keepassxcBin} "''${base_args[@]}"
+    fi
+
+    if [ "${if autoUnlockMode == "convenient" then "1" else "0"}" = "1" ]; then
+      db_password="$(${pkgs.libsecret}/bin/secret-tool lookup application keepassxc entry ${lib.escapeShellArg keyringEntry} 2>/dev/null || true)"
+      if [ -z "$db_password" ]; then
+        echo "warning: missing keyring entry for ${keyringEntry}; falling back to balanced mode" >&2
+        exec ${keepassxcBin} "''${base_args[@]}"
+      fi
+      printf '%s\n' "$db_password" | exec ${keepassxcBin} --pw-stdin "''${base_args[@]}"
+    fi
+
+    if [ "${if autoUnlockMode == "full-auto" then "1" else "0"}" = "1" ]; then
+      db_password="$(${pkgs.libsecret}/bin/secret-tool lookup application keepassxc entry ${lib.escapeShellArg keyringEntry} 2>/dev/null || true)"
+      if [ -z "$db_password" ]; then
+        db_password="$(tr -d '\n' < ${lib.escapeShellArg (if passwordSecretPath != null then passwordSecretPath else "")})"
+      fi
+      if [ -z "$db_password" ]; then
+        echo "warning: empty keepass password secret; falling back to balanced mode" >&2
+        exec ${keepassxcBin} "''${base_args[@]}"
+      fi
+      if [ "${if keyringSupported then "1" else "0"}" = "1" ]; then
+        printf '%s' "$db_password" | ${pkgs.libsecret}/bin/secret-tool store --label ${lib.escapeShellArg "KeePassXC ${keyringEntry}"} application keepassxc entry ${lib.escapeShellArg keyringEntry} >/dev/null 2>&1 || true
+      fi
+      printf '%s\n' "$db_password" | exec ${keepassxcBin} --pw-stdin "''${base_args[@]}"
+    fi
+
+    exec ${keepassxcBin} "''${base_args[@]}"
+  '';
+
   startupScript = pkgs.writeShellScriptBin "keepassxc-startup" ''
     set -eu
 
     export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
-    db_path=${lib.escapeShellArg (if databasePath != null then databasePath else "")}
     keepass_client_filter='
       .[]
       | select(
@@ -111,68 +164,6 @@ let
       exit 0
     fi
 
-    launch_keepassxc() {
-      if [ "${if autoUnlockMode == "strict" then "1" else "0"}" = "1" ]; then
-        exec ${keepassxcBin} ${lib.optionalString effectiveStartMinimized "--minimized"}
-      fi
-
-      if [ -z "$db_path" ]; then
-        echo "warning: keepassxc.databasePath is unset; falling back to plain KeepassXC startup" >&2
-        exec ${keepassxcBin} ${lib.optionalString effectiveStartMinimized "--minimized"}
-      fi
-
-      base_args=()
-      if [ "${if effectiveStartMinimized then "1" else "0"}" = "1" ]; then
-        base_args+=(--minimized)
-      fi
-      if [ "${if keyFileSecretPath != null then "1" else "0"}" = "1" ]; then
-        base_args+=(--keyfile ${lib.escapeShellArg keyFilePath})
-      fi
-      base_args+=("$db_path")
-
-      if [ "${if autoUnlockMode == "balanced" then "1" else "0"}" = "1" ]; then
-        exec ${keepassxcBin} "''${base_args[@]}"
-      fi
-
-      if [ "${if autoUnlockMode == "convenient" then "1" else "0"}" = "1" ]; then
-        db_password="$(${pkgs.libsecret}/bin/secret-tool lookup application keepassxc entry ${lib.escapeShellArg keyringEntry} 2>/dev/null || true)"
-        if [ -z "$db_password" ]; then
-          echo "warning: missing keyring entry for ${keyringEntry}; falling back to balanced mode" >&2
-          exec ${keepassxcBin} "''${base_args[@]}"
-        fi
-        printf '%s\n' "$db_password" | exec ${keepassxcBin} --pw-stdin "''${base_args[@]}"
-      fi
-
-      if [ "${if autoUnlockMode == "full-auto" then "1" else "0"}" = "1" ]; then
-        db_password="$(${pkgs.libsecret}/bin/secret-tool lookup application keepassxc entry ${lib.escapeShellArg keyringEntry} 2>/dev/null || true)"
-        if [ -z "$db_password" ]; then
-          db_password="$(tr -d '\n' < ${lib.escapeShellArg (if passwordSecretPath != null then passwordSecretPath else "")})"
-        fi
-        if [ -z "$db_password" ]; then
-          echo "warning: empty keepass password secret; falling back to balanced mode" >&2
-          exec ${keepassxcBin} "''${base_args[@]}"
-        fi
-        if [ "${if keyringSupported then "1" else "0"}" = "1" ]; then
-          printf '%s' "$db_password" | ${pkgs.libsecret}/bin/secret-tool store --label ${lib.escapeShellArg "KeePassXC ${keyringEntry}"} application keepassxc entry ${lib.escapeShellArg keyringEntry} >/dev/null 2>&1 || true
-        fi
-        printf '%s\n' "$db_password" | exec ${keepassxcBin} --pw-stdin "''${base_args[@]}"
-      fi
-
-      exec ${keepassxcBin} "''${base_args[@]}"
-    }
-
-    if [ "${if workspaceUsesSpecial then "1" else "0"}" = "1" ]; then
-      (
-        for _ in $(seq 1 80); do
-          if ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e "$keepass_client_filter" >/dev/null 2>&1; then
-            ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspacesilent "special:${workspaceName}" >/dev/null 2>&1 || true
-            exit 0
-          fi
-          sleep 0.1
-        done
-      ) &
-    fi
-
     if [ "${if workspaceUsesMinimizer && minimizerEnabled then "1" else "0"}" = "1" ]; then
       (
         for _ in $(seq 1 50); do
@@ -191,7 +182,11 @@ let
       ) &
     fi
 
-    launch_keepassxc
+    if [ "${if workspaceUsesSpecial then "1" else "0"}" = "1" ] && [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+      exec ${pkgs.hyprland}/bin/hyprctl dispatch exec "[workspace special:${workspaceName} silent] ${lib.getExe launchScript}"
+    fi
+
+    exec ${lib.getExe launchScript}
   '';
 
   toggleScript = pkgs.writeShellScriptBin "keepassxc-toggle" ''
@@ -369,6 +364,7 @@ lib.mkIf enabled {
   j0nix.user.software.packages = [
     pkgs.keepassxc
     pkgs.libsecret
+    launchScript
     startupScript
     toggleScript
     doctorScript
