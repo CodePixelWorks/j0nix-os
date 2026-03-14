@@ -13,6 +13,7 @@
         gparted-j0nix = final.callPackage ./system/software/pkgs/storage/gparted-j0nix.nix {
           gparted = prev.gparted;
         };
+        hyprqt6engine = final.callPackage ./system/software/pkgs/qt/hyprqt6engine.nix { };
         mauiman4 = final.callPackage ./system/software/pkgs/maui/mauiman4.nix { };
         mauikit4 = final.callPackage ./system/software/pkgs/maui/mauikit4.nix { };
         qmlgreet = final.callPackage ./system/software/pkgs/greetd/qmlgreet.nix { };
