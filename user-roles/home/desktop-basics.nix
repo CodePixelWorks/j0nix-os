@@ -7,6 +7,7 @@ let
     (pkgs.loupe or null)
     (pkgs.gnome-calculator or null)
     (pkgs.gparted-j0nix or pkgs.gparted or null)
+    (pkgs.nwg-look or null)
     (pkgs.pavucontrol or null)
   ];
 in
