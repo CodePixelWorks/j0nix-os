@@ -53,10 +53,10 @@ let
       providedSessions = [ "hyprland-uwsm" ];
     };
   });
-  blackDonWallpapers = pkgs.stdenvNoCC.mkDerivation {
-    pname = "black-don-wallpapers";
+  repoWallpapers = pkgs.stdenvNoCC.mkDerivation {
+    pname = "j0nix-wallpapers";
     version = "1.0.0";
-    src = ../../wallpapers/black-don;
+    src = ../../wallpapers;
     dontBuild = true;
     installPhase = ''
       mkdir -p "$out/share/wallpapers"
@@ -223,7 +223,7 @@ in {
     brightnessctl
     bibata-cursors
     btop
-    blackDonWallpapers
+    repoWallpapers
   ] ++ lib.optional (useDankMaterialShell && hasDmsPackage) dmsPackage;
 
   environment.sessionVariables = {
