@@ -312,10 +312,36 @@ in
         || "$systemctl_bin" suspend-then-hibernate
     '')
     (writeShellScriptBin "system-reboot-safe" ''
-      "${pkgs.systemd}/bin/loginctl" reboot || "${pkgs.systemd}/bin/systemctl" reboot
+      loginctl_bin="${pkgs.systemd}/bin/loginctl"
+      systemctl_bin="${pkgs.systemd}/bin/systemctl"
+
+      "$systemctl_bin" --user stop graphical-session.target >/dev/null 2>&1 || true
+      "$systemctl_bin" --user stop \
+        xdg-desktop-portal.service \
+        xdg-desktop-portal-gtk.service \
+        xdg-desktop-portal-hyprland.service \
+        xdg-document-portal.service \
+        gvfs-daemon.service \
+        gvfs-daemon-fuse.service >/dev/null 2>&1 || true
+      sleep 1
+
+      "$loginctl_bin" reboot || "$systemctl_bin" reboot
     '')
     (writeShellScriptBin "system-poweroff-safe" ''
-      "${pkgs.systemd}/bin/loginctl" poweroff || "${pkgs.systemd}/bin/systemctl" poweroff
+      loginctl_bin="${pkgs.systemd}/bin/loginctl"
+      systemctl_bin="${pkgs.systemd}/bin/systemctl"
+
+      "$systemctl_bin" --user stop graphical-session.target >/dev/null 2>&1 || true
+      "$systemctl_bin" --user stop \
+        xdg-desktop-portal.service \
+        xdg-desktop-portal-gtk.service \
+        xdg-desktop-portal-hyprland.service \
+        xdg-document-portal.service \
+        gvfs-daemon.service \
+        gvfs-daemon-fuse.service >/dev/null 2>&1 || true
+      sleep 1
+
+      "$loginctl_bin" poweroff || "$systemctl_bin" poweroff
     '')
     (writeShellScriptBin "wm-shell-stop" ''
       export PATH="${shellPath}:$PATH"
