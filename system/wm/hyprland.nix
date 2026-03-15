@@ -330,6 +330,27 @@ in {
 
   environment.etc."qmlgreet/hyprland.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet" && regreetCompositor == "hyprland") {
     text = ''
+      general {
+        gaps_in = 0
+        gaps_out = 0
+        border_size = 0
+      }
+
+      decoration {
+        rounding = 0
+        active_opacity = 0.97
+        inactive_opacity = 0.97
+        fullscreen_opacity = 0.97
+
+        blur {
+          enabled = true
+          size = 8
+          passes = 2
+        }
+      }
+
+      windowrule = noborder 1, class:^(qmlgreet)$
+
       misc {
         disable_hyprland_logo = true
         disable_splash_rendering = true
