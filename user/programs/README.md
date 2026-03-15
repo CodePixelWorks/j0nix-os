@@ -17,6 +17,14 @@ Common user program configs shared across shells/WMs.
 
 Program toggles should be wired through `settings.programs.*`.
 
+`AAGL GTK on Nix` is configured via `settings.programs.aagl.*` and imports the upstream NixOS module from `ezKEa/aagl-gtk-on-nix`. The j0nix contract controls whether the launcher bundle is enabled at all and which launcher frontends are installed:
+- `animeGame`
+- `animeGames`
+- `honkers`
+- `honkersRailway`
+- `sleepy`
+- `wavey`
+
 `Element Desktop` (Matrix client) is configured via `settings.userSettings.<name>.programs.elementDesktop.*` and supports:
 - declarative package installation
 - a managed `~/.config/Element/config.json`
