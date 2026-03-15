@@ -44,15 +44,8 @@ let
     else
       qmlgreetColorSchemePath;
   qmlgreetBackgroundImage = qmlgreetSettings.backgroundImage or null;
-  qmlgreetManagedBackgroundRelPath =
-    if qmlgreetBackgroundImage != null && builtins.isPath qmlgreetBackgroundImage then
-      "qmlgreet/backgrounds/${builtins.baseNameOf (toString qmlgreetBackgroundImage)}"
-    else
-      null;
   qmlgreetWallpaperPath =
-    if qmlgreetManagedBackgroundRelPath != null then
-      "/etc/${qmlgreetManagedBackgroundRelPath}"
-    else if qmlgreetBackgroundImage != null then
+    if qmlgreetBackgroundImage != null then
       toString qmlgreetBackgroundImage
     else
       (((settings.dms or { }).wallpaper or { }).wallpaperPath or "");
@@ -79,17 +72,6 @@ let
       providedSessions = [ "hyprland-uwsm" ];
     };
   });
-  repoWallpapers = pkgs.stdenvNoCC.mkDerivation {
-    pname = "j0nix-wallpapers";
-    version = "1.0.0";
-    src = ../../wallpapers;
-    dontBuild = true;
-    installPhase = ''
-      mkdir -p "$out/share/wallpapers"
-      cp -r "$src"/. "$out/share/wallpapers/"
-    '';
-  };
-
   cursorTheme = "Bibata-Modern-Classic";
   cursorSize = 24;
 
@@ -253,7 +235,7 @@ in {
     brightnessctl
     bibata-cursors
     btop
-    repoWallpapers
+    pkgs.j0nix-wallpapers
   ] ++ lib.optional (useDankMaterialShell && hasDmsPackage) dmsPackage;
 
   environment.sessionVariables = {
@@ -287,11 +269,6 @@ in {
 
   environment.etc."qmlgreet/QMLGreetDefault.colors" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet") {
     source = "${qmlgreetPackage}/share/qmlgreet/QMLGreetDefault.colors";
-    mode = "0444";
-  };
-
-  environment.etc."${qmlgreetManagedBackgroundRelPath}" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet" && qmlgreetManagedBackgroundRelPath != null) {
-    source = qmlgreetBackgroundImage;
     mode = "0444";
   };
 
