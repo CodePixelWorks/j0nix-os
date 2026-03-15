@@ -14,6 +14,11 @@ Main user-side Hyprland module (`default.nix`) plus shell-specific variants.
 
 Modules under `shells/` are selected per user via `settings.userSettings.<name>.wmShell` (legacy alias: `hyprlandShell`).
 
+Portal routing on Hyprland is intentionally split:
+- `org.freedesktop.impl.portal.ScreenCast` -> `hyprland`
+- `org.freedesktop.impl.portal.FileChooser` -> `gtk`
+- `org.freedesktop.impl.portal.Settings` -> `gtk`
+
 ## Hyprland Rule Syntax Notes (0.53.2+)
 
 - Older window rule syntax is parsed much more strictly.
