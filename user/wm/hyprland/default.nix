@@ -888,11 +888,11 @@ let
   hyprdynamicmonitorsRenderedStartupProfilePath = "hyprdynamicmonitors/hyprconfigs/j0nix-startup.conf";
   hyprdynamicmonitorsConfigText = ''
     [general]
-    destination = ${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath}
+    destination = ${builtins.toJSON hyprlandRuntimeMonitorConfigPath}
     hot_reload = true
 
     [fallback_profile]
-    config_file = ${lib.escapeShellArg "${config.home.homeDirectory}/.config/${hyprdynamicmonitorsRenderedStartupProfilePath}"}
+    config_file = ${builtins.toJSON "${config.home.homeDirectory}/.config/${hyprdynamicmonitorsRenderedStartupProfilePath}"}
     config_file_type = "static"
   '';
   hyprdynamicmonitorsStartupProfileText =
