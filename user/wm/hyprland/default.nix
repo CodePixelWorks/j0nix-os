@@ -424,6 +424,7 @@ let
     outputs_json=${lib.escapeShellArg toggleableOutputsJson}
     bindings_json=${lib.escapeShellArg outputBindingsJson}
     headless_outputs_json=${lib.escapeShellArg headlessOutputsJson}
+    runtime_config_path=${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath}
     runtime_dir="''${XDG_RUNTIME_DIR:-}"
     if [ -n "$runtime_dir" ] && [ -d "$runtime_dir" ] && [ -w "$runtime_dir" ]; then
       state_dir="$runtime_dir/hyprland-monitor-state"
@@ -684,6 +685,37 @@ let
           done
     }
 
+    sync_runtime_monitor_overrides() {
+      local tmp_file monitor_line
+
+      mkdir -p "$(dirname "$runtime_config_path")"
+      tmp_file="$(mktemp "$state_dir/runtime-monitors.XXXXXX")"
+      {
+        echo "# ------------------------------------------------------------------"
+        echo "# Runtime Monitor Overrides"
+        echo "# ------------------------------------------------------------------"
+        echo "# Managed by wm-monitor. This file intentionally persists the current"
+        echo "# toggleable output state across Hyprland reloads."
+        "$jq_bin" -c '.[]' "$outputs_json" | while IFS= read -r output; do
+          name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
+          mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
+          position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "auto"')"
+          scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
+
+          [ -n "$name" ] || continue
+
+          if output_is_active "$name"; then
+            monitor_line="''${name},''${mode},''${position},''${scale}"
+          else
+            monitor_line="''${name},disable"
+          fi
+
+          printf 'monitor = %s\n' "$monitor_line"
+        done
+      } >"$tmp_file"
+      mv -f "$tmp_file" "$runtime_config_path"
+    }
+
     run_config_tool() {
       case ${lib.escapeShellArg defaultMonitorTool} in
         hyprdynamicmonitors)
@@ -732,9 +764,11 @@ let
     case "$command" in
       on)
         enable_output "$output_json" "$output_name" "$prefix"
+        sync_runtime_monitor_overrides
         ;;
       off)
         disable_output "$output_json" "$output_name" "$prefix"
+        sync_runtime_monitor_overrides
         ;;
       toggle)
         if output_is_active "$output_name"; then
@@ -742,9 +776,11 @@ let
         else
           enable_output "$output_json" "$output_name" "$prefix"
         fi
+        sync_runtime_monitor_overrides
         ;;
       restore)
         restore_output_state "$output_json" "$output_name" "$prefix"
+        sync_runtime_monitor_overrides
         ;;
       status)
         monitor_status "$output_json" "$output_name" "$prefix"
@@ -765,6 +801,21 @@ let
   monitorWorkspaceToScript = pkgs.writeShellScriptBin "wm-monitor-workspace-to" ''exec ${lib.getExe monitorStateScript} workspace-to "$@"'';
   monitorFocusedWorkspacesToScript = pkgs.writeShellScriptBin "wm-monitor-focused-workspaces-to" ''exec ${lib.getExe monitorStateScript} focused-workspaces-to "$@"'';
   monitorListScript = pkgs.writeShellScriptBin "wm-monitor-list" ''exec ${lib.getExe monitorStateScript} list "$@"'';
+  monitorDebugScript = pkgs.writeShellScriptBin "wm-monitor-debug" ''
+    set -eu
+
+    echo "== Hyprland monitors (all) =="
+    ${hyprctlExec} -j monitors all || true
+    echo
+    echo "== Startup monitor defaults =="
+    cat ${lib.escapeShellArg "${config.home.homeDirectory}/.config/hypr/conf.d/10-monitors.conf"} || true
+    echo
+    echo "== Runtime monitor overrides =="
+    cat ${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath} || true
+    echo
+    echo "== hyprdynamicmonitors config =="
+    cat ${lib.escapeShellArg "${config.home.homeDirectory}/.config/${hyprdynamicmonitorsConfigPath}"} || true
+  '';
   monitorConfigScript = pkgs.writeShellScriptBin "wm-monitor-config" ''
     case ${lib.escapeShellArg defaultMonitorTool} in
       hyprdynamicmonitors)
@@ -933,6 +984,7 @@ in {
     monitorWorkspaceToScript
     monitorFocusedWorkspacesToScript
     monitorListScript
+    monitorDebugScript
     monitorConfigScript
     monitorConfigTuiScript
     monitorConfigGuiScript

@@ -197,6 +197,7 @@ Current default TV setup:
 Runtime commands:
 
 - `wm-monitor-list`
+- `wm-monitor-debug`
 - `wm-monitor-toggle DP-3`
 - `wm-monitor-on DP-3`
 - `wm-monitor-off DP-3`
@@ -206,6 +207,8 @@ Runtime commands:
 - `wm-monitor-focused-workspaces-to DP-3`
 
 The toggle layer saves the output's workspace/focus state before disabling it, moves those workspaces onto the configured fallback monitor, and restores them when the output comes back. The same workspace handoff logic is also exposed through the numeric `SUPER+ALT+<number>` and `SUPER+CTRL+ALT+<number>` monitor binds. The “move all” variant only targets normal numbered workspaces (`id > 0`) and leaves special workspaces alone.
+
+Manual `wm-monitor-*` actions also rewrite `11-runtime-monitors.conf`, so the currently chosen monitor state survives later Hyprland config reloads instead of snapping back to the startup defaults.
 
 Initial output states are now expressed in two layers:
 
