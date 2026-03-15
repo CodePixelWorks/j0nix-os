@@ -18,6 +18,7 @@ Portal routing on Hyprland is intentionally split:
 - `org.freedesktop.impl.portal.ScreenCast` -> `hyprland`
 - `org.freedesktop.impl.portal.FileChooser` -> `gtk`
 - `org.freedesktop.impl.portal.Settings` -> `gtk`
+- `org.freedesktop.impl.portal.Secret` -> `gnome-keyring`
 
 ## Hyprland Rule Syntax Notes (0.53.2+)
 
