@@ -51,6 +51,7 @@
     "match:class ^(nwg-look)$, float 1, size 50% 60%, center 1"
     "match:class ^(wineboot\\.exe)$, match:title ^(Wine)$, float 1, center 1"
     "match:class ^(naps2)$, match:title negative:^NAPS2.*, float 1, center 1"
+    "match:class ^(app\\.twintaillauncher\\.ttl)$, float 1, center 1"
     # Browser child windows use the same class as the main window, so match the
     # common utility/dialog titles explicitly instead of floating the browser itself.
     "match:class ^(firefox|org\\.mozilla\\.firefox|LibreWolf|librewolf|google-chrome|google-chrome-beta|chromium|chromium-browser|brave-browser)$, match:title ^(Library|Downloads|Page Info|Bookmarks Manager|Extension Manager|Extensions|Add-ons Manager|Task Manager|Clear browsing data|Import bookmarks and settings|Choose Profile|Create Profile|About Mozilla Firefox|About Google Chrome|About Chromium|About Brave|Firefox Settings|Chrome Settings|Chromium Settings|Brave Settings)( .*)?$, float 1, center 1"
