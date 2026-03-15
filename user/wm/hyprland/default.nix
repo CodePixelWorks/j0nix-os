@@ -424,21 +424,38 @@ let
     [ -x "$hyprctl_bin" ] || exit 0
     [ -x "$jq_bin" ] || exit 0
 
-    "$jq_bin" -c '.[]' "$outputs_json" | while IFS= read -r output; do
-      name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
-      enabled_by_default="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
-      mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
-      position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "auto"')"
-      scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
-
-      [ -n "$name" ] || continue
-
-      if [ "$enabled_by_default" = "1" ]; then
-        "$hyprctl_bin" keyword monitor "$name,$mode,$position,$scale" >/dev/null 2>&1 || true
-      else
-        "$hyprctl_bin" keyword monitor "$name,disable" >/dev/null 2>&1 || true
+    wait_attempt=0
+    while [ "$wait_attempt" -lt 20 ]; do
+      if "$hyprctl_bin" -j monitors >/dev/null 2>&1; then
+        break
       fi
+      wait_attempt=$((wait_attempt + 1))
+      sleep 1
     done
+
+    apply_defaults() {
+      "$jq_bin" -c '.[]' "$outputs_json" | while IFS= read -r output; do
+        name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
+        enabled_by_default="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
+        mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
+        position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "auto"')"
+        scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
+
+        [ -n "$name" ] || continue
+
+        if [ "$enabled_by_default" = "1" ]; then
+          "$hyprctl_bin" keyword monitor "$name,$mode,$position,$scale" >/dev/null 2>&1 || true
+        else
+          "$hyprctl_bin" keyword monitor "$name,disable" >/dev/null 2>&1 || true
+        fi
+      done
+    }
+
+    apply_defaults
+    sleep 1
+    apply_defaults
+    sleep 2
+    apply_defaults
   '';
   monitorStateScript = pkgs.writeShellScriptBin "wm-monitor" ''
     set -eu
