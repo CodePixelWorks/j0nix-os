@@ -524,12 +524,10 @@ in {
 
         blur {
           enabled = true
-          size = 8
-          passes = 2
+          size = 2
+          passes = 1
         }
       }
-
-      windowrule = noborder, class:^(qmlgreet)$
 
       misc {
         disable_hyprland_logo = true
