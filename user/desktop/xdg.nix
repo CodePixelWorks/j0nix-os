@@ -1,4 +1,4 @@
-{ config, lib, settings, ... }:
+{ config, lib, pkgs, settings, ... }:
 let
   configuredFileManagersRaw =
     settings.fileManagers
@@ -53,6 +53,34 @@ let
     type = "Application";
     exec = "false";
   });
+  flatpakRefInstallScript = pkgs.writeShellScriptBin "flatpakref-install" ''
+    set -eu
+
+    if [ "$#" -lt 1 ]; then
+      echo "usage: flatpakref-install <url-or-file>" >&2
+      exit 2
+    fi
+
+    target="$1"
+    case "$target" in
+      flatpak+https://*)
+        target="https://''${target#flatpak+https://}"
+        ;;
+      flatpak+http://*)
+        target="http://''${target#flatpak+http://}"
+        ;;
+    esac
+
+    status=0
+    ${pkgs.flatpak}/bin/flatpak install --user --from "$target" || status=$?
+    printf '\nPress Enter to close...'
+    read -r _ || true
+    exit "$status"
+  '';
+  flatpakRefHandlerScript = pkgs.writeShellScriptBin "flatpakref-handler" ''
+    set -eu
+    exec ${lib.getExe pkgs.xdg-terminal-exec} ${lib.getExe flatpakRefInstallScript} "$@"
+  '';
 in
 {
   xdg.enable = true;
@@ -61,7 +89,12 @@ in
     defaultApplications = {
       "x-scheme-handler/http" = [ "chromium.desktop" ];
       "x-scheme-handler/https" = [ "chromium.desktop" ];
+      "x-scheme-handler/flatpak+http" = [ "j0nix-flatpakref-handler.desktop" ];
+      "x-scheme-handler/flatpak+https" = [ "j0nix-flatpakref-handler.desktop" ];
       "text/html" = [ "chromium.desktop" ];
+      "application/vnd.flatpak" = [ "j0nix-flatpakref-handler.desktop" ];
+      "application/vnd.flatpak.ref" = [ "j0nix-flatpakref-handler.desktop" ];
+      "application/vnd.flatpak.repo" = [ "j0nix-flatpakref-handler.desktop" ];
       "application/pdf" = [
         "org.kde.okular.desktop"
         "okularApplication_pdf.desktop"
@@ -87,7 +120,22 @@ in
       BOOK = "${config.home.homeDirectory}/Media/Books";
     };
   };
-  xdg.desktopEntries = kritaMimeHelperOverrides;
+  xdg.desktopEntries = kritaMimeHelperOverrides // {
+    j0nix-flatpakref-handler = {
+      name = "Flatpak Ref Installer";
+      noDisplay = true;
+      terminal = false;
+      type = "Application";
+      exec = "${lib.getExe flatpakRefHandlerScript} %u";
+      mimeType = [
+        "x-scheme-handler/flatpak+http"
+        "x-scheme-handler/flatpak+https"
+        "application/vnd.flatpak"
+        "application/vnd.flatpak.ref"
+        "application/vnd.flatpak.repo"
+      ];
+    };
+  };
 
   assertions = [
     {
