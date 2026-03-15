@@ -8,10 +8,8 @@ let
   drivers = settings.drivers or { };
   nvidia = drivers.nvidia or { };
   nvidiaEnabled = nvidia.enable or false;
-  sysctlProfiles = settings.sysctlProfiles or { };
-  sysctlGaming = sysctlProfiles.gaming or { };
-  expectedVmMaxMapCount = sysctlGaming.vmMaxMapCount or 2147483642;
-  expectedSwappiness = sysctlGaming.swappiness or 10;
+  expectedVmMaxMapCount = 2147483642;
+  expectedSwappiness = 10;
   proton = gaming.proton or { };
   protonProvider = proton.provider or "ge";
   protonCachyos = proton.cachyos or { };
