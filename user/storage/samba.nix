@@ -154,7 +154,9 @@ let
       set -eu
       export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
       if mountpoint -q ${lib.escapeShellArg mountPath}; then
-        ${fuseUnmountBin} -u ${lib.escapeShellArg mountPath} || true
+        ${fuseUnmountBin} -uz ${lib.escapeShellArg mountPath} >/dev/null 2>&1 \
+          || ${pkgs.util-linux}/bin/umount -l ${lib.escapeShellArg mountPath} >/dev/null 2>&1 \
+          || true
       fi
       rm -f "$XDG_RUNTIME_DIR/rclone-smb-${shareNameOf share}.conf"
     '';
