@@ -6,6 +6,8 @@ in
   config = lib.mkIf config.security.polkit.enable {
     # Allow local wheel users to trigger logind power actions without requiring
     # an interactive polkit prompt from the desktop shell.
+    services.logind.settings.Login.KillUserProcesses = true;
+
     j0nix.desktop.security.polkit.extraConfigSnippets = [
       polkitRules.mkLoginPowerWheelRule
     ];
