@@ -190,6 +190,12 @@ let
       fi
       ${lib.concatStringsSep "\n" (lib.mapAttrsToList loadKey sshKeysWithPassphrases)}
     '';
+  guiSshAskpass = lib.getExe' pkgs.wayprompt "wayprompt-ssh-askpass";
+  sshAddGuiScript = pkgs.writeShellScriptBin "ssh-add-gui" ''
+    set -eu
+    exec env SSH_ASKPASS='${guiSshAskpass}' SSH_ASKPASS_REQUIRE=force \
+      ${pkgs.util-linux}/bin/setsid -w ${pkgs.openssh}/bin/ssh-add "$@" < /dev/null
+  '';
 in
 {
   imports = [
@@ -220,8 +226,6 @@ in
     home.sessionVariables =
       lib.optionalAttrs (sshEnabled && sshAgentProvider == "gnome-keyring") {
         SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/gcr/ssh";
-        SSH_ASKPASS = "${lib.getExe' pkgs.wayprompt "wayprompt-ssh-askpass"}";
-        SUDO_ASKPASS = "${lib.getExe' pkgs.wayprompt "wayprompt-ssh-askpass"}";
       };
 
     programs.ssh = lib.mkIf sshEnabled {
@@ -270,6 +274,7 @@ in
         deadnix
         wayprompt
       ])
+      ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring") [ sshAddGuiScript ]
       ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { }) [
         loadSecretBackedSshKeysScript
       ];
