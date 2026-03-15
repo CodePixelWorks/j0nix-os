@@ -1069,6 +1069,9 @@ EOF
     }
     // {
       "hypr/hyprland.conf".force = true;
+      "hypr/conf.d/11-runtime-monitors.conf" =
+        (hyprlandFragmentFiles."hypr/conf.d/11-runtime-monitors.conf" or { text = ""; })
+        // { force = true; };
       "${hyprdynamicmonitorsConfigPath}".text = hyprdynamicmonitorsConfigText;
       "${hyprdynamicmonitorsRenderedStartupProfilePath}" = {
         text = hyprdynamicmonitorsStartupProfileText;
