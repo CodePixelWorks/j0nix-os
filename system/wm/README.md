@@ -26,3 +26,14 @@ Display manager and system WM integration.
 - `regreet`
 - `qmlgreet`
 - `dms-greeter` (legacy alias: `darkmaterialshell`)
+
+`qmlgreet` is rendered from the official upstream config shape and controlled via:
+- `settings.greetd.qmlgreet.defaultSession`
+- `settings.greetd.qmlgreet.colorSchemePath`
+- `settings.greetd.qmlgreet.backgroundImage`
+- `settings.greetd.qmlgreet.iconTheme`
+- `settings.greetd.qmlgreet.font`
+- `settings.greetd.qmlgreet.fontSize`
+- `settings.greetd.qmlgreet.showAvatars`
+
+Leave `defaultSession` empty for the most robust behavior; hardcoding a session label is brittle when session display names change.
