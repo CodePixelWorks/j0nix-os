@@ -6,9 +6,9 @@ Performance and kernel/userland tuning modules.
 
 - `default.nix`: tuning entrypoint
 - `thermal.nix`: thermal/fan baseline (governor + hwmon module)
-- `sysctl/`: split sysctl profiles (gaming/dev/custom merge)
+- `sysctl/`: central sysctl collector for role-provided fragments
 
 ## Control
 
-Managed through `settings.sysctlProfiles.*`.
+Sysctls are managed through `j0nix.desktop.sysctl.extraFragments`, typically from `user-roles/system/*`, with `settings.custom.sysctl` reserved for explicit overrides.
 Thermal tuning is managed through `settings.thermal.*`.
