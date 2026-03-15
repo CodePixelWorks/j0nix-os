@@ -41,4 +41,5 @@ Leave `defaultSession` empty for the most robust behavior; hardcoding a session 
 Wallpaper assets should come from the shared system wallpaper package under:
 - `/run/current-system/sw/share/j0nix/wallpapers/...`
 
+The package flattens all repo wallpaper files into that single directory, so consumers should not rely on subdirectories there.
 That keeps the same wallpaper source usable across greeters, Hyprland shells, and other desktop components without copying assets into `/etc`.
