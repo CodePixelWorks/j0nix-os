@@ -424,14 +424,38 @@ let
     [ -x "$hyprctl_bin" ] || exit 0
     [ -x "$jq_bin" ] || exit 0
 
-    wait_attempt=0
-    while [ "$wait_attempt" -lt 20 ]; do
-      if "$hyprctl_bin" -j monitors >/dev/null 2>&1; then
-        break
-      fi
-      wait_attempt=$((wait_attempt + 1))
-      sleep 1
-    done
+    wait_for_hyprland() {
+      wait_attempt=0
+      while [ "$wait_attempt" -lt 30 ]; do
+        if "$hyprctl_bin" -j monitors all >/dev/null 2>&1; then
+          return 0
+        fi
+        wait_attempt=$((wait_attempt + 1))
+        sleep 1
+      done
+      return 1
+    }
+
+    wait_for_monitor_settle() {
+      previous=""
+      stable_count=0
+      wait_attempt=0
+      while [ "$wait_attempt" -lt 30 ]; do
+        current="$("$hyprctl_bin" -j monitors all 2>/dev/null | "$jq_bin" -c 'map(.name // "") | sort')"
+        if [ -n "$current" ] && [ "$current" = "$previous" ] && [ "$current" != "[]" ]; then
+          stable_count=$((stable_count + 1))
+          if [ "$stable_count" -ge 2 ]; then
+            return 0
+          fi
+        else
+          stable_count=0
+          previous="$current"
+        fi
+        wait_attempt=$((wait_attempt + 1))
+        sleep 1
+      done
+      return 1
+    }
 
     apply_defaults() {
       "$jq_bin" -c '.[]' "$outputs_json" | while IFS= read -r output; do
@@ -451,10 +475,8 @@ let
       done
     }
 
-    apply_defaults
-    sleep 1
-    apply_defaults
-    sleep 2
+    wait_for_hyprland || exit 0
+    wait_for_monitor_settle || true
     apply_defaults
   '';
   monitorStateScript = pkgs.writeShellScriptBin "wm-monitor" ''
@@ -856,6 +878,24 @@ let
     ${homeBinDir}/wm-hypr-keybind-dump --phase=login-delayed
   '';
   managedStaticMonitorNames = lib.unique (toggleableOutputNames ++ headlessOutputNames);
+  initialOutputStateToMonitorLine =
+    output:
+      let
+        name = output.name or "";
+        enabledByDefault = output.enabledByDefault or true;
+        mode = output.mode or "preferred";
+        position = output.position or "auto";
+        scale = toString (output.scale or 1);
+      in
+        if enabledByDefault then
+          "${name},${mode},${position},${scale}"
+        else
+          "${name},disable";
+  managedConfigMonitorNames =
+    map (output: output.name or "") (builtins.filter (output: !(builtins.elem (output.name or "") headlessOutputNames)) initialOutputStates);
+  managedConfigMonitorLines =
+    map initialOutputStateToMonitorLine
+      (builtins.filter (output: !(builtins.elem (output.name or "") headlessOutputNames)) initialOutputStates);
   monitorNameFromLine =
     line:
       let
@@ -865,7 +905,7 @@ let
   filteredProfileDetails = profileDetails // {
     hyprlandMonitors =
       builtins.filter
-        (line: !(builtins.elem (monitorNameFromLine line) managedStaticMonitorNames))
+        (line: !(builtins.elem (monitorNameFromLine line) managedConfigMonitorNames))
         (profileDetails.hyprlandMonitors or [ ]);
   };
   hyprlandFragments = import ./config/fragments.nix {
@@ -894,6 +934,7 @@ let
     swwwDaemonCommand = lib.getExe' pkgs.swww "swww-daemon";
     startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
     keybindDiagnosticsStartupCommand = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
+    managedMonitorLines = managedConfigMonitorLines;
   };
   hyprlandFragmentFiles =
     lib.mapAttrs'
