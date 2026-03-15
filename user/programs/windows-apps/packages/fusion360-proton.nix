@@ -138,9 +138,11 @@ let
       fusion360::ensure_dirs() {
         mkdir -p \
           "$FUSION360_BIN_DIR" \
+          "$FUSION360_COMPAT_DIR" \
           "$FUSION360_DOWNLOADS" \
           "$FUSION360_LOGS" \
-          "$FUSION360_INSTALL_ROOT/resources"
+          "$FUSION360_INSTALL_ROOT/resources" \
+          "$(dirname "$FUSION360_WINEPREFIX")"
       }
 
       fusion360::require_prefix_layout() {
