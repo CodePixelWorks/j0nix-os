@@ -38,11 +38,21 @@ let
   qmlgreetPackage = pkgs.qmlgreet;
   qmlgreetSettings = (settings.greetd or { }).qmlgreet or { };
   qmlgreetDefaultSession = qmlgreetSettings.defaultSession or "";
-  qmlgreetColorSchemeFile = qmlgreetSettings.colorSchemePath or qmlgreetColorSchemePath;
+  qmlgreetColorSchemeFile =
+    if (qmlgreetSettings.colorSchemePath or null) != null then
+      qmlgreetSettings.colorSchemePath
+    else
+      qmlgreetColorSchemePath;
   qmlgreetWallpaperPath =
-    qmlgreetSettings.backgroundImage
-    or (((settings.dms or { }).wallpaper or { }).wallpaperPath or "");
-  qmlgreetIconTheme = qmlgreetSettings.iconTheme or ((settings.iconTheme or { }).name or "");
+    if (qmlgreetSettings.backgroundImage or null) != null then
+      qmlgreetSettings.backgroundImage
+    else
+      (((settings.dms or { }).wallpaper or { }).wallpaperPath or "");
+  qmlgreetIconTheme =
+    if (qmlgreetSettings.iconTheme or null) != null then
+      qmlgreetSettings.iconTheme
+    else
+      ((settings.iconTheme or { }).name or "");
   qmlgreetFont = qmlgreetSettings.font or "";
   qmlgreetFontSize = toString (qmlgreetSettings.fontSize or 10);
   qmlgreetShowAvatars = if qmlgreetSettings ? showAvatars then qmlgreetSettings.showAvatars else true;
