@@ -301,7 +301,12 @@ EOF
       fusion360::ensure_proton
       fusion360::ensure_dirs
 
-      if [ -n "$(fusion360::find_fusion_exe || true)" ]; then
+      existing_fusion_exe="$(fusion360::find_fusion_exe || true)"
+      if [ -n "$existing_fusion_exe" ]; then
+        echo "Fusion 360 ist bereits installiert:"
+        echo "  $existing_fusion_exe"
+        echo "Wenn du neu installieren willst, lösche zuerst den bestehenden Prefix unter:"
+        echo "  $FUSION360_INSTALL_ROOT"
         exit 0
       fi
 
