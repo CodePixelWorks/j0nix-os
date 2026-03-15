@@ -235,7 +235,6 @@ in {
     brightnessctl
     bibata-cursors
     btop
-    pkgs.j0nix-wallpapers
   ] ++ lib.optional (useDankMaterialShell && hasDmsPackage) dmsPackage;
 
   environment.sessionVariables = {
