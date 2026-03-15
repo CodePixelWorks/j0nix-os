@@ -33,10 +33,91 @@ let
   regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
   qmlgreetHyprlandConfigPath = "/etc/qmlgreet/hyprland.conf";
   qmlgreetConfigPath = "/etc/qmlgreet/qmlgreet.conf";
-  qmlgreetColorSchemePath = "/etc/qmlgreet/QMLGreetDefault.colors";
+  qmlgreetColorSchemePath = "/etc/qmlgreet/j0nix.colors";
   dmsGreeterHyprConfigPath = "/etc/greetd/hypr.conf";
   qmlgreetPackage = pkgs.qmlgreet;
   qmlgreetSettings = (settings.greetd or { }).qmlgreet or { };
+  caelestiaThemeSettings = ((settings.programs or { }).caelestia or { }).theme or { };
+  qmlgreetMode = settings.colorSchemePreference or (caelestiaThemeSettings.mode or "dark");
+  useCatppuccinMochaForGreeter =
+    (caelestiaThemeSettings.scheme or (settings.theme or "catppuccin")) == "catppuccin"
+    && (caelestiaThemeSettings.flavour or "mocha") == "mocha"
+    && qmlgreetMode != "light";
+  qmlgreetPalette =
+    if useCatppuccinMochaForGreeter then
+      {
+        buttonBg = "49,50,68";
+        buttonAlt = "69,71,90";
+        buttonFg = "205,214,244";
+        viewBg = "30,30,46";
+        viewAlt = "24,24,37";
+        viewFg = "205,214,244";
+        windowBg = "24,24,37";
+        windowAlt = "17,17,27";
+        windowFg = "205,214,244";
+        headerBg = "17,17,27";
+        selectionBg = "203,166,247";
+        selectionAlt = "137,180,250";
+        selectionFg = "17,17,27";
+        tooltipBg = "49,50,68";
+        tooltipAlt = "69,71,90";
+        tooltipFg = "205,214,244";
+        focus = "203,166,247";
+        hover = "137,180,250";
+        active = "137,180,250";
+        inactive = "166,173,200";
+        link = "137,180,250";
+        visited = "180,190,254";
+        negative = "243,139,168";
+        neutral = "249,226,175";
+        positive = "166,227,161";
+        complementaryBg = "17,17,27";
+        complementaryAlt = "24,24,37";
+        complementaryFg = "205,214,244";
+        wmActiveBg = "24,24,37";
+        wmActiveBlend = "24,24,37";
+        wmActiveFg = "205,214,244";
+        wmInactiveBg = "30,30,46";
+        wmInactiveBlend = "30,30,46";
+        wmInactiveFg = "166,173,200";
+      }
+    else
+      {
+        buttonBg = "49,54,59";
+        buttonAlt = "59,64,69";
+        buttonFg = "239,240,241";
+        viewBg = "30,32,36";
+        viewAlt = "36,39,44";
+        viewFg = "239,240,241";
+        windowBg = "24,26,30";
+        windowAlt = "30,32,36";
+        windowFg = "239,240,241";
+        headerBg = "24,26,30";
+        selectionBg = "88,101,242";
+        selectionAlt = "114,135,253";
+        selectionFg = "239,240,241";
+        tooltipBg = "49,54,59";
+        tooltipAlt = "59,64,69";
+        tooltipFg = "239,240,241";
+        focus = "88,101,242";
+        hover = "114,135,253";
+        active = "114,135,253";
+        inactive = "175,176,179";
+        link = "137,180,250";
+        visited = "180,190,254";
+        negative = "243,139,168";
+        neutral = "249,226,175";
+        positive = "166,227,161";
+        complementaryBg = "17,19,22";
+        complementaryAlt = "24,26,30";
+        complementaryFg = "239,240,241";
+        wmActiveBg = "24,26,30";
+        wmActiveBlend = "24,26,30";
+        wmActiveFg = "239,240,241";
+        wmInactiveBg = "30,32,36";
+        wmInactiveBlend = "30,32,36";
+        wmInactiveFg = "175,176,179";
+      };
   qmlgreetDefaultSession = qmlgreetSettings.defaultSession or "";
   qmlgreetColorSchemeFile =
     if (qmlgreetSettings.colorSchemePath or null) != null then
@@ -266,8 +347,131 @@ in {
     mode = "0444";
   };
 
-  environment.etc."qmlgreet/QMLGreetDefault.colors" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet") {
-    source = "${qmlgreetPackage}/share/qmlgreet/QMLGreetDefault.colors";
+  environment.etc."qmlgreet/j0nix.colors" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet") {
+    text = ''
+      [ColorEffects:Disabled]
+      Color=56,56,56
+      ColorAmount=0
+      ColorEffect=0
+      ContrastAmount=0.65
+      ContrastEffect=0
+      IntensityAmount=0.1
+      IntensityEffect=0
+
+      [ColorEffects:Inactive]
+      ChangeSelectionColor=true
+      Color=${qmlgreetPalette.inactive}
+      ColorAmount=-0.95
+      ColorEffect=1
+      ContrastAmount=0.4
+      ContrastEffect=2
+      Enable=true
+      IntensityAmount=0
+      IntensityEffect=0
+
+      [Colors:Button]
+      BackgroundAlternate=${qmlgreetPalette.buttonAlt}
+      BackgroundNormal=${qmlgreetPalette.buttonBg}
+      DecorationFocus=${qmlgreetPalette.focus}
+      DecorationHover=${qmlgreetPalette.hover}
+      ForegroundActive=${qmlgreetPalette.active}
+      ForegroundInactive=${qmlgreetPalette.inactive}
+      ForegroundLink=${qmlgreetPalette.link}
+      ForegroundNegative=${qmlgreetPalette.negative}
+      ForegroundNeutral=${qmlgreetPalette.neutral}
+      ForegroundNormal=${qmlgreetPalette.buttonFg}
+      ForegroundPositive=${qmlgreetPalette.positive}
+      ForegroundVisited=${qmlgreetPalette.visited}
+
+      [Colors:Complementary]
+      BackgroundAlternate=${qmlgreetPalette.complementaryAlt}
+      BackgroundNormal=${qmlgreetPalette.complementaryBg}
+      DecorationFocus=${qmlgreetPalette.focus}
+      DecorationHover=${qmlgreetPalette.hover}
+      ForegroundActive=${qmlgreetPalette.active}
+      ForegroundInactive=${qmlgreetPalette.inactive}
+      ForegroundLink=${qmlgreetPalette.link}
+      ForegroundNegative=${qmlgreetPalette.negative}
+      ForegroundNeutral=${qmlgreetPalette.neutral}
+      ForegroundNormal=${qmlgreetPalette.complementaryFg}
+      ForegroundPositive=${qmlgreetPalette.positive}
+      ForegroundVisited=${qmlgreetPalette.visited}
+
+      [Colors:Header]
+      BackgroundNormal=${qmlgreetPalette.headerBg}
+
+      [Colors:Selection]
+      BackgroundAlternate=${qmlgreetPalette.selectionAlt}
+      BackgroundNormal=${qmlgreetPalette.selectionBg}
+      DecorationFocus=${qmlgreetPalette.focus}
+      DecorationHover=${qmlgreetPalette.hover}
+      ForegroundActive=${qmlgreetPalette.selectionFg}
+      ForegroundInactive=${qmlgreetPalette.selectionFg}
+      ForegroundLink=${qmlgreetPalette.selectionFg}
+      ForegroundNegative=${qmlgreetPalette.selectionFg}
+      ForegroundNeutral=${qmlgreetPalette.selectionFg}
+      ForegroundNormal=${qmlgreetPalette.selectionFg}
+      ForegroundPositive=${qmlgreetPalette.selectionFg}
+      ForegroundVisited=${qmlgreetPalette.selectionFg}
+
+      [Colors:Tooltip]
+      BackgroundAlternate=${qmlgreetPalette.tooltipAlt}
+      BackgroundNormal=${qmlgreetPalette.tooltipBg}
+      DecorationFocus=${qmlgreetPalette.focus}
+      DecorationHover=${qmlgreetPalette.hover}
+      ForegroundActive=${qmlgreetPalette.active}
+      ForegroundInactive=${qmlgreetPalette.inactive}
+      ForegroundLink=${qmlgreetPalette.link}
+      ForegroundNegative=${qmlgreetPalette.negative}
+      ForegroundNeutral=${qmlgreetPalette.neutral}
+      ForegroundNormal=${qmlgreetPalette.tooltipFg}
+      ForegroundPositive=${qmlgreetPalette.positive}
+      ForegroundVisited=${qmlgreetPalette.visited}
+
+      [Colors:View]
+      BackgroundAlternate=${qmlgreetPalette.viewAlt}
+      BackgroundNormal=${qmlgreetPalette.viewBg}
+      DecorationFocus=${qmlgreetPalette.focus}
+      DecorationHover=${qmlgreetPalette.hover}
+      ForegroundActive=${qmlgreetPalette.active}
+      ForegroundInactive=${qmlgreetPalette.inactive}
+      ForegroundLink=${qmlgreetPalette.link}
+      ForegroundNegative=${qmlgreetPalette.negative}
+      ForegroundNeutral=${qmlgreetPalette.neutral}
+      ForegroundNormal=${qmlgreetPalette.viewFg}
+      ForegroundPositive=${qmlgreetPalette.positive}
+      ForegroundVisited=${qmlgreetPalette.visited}
+
+      [Colors:Window]
+      BackgroundAlternate=${qmlgreetPalette.windowAlt}
+      BackgroundNormal=${qmlgreetPalette.windowBg}
+      DecorationFocus=${qmlgreetPalette.focus}
+      DecorationHover=${qmlgreetPalette.hover}
+      ForegroundActive=${qmlgreetPalette.active}
+      ForegroundInactive=${qmlgreetPalette.inactive}
+      ForegroundLink=${qmlgreetPalette.link}
+      ForegroundNegative=${qmlgreetPalette.negative}
+      ForegroundNeutral=${qmlgreetPalette.neutral}
+      ForegroundNormal=${qmlgreetPalette.windowFg}
+      ForegroundPositive=${qmlgreetPalette.positive}
+      ForegroundVisited=${qmlgreetPalette.visited}
+
+      [General]
+      ColorScheme=j0nix-greeter
+      Name=j0nix Greeter
+      shadeSortColumn=true
+
+      [KDE]
+      contrast=0
+
+      [WM]
+      activeBackground=${qmlgreetPalette.wmActiveBg}
+      activeBlend=${qmlgreetPalette.wmActiveBlend}
+      activeForeground=${qmlgreetPalette.wmActiveFg}
+      inactiveBackground=${qmlgreetPalette.wmInactiveBg}
+      inactiveBlend=${qmlgreetPalette.wmInactiveBlend}
+      inactiveForeground=${qmlgreetPalette.wmInactiveFg}
+    '';
     mode = "0444";
   };
 
