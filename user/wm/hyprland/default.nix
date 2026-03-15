@@ -105,7 +105,6 @@ let
           })
           toggleableOutputs;
   initialOutputStateNames = map (output: output.name or "") initialOutputStates;
-  initialOutputStatesJson = pkgs.writeText "hyprland-initial-output-states.json" (builtins.toJSON initialOutputStates);
   toggleableOutputs = hyprlandCfg.toggleableOutputs or [ ];
   toggleableOutputsWithBindings =
     builtins.genList
@@ -129,9 +128,11 @@ let
   installNwgDisplays = monitorToolsCfg.installNwgDisplays or true;
   defaultMonitorTool = monitorToolsCfg.default or "hyprdynamicmonitors";
   monitorToolsAutoStart = monitorToolsCfg.autoStart or true;
-  hyprdynamicmonitorsServiceEnabled =
+  hyprdynamicmonitorsPrepareEnabled =
     installHyprdynamicmonitors
-    && monitorToolsAutoStart
+    && monitorToolsAutoStart;
+  hyprdynamicmonitorsServiceEnabled =
+    hyprdynamicmonitorsPrepareEnabled
     && toggleableOutputs == [ ];
   keybindDiagnosticsCfg = hyprlandDebug.keybindDiagnostics or { };
   keybindDiagnosticsEnable = keybindDiagnosticsCfg.enable or false;
@@ -309,6 +310,7 @@ let
   userHyprShellOverridesDir = "${config.home.homeDirectory}/.config/hypr/shell-overrides/${selectedShell}";
   userHyprConfigPath = "${userHyprShellOverridesDir}/user-overrides.conf";
   mainHyprConfigDir = "${config.home.homeDirectory}/.config/hypr/conf.d";
+  hyprlandRuntimeMonitorConfigPath = "${mainHyprConfigDir}/11-runtime-monitors.conf";
   shellGeneratedConfigDir = "${config.home.homeDirectory}/.config/hypr/shells/${selectedShell}/generated";
   hyprlandWindowRules = import ./config/window-rules.nix;
   hyprlandKeybinds = import ./config/keybinds.nix {
@@ -413,71 +415,6 @@ let
       [ -n "$name" ] || continue
       "$hyprctl_bin" output remove "$name" >/dev/null 2>&1 || true
     done
-  '';
-  initialOutputStatesScript = pkgs.writeShellScriptBin "wm-monitor-apply-defaults" ''
-    set -eu
-
-    hyprctl_bin="${hyprctlExec}"
-    jq_bin="${pkgs.jq}/bin/jq"
-    outputs_json=${lib.escapeShellArg initialOutputStatesJson}
-
-    [ -x "$hyprctl_bin" ] || exit 0
-    [ -x "$jq_bin" ] || exit 0
-
-    wait_for_hyprland() {
-      wait_attempt=0
-      while [ "$wait_attempt" -lt 30 ]; do
-        if "$hyprctl_bin" -j monitors all >/dev/null 2>&1; then
-          return 0
-        fi
-        wait_attempt=$((wait_attempt + 1))
-        sleep 1
-      done
-      return 1
-    }
-
-    wait_for_monitor_settle() {
-      previous=""
-      stable_count=0
-      wait_attempt=0
-      while [ "$wait_attempt" -lt 30 ]; do
-        current="$("$hyprctl_bin" -j monitors all 2>/dev/null | "$jq_bin" -c 'map(.name // "") | sort')"
-        if [ -n "$current" ] && [ "$current" = "$previous" ] && [ "$current" != "[]" ]; then
-          stable_count=$((stable_count + 1))
-          if [ "$stable_count" -ge 2 ]; then
-            return 0
-          fi
-        else
-          stable_count=0
-          previous="$current"
-        fi
-        wait_attempt=$((wait_attempt + 1))
-        sleep 1
-      done
-      return 1
-    }
-
-    apply_defaults() {
-      "$jq_bin" -c '.[]' "$outputs_json" | while IFS= read -r output; do
-        name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
-        enabled_by_default="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
-        mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
-        position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "auto"')"
-        scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
-
-        [ -n "$name" ] || continue
-
-        if [ "$enabled_by_default" = "1" ]; then
-          "$hyprctl_bin" keyword monitor "$name,$mode,$position,$scale" >/dev/null 2>&1 || true
-        else
-          "$hyprctl_bin" keyword monitor "$name,disable" >/dev/null 2>&1 || true
-        fi
-      done
-    }
-
-    wait_for_hyprland || exit 0
-    wait_for_monitor_settle || true
-    apply_defaults
   '';
   monitorStateScript = pkgs.writeShellScriptBin "wm-monitor" ''
     set -eu
@@ -896,6 +833,20 @@ let
   managedConfigMonitorLines =
     map initialOutputStateToMonitorLine
       (builtins.filter (output: !(builtins.elem (output.name or "") headlessOutputNames)) initialOutputStates);
+  hyprdynamicmonitorsConfigPath = "hyprdynamicmonitors/config.toml";
+  hyprdynamicmonitorsRenderedStartupProfilePath = "hyprdynamicmonitors/hyprconfigs/j0nix-startup.conf";
+  hyprdynamicmonitorsConfigText = ''
+    [general]
+    destination = ${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath}
+    hot_reload = true
+
+    [fallback_profile]
+    config_file = ${lib.escapeShellArg "${config.home.homeDirectory}/.config/${hyprdynamicmonitorsRenderedStartupProfilePath}"}
+    config_file_type = "static"
+  '';
+  hyprdynamicmonitorsStartupProfileText =
+    (lib.concatStringsSep "\n" (map (line: "monitor = ${line}") managedConfigMonitorLines))
+    + "\n";
   monitorNameFromLine =
     line:
       let
@@ -973,7 +924,6 @@ in {
     headlessOutputsRemoveScript
   ]
   ++ lib.optionals (initialOutputStates != [ ]) [
-    initialOutputStatesScript
     monitorStateScript
     monitorOnScript
     monitorOffScript
@@ -1043,20 +993,15 @@ EOF
     ''}
   '';
 
-  home.activation.hyprlandInitialOutputStatesReload = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
-    ${lib.optionalString (initialOutputStates != [ ]) ''
-    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
-    if [ -S "$runtime_dir/bus" ]; then
-      ${pkgs.systemd}/bin/systemctl --user daemon-reload >/dev/null 2>&1 || true
-      ${pkgs.systemd}/bin/systemctl --user restart hyprland-initial-output-states.service >/dev/null 2>&1 || true
-    fi
-    ''}
-  '';
-
   home.activation.hyprdynamicmonitorsSync = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     if [ -S "$runtime_dir/bus" ]; then
       ${pkgs.systemd}/bin/systemctl --user daemon-reload >/dev/null 2>&1 || true
+      if [ "${if hyprdynamicmonitorsPrepareEnabled then "1" else "0"}" = "1" ]; then
+        ${pkgs.systemd}/bin/systemctl --user start hyprdynamicmonitors-prepare.service >/dev/null 2>&1 || true
+      else
+        ${pkgs.systemd}/bin/systemctl --user stop hyprdynamicmonitors-prepare.service >/dev/null 2>&1 || true
+      fi
       if [ "${if hyprdynamicmonitorsServiceEnabled then "1" else "0"}" = "1" ]; then
         ${pkgs.systemd}/bin/systemctl --user start hyprdynamicmonitors.service >/dev/null 2>&1 || true
       else
@@ -1072,6 +1017,11 @@ EOF
     }
     // {
       "hypr/hyprland.conf".force = true;
+      "${hyprdynamicmonitorsConfigPath}".text = hyprdynamicmonitorsConfigText;
+      "${hyprdynamicmonitorsRenderedStartupProfilePath}" = {
+        text = hyprdynamicmonitorsStartupProfileText;
+        force = true;
+      };
     };
 
   systemd.user.services.hyprland-headless-outputs = lib.mkIf headlessOutputsAutoEnsure {
@@ -1094,23 +1044,20 @@ EOF
     };
   };
 
-  systemd.user.services.hyprland-initial-output-states = lib.mkIf (initialOutputStates != [ ]) {
+  systemd.user.services.hyprdynamicmonitors-prepare = lib.mkIf hyprdynamicmonitorsPrepareEnabled {
     Unit = {
-      Description = "Apply initial Hyprland output states";
+      Description = "Prepare Hyprland dynamic monitor runtime config";
+      Before = [ "graphical-session-pre.target" ];
       PartOf = [ "graphical-session.target" ];
-      After =
-        [ "graphical-session.target" ]
-        ++ lib.optionals headlessOutputsAutoEnsure [ "hyprland-headless-outputs.service" ];
-      Wants =
-        [ "graphical-session.target" ]
-        ++ lib.optionals headlessOutputsAutoEnsure [ "hyprland-headless-outputs.service" ];
+      ConditionPathExists = "%h/.config/hyprdynamicmonitors/config.toml";
     };
 
-    Install.WantedBy = [ "graphical-session.target" ];
+    Install.WantedBy = [ "graphical-session-pre.target" ];
 
     Service = {
       Type = "oneshot";
-      ExecStart = lib.getExe initialOutputStatesScript;
+      RemainAfterExit = true;
+      ExecStart = "${lib.getExe pkgs.hyprdynamicmonitors} prepare --config %h/.config/hyprdynamicmonitors/config.toml";
     };
   };
 
@@ -1118,8 +1065,10 @@ EOF
     Unit = {
       Description = "Hyprland dynamic monitor profile daemon";
       PartOf = [ "graphical-session.target" ];
-      After = [ "graphical-session.target" ];
-      Wants = [ "graphical-session.target" ];
+      After =
+        [ "graphical-session.target" "hyprdynamicmonitors-prepare.service" ]
+        ++ lib.optionals headlessOutputsAutoEnsure [ "hyprland-headless-outputs.service" ];
+      Wants = [ "graphical-session.target" "hyprdynamicmonitors-prepare.service" ];
       ConditionPathExists = "%h/.config/hyprdynamicmonitors/config.toml";
     };
 
@@ -1129,8 +1078,7 @@ EOF
 
     Service = {
       Type = "simple";
-      ExecStartPre = "${lib.getExe pkgs.hyprdynamicmonitors} prepare";
-      ExecStart = "${lib.getExe pkgs.hyprdynamicmonitors} run";
+      ExecStart = "${lib.getExe pkgs.hyprdynamicmonitors} run --config %h/.config/hyprdynamicmonitors/config.toml";
       Restart = "on-failure";
       RestartSec = 2;
     };
