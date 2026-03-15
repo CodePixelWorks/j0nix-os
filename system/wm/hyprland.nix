@@ -36,8 +36,16 @@ let
   qmlgreetColorSchemePath = "/etc/qmlgreet/QMLGreetDefault.colors";
   dmsGreeterHyprConfigPath = "/etc/greetd/hypr.conf";
   qmlgreetPackage = pkgs.qmlgreet;
-  qmlgreetIconTheme = (settings.iconTheme or { }).name or "";
-  qmlgreetWallpaperPath = ((settings.dms or { }).wallpaper or { }).wallpaperPath or "";
+  qmlgreetSettings = (settings.greetd or { }).qmlgreet or { };
+  qmlgreetDefaultSession = qmlgreetSettings.defaultSession or "";
+  qmlgreetColorSchemeFile = qmlgreetSettings.colorSchemePath or qmlgreetColorSchemePath;
+  qmlgreetWallpaperPath =
+    qmlgreetSettings.backgroundImage
+    or (((settings.dms or { }).wallpaper or { }).wallpaperPath or "");
+  qmlgreetIconTheme = qmlgreetSettings.iconTheme or ((settings.iconTheme or { }).name or "");
+  qmlgreetFont = qmlgreetSettings.font or "";
+  qmlgreetFontSize = toString (qmlgreetSettings.fontSize or 10);
+  qmlgreetShowAvatars = if qmlgreetSettings ? showAvatars then qmlgreetSettings.showAvatars else true;
   dmsGreeterCommand =
     "${if hasDmsPackage then lib.getExe' dmsPackage "dms-greeter" else "/run/current-system/sw/bin/dms-greeter"} --command hyprland -C ${dmsGreeterHyprConfigPath}";
   hyprlandUwsmSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/hyprland-uwsm.desktop" ''
@@ -202,6 +210,10 @@ in {
       message = "settings.greetd.regreetCompositor must be one of: cage, hyprland";
     }
     {
+      assertion = (!useGreetd) || (selectedGreetdGreeter != "qmlgreet") || ((qmlgreetSettings.fontSize or 10) > 0);
+      message = "settings.greetd.qmlgreet.fontSize must be > 0.";
+    }
+    {
       assertion = (!useDankMaterialShell) || hasDmsPackage;
       message = "greetd.greeter=dms-greeter requires inputs.dank-material-shell.packages.<system>.default to be available";
     }
@@ -262,18 +274,33 @@ in {
 
   environment.etc."qmlgreet/qmlgreet.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet") {
     text = ''
+      # Default values for QMLGreet
+      # qmlgreet.conf 2026 (c) Nitrux Latinoamericana S.C.
+
       [General]
-      DefaultSession=auto-wm-session
+      # Default session (leave empty to use first available)
+      # Put the exact name of the session as it appears in the list (e.g., Hyprland, or Hyprland (uwsm-managed)).
+      DefaultSession=${qmlgreetDefaultSession}
 
       [Appearance]
-      ColorScheme=${qmlgreetColorSchemePath}
+      # Path to KDE color scheme file (leave empty to use a default color scheme)
+      ColorScheme=${qmlgreetColorSchemeFile}
+
+      # Path to background image (leave empty for solid color)
       BackgroundImage=${qmlgreetWallpaperPath}
+
+      # Icon theme to use (leave empty to use hicolor)
       IconTheme=${qmlgreetIconTheme}
-      Font=
-      FontSize=10
+
+      # Font to use (leave empty to use Noto Sans)
+      Font=${qmlgreetFont}
+
+      # Font size to use (leave empty to use a size of 10)
+      FontSize=${qmlgreetFontSize}
 
       [Behavior]
-      ShowAvatars=true
+      # Show user avatars (true/false)
+      ShowAvatars=${if qmlgreetShowAvatars then "true" else "false"}
     '';
     mode = "0444";
   };
