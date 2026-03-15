@@ -32,6 +32,7 @@ in
     ./modules/drivers.nix
     ./modules/support-drivers.nix
     ../../system/apps/bambulab.nix
+    ../../system/apps/aagl.nix
     ../../system/apps/flatpak-sync.nix
     ../../system/apps/ollama.nix
     ../../system/apps/syncthing.nix
