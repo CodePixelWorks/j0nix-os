@@ -37,3 +37,8 @@ Display manager and system WM integration.
 - `settings.greetd.qmlgreet.showAvatars`
 
 Leave `defaultSession` empty for the most robust behavior; hardcoding a session label is brittle when session display names change.
+
+Wallpaper assets should come from the shared system wallpaper package under:
+- `/run/current-system/sw/share/j0nix/wallpapers/...`
+
+That keeps the same wallpaper source usable across greeters, Hyprland shells, and other desktop components without copying assets into `/etc`.
