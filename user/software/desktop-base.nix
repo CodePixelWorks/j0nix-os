@@ -65,7 +65,6 @@ in
 {
   j0nix.user.software.packages =
     (with pkgs; [
-      foot
       kitty
       git
       gh
