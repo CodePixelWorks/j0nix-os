@@ -1,17 +1,13 @@
-# Sysctl Profiles
+# Sysctl Collector
 
-Split sysctl model for clean composition.
+Central sysctl merge layer for role-provided fragments.
 
 ## Files
 
 - `default.nix`: merge layer
-- `gaming.nix`: gaming-oriented kernel parameters
-- `dev.nix`: development-oriented kernel parameters
+- legacy profile fragments remain in this directory for reference only
 
 ## Control Keys
 
-- `settings.sysctlProfiles.fileMax`
-- `settings.sysctlProfiles.gaming.*`
-- `settings.sysctlProfiles.dev.*`
-- `settings.sysctlProfiles.network.*`
-- `settings.sysctlProfiles.custom`
+- `j0nix.desktop.sysctl.extraFragments`
+- `settings.custom.sysctl`
