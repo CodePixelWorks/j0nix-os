@@ -220,6 +220,8 @@ in
     home.sessionVariables =
       lib.optionalAttrs (sshEnabled && sshAgentProvider == "gnome-keyring") {
         SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/gcr/ssh";
+        SSH_ASKPASS = "${lib.getExe' pkgs.wayprompt "wayprompt-ssh-askpass"}";
+        SUDO_ASKPASS = "${lib.getExe' pkgs.wayprompt "wayprompt-ssh-askpass"}";
       };
 
     programs.ssh = lib.mkIf sshEnabled {
@@ -266,6 +268,7 @@ in
         nixd
         statix
         deadnix
+        wayprompt
       ])
       ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { }) [
         loadSecretBackedSshKeysScript
