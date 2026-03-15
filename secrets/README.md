@@ -60,7 +60,7 @@ This re-encrypts host/user files with recipients derived from local key files
 It enforces a strict mapping:
 
 - `secrets/hosts/*` -> host key recipient only
-- `secrets/users/*` -> user key recipient only
+- `secrets/users/*` -> user key recipient + host key recipient
 
 If host secrets exist, run it with permissions that can read `/var/lib/sops-nix/key.txt`:
 
@@ -119,6 +119,32 @@ If that fails, it keeps the existing `.pub` file instead of truncating it.
 If `passphraseKey` is set and the user uses `dev.ssh.agent.provider = "gnome-keyring"`,
 the user session installs `ssh-load-secret-keys` and automatically loads those keys into
 the SSH agent during the graphical session.
+
+## SOPS Rename Rule
+
+Do not rename encrypted key paths in a SOPS file with a normal text edit.
+
+Reason:
+
+- SOPS binds encrypted values to their exact tree path and MAC
+- manually renaming a key like `ssh.id_ed22519_foo` -> `ssh.id_ed25519_foo`
+  can make the affected value undecryptable
+- the result is typically:
+  - `Could not decrypt with AES_GCM: cipher: message authentication failed`
+
+Use one of these methods instead:
+
+- `sops edit <file>`
+- `sops set`
+- `sops unset`
+
+Safe migration pattern:
+
+1. decrypt or extract the old value with `sops`
+2. write it to the new path with `sops set`
+3. remove the old path with `sops unset`
+
+Do not "refactor" encrypted YAML keys with plain text search/replace.
 
 Store repo-tracked public keys outside `secrets/`, for example:
 
