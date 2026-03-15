@@ -18,6 +18,7 @@
   swwwDaemonCommand,
   startupAppsCommand,
   keybindDiagnosticsStartupCommand,
+  managedMonitorLines,
   mainConfigDir,
   shellConfigDir,
 }:
@@ -40,7 +41,7 @@ let
     "${shellConfigDir}/95-shell.conf"
   ];
 
-  monitorLines = staticMonitorLines ++ [ ",preferred,auto,1" ];
+  monitorLines = staticMonitorLines ++ managedMonitorLines ++ [ ",preferred,auto,1" ];
 
   startupLines =
     [
