@@ -31,6 +31,7 @@ let
     "${mainConfigDir}/00-vars.conf"
     "${mainConfigDir}/05-env.conf"
     "${mainConfigDir}/10-monitors.conf"
+    "${mainConfigDir}/11-runtime-monitors.conf"
     "${mainConfigDir}/20-startup.conf"
     "${mainConfigDir}/30-input.conf"
     "${mainConfigDir}/40-general.conf"
@@ -108,9 +109,19 @@ in
 
     "hypr/conf.d/10-monitors.conf" = ''
       # ------------------------------------------------------------------
-      # Monitors
+      # Startup Monitor Defaults
       # ------------------------------------------------------------------
       ${renderLines "monitor" monitorLines}
+    '';
+
+    "hypr/conf.d/11-runtime-monitors.conf" = ''
+      # ------------------------------------------------------------------
+      # Runtime Monitor Overrides
+      # ------------------------------------------------------------------
+      # This file is intentionally managed by tooling such as
+      # hyprdynamicmonitors. Keep it empty in the declarative baseline so the
+      # startup monitor defaults remain authoritative until a runtime profile
+      # explicitly overrides them.
     '';
 
     "hypr/conf.d/20-startup.conf" = ''
