@@ -43,9 +43,17 @@ let
       qmlgreetSettings.colorSchemePath
     else
       qmlgreetColorSchemePath;
+  qmlgreetBackgroundImage = qmlgreetSettings.backgroundImage or null;
+  qmlgreetManagedBackgroundRelPath =
+    if qmlgreetBackgroundImage != null && builtins.isPath qmlgreetBackgroundImage then
+      "qmlgreet/backgrounds/${builtins.baseNameOf (toString qmlgreetBackgroundImage)}"
+    else
+      null;
   qmlgreetWallpaperPath =
-    if (qmlgreetSettings.backgroundImage or null) != null then
-      qmlgreetSettings.backgroundImage
+    if qmlgreetManagedBackgroundRelPath != null then
+      "/etc/${qmlgreetManagedBackgroundRelPath}"
+    else if qmlgreetBackgroundImage != null then
+      toString qmlgreetBackgroundImage
     else
       (((settings.dms or { }).wallpaper or { }).wallpaperPath or "");
   qmlgreetIconTheme =
@@ -279,6 +287,11 @@ in {
 
   environment.etc."qmlgreet/QMLGreetDefault.colors" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet") {
     source = "${qmlgreetPackage}/share/qmlgreet/QMLGreetDefault.colors";
+    mode = "0444";
+  };
+
+  environment.etc."${qmlgreetManagedBackgroundRelPath}" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet" && qmlgreetManagedBackgroundRelPath != null) {
+    source = qmlgreetBackgroundImage;
     mode = "0444";
   };
 
