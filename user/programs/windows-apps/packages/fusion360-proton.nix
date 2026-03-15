@@ -187,6 +187,7 @@ let
         if [ -z "$candidate" ]; then
           echo "Fusion installer erforderlich." >&2
           echo "Nutze: fusion360-setup /pfad/zum/FusionClientInstaller.exe" >&2
+          echo "Relative Pfade aus dem aktuellen Arbeitsverzeichnis werden unterstützt." >&2
           return 1
         fi
 
@@ -388,6 +389,7 @@ Usage:
   fusion360-setup /path/to/FusionClientInstaller.exe
 
 The Autodesk installer EXE must be supplied explicitly.
+Relative paths from the current working directory are supported.
 The setup wrapper validates the file, stages it into the managed Fusion install
 root, records a SHA256 manifest, and then runs the Proton-based installation.
 EOF
