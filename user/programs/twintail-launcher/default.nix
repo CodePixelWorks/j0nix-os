@@ -18,16 +18,4 @@ lib.mkIf enabled {
   ];
 
   j0nix.user.software.packages = [ twintailWrapper ];
-
-  xdg.desktopEntries.TwintailLauncher = {
-    name = "Twintail Launcher";
-    genericName = "Launcher";
-    comment = "Open Twintail Launcher";
-    exec = lib.getExe twintailWrapper;
-    icon = appId;
-    terminal = false;
-    type = "Application";
-    categories = [ "Game" "Utility" ];
-    startupNotify = true;
-  };
 }
