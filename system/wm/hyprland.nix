@@ -529,7 +529,7 @@ in {
         }
       }
 
-      windowrule = noborder 1, class:^(qmlgreet)$
+      windowrule = noborder, class:^(qmlgreet)$
 
       misc {
         disable_hyprland_logo = true
