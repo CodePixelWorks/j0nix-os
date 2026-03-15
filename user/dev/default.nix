@@ -220,9 +220,6 @@ in
     home.sessionVariables =
       lib.optionalAttrs (sshEnabled && sshAgentProvider == "gnome-keyring") {
         SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/gcr/ssh";
-      }
-      // lib.optionalAttrs (sshEnabled && keyringEnabled) {
-        SSH_ASKPASS_REQUIRE = "prefer";
       };
 
     programs.ssh = lib.mkIf sshEnabled {
