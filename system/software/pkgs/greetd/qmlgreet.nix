@@ -38,6 +38,7 @@ stdenv.mkDerivation (finalAttrs: {
     qt6.qt5compat
     qt6.qtbase
     qt6.qtdeclarative
+    qt6.qtimageformats
     qt6.qtwayland
     kdePackages.kirigami
     kdePackages.qqc2-desktop-style
