@@ -85,6 +85,7 @@ let
     runtimeInputs = with pkgs; [
       coreutils
       curl
+      file
       findutils
       gawk
       gnugrep
@@ -179,6 +180,72 @@ let
         fi
       }
 
+      fusion360::resolve_manual_installer() {
+        local candidate="$1"
+        if [ -z "$candidate" ]; then
+          echo "Fusion installer erforderlich." >&2
+          echo "Nutze: fusion360-setup /pfad/zum/FusionClientInstaller.exe" >&2
+          return 1
+        fi
+
+        if [ ! -f "$candidate" ]; then
+          echo "Installer-Datei nicht gefunden: $candidate" >&2
+          return 1
+        fi
+
+        local resolved
+        resolved="$(realpath -e "$candidate")"
+
+        case "''${resolved##*/}" in
+          *.exe|*.EXE)
+            ;;
+          *)
+            echo "Installer muss eine .exe-Datei sein: $resolved" >&2
+            return 1
+            ;;
+        esac
+
+        local file_info
+        file_info="$(file -b "$resolved")"
+        case "$file_info" in
+          PE32*|MS-DOS*)
+            ;;
+          *)
+            echo "Installer sieht nicht wie eine Windows-Executable aus: $resolved" >&2
+            echo "file(1): $file_info" >&2
+            return 1
+            ;;
+        esac
+
+        printf '%s\n' "$resolved"
+      }
+
+      fusion360::stage_manual_installer() {
+        local source_path="$1"
+        local destination_path="$2"
+        local metadata_path="$FUSION360_INSTALL_ROOT/resources/fusion-installer.json"
+        local sha256
+
+        sha256="$(sha256sum "$source_path" | awk '{print $1}')"
+        mkdir -p "$(dirname "$destination_path")"
+        cp "$source_path" "$destination_path"
+        chmod 0644 "$destination_path"
+
+        cat > "$metadata_path" <<EOF
+{
+  "sourcePath": $(printf '%s' "$source_path" | jq -Rs .),
+  "stagedPath": $(printf '%s' "$destination_path" | jq -Rs .),
+  "sha256": $(printf '%s' "$sha256" | jq -Rs .),
+  "stagedAt": $(date -Iseconds | jq -Rs .)
+}
+EOF
+
+        echo "Fusion-Installer übernommen:"
+        echo "  Quelle: $source_path"
+        echo "  Ziel:   $destination_path"
+        echo "  SHA256: $sha256"
+      }
+
       fusion360::find_identity_manager() {
         find "$FUSION360_WINEPREFIX" -name AdskIdentityManager.exe 2>/dev/null | head -n 1
       }
@@ -229,6 +296,7 @@ let
       # shellcheck disable=SC1091
       source "${fusion360ProtonLib}/bin/fusion360-proton-lib"
       installer_path="''${1:-}"
+      manual_installer_path=""
 
       fusion360::ensure_proton
       fusion360::ensure_dirs
@@ -243,7 +311,12 @@ let
 
       cd "$HOME"
 
-      fusion360::ensure_payload "$FUSION360_INSTALLER_SPEC" "$FUSION360_DOWNLOADS/FusionClientInstaller.exe" "$installer_path"
+      if [ "$(${pkgs.jq}/bin/jq -r '.mode' "$FUSION360_INSTALLER_SPEC")" = "manual" ]; then
+        manual_installer_path="$(fusion360::resolve_manual_installer "$installer_path")"
+        fusion360::stage_manual_installer "$manual_installer_path" "$FUSION360_DOWNLOADS/FusionClientInstaller.exe"
+      fi
+
+      fusion360::ensure_payload "$FUSION360_INSTALLER_SPEC" "$FUSION360_DOWNLOADS/FusionClientInstaller.exe" "$manual_installer_path"
       fusion360::ensure_payload "$FUSION360_WEBVIEW2_SPEC" "$FUSION360_DOWNLOADS/WebView2installer.exe"
 
       echo "Initialisiere Proton-Prefix..."
@@ -363,8 +436,8 @@ in
     "fusion360-setup" = {
       name = "Fusion 360 Setup (Proton)";
       genericName = "Fusion 360 Installer";
-      comment = "Prepare and install Autodesk Fusion 360 via Proton";
-      exec = "fusion360-setup";
+      comment = "Run fusion360-setup /path/to/FusionClientInstaller.exe in a terminal";
+      exec = "sh -lc 'printf \"%s\\n\" \"Usage: fusion360-setup /path/to/FusionClientInstaller.exe\"; printf \"%s\\n\" \"The Autodesk installer EXE must be supplied explicitly.\"; exec \"$SHELL\"'";
       terminal = true;
       categories = [ "Graphics" "Engineering" ];
     };
