@@ -371,6 +371,25 @@ EOF
     '';
   };
 
+  fusion360ProtonSetupHelp = pkgs.writeShellApplication {
+    name = "fusion360-setup-help";
+    text = ''
+      set -euo pipefail
+
+      cat <<'EOF'
+Usage:
+  fusion360-setup /path/to/FusionClientInstaller.exe
+
+The Autodesk installer EXE must be supplied explicitly.
+The setup wrapper validates the file, stages it into the managed Fusion install
+root, records a SHA256 manifest, and then runs the Proton-based installation.
+EOF
+
+      printf '\nPress Enter to close...\n'
+      read -r _ || true
+    '';
+  };
+
   fusion360ProtonRun = pkgs.writeShellApplication {
     name = "fusion360-proton-run";
     runtimeInputs = [ fusion360ProtonLib ];
@@ -422,6 +441,7 @@ in
   payloadPackages = payloadPackages;
   runtimePackages = [
     fusion360ProtonSetup
+    fusion360ProtonSetupHelp
     fusion360ProtonRun
     fusion360ProtonOpenIdMgr
   ];
@@ -436,8 +456,8 @@ in
     "fusion360-setup" = {
       name = "Fusion 360 Setup (Proton)";
       genericName = "Fusion 360 Installer";
-      comment = "Run fusion360-setup /path/to/FusionClientInstaller.exe in a terminal";
-      exec = "sh -lc 'printf \"%s\\n\" \"Usage: fusion360-setup /path/to/FusionClientInstaller.exe\"; printf \"%s\\n\" \"The Autodesk installer EXE must be supplied explicitly.\"; exec \"$SHELL\"'";
+      comment = "Show the manual Fusion 360 installer workflow";
+      exec = "fusion360-setup-help";
       terminal = true;
       categories = [ "Graphics" "Engineering" ];
     };
