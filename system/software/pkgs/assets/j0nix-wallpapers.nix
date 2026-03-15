@@ -8,6 +8,8 @@ stdenvNoCC.mkDerivation {
 
   installPhase = ''
     mkdir -p "$out/share/j0nix/wallpapers"
-    cp -r "$src"/. "$out/share/j0nix/wallpapers/"
+    find "$src" -type f | while IFS= read -r file; do
+      install -Dm644 "$file" "$out/share/j0nix/wallpapers/$(basename "$file")"
+    done
   '';
 }
