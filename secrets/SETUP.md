@@ -256,6 +256,31 @@ This makes the intent explicit:
 
 The Home Manager layer can inherit the system key, but for a multi-user setup this explicit per-user key is the preferred model.
 
+## Important: Renaming Keys Inside SOPS Files
+
+Never rename encrypted key paths by editing the YAML directly in a normal editor.
+
+Example of what not to do:
+
+- changing `ssh.id_ed22519_example` to `ssh.id_ed25519_example` by hand
+
+Why this breaks:
+
+- SOPS authenticates encrypted values against their tree position
+- a manual rename can invalidate the encrypted value for that path
+- symptoms include:
+  - `Could not decrypt with AES_GCM: cipher: message authentication failed`
+
+Correct procedure:
+
+1. use `sops edit` for small changes
+2. for path migrations, use:
+   - `sops set`
+   - `sops unset`
+3. if needed, first extract the old value, then write it back under the new path
+
+Treat encrypted key-path renames as data migrations, not text refactors.
+
 ## 8. Migrate Existing Mixed Secrets Safely
 
 If older setups mixed system and user secrets in one user file, run:
@@ -285,7 +310,7 @@ The script keeps encrypted backups and rewrites recipients from your current loc
 It enforces:
 
 - `secrets/hosts/*` encrypted for host key only
-- `secrets/users/*` encrypted for user key only
+- `secrets/users/*` encrypted for user key + host key
 
 If host files exist, run via `sudo` so `/var/lib/sops-nix/key.txt` is readable.
 ## 9. Wire Syncthing To The Secret
