@@ -40,6 +40,9 @@ in
     ] ++ (custom.systemPackages or [ ]);
 
     environment.systemPackages = lib.mkAfter (lib.unique cfg.systemPackages);
+    environment.pathsToLink = lib.mkAfter [
+      "/share/j0nix"
+    ];
     assertions = [
       {
         assertion = profileSoftwareDefinitions == [ ];
