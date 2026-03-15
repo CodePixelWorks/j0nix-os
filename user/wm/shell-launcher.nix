@@ -315,31 +315,11 @@ in
       loginctl_bin="${pkgs.systemd}/bin/loginctl"
       systemctl_bin="${pkgs.systemd}/bin/systemctl"
 
-      "$systemctl_bin" --user stop graphical-session.target >/dev/null 2>&1 || true
-      "$systemctl_bin" --user stop \
-        xdg-desktop-portal.service \
-        xdg-desktop-portal-gtk.service \
-        xdg-desktop-portal-hyprland.service \
-        xdg-document-portal.service \
-        gvfs-daemon.service \
-        gvfs-daemon-fuse.service >/dev/null 2>&1 || true
-      sleep 1
-
       "$loginctl_bin" reboot || "$systemctl_bin" reboot
     '')
     (writeShellScriptBin "system-poweroff-safe" ''
       loginctl_bin="${pkgs.systemd}/bin/loginctl"
       systemctl_bin="${pkgs.systemd}/bin/systemctl"
-
-      "$systemctl_bin" --user stop graphical-session.target >/dev/null 2>&1 || true
-      "$systemctl_bin" --user stop \
-        xdg-desktop-portal.service \
-        xdg-desktop-portal-gtk.service \
-        xdg-desktop-portal-hyprland.service \
-        xdg-document-portal.service \
-        gvfs-daemon.service \
-        gvfs-daemon-fuse.service >/dev/null 2>&1 || true
-      sleep 1
 
       "$loginctl_bin" poweroff || "$systemctl_bin" poweroff
     '')
