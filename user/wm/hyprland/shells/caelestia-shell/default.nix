@@ -974,7 +974,7 @@ EOF
             | .appearance.font.size = (.appearance.font.size // {})
             | .appearance.font.size.scale = ((.appearance.font.size.scale // 1) | as_num(1) | clamp(0.5; 2.0))
             | if $wallpaperDir != "" then
-                .paths = ((.paths // {}) | .wallpaperDir = (.wallpaperDir // $wallpaperDir))
+                .paths = ((.paths // {}) | .wallpaperDir = $wallpaperDir)
               else
                 .
               end
