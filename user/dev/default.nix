@@ -190,7 +190,7 @@ let
       fi
       ${lib.concatStringsSep "\n" (lib.mapAttrsToList loadKey sshKeysWithPassphrases)}
     '';
-  guiSshAskpass = lib.getExe' pkgs.wayprompt "wayprompt-ssh-askpass";
+  guiSshAskpass = "${pkgs.openssh-askpass}/libexec/gtk-ssh-askpass";
   sshAddGuiScript = pkgs.writeShellScriptBin "ssh-add-gui" ''
     set -eu
     exec env SSH_ASKPASS='${guiSshAskpass}' SSH_ASKPASS_REQUIRE=force \
@@ -272,7 +272,7 @@ in
         nixd
         statix
         deadnix
-        wayprompt
+        openssh-askpass
       ])
       ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring") [ sshAddGuiScript ]
       ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { }) [
