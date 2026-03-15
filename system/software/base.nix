@@ -15,5 +15,6 @@
     lsof
     lm_sensors
     vulkan-tools
+    j0nix-wallpapers
   ];
 }
