@@ -38,6 +38,11 @@ Display manager and system WM integration.
 
 Leave `defaultSession` empty for the most robust behavior; hardcoding a session label is brittle when session display names change.
 
+By default, the greeter uses a generated dark KDE color scheme under:
+- `/etc/qmlgreet/j0nix.colors`
+
+That avoids qmlgreet's upstream light default palette, which otherwise makes the login surface look white even when a wallpaper is configured.
+
 Wallpaper assets should come from the shared system wallpaper package under:
 - `/run/current-system/sw/share/j0nix/wallpapers/...`
 
