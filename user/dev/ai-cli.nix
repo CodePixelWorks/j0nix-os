@@ -7,7 +7,9 @@ let
   preferredTerminal = settings.preferredTerminal or "kitty";
   codex = import ../../system/dev/codex.nix { inherit inputs lib pkgs settings; };
   codexEnabled = codex.enabled;
+  claudeCodeEnabled = ai.claudeCode or true;
   geminiEnabled = ai.gemini or true;
+  claudeCodePackage = if builtins.hasAttr "claude-code" pkgs then pkgs."claude-code" else null;
   codexMcpNixosSync = pkgs.writeShellApplication {
     name = "codex-mcp-nixos-sync";
     runtimeInputs = [ pkgs.python3 ];
@@ -62,6 +64,7 @@ lib.mkIf enabled {
   j0nix.user.software.packages =
     lib.optionals (installScope == "user" && codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
     ++ lib.optionals (installScope == "user" && codexEnabled && codex.mcpNixosEnable && codex.mcpNixosPackage != null) [ codex.mcpNixosPackage ]
+    ++ lib.optionals (installScope == "user" && claudeCodeEnabled && claudeCodePackage != null) [ claudeCodePackage ]
     ++ lib.optionals (installScope == "user" && geminiEnabled && hasGeminiPackage) [ pkgs.gemini-cli ]
     ++ lib.optionals (installScope == "user" && geminiEnabled) [
       (pkgs.writeShellScriptBin "gemini-launcher" ''
@@ -112,6 +115,10 @@ lib.mkIf enabled {
     {
       assertion = (!codex.mcpNixosEnable) || codex.mcpNixosPackage != null;
       message = "settings.dev.ai.codex.mcp.nixos=true but pkgs.mcp-nixos is unavailable";
+    }
+    {
+      assertion = (!claudeCodeEnabled) || claudeCodePackage != null;
+      message = "settings.dev.ai.claudeCode=true but pkgs.\"claude-code\" is unavailable";
     }
     {
       assertion = (!geminiEnabled) || hasGeminiPackage;
