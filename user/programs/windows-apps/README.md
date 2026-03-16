@@ -27,6 +27,9 @@ upstream `cryinkfly/Autodesk-Fusion-360-on-Linux` project:
 - no auto-launch of Fusion after setup
 - optional manual staging of a supplied Autodesk installer EXE before the
   upstream flow starts
+- when Fusion is enabled for any user, j0nix enables `spacenavd` system-wide
+  and installs the host-side `gawk` and `mokutil` tools expected by the
+  upstream diagnostics
 
 ### Default operator flow
 
