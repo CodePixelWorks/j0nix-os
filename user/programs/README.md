@@ -63,7 +63,7 @@ Current first-party package:
 
 `Fusion 360` remains a managed exception: installer/runtime wrappers are declarative, but Proton/Wine prefix creation and Autodesk login state are user-state and therefore provisioned via user systemd, not built into the Nix store.
 Its payloads can now be sourced in four ways under `settings.programs.fusion360.protonInstaller.payloads.*`:
-- `manual`: run `fusion360-setup /path/to/FusionClientInstaller.exe`; absolute and relative paths are both supported. The wrapper validates that the argument is a Windows `.exe`, stages it into the managed Fusion install root, records a SHA256 manifest, and only then continues with setup
+- `manual`: run `fusion360-setup /path/to/FusionClientInstaller.exe`; absolute and relative paths are both supported. The wrapper validates that the argument is a Windows `.exe`, rejects the known `Fusion Client Downloader.exe` bootstrapper, stages the accepted installer into the managed Fusion install root, records a SHA256 manifest, and only then continues with setup
 - `runtime-download`: keep the current first-run download behavior
 - `fetchurl`: pin the installer as a fixed-output Nix artifact with `url` + `hash`
 - `requireFile`: require a locally supplied proprietary installer file with `fileName` + `hash`
