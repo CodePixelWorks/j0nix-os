@@ -28,6 +28,7 @@ Notable controls:
 - `settings.dev.python.installUv = true`: install `uv` alongside the version manager
 - `pyuse 3.12`: switch the global Python version through `mise`
 - `pylocal 3.12`: pin a project-local Python version through `mise`
+- `claude`: shell alias for `claude-code`
 - `settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey`: optional SOPS path for automatic key loading into the keyring-backed agent
 - The automatic loader waits for the `gcr` SSH socket and retries `ssh-add`, so key loading is resilient to slower desktop startup ordering
 - `settings.dev.ai.installScope`: install shared AI CLIs as `system` packages or per-user via Home Manager
