@@ -456,6 +456,8 @@ Usage:
 
 The Autodesk installer EXE must be supplied explicitly.
 Relative paths from the current working directory are supported.
+In the default j0nix configuration you can also run `fusion360-setup` without an
+argument and let the upstream installer download the admin installer itself.
 The setup wrapper validates the file, stages it into the managed Fusion install
 root, records a SHA256 manifest, and then runs the Proton-based installation.
 EOF
@@ -520,7 +522,7 @@ in
   ];
 
   autoSetup = {
-    enable = fusionInstaller.mode != "manual";
+    enable = false;
     description = "Setup Autodesk Fusion 360 via Proton";
     command = "${config.home.profileDirectory}/bin/fusion360-setup";
   };
@@ -529,8 +531,8 @@ in
     "fusion360-setup" = {
       name = "Fusion 360 Setup (Proton)";
       genericName = "Fusion 360 Installer";
-      comment = "Show the manual Fusion 360 installer workflow";
-      exec = "fusion360-setup-help";
+      comment = "Install Autodesk Fusion 360 via the upstream Linux setup flow";
+      exec = "fusion360-setup";
       terminal = true;
       categories = [ "Graphics" "Engineering" ];
     };
