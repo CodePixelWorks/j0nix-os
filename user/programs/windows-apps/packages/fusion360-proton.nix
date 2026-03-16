@@ -401,6 +401,52 @@ EOF
         echo "Überspringe Wine-Installation: j0nix stellt Wine/winetricks bereit."
       }
 
+      check_gpu_driver() {
+        local gpu_name=""
+        local renderer=""
+
+        if command -v nvidia-smi >/dev/null 2>&1; then
+          gpu_name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n 1 | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+          if [ -n "$gpu_name" ]; then
+            echo "NVIDIA GPU detected: $gpu_name"
+            return 0
+          fi
+        fi
+
+        if command -v glxinfo >/dev/null 2>&1; then
+          renderer="$(glxinfo -B 2>/dev/null | awk -F: '/OpenGL renderer string/ {sub(/^[ \t]+/, "", $2); print $2; exit}')"
+          if [ -n "$renderer" ]; then
+            echo "GPU renderer detected: $renderer"
+            return 0
+          fi
+        fi
+
+        echo "GPU detection skipped: no safe renderer information was available."
+      }
+
+      check_gpu_vram() {
+        local nvidia_vram=""
+        local mesa_vram=""
+
+        if command -v nvidia-smi >/dev/null 2>&1; then
+          nvidia_vram="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -n 1 | tr -d '[:space:]')"
+          if [ -n "$nvidia_vram" ]; then
+            echo "NVIDIA GPU detected with ''${nvidia_vram}MB VRAM"
+            return 0
+          fi
+        fi
+
+        if command -v glxinfo >/dev/null 2>&1; then
+          mesa_vram="$(glxinfo -B 2>/dev/null | awk -F: '/Video memory/ {sub(/^[ \t]+/, "", $2); print $2; exit}')"
+          if [ -n "$mesa_vram" ]; then
+            echo "GPU VRAM detected: $mesa_vram"
+            return 0
+          fi
+        fi
+
+        echo "GPU VRAM check skipped: no safe VRAM query succeeded."
+      }
+
       check_required_packages
       deactivate_window_not_responding_dialog
       create_data_structure
