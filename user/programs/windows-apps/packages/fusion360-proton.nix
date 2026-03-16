@@ -220,6 +220,14 @@ let
             ;;
         esac
 
+        case "''${resolved##*/}" in
+          *Downloader*.exe|*Downloader*.EXE)
+            echo "Der uebergebene Installer ist nur der Fusion-Downloader: $resolved" >&2
+            echo "Nutze stattdessen die Autodesk Admin-Installer-EXE, z. B. 'Fusion Admin Install.exe'." >&2
+            return 1
+            ;;
+        esac
+
         printf '%s\n' "$resolved"
       }
 
@@ -254,14 +262,22 @@ EOF
       }
 
       fusion360::find_fusion_exe() {
+        find "$FUSION360_WINEPREFIX" -iname Fusion360.exe 2>/dev/null | grep -E '/Autodesk/|/Fusion/' | head -n 1
+      }
+
+      fusion360::find_fusion_launcher() {
+        find "$FUSION360_WINEPREFIX" -iname FusionLauncher.exe 2>/dev/null | grep -E '/Autodesk/|/Fusion/' | head -n 1
+      }
+
+      fusion360::find_fusion_entrypoint() {
         local exe
-        exe="$(find "$FUSION360_WINEPREFIX" -iname Fusion360.exe 2>/dev/null | grep -E '/Autodesk/|/Fusion/' | head -n 1 || true)"
+        exe="$(fusion360::find_fusion_exe || true)"
         if [ -n "$exe" ]; then
           printf '%s\n' "$exe"
           return 0
         fi
 
-        find "$FUSION360_WINEPREFIX" -iname FusionLauncher.exe 2>/dev/null | grep -E '/Autodesk/|/Fusion/' | head -n 1
+        fusion360::find_fusion_launcher
       }
 
       fusion360::run_installer_until_fusion_present() {
@@ -272,7 +288,7 @@ EOF
         local installer_pid=$!
 
         for _ in $(seq 1 "$timeout_seconds"); do
-          if [ -n "$(fusion360::find_fusion_exe || true)" ]; then
+          if [ -n "$(fusion360::find_fusion_entrypoint || true)" ]; then
             WINEPREFIX="$FUSION360_WINEPREFIX" wineserver -k >/dev/null 2>&1 || true
             wait "$installer_pid" >/dev/null 2>&1 || true
             return 0
@@ -286,7 +302,7 @@ EOF
 
         WINEPREFIX="$FUSION360_WINEPREFIX" wineserver -k >/dev/null 2>&1 || true
         wait "$installer_pid" >/dev/null 2>&1 || true
-        [ -n "$(fusion360::find_fusion_exe || true)" ]
+        [ -n "$(fusion360::find_fusion_entrypoint || true)" ]
       }
     '';
   };
@@ -304,7 +320,7 @@ EOF
       fusion360::ensure_proton
       fusion360::ensure_dirs
 
-      existing_fusion_exe="$(fusion360::find_fusion_exe || true)"
+      existing_fusion_exe="$(fusion360::find_fusion_entrypoint || true)"
       if [ -n "$existing_fusion_exe" ]; then
         echo "Fusion 360 ist bereits installiert:"
         echo "  $existing_fusion_exe"
@@ -361,12 +377,22 @@ EOF
 
       echo "Starte Fusion-Installer (1/2)..."
       fusion360::run_installer_until_fusion_present "$FUSION360_LOGS/fusion-installer-pass1.log" 540 || true
-      if [ -z "$(fusion360::find_fusion_exe || true)" ]; then
+      if [ -z "$(fusion360::find_fusion_entrypoint || true)" ]; then
         echo "Starte Fusion-Installer (2/2)..."
         fusion360::run_installer_until_fusion_present "$FUSION360_LOGS/fusion-installer-pass2.log" 120 || true
       fi
 
-      if [ -z "$(fusion360::find_fusion_exe || true)" ]; then
+      installed_fusion_exe="$(fusion360::find_fusion_exe || true)"
+      installed_fusion_launcher="$(fusion360::find_fusion_launcher || true)"
+      if [ -z "$installed_fusion_exe" ] && [ -n "$installed_fusion_launcher" ]; then
+        echo "Nur FusionLauncher.exe wurde installiert:" >&2
+        echo "  $installed_fusion_launcher" >&2
+        echo "Das ist ein unvollstaendiger Bootstrap und deutet meist auf den falschen Autodesk-Installer hin." >&2
+        echo "Nutze die Admin-Installer-EXE und fuehre fusion360-setup erneut aus." >&2
+        exit 1
+      fi
+
+      if [ -z "$installed_fusion_exe" ]; then
         echo "Fusion 360 wurde nicht installiert. Prüfe $FUSION360_LOGS/fusion-installer-pass1.log und $FUSION360_LOGS/fusion-installer-pass2.log" >&2
         exit 1
       fi
@@ -408,7 +434,7 @@ EOF
       source "${fusion360ProtonLib}/bin/fusion360-proton-lib"
       fusion360::ensure_proton
 
-      exe="$(fusion360::find_fusion_exe || true)"
+      exe="$(fusion360::find_fusion_entrypoint || true)"
       if [ -z "$exe" ]; then
         echo "Fusion 360 executable nicht gefunden im Prefix: $FUSION360_WINEPREFIX" >&2
         echo "Führe zuerst 'fusion360-setup /pfad/zum/installer.exe' aus." >&2
