@@ -184,7 +184,7 @@ if [ "''${1:-}" = "--version" ]; then
   echo "wine-''${proton_major:-10}.0"
   exit 0
 fi
-exec "$FUSION360_PROTON_DIR/proton" run wine "\$@"
+exec "$FUSION360_PROTON_DIR/proton" run "\$@"
 EOF
         chmod 0755 "$FUSION360_BIN_DIR/proton-wine"
 
