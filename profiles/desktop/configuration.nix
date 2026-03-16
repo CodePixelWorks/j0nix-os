@@ -34,6 +34,7 @@ in
     ../../system/apps/bambulab.nix
     ../../system/apps/aagl.nix
     ../../system/apps/flatpak-sync.nix
+    ../../system/apps/fusion360.nix
     ../../system/apps/ollama.nix
     ../../system/apps/syncthing.nix
     ../../system/apps/twintail-launcher.nix
