@@ -20,6 +20,8 @@ let
   aiInstallScope = ai.installScope or "system"; # "system" | "user"
   codex = import ./codex.nix { inherit inputs lib pkgs settings; };
   codexEnabled = codex.enabled;
+  opencodeEnabled = ai.opencode or true;
+  opencodePackage = if builtins.hasAttr "opencode" pkgs then pkgs.opencode else null;
   claudeCodeEnabled = ai.claudeCode or true;
   claudeCodePackage = if builtins.hasAttr "claude-code" pkgs then pkgs."claude-code" else null;
   sshUsers =
@@ -98,6 +100,7 @@ in
     pkgs.seahorse
   ] ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled && codex.mcpNixosEnable && codex.mcpNixosPackage != null) [ codex.mcpNixosPackage ]
+    ++ lib.optionals (aiEnabled && aiInstallScope == "system" && opencodeEnabled && opencodePackage != null) [ opencodePackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && claudeCodeEnabled && claudeCodePackage != null) [ claudeCodePackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && geminiEnabled && hasGeminiPackage) [
       pkgs.gemini-cli
@@ -124,6 +127,10 @@ in
     {
       assertion = (!codex.mcpNixosEnable) || codex.mcpNixosPackage != null;
       message = "settings.dev.ai.codex.mcp.nixos=true but pkgs.mcp-nixos is unavailable";
+    }
+    {
+      assertion = (!opencodeEnabled) || opencodePackage != null;
+      message = "settings.dev.ai.opencode=true but pkgs.opencode is unavailable";
     }
     {
       assertion = (!claudeCodeEnabled) || claudeCodePackage != null;
