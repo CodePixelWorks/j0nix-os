@@ -28,8 +28,9 @@ upstream `cryinkfly/Autodesk-Fusion-360-on-Linux` project:
 - optional manual staging of a supplied Autodesk installer EXE before the
   upstream flow starts
 - when Fusion is enabled for any user, j0nix enables `spacenavd` system-wide
-  and installs the host-side `gawk` and `mokutil` tools expected by the
-  upstream diagnostics
+  and installs the host-side command set expected by the upstream diagnostics
+  (`bc`, `cabextract`, `curl`, `gawk`, `lsb_release`, `glxinfo`, `mokutil`,
+  `7z`, `wbinfo`, `xrandr`, `xdg-open`, plus a compatibility `samba` wrapper)
 
 ### Default operator flow
 
