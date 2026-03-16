@@ -84,7 +84,10 @@ let
     hash = "sha256-7BMn2JREc/RURjA3iKR08gvMsHbJoTf3xJy/X3oAH/o=";
   };
   upstreamInstallerLibrary = pkgs.runCommandLocal "autodesk_fusion_installer_x86-64-lib.sh" { } ''
-    sed '$d' ${upstreamInstallerRaw} | sed '$d' > "$out"
+    sed '$d' ${upstreamInstallerRaw} | sed '$d' \
+      | sed 's#WINE="\$PROTON_DIRECTORY/files/bin/wine"#WINE="\$SELECTED_DIRECTORY/bin/proton-wine"#' \
+      | sed 's#WINESERVER="\$PROTON_DIRECTORY/files/bin/wineserver"#WINESERVER="\$SELECTED_DIRECTORY/bin/proton-wineserver"#' \
+      > "$out"
     chmod 0555 "$out"
   '';
 
@@ -164,6 +167,30 @@ let
           "$FUSION360_LOGS" \
           "$FUSION360_INSTALL_ROOT/resources" \
           "$(dirname "$FUSION360_WINEPREFIX")"
+      }
+
+      fusion360::write_proton_wrappers() {
+        if [ -z "$FUSION360_PROTON_VERSION" ]; then
+          return 0
+        fi
+
+        cat > "$FUSION360_BIN_DIR/proton-wine" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export STEAM_COMPAT_CLIENT_INSTALL_PATH="$FUSION360_STEAM_DIR"
+export STEAM_COMPAT_DATA_PATH="$FUSION360_COMPAT_DIR"
+exec "$FUSION360_PROTON_DIR/proton" run wine "\$@"
+EOF
+        chmod 0755 "$FUSION360_BIN_DIR/proton-wine"
+
+        cat > "$FUSION360_BIN_DIR/proton-wineserver" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export STEAM_COMPAT_CLIENT_INSTALL_PATH="$FUSION360_STEAM_DIR"
+export STEAM_COMPAT_DATA_PATH="$FUSION360_COMPAT_DIR"
+exec "$FUSION360_PROTON_DIR/proton" run wineserver "\$@"
+EOF
+        chmod 0755 "$FUSION360_BIN_DIR/proton-wineserver"
       }
 
       fusion360::require_prefix_layout() {
@@ -345,6 +372,7 @@ EOF
         fusion360::ensure_proton
       fi
       fusion360::ensure_dirs
+      fusion360::write_proton_wrappers
 
       main_log="$FUSION360_LOGS/fusion360-setup.log"
       trace_log="$FUSION360_LOGS/fusion360-setup-trace.log"
