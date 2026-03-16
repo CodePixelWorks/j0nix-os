@@ -62,8 +62,25 @@ Current first-party package:
 - `fusion360-proton`
 
 `Fusion 360` remains a managed exception: installer/runtime wrappers are declarative, but Proton/Wine prefix creation and Autodesk login state are user-state and therefore provisioned via user systemd, not built into the Nix store.
+The current setup path is intentionally based on the upstream `cryinkfly/Autodesk-Fusion-360-on-Linux` installer project:
+- Project: `https://codeberg.org/cryinkfly/Autodesk-Fusion-360-on-Linux`
+- Upstream setup script: `files/setup/autodesk_fusion_installer_x86-64.sh`
+- j0nix vendors that script as a fetched artifact and drives its install functions from a local wrapper instead of maintaining a separate installer implementation.
+
+Important upstream behavior we currently rely on:
+- it creates the Fusion data structure under the selected install root
+- it downloads the tested helper payloads itself (`winetricks`, `WebView2`, patched `Qt6WebEngineCore.dll`, patched `siappdll.dll`, launcher assets, optional extensions)
+- it applies the known post-install DLL patches and desktop launcher generation
+- it supports both plain Wine and Steam-Proton execution modes
+
+Local j0nix deviations from upstream:
+- package-manager mutations from the upstream script are disabled; Nix provides the runtime dependencies instead
+- the setup wrapper may stage a manually supplied Autodesk installer EXE into the managed install root before invoking the upstream flow
+- the known `Fusion Client Downloader.exe` bootstrapper is rejected; the supported manual payload is the real admin installer
+- the setup wrapper does not auto-open the upstream partner page or auto-launch Fusion at the end of installation
+
 Its payloads can now be sourced in four ways under `settings.programs.fusion360.protonInstaller.payloads.*`:
-- `manual`: run `fusion360-setup /path/to/FusionClientInstaller.exe`; absolute and relative paths are both supported. The wrapper validates that the argument is a Windows `.exe`, rejects the known `Fusion Client Downloader.exe` bootstrapper, stages the accepted installer into the managed Fusion install root, records a SHA256 manifest, and only then continues with setup
+- `manual`: run `fusion360-setup /path/to/Fusion\ Admin\ Install.exe`; absolute and relative paths are both supported. The wrapper validates that the argument is a Windows `.exe`, rejects the known `Fusion Client Downloader.exe` bootstrapper, stages the accepted installer into the managed Fusion install root, records a SHA256 manifest, and only then continues with setup
 - `runtime-download`: keep the current first-run download behavior
 - `fetchurl`: pin the installer as a fixed-output Nix artifact with `url` + `hash`
 - `requireFile`: require a locally supplied proprietary installer file with `fileName` + `hash`
