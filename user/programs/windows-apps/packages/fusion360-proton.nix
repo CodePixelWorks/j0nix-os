@@ -144,7 +144,7 @@ let
 
       fusion360::proton_run() {
         fusion360::proton_env
-        "$FUSION360_PROTON_DIR/proton" run "$@"
+        ${pkgs.steam-run}/bin/steam-run "$FUSION360_PROTON_DIR/proton" run "$@"
       }
 
       fusion360::ensure_proton() {
@@ -184,7 +184,7 @@ if [ "''${1:-}" = "--version" ]; then
   echo "wine-''${proton_major:-10}.0"
   exit 0
 fi
-exec "$FUSION360_PROTON_DIR/proton" run "\$@"
+exec ${pkgs.steam-run}/bin/steam-run "$FUSION360_PROTON_DIR/proton" run "\$@"
 EOF
         chmod 0755 "$FUSION360_BIN_DIR/proton-wine"
 
@@ -198,7 +198,7 @@ if [ "''${1:-}" = "--version" ]; then
   echo "wineserver-''${proton_major:-10}.0"
   exit 0
 fi
-exec "$FUSION360_PROTON_DIR/proton" run wineserver "\$@"
+exec ${pkgs.steam-run}/bin/steam-run "$FUSION360_PROTON_DIR/proton" run wineserver "\$@"
 EOF
         chmod 0755 "$FUSION360_BIN_DIR/proton-wineserver"
       }
@@ -610,7 +610,7 @@ EOF
           WINE="$SELECTED_DIRECTORY/bin/proton-wine"
           WINESERVER="$SELECTED_DIRECTORY/bin/proton-wineserver"
           export WINE WINESERVER
-          STEAM_COMPAT_CLIENT_INSTALL_PATH="$STEAM_DIRECTORY" STEAM_COMPAT_DATA_PATH="$PROTONPREFIX_DIRECTORY" "$PROTON_DIRECTORY/proton" run wineboot --init
+          STEAM_COMPAT_CLIENT_INSTALL_PATH="$STEAM_DIRECTORY" STEAM_COMPAT_DATA_PATH="$PROTONPREFIX_DIRECTORY" ${pkgs.steam-run}/bin/steam-run "$PROTON_DIRECTORY/proton" run wineboot --init
         else
           wineboot --init
         fi
