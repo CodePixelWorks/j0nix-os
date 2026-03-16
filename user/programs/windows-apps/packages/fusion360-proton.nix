@@ -367,16 +367,16 @@ EOF
       fi
 
       set -- "$selected_option" "$selected_directory_arg" "--full"
-      # shellcheck disable=SC1090
+      # shellcheck source=/dev/null
       source "${upstreamInstallerLibrary}"
 
       if [ -n "$FUSION360_PROTON_VERSION" ]; then
-        PROTON_VERSION="$FUSION360_PROTON_VERSION"
-        PROTONPREFIX_DIRECTORY="$SELECTED_DIRECTORY/protonprefix"
-        WINE_PFX="$PROTONPREFIX_DIRECTORY/pfx"
+        export PROTON_VERSION="$FUSION360_PROTON_VERSION"
+        export PROTONPREFIX_DIRECTORY="$SELECTED_DIRECTORY/protonprefix"
+        export WINE_PFX="$PROTONPREFIX_DIRECTORY/pfx"
       else
-        PROTON_VERSION=""
-        WINE_PFX="$SELECTED_DIRECTORY/wineprefixes/default"
+        export PROTON_VERSION=""
+        export WINE_PFX="$SELECTED_DIRECTORY/wineprefixes/default"
       fi
 
       check_required_packages() {
