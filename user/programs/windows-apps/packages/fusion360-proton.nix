@@ -560,6 +560,115 @@ EOF
         return 1
       }
 
+      autodesk_fusion_patch_qt6webenginecore() {
+        QT6_WEBENGINECORE="$(find "$WINE_PFX" -name 'Qt6WebEngineCore.dll' -printf "%T+ %p\n" | sort -r | head -n 1 | sed -r 's/^[^ ]+ //')"
+        if [ -z "$QT6_WEBENGINECORE" ]; then
+          echo "Qt6WebEngineCore.dll wurde im Prefix nicht gefunden." >&2
+          return 1
+        fi
+
+        QT6_WEBENGINECORE_DIR="$(dirname "$QT6_WEBENGINECORE")"
+        echo "$QT6_WEBENGINECORE_DIR"
+        echo "The old Qt6WebEngineCore.dll file is located in the following directory: $QT6_WEBENGINECORE_DIR"
+
+        if [ -f "$QT6_WEBENGINECORE_DIR/Qt6WebEngineCore.dll" ]; then
+          cp -f "$QT6_WEBENGINECORE_DIR/Qt6WebEngineCore.dll" "$QT6_WEBENGINECORE_DIR/Qt6WebEngineCore.dll.bak"
+          echo "The Qt6WebEngineCore.dll file is backed up as Qt6WebEngineCore.dll.bak!"
+        else
+          echo "The Qt6WebEngineCore.dll file does not exist. No backup was made."
+        fi
+
+        if [ ! -f "$SELECTED_DIRECTORY/downloads/Qt6WebEngineCore.dll" ]; then
+          echo "Die gepatchte Qt6WebEngineCore.dll wurde nicht nach $SELECTED_DIRECTORY/downloads entpackt." >&2
+          return 1
+        fi
+
+        echo "Patching the Qt6WebEngineCore.dll file for Autodesk Fusion ..."
+        sleep 2
+        cp -f "$SELECTED_DIRECTORY/downloads/Qt6WebEngineCore.dll" "$QT6_WEBENGINECORE_DIR/Qt6WebEngineCore.dll"
+        echo "The Qt6WebEngineCore.dll file is patched successfully!"
+      }
+
+      wine_autodesk_fusion_install() {
+        WINE="wine"
+        WINESERVER="wineserver"
+        WINETRICKS="$SELECTED_DIRECTORY/bin/winetricks"
+        export WINEPREFIX="$WINE_PFX"
+
+        if [ -n "$PROTON_VERSION" ]; then
+          echo "Init Proton..."
+          if ! pgrep -x steam >/dev/null 2>&1; then
+            echo "Starting Steam (background, no window)..."
+            if command -v systemd-run >/dev/null 2>&1; then
+              setsid -f systemd-run --user --scope --quiet steam -silent </dev/null >/dev/null 2>&1
+            else
+              setsid -f steam -silent </dev/null >/dev/null 2>&1
+            fi
+            sleep 5
+          fi
+          USER="steamuser"
+          WINE="$SELECTED_DIRECTORY/bin/proton-wine"
+          WINESERVER="$SELECTED_DIRECTORY/bin/proton-wineserver"
+          export WINE WINESERVER
+          STEAM_COMPAT_CLIENT_INSTALL_PATH="$STEAM_DIRECTORY" STEAM_COMPAT_DATA_PATH="$PROTONPREFIX_DIRECTORY" "$PROTON_DIRECTORY/proton" run wineboot --init
+        else
+          wineboot --init
+        fi
+
+        "$WINESERVER" -w
+
+        echo "Setting up the Wine prefix for Autodesk Fusion 360 in Sandbox... (suppressed)"
+        DRIVE_PATH="$WINE_PFX/dosdevices/g:"
+        if [ ! -L "$DRIVE_PATH" ]; then
+          mkdir -p "$WINE_PFX/dosdevices"
+          ln -s "/" "$DRIVE_PATH"
+        fi
+        "$WINETRICKS" -q sandbox >> "$SELECTED_DIRECTORY/logs/winetricks_sandbox.log" 2>&1
+
+        echo "Linking the downloads folder to the Wine prefix..."
+        rm -rf "$WINE_PFX/drive_c/users/$USER/Downloads"
+        ln -s "$SELECTED_DIRECTORY/downloads" "$WINE_PFX/drive_c/users/$USER/Downloads"
+
+        echo "Configuring the Wine prefix for Autodesk Fusion 360..."
+        sleep 5
+
+        "$WINETRICKS" -q atmlib gdiplus corefonts cjkfonts dotnet48 msxml4 msxml6 vcrun2022 fontsmooth=rgb winhttp win10 2>> "$SELECTED_DIRECTORY/logs/winetricks_dotnet48.log"
+        echo "Re-installing cjkfonts... (suppressed)"
+        sleep 5
+        "$WINETRICKS" -q cjkfonts >> "$SELECTED_DIRECTORY/logs/winetricks_cjkfonts_2.log" 2>&1
+        echo "Setting Windows 11 as the Windows version... (suppressed)"
+        sleep 5
+        "$WINETRICKS" -q win11 >> "$SELECTED_DIRECTORY/logs/winetricks_win11.log" 2>&1
+        sleep 5
+        "$WINE" REG ADD "HKCU\Software\Wine\DllOverrides" /v "adpclientservice.exe" /t REG_SZ /d native /f
+        "$WINE" REG ADD "HKCU\Software\Wine\DllOverrides" /v "AdCefWebBrowser.exe" /t REG_SZ /d builtin /f
+        "$WINE" REG ADD "HKCU\Software\Wine\DllOverrides" /v "msvcp140" /t REG_SZ /d native /f
+        "$WINE" REG ADD "HKCU\Software\Wine\DllOverrides" /v "mfc140u" /t REG_SZ /d native /f
+        "$WINE" REG ADD "HKCU\Software\Wine\DllOverrides" /v "bcp47langs" /t REG_SZ /d "" /f
+        sleep 5
+        "$WINETRICKS" -q 7zip >> "$SELECTED_DIRECTORY/logs/winetricks_7zip.log" 2>&1
+        "$WINE" "$WINE_PFX/drive_c/Program Files/7-Zip/7z.exe" x "C:\\users\\$USER\\Downloads\\Qt6WebEngineCore.dll.7z" -o"C:\\users\\$USER\\Downloads\\"
+        echo "Installing Microsoft Edge WebView2 Runtime for Autodesk Fusion ..."
+        sleep 2
+        "$WINE" "$SELECTED_DIRECTORY/downloads/WebView2installer.exe" /silent /install 2>> "$SELECTED_DIRECTORY/logs/WebView2_install.log"
+        echo "Microsoft Edge WebView2 Runtime installation completed!"
+        APPDATA_DIRECTORY="$WINE_PFX/drive_c/users/$USER/AppData"
+        APPLICATION_DATA_DIRECTORY="$WINE_PFX/drive_c/users/$USER/Application Data"
+        mkdir -p "$APPDATA_DIRECTORY/Roaming/Microsoft/Internet Explorer/Quick Launch/User Pinned"
+
+        if [[ $GPU_DRIVER = "DXVK" ]]; then
+          "$WINETRICKS" -q dxvk
+          "$WINE" regedit.exe "C:\\users\\$USER\\Downloads\\DXVK\\DXVK.reg"
+        fi
+        autodesk_fusion_run_install_client
+        mkdir -p "$APPDATA_DIRECTORY/Roaming/Autodesk/Neutron Platform/Options"
+        mkdir -p "$APPDATA_DIRECTORY/Local/Autodesk/Neutron Platform/Options"
+        mkdir -p "$APPLICATION_DATA_DIRECTORY/Autodesk/Neutron Platform/Options"
+        cp "$SELECTED_DIRECTORY/downloads/$GPU_DRIVER/NMachineSpecificOptions.xml" "$APPDATA_DIRECTORY/Roaming/Autodesk/Neutron Platform/Options/NMachineSpecificOptions.xml" || return
+        cp "$SELECTED_DIRECTORY/downloads/$GPU_DRIVER/NMachineSpecificOptions.xml" "$APPDATA_DIRECTORY/Local/Autodesk/Neutron Platform/Options/NMachineSpecificOptions.xml" || return
+        cp "$SELECTED_DIRECTORY/downloads/$GPU_DRIVER/NMachineSpecificOptions.xml" "$APPLICATION_DATA_DIRECTORY/Autodesk/Neutron Platform/Options/NMachineSpecificOptions.xml" || return
+      }
+
       fusion360::run_step "check_required_packages" check_required_packages
       fusion360::run_step "deactivate_window_not_responding_dialog" deactivate_window_not_responding_dialog
       fusion360::run_step "create_data_structure" create_data_structure
