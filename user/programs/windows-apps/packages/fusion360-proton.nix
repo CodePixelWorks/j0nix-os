@@ -346,6 +346,35 @@ EOF
       fi
       fusion360::ensure_dirs
 
+      main_log="$FUSION360_LOGS/fusion360-setup.log"
+      trace_log="$FUSION360_LOGS/fusion360-setup-trace.log"
+      touch "$main_log"
+      exec > >(${pkgs.coreutils}/bin/tee -a "$main_log") 2>&1
+
+      echo "Fusion 360 setup log: $main_log"
+
+      if [ "''${FUSION360_SETUP_TRACE:-0}" = "1" ]; then
+        exec 9>>"$trace_log"
+        export BASH_XTRACEFD=9
+        export PS4='+ ''${BASH_SOURCE##*/}:''${LINENO}:''${FUNCNAME[0]:-main}: '
+        set -x
+        echo "Fusion 360 trace log: $trace_log"
+      fi
+
+      fusion360::run_step() {
+        local label="$1"
+        shift
+        echo
+        echo "==> $label"
+        if "$@"; then
+          echo "<== $label (ok)"
+        else
+          local rc=$?
+          echo "<== $label (failed: $rc)" >&2
+          return "$rc"
+        fi
+      }
+
       existing_fusion_exe="$(fusion360::find_fusion_entrypoint || true)"
       if [ -n "$existing_fusion_exe" ]; then
         echo "Fusion 360 ist bereits installiert:"
@@ -493,26 +522,26 @@ EOF
         return 1
       }
 
-      check_required_packages
-      deactivate_window_not_responding_dialog
-      create_data_structure
-      check_secure_boot
-      check_ram
-      check_gpu_driver
-      check_gpu_vram
-      check_disk_space
+      fusion360::run_step "check_required_packages" check_required_packages
+      fusion360::run_step "deactivate_window_not_responding_dialog" deactivate_window_not_responding_dialog
+      fusion360::run_step "create_data_structure" create_data_structure
+      fusion360::run_step "check_secure_boot" check_secure_boot
+      fusion360::run_step "check_ram" check_ram
+      fusion360::run_step "check_gpu_driver" check_gpu_driver
+      fusion360::run_step "check_gpu_vram" check_gpu_vram
+      fusion360::run_step "check_disk_space" check_disk_space
       if [ -n "$PROTON_VERSION" ]; then
-        check_steam_proton
+        fusion360::run_step "check_steam_proton" check_steam_proton
       fi
-      download_files
-      check_and_install_wine
-      wine_autodesk_fusion_install
-      autodesk_fusion_patch_qt6webenginecore
-      autodesk_fusion_patch_siappdll
-      wine_autodesk_fusion_install_extensions
-      autodesk_fusion_shortcuts_load
-      autodesk_fusion_safe_logfile
-      reset_window_not_responding_dialog
+      fusion360::run_step "download_files" download_files
+      fusion360::run_step "check_and_install_wine" check_and_install_wine
+      fusion360::run_step "wine_autodesk_fusion_install" wine_autodesk_fusion_install
+      fusion360::run_step "autodesk_fusion_patch_qt6webenginecore" autodesk_fusion_patch_qt6webenginecore
+      fusion360::run_step "autodesk_fusion_patch_siappdll" autodesk_fusion_patch_siappdll
+      fusion360::run_step "wine_autodesk_fusion_install_extensions" wine_autodesk_fusion_install_extensions
+      fusion360::run_step "autodesk_fusion_shortcuts_load" autodesk_fusion_shortcuts_load
+      fusion360::run_step "autodesk_fusion_safe_logfile" autodesk_fusion_safe_logfile
+      fusion360::run_step "reset_window_not_responding_dialog" reset_window_not_responding_dialog
 
       installed_fusion_exe="$(fusion360::find_fusion_exe || true)"
       installed_fusion_launcher="$(fusion360::find_fusion_launcher || true)"
