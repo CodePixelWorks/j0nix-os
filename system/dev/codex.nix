@@ -13,6 +13,16 @@ let
   vscodeEnable = codexCfg.vscode or true;
   mcp = codexCfg.mcp or { };
   mcpNixosEnable = enabled && (mcp.nixos or false);
+  mcpNixosPackage =
+    if pkgs ? mcp-nixos then
+      pkgs.mcp-nixos.overridePythonAttrs (_: {
+        # nixpkgs 26.05 currently evaluates the package with a broken pytest
+        # TOML shape on Python 3.13. The runtime package is fine; only the
+        # check phase fails.
+        doCheck = false;
+      })
+    else
+      null;
 
   compatAvailable =
     (inputs ? codex-cli-nix)
@@ -38,7 +48,7 @@ let
   vscodeExtension = lib.attrByPath [ "openai" "chatgpt" ] null marketplace;
 in
 {
-  inherit enabled provider vscodeEnable compatAvailable cliPackage vscodeExtension mcpNixosEnable;
+  inherit enabled provider vscodeEnable compatAvailable cliPackage vscodeExtension mcpNixosEnable mcpNixosPackage;
 
   validProvider = builtins.elem provider [ "upstream" "compat" ];
 
