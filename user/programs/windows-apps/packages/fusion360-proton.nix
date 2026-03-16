@@ -179,6 +179,11 @@ let
 set -euo pipefail
 export STEAM_COMPAT_CLIENT_INSTALL_PATH="$FUSION360_STEAM_DIR"
 export STEAM_COMPAT_DATA_PATH="$FUSION360_COMPAT_DIR"
+if [ "''${1:-}" = "--version" ]; then
+  proton_major="\$(printf '%s\n' "$FUSION360_PROTON_VERSION" | sed -n 's/[^0-9]*\\([0-9][0-9]*\\).*/\\1/p' | head -n 1)"
+  echo "wine-''${proton_major:-10}.0"
+  exit 0
+fi
 exec "$FUSION360_PROTON_DIR/proton" run wine "\$@"
 EOF
         chmod 0755 "$FUSION360_BIN_DIR/proton-wine"
@@ -188,6 +193,11 @@ EOF
 set -euo pipefail
 export STEAM_COMPAT_CLIENT_INSTALL_PATH="$FUSION360_STEAM_DIR"
 export STEAM_COMPAT_DATA_PATH="$FUSION360_COMPAT_DIR"
+if [ "''${1:-}" = "--version" ]; then
+  proton_major="\$(printf '%s\n' "$FUSION360_PROTON_VERSION" | sed -n 's/[^0-9]*\\([0-9][0-9]*\\).*/\\1/p' | head -n 1)"
+  echo "wineserver-''${proton_major:-10}.0"
+  exit 0
+fi
 exec "$FUSION360_PROTON_DIR/proton" run wineserver "\$@"
 EOF
         chmod 0755 "$FUSION360_BIN_DIR/proton-wineserver"
