@@ -79,21 +79,42 @@ let
 
   fusionInstallerRuntimeFile = pkgs.writeText "fusion360-installer-runtime.json" (builtins.toJSON fusionInstallerRuntimeSpec);
   webView2InstallerRuntimeFile = pkgs.writeText "fusion360-webview2-runtime.json" (builtins.toJSON webView2InstallerRuntimeSpec);
+  upstreamInstallerRaw = pkgs.fetchurl {
+    url = "https://codeberg.org/cryinkfly/Autodesk-Fusion-360-on-Linux/raw/branch/main/files/setup/autodesk_fusion_installer_x86-64.sh";
+    hash = "sha256-7BMn2JREc/RURjA3iKR08gvMsHbJoTf3xJy/X3oAH/o=";
+  };
+  upstreamInstallerLibrary = pkgs.runCommandLocal "autodesk_fusion_installer_x86-64-lib.sh" { } ''
+    sed '$d' ${upstreamInstallerRaw} | sed '$d' > "$out"
+    chmod 0555 "$out"
+  '';
 
   fusion360ProtonLib = pkgs.writeShellApplication {
     name = "fusion360-proton-lib";
     runtimeInputs = with pkgs; [
+      bc
+      cabextract
       coreutils
       curl
       file
       findutils
       gawk
+      gettext
+      glib
       gnugrep
       gnused
-      procps
-      xdg-utils
       jq
+      lsb-release
+      mesa-demos
+      mokutil
+      p7zip
+      procps
+      samba
+      util-linux
+      wget
+      which
       winetricks
+      xdg-utils
+      xrandr
       wineWow64Packages.waylandFull
     ];
     text = ''
@@ -169,7 +190,7 @@ let
           cp "$store_path" "$out"
         elif [ "$mode" = "manual" ]; then
           if [ -z "$manual_source" ]; then
-            echo "Fusion installer erforderlich. Nutze: fusion360-setup /pfad/zum/installer.exe" >&2
+            echo "Fusion installer erforderlich. Nutze: fusion360-setup /pfad/zum/Fusion\\ Admin\\ Install.exe" >&2
             return 1
           fi
           if [ ! -f "$manual_source" ]; then
@@ -186,7 +207,7 @@ let
         local candidate="$1"
         if [ -z "$candidate" ]; then
           echo "Fusion installer erforderlich." >&2
-          echo "Nutze: fusion360-setup /pfad/zum/FusionClientInstaller.exe" >&2
+          echo "Nutze: fusion360-setup /pfad/zum/Fusion\\ Admin\\ Install.exe" >&2
           echo "Relative Pfade aus dem aktuellen Arbeitsverzeichnis werden unterstützt." >&2
           return 1
         fi
@@ -316,8 +337,13 @@ EOF
       source "${fusion360ProtonLib}/bin/fusion360-proton-lib"
       installer_path="''${1:-}"
       manual_installer_path=""
+      selected_option="--install"
+      selected_directory_arg="$FUSION360_INSTALL_ROOT"
 
-      fusion360::ensure_proton
+      if [ -n "$FUSION360_PROTON_VERSION" ]; then
+        selected_option="--proton=$FUSION360_PROTON_VERSION"
+        fusion360::ensure_proton
+      fi
       fusion360::ensure_dirs
 
       existing_fusion_exe="$(fusion360::find_fusion_entrypoint || true)"
@@ -340,47 +366,61 @@ EOF
         fusion360::stage_manual_installer "$manual_installer_path" "$FUSION360_DOWNLOADS/FusionClientInstaller.exe"
       fi
 
-      fusion360::ensure_payload "$FUSION360_INSTALLER_SPEC" "$FUSION360_DOWNLOADS/FusionClientInstaller.exe" "$manual_installer_path"
-      fusion360::ensure_payload "$FUSION360_WEBVIEW2_SPEC" "$FUSION360_DOWNLOADS/WebView2installer.exe"
+      set -- "$selected_option" "$selected_directory_arg" "--full"
+      # shellcheck disable=SC1090
+      source "${upstreamInstallerLibrary}"
 
-      echo "Initialisiere Proton-Prefix..."
-      fusion360::proton_run wineboot -u >/dev/null 2>&1 || true
-
-      echo "Initialisiere Wine-Prefix..."
-      if ! WINEPREFIX="$FUSION360_WINEPREFIX" wineboot -u >> "$FUSION360_LOGS/wineboot.log" 2>&1; then
-        echo "wineboot ist fehlgeschlagen. Prüfe $FUSION360_LOGS/wineboot.log" >&2
-        exit 1
-      fi
-      fusion360::require_prefix_layout
-
-      mkdir -p "$FUSION360_WINEPREFIX/dosdevices"
-      [ -L "$FUSION360_WINEPREFIX/dosdevices/g:" ] || ln -s / "$FUSION360_WINEPREFIX/dosdevices/g:"
-
-      if [ -d "$FUSION360_WINEPREFIX/drive_c/users/$FUSION360_USER_IN_PREFIX" ]; then
-        rm -rf "$FUSION360_WINEPREFIX/drive_c/users/$FUSION360_USER_IN_PREFIX/Downloads"
-        ln -s "$FUSION360_DOWNLOADS" "$FUSION360_WINEPREFIX/drive_c/users/$FUSION360_USER_IN_PREFIX/Downloads"
+      if [ -n "$FUSION360_PROTON_VERSION" ]; then
+        PROTON_VERSION="$FUSION360_PROTON_VERSION"
+        PROTONPREFIX_DIRECTORY="$SELECTED_DIRECTORY/protonprefix"
+        WINE_PFX="$PROTONPREFIX_DIRECTORY/pfx"
+      else
+        PROTON_VERSION=""
+        WINE_PFX="$SELECTED_DIRECTORY/wineprefixes/default"
       fi
 
-      echo "Winetricks Basis-Setup (kann dauern)..."
-      WINEPREFIX="$FUSION360_WINEPREFIX" winetricks -q sandbox >> "$FUSION360_LOGS/winetricks-sandbox.log" 2>&1 || true
-      WINEPREFIX="$FUSION360_WINEPREFIX" winetricks -q atmlib gdiplus corefonts cjkfonts msxml4 msxml6 vcrun2022 fontsmooth=rgb winhttp win10 >> "$FUSION360_LOGS/winetricks-base.log" 2>&1 || true
-      WINEPREFIX="$FUSION360_WINEPREFIX" winetricks -q cjkfonts >> "$FUSION360_LOGS/winetricks-cjkfonts.log" 2>&1 || true
-      WINEPREFIX="$FUSION360_WINEPREFIX" winetricks -q win11 >> "$FUSION360_LOGS/winetricks-win11.log" 2>&1 || true
+      check_required_packages() {
+        echo "Überspringe Paketprüfung: j0nix stellt die benötigten Runtime-Tools bereit."
+      }
 
-      echo "Registry-Overrides setzen..."
-      WINEPREFIX="$FUSION360_WINEPREFIX" wine reg add "HKCU\\Software\\Wine\\DllOverrides" /v "adpclientservice.exe" /t REG_SZ /d native /f >> "$FUSION360_LOGS/registry.log" 2>&1 || true
-      WINEPREFIX="$FUSION360_WINEPREFIX" wine reg add "HKCU\\Software\\Wine\\DllOverrides" /v "AdCefWebBrowser.exe" /t REG_SZ /d builtin /f >> "$FUSION360_LOGS/registry.log" 2>&1 || true
-      WINEPREFIX="$FUSION360_WINEPREFIX" wine reg add "HKCU\\Software\\Wine\\DllOverrides" /v "bcp47langs" /t REG_SZ /d "" /f >> "$FUSION360_LOGS/registry.log" 2>&1 || true
+      install_required_packages() {
+        echo "Automatische Paketinstallation ist in j0nix deaktiviert." >&2
+        echo "Fehlende Tools müssen deklarativ über Nix bereitgestellt werden." >&2
+        return 1
+      }
 
-      echo "Installiere WebView2..."
-      WINEPREFIX="$FUSION360_WINEPREFIX" wine "$FUSION360_DOWNLOADS/WebView2installer.exe" /silent /install >> "$FUSION360_LOGS/webview2.log" 2>&1 || true
+      check_and_install_wine() {
+        if ! command -v wine >/dev/null 2>&1; then
+          echo "Wine fehlt in PATH." >&2
+          exit 1
+        fi
+        if ! command -v winetricks >/dev/null 2>&1; then
+          echo "winetricks fehlt in PATH." >&2
+          exit 1
+        fi
+        echo "Überspringe Wine-Installation: j0nix stellt Wine/winetricks bereit."
+      }
 
-      echo "Starte Fusion-Installer (1/2)..."
-      fusion360::run_installer_until_fusion_present "$FUSION360_LOGS/fusion-installer-pass1.log" 540 || true
-      if [ -z "$(fusion360::find_fusion_entrypoint || true)" ]; then
-        echo "Starte Fusion-Installer (2/2)..."
-        fusion360::run_installer_until_fusion_present "$FUSION360_LOGS/fusion-installer-pass2.log" 120 || true
+      check_required_packages
+      deactivate_window_not_responding_dialog
+      create_data_structure
+      check_secure_boot
+      check_ram
+      check_gpu_driver
+      check_gpu_vram
+      check_disk_space
+      if [ -n "$PROTON_VERSION" ]; then
+        check_steam_proton
       fi
+      download_files
+      check_and_install_wine
+      wine_autodesk_fusion_install
+      autodesk_fusion_patch_qt6webenginecore
+      autodesk_fusion_patch_siappdll
+      wine_autodesk_fusion_install_extensions
+      autodesk_fusion_shortcuts_load
+      autodesk_fusion_safe_logfile
+      reset_window_not_responding_dialog
 
       installed_fusion_exe="$(fusion360::find_fusion_exe || true)"
       installed_fusion_launcher="$(fusion360::find_fusion_launcher || true)"
@@ -412,7 +452,7 @@ EOF
 
       cat <<'EOF'
 Usage:
-  fusion360-setup /path/to/FusionClientInstaller.exe
+  fusion360-setup /path/to/Fusion\ Admin\ Install.exe
 
 The Autodesk installer EXE must be supplied explicitly.
 Relative paths from the current working directory are supported.
@@ -432,16 +472,14 @@ EOF
       set -euo pipefail
       # shellcheck disable=SC1091
       source "${fusion360ProtonLib}/bin/fusion360-proton-lib"
-      fusion360::ensure_proton
-
-      exe="$(fusion360::find_fusion_entrypoint || true)"
-      if [ -z "$exe" ]; then
-        echo "Fusion 360 executable nicht gefunden im Prefix: $FUSION360_WINEPREFIX" >&2
-        echo "Führe zuerst 'fusion360-setup /pfad/zum/installer.exe' aus." >&2
+      launcher="$FUSION360_BIN_DIR/autodesk_fusion_launcher.sh"
+      if [ ! -x "$launcher" ]; then
+        echo "Fusion 360 Launcher nicht gefunden: $launcher" >&2
+        echo "Führe zuerst 'fusion360-setup /pfad/zum/Fusion Admin Install.exe' aus." >&2
         exit 1
       fi
 
-      fusion360::proton_run "$exe" "$@"
+      exec "$launcher" "$@"
     '';
   };
 
@@ -457,7 +495,7 @@ EOF
       url="''${1:-}"
       exe="$(fusion360::find_identity_manager || true)"
       if [ -z "$exe" ]; then
-        echo "Führe zuerst 'fusion360-setup /pfad/zum/installer.exe' aus." >&2
+        echo "Führe zuerst 'fusion360-setup /pfad/zum/Fusion\\ Admin\\ Install.exe' aus." >&2
         exit 1
       fi
 
