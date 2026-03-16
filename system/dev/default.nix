@@ -95,7 +95,7 @@ in
     ]) ++ lib.optionals keyringEnable [
     pkgs.seahorse
   ] ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
-    ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled && codex.mcpNixosEnable) [ pkgs.mcp-nixos ]
+    ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled && codex.mcpNixosEnable && codex.mcpNixosPackage != null) [ codex.mcpNixosPackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && geminiEnabled && hasGeminiPackage) [
       pkgs.gemini-cli
       geminiLauncher
@@ -119,7 +119,7 @@ in
       message = codex.compatMessage;
     }
     {
-      assertion = (!codex.mcpNixosEnable) || (pkgs ? mcp-nixos);
+      assertion = (!codex.mcpNixosEnable) || codex.mcpNixosPackage != null;
       message = "settings.dev.ai.codex.mcp.nixos=true but pkgs.mcp-nixos is unavailable";
     }
     {
