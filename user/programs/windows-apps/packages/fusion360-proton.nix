@@ -588,11 +588,19 @@ EOF
         echo "  $installed_fusion_launcher" >&2
         echo "Das ist ein unvollstaendiger Bootstrap und deutet meist auf den falschen Autodesk-Installer hin." >&2
         echo "Nutze die Admin-Installer-EXE und fuehre fusion360-setup erneut aus." >&2
+        echo "Relevante Logs:" >&2
+        echo "  $FUSION360_LOGS/fusion360-setup.log" >&2
+        echo "  $FUSION360_LOGS/FusionClientInstaller_1.log" >&2
+        echo "  $FUSION360_LOGS/FusionClientInstaller_2.log" >&2
         exit 1
       fi
 
       if [ -z "$installed_fusion_exe" ]; then
-        echo "Fusion 360 wurde nicht installiert. Prüfe $FUSION360_LOGS/fusion-installer-pass1.log und $FUSION360_LOGS/fusion-installer-pass2.log" >&2
+        echo "Fusion 360 wurde nicht installiert." >&2
+        echo "Prüfe diese Logs:" >&2
+        echo "  $FUSION360_LOGS/fusion360-setup.log" >&2
+        echo "  $FUSION360_LOGS/FusionClientInstaller_1.log" >&2
+        echo "  $FUSION360_LOGS/FusionClientInstaller_2.log" >&2
         exit 1
       fi
 
