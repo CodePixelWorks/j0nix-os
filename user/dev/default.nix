@@ -196,6 +196,29 @@ let
     exec env SSH_ASKPASS='${guiSshAskpass}' SSH_ASKPASS_REQUIRE=force \
       ${pkgs.util-linux}/bin/setsid -w ${pkgs.openssh}/bin/ssh-add "$@" < /dev/null
   '';
+  pythonCfg = dev.python or { };
+  pythonEnabled = pythonCfg.enable or true;
+  pythonVersionManager = pythonCfg.versionManager or "mise";
+  pythonInstallUv = pythonCfg.installUv or true;
+  pythonVersionManagerEnabled = pythonEnabled && pythonVersionManager == "mise";
+  pythonUseScript = pkgs.writeShellScriptBin "pyuse" ''
+    set -eu
+    if [ $# -ne 1 ]; then
+      echo "Usage: pyuse <python-version>" >&2
+      echo "Example: pyuse 3.12" >&2
+      exit 2
+    fi
+    exec ${pkgs.mise}/bin/mise use -g "python@$1"
+  '';
+  pythonLocalScript = pkgs.writeShellScriptBin "pylocal" ''
+    set -eu
+    if [ $# -ne 1 ]; then
+      echo "Usage: pylocal <python-version>" >&2
+      echo "Example: pylocal 3.12" >&2
+      exit 2
+    fi
+    exec ${pkgs.mise}/bin/mise use "python@$1"
+  '';
 in
 {
   imports = [
@@ -224,11 +247,22 @@ in
     xdg.configFile = lib.mkIf gitEnabled (builtins.listToAttrs (lib.mapAttrsToList mkGitHostInclude gitHostProfiles));
 
     home.sessionVariables =
-      lib.optionalAttrs (sshEnabled && sshAgentProvider == "gnome-keyring") {
+      (lib.optionalAttrs (sshEnabled && sshAgentProvider == "gnome-keyring") {
         SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/gcr/ssh";
         SSH_ASKPASS = guiSshAskpass;
         SUDO_ASKPASS = guiSshAskpass;
-      };
+      })
+      // (lib.optionalAttrs pythonVersionManagerEnabled {
+        MISE_USE_TOML = "1";
+      });
+
+    programs.zsh.initContent = lib.mkIf pythonVersionManagerEnabled (lib.mkAfter ''
+      eval "$(${pkgs.mise}/bin/mise activate zsh)"
+    '');
+
+    programs.fish.interactiveShellInit = lib.mkIf pythonVersionManagerEnabled (lib.mkAfter ''
+      ${pkgs.mise}/bin/mise activate fish | source
+    '');
 
     programs.ssh = lib.mkIf sshEnabled {
       enable = true;
@@ -275,7 +309,16 @@ in
         statix
         deadnix
         openssh-askpass
+        python3
       ])
+      ++ lib.optionals pythonVersionManagerEnabled [
+        pkgs.mise
+        pythonUseScript
+        pythonLocalScript
+      ]
+      ++ lib.optionals (pythonEnabled && pythonInstallUv) [
+        pkgs.uv
+      ]
       ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring") [ sshAddGuiScript ]
       ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { }) [
         loadSecretBackedSshKeysScript
@@ -302,6 +345,10 @@ in
       {
         assertion = (sshKeysWithPassphrases == { }) || sshAgentProvider == "gnome-keyring";
         message = "settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey requires settings.userSettings.<name>.dev.ssh.agent.provider = gnome-keyring for automatic keyring loading.";
+      }
+      {
+        assertion = builtins.elem pythonVersionManager [ "mise" "none" ];
+        message = "settings.dev.python.versionManager must be one of: mise, none";
       }
     ];
   };

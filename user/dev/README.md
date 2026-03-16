@@ -23,6 +23,11 @@ Notable controls:
 - `settings.userSettings.<name>.dev.ssh.keyring.enable = true`: prefer askpass/keyring-assisted passphrase prompts in GUI sessions
 - `SSH_ASKPASS`/`SUDO_ASKPASS` point at the GNOME askpass binary when the SSH agent provider is `gnome-keyring`
 - `ssh-add-gui`: explicit `openssh-askpass`/GNOME askpass wrapper for `ssh-add`
+- `settings.dev.python.enable`: install baseline Python tooling for development
+- `settings.dev.python.versionManager = "mise"`: activate `mise` in the shell for fast Python version switching
+- `settings.dev.python.installUv = true`: install `uv` alongside the version manager
+- `pyuse 3.12`: switch the global Python version through `mise`
+- `pylocal 3.12`: pin a project-local Python version through `mise`
 - `settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey`: optional SOPS path for automatic key loading into the keyring-backed agent
 - The automatic loader waits for the `gcr` SSH socket and retries `ssh-add`, so key loading is resilient to slower desktop startup ordering
 - `settings.dev.ai.installScope`: install shared AI CLIs as `system` packages or per-user via Home Manager
