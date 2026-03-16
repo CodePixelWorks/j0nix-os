@@ -404,24 +404,58 @@ EOF
       check_gpu_driver() {
         local gpu_name=""
         local renderer=""
+        NVIDIA_PRESENT=0
+        AMD_PRESENT=0
+        INTEL_PRESENT=0
+        GPU_DRIVER="OpenGL"
+        GET_VRAM_MEGABYTES=0
+        MONITOR_RESOLUTION="1920x1080"
 
         if command -v nvidia-smi >/dev/null 2>&1; then
           gpu_name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n 1 | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
           if [ -n "$gpu_name" ]; then
+            NVIDIA_PRESENT=1
+            if [ "''${SECURE_BOOT:-0}" -eq 1 ]; then
+              GPU_DRIVER="OpenGL"
+            else
+              GPU_DRIVER="DXVK"
+            fi
             echo "NVIDIA GPU detected: $gpu_name"
-            return 0
           fi
+        fi
+
+        if [ "$NVIDIA_PRESENT" -eq 1 ]; then
+          GET_VRAM_MEGABYTES="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -n 1 | tr -d '[:space:]')"
         fi
 
         if command -v glxinfo >/dev/null 2>&1; then
           renderer="$(glxinfo -B 2>/dev/null | awk -F: '/OpenGL renderer string/ {sub(/^[ \t]+/, "", $2); print $2; exit}')"
           if [ -n "$renderer" ]; then
+            case "$renderer" in
+              *AMD*|*Radeon*)
+                AMD_PRESENT=1
+                ;;
+              *Intel*)
+                INTEL_PRESENT=1
+                ;;
+            esac
             echo "GPU renderer detected: $renderer"
-            return 0
           fi
         fi
 
-        echo "GPU detection skipped: no safe renderer information was available."
+        if [ "$NVIDIA_PRESENT" -eq 0 ] && [ "$AMD_PRESENT" -eq 1 ]; then
+          GPU_DRIVER="DXVK"
+        fi
+        if [ "$NVIDIA_PRESENT" -eq 0 ] && [ "$INTEL_PRESENT" -eq 1 ]; then
+          GPU_DRIVER="OpenGL"
+        fi
+
+        if [ -z "$GET_VRAM_MEGABYTES" ]; then
+          GET_VRAM_MEGABYTES=0
+        fi
+
+        echo "Selected GPU driver for installer: $GPU_DRIVER"
+        echo "Main monitor resolution: $MONITOR_RESOLUTION"
       }
 
       check_gpu_vram() {
@@ -431,20 +465,32 @@ EOF
         if command -v nvidia-smi >/dev/null 2>&1; then
           nvidia_vram="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -n 1 | tr -d '[:space:]')"
           if [ -n "$nvidia_vram" ]; then
+            GET_VRAM_MEGABYTES="$nvidia_vram"
             echo "NVIDIA GPU detected with ''${nvidia_vram}MB VRAM"
-            return 0
           fi
         fi
 
-        if command -v glxinfo >/dev/null 2>&1; then
+        if [ "$GET_VRAM_MEGABYTES" = "0" ] && command -v glxinfo >/dev/null 2>&1; then
           mesa_vram="$(glxinfo -B 2>/dev/null | awk -F: '/Video memory/ {sub(/^[ \t]+/, "", $2); print $2; exit}')"
           if [ -n "$mesa_vram" ]; then
+            GET_VRAM_MEGABYTES="$(printf '%s' "$mesa_vram" | grep -Eo '[0-9]+' | head -n 1)"
             echo "GPU VRAM detected: $mesa_vram"
-            return 0
           fi
         fi
 
-        echo "GPU VRAM check skipped: no safe VRAM query succeeded."
+        if [ -z "$GET_VRAM_MEGABYTES" ]; then
+          GET_VRAM_MEGABYTES=0
+        fi
+
+        if awk -v vram="$GET_VRAM_MEGABYTES" 'BEGIN {exit !(vram > 1000)}'; then
+          CONVERT_RAM_GIGABYTES="$(awk "BEGIN {printf \"%.2f\", $GET_VRAM_MEGABYTES / 1000}")"
+          echo "The total VRAM (Video RAM) is greater than 1 GByte (''${CONVERT_RAM_GIGABYTES} GByte) and Autodesk Fusion will run more stable later!"
+          return 0
+        fi
+
+        CONVERT_RAM_GIGABYTES="$(awk "BEGIN {printf \"%.2f\", $GET_VRAM_MEGABYTES / 1000}")"
+        echo "The total VRAM (Video RAM) is not greater than 1 GByte (''${CONVERT_RAM_GIGABYTES} GByte) and Autodesk Fusion may run unstable later with insufficient VRAM memory!" >&2
+        return 1
       }
 
       check_required_packages
