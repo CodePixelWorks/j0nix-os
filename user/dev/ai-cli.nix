@@ -8,12 +8,60 @@ let
   codex = import ../../system/dev/codex.nix { inherit inputs lib pkgs settings; };
   codexEnabled = codex.enabled;
   geminiEnabled = ai.gemini or true;
+  codexMcpNixosSync = pkgs.writeShellApplication {
+    name = "codex-mcp-nixos-sync";
+    runtimeInputs = [ pkgs.python3 ];
+    text = ''
+      mode="sync"
+      if [ "''${1:-}" = "--remove" ]; then
+        mode="remove"
+      elif [ -n "''${1:-}" ] && [ "''${1:-}" != "sync" ]; then
+        echo "Usage: codex-mcp-nixos-sync [--remove]" >&2
+        exit 2
+      fi
+
+      config_file="$HOME/.codex/config.toml"
+      mkdir -p "$(dirname "$config_file")"
+
+      MCP_MODE="$mode" MCP_CONFIG_FILE="$config_file" ${pkgs.python3}/bin/python <<'PY'
+from pathlib import Path
+import os
+import re
+
+path = Path(os.environ["MCP_CONFIG_FILE"])
+mode = os.environ["MCP_MODE"]
+block = '[mcp_servers.nixos]\ncommand = "mcp-nixos"\n'
+pattern = re.compile(r'(?ms)^\[mcp_servers\.nixos\]\n.*?(?=^\[|\Z)')
+
+text = path.read_text(encoding="utf-8") if path.exists() else ""
+
+if mode == "remove":
+    updated = pattern.sub("", text, count=1)
+    updated = re.sub(r"\n{3,}", "\n\n", updated).lstrip("\n")
+else:
+    replacement = block + "\n"
+    if pattern.search(text):
+        updated = pattern.sub(replacement, text, count=1)
+    else:
+        suffix = ""
+        if text and not text.endswith("\n"):
+            suffix += "\n"
+        if text and not text.endswith("\n\n"):
+            suffix += "\n"
+        updated = f"{text}{suffix}{block}"
+
+if updated != text:
+    path.write_text(updated, encoding="utf-8")
+PY
+    '';
+  };
 
   hasGeminiPackage = pkgs ? gemini-cli;
 in
 lib.mkIf enabled {
   j0nix.user.software.packages =
     lib.optionals (installScope == "user" && codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
+    ++ lib.optionals (installScope == "user" && codexEnabled && codex.mcpNixosEnable) [ pkgs.mcp-nixos ]
     ++ lib.optionals (installScope == "user" && geminiEnabled && hasGeminiPackage) [ pkgs.gemini-cli ]
     ++ lib.optionals (installScope == "user" && geminiEnabled) [
       (pkgs.writeShellScriptBin "gemini-launcher" ''
@@ -31,6 +79,10 @@ lib.mkIf enabled {
         fi
       '')
     ];
+
+  home.activation.codexMcpNixosSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    $DRY_RUN_CMD ${codexMcpNixosSync}/bin/codex-mcp-nixos-sync ${lib.optionalString (!codex.mcpNixosEnable) "--remove"}
+  '';
 
   xdg.desktopEntries.gemini-cli = lib.mkIf (geminiEnabled && (ai.geminiDesktopEntry or true)) {
     name = "Gemini CLI";
@@ -56,6 +108,10 @@ lib.mkIf enabled {
     {
       assertion = (!codexEnabled) || codex.provider != "compat" || codex.compatAvailable;
       message = codex.compatMessage;
+    }
+    {
+      assertion = (!codex.mcpNixosEnable) || (pkgs ? mcp-nixos);
+      message = "settings.dev.ai.codex.mcp.nixos=true but pkgs.mcp-nixos is unavailable";
     }
     {
       assertion = (!geminiEnabled) || hasGeminiPackage;
