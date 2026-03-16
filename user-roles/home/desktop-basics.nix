@@ -9,6 +9,7 @@ let
     (pkgs.gparted-j0nix or pkgs.gparted or null)
     (pkgs.nwg-look or null)
     (pkgs.pavucontrol or null)
+    (pkgs.yad or null)
   ];
 in
 {
