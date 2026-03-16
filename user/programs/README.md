@@ -81,10 +81,10 @@ Local j0nix deviations from upstream:
 
 Its payloads can now be sourced in four ways under `settings.programs.fusion360.protonInstaller.payloads.*`:
 - `manual`: run `fusion360-setup /path/to/Fusion\ Admin\ Install.exe`; absolute and relative paths are both supported. The wrapper validates that the argument is a Windows `.exe`, rejects the known `Fusion Client Downloader.exe` bootstrapper, stages the accepted installer into the managed Fusion install root, records a SHA256 manifest, and only then continues with setup
-- `runtime-download`: keep the current first-run download behavior
+- `runtime-download`: follow the upstream default and let the setup wrapper download the Autodesk admin installer itself
 - `fetchurl`: pin the installer as a fixed-output Nix artifact with `url` + `hash`
 - `requireFile`: require a locally supplied proprietary installer file with `fileName` + `hash`
-The default j0nix path is now `manual`, so Fusion setup is an explicit operator action instead of an automatic login-time job.
+The default j0nix path is now `runtime-download`, but setup is still an explicit operator action. j0nix does not auto-run the Fusion installer on login.
 
 `KeePassXC` is user-scoped via `settings.userSettings.<name>.programs.keepassxc.*` and supports:
 - optional autostart

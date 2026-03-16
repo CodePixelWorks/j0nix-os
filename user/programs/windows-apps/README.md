@@ -28,6 +28,17 @@ upstream `cryinkfly/Autodesk-Fusion-360-on-Linux` project:
 - optional manual staging of a supplied Autodesk installer EXE before the
   upstream flow starts
 
+### Default operator flow
+
+The default j0nix mode now follows the upstream script more closely:
+
+```bash
+fusion360-setup
+```
+
+That uses the upstream admin-installer download path and keeps setup as an
+explicit operator action instead of a login-time auto-setup job.
+
 ### Manual installer requirement
 
 For the manual path, use the real Autodesk admin installer:
