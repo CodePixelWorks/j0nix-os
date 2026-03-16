@@ -43,6 +43,26 @@ fusion360-setup
 That uses the upstream admin-installer download path and keeps setup as an
 explicit operator action instead of a login-time auto-setup job.
 
+### Troubleshooting and logging
+
+`fusion360-setup` now always writes an orchestration log to:
+
+```bash
+~/.autodesk_fusion/logs/fusion360-setup.log
+```
+
+For shell-level tracing of the wrapper and upstream steps:
+
+```bash
+FUSION360_SETUP_TRACE=1 fusion360-setup
+```
+
+That additionally writes:
+
+```bash
+~/.autodesk_fusion/logs/fusion360-setup-trace.log
+```
+
 ### Manual installer requirement
 
 For the manual path, use the real Autodesk admin installer:
