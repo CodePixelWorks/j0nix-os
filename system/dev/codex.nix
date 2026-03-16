@@ -11,6 +11,8 @@ let
   enabled = (ai.enable or true) && (codexCfg.enable or true);
   provider = codexCfg.provider or "upstream";
   vscodeEnable = codexCfg.vscode or true;
+  mcp = codexCfg.mcp or { };
+  mcpNixosEnable = enabled && (mcp.nixos or false);
 
   compatAvailable =
     (inputs ? codex-cli-nix)
@@ -36,7 +38,7 @@ let
   vscodeExtension = lib.attrByPath [ "openai" "chatgpt" ] null marketplace;
 in
 {
-  inherit enabled provider vscodeEnable compatAvailable cliPackage vscodeExtension;
+  inherit enabled provider vscodeEnable compatAvailable cliPackage vscodeExtension mcpNixosEnable;
 
   validProvider = builtins.elem provider [ "upstream" "compat" ];
 
