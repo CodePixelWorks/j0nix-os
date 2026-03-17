@@ -7,6 +7,16 @@
     wget
     curl
     vim
+    less
+    file
+    which
+    rsync
+    zip
+    unzip
+    bc
+    jq
+    tree
+    zstd
     pciutils
     usbutils
     ntfs3g
