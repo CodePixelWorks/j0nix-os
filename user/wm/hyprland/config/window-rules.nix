@@ -19,6 +19,9 @@
     "match:class ^(qt5ct|qt6ct)$, float 1, center 1"
     "match:class ^(xdg-desktop-portal-gtk)$, float 1, center 1"
     "match:class ^(org\\.freedesktop\\.impl\\.portal\\.FileChooser)$, float 1, center 1"
+    # GIMP uses the same class for its main window and many child dialogs, so
+    # keep the rule title-scoped instead of floating the whole application.
+    "match:class ^(org\\.gimp\\.GIMP|gimp-2\\.10|Gimp-2\\.10|gimp)$, match:title ^(Open Image|Save Image|Export Image|Export Image as.*|Preferences|Image Properties|Scale Image|Canvas Size|Print|Quit GIMP)( .*)?$, float 1, center 1"
 
     # Bambu Studio popup dialogs (e.g. filament selection) position themselves;
     # forcing center breaks the in-window send/print flow. Keep this before generic
