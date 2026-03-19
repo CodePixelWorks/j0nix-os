@@ -10,6 +10,10 @@
     less
     file
     which
+    procps
+    psmisc
+    htop
+    btop
     rsync
     zip
     unzip
