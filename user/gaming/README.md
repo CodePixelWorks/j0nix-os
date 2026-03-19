@@ -21,11 +21,27 @@ Managed by `j0nix.desktop.gaming.*` (typically set in `profiles/desktop/modules/
 
 ## Steam Helpers
 
+- `steam-session-run`: core Steam launch wrapper with explicit `--gamescope`, `--x11`, `--wayland`, `--hdr`, `--gamemode`, `--mangoapp`, and `--launcher-skip`
+- `steam-session-run` writes debug logs to `~/.local/state/j0nix/gaming/steam-session-run.log`
+- Default recommendation: do not put Gamescope in the normal Steam launch path unless you specifically need it. Use:
+  - `steam-session-run --gamemode %command%`
+  - `steam-session-run --wayland --gamemode %command%`
+- Gamescope is treated as a special-case wrapper layer because the visible top-level window becomes the Gamescope client rather than the game's direct Xwayland window.
+- `steam-session-gamescope`
+- `steam-session-gamescope-wayland`
+- `steam-session-gamescope-hdr`
+- `steam-session-gamescope-hdr-wayland`
 - `game-session-gamemode`
 - `game-session-mangohud`
+- `game-session-gamescope`
+- `game-session-gamescope-wayland`
 - `game-session-gamescope-hdr`
+- `game-session-gamescope-hdr-wayland`
 - `game-session-cyberpunk` (adds `--launcher-skip`)
+- `game-session-cyberpunk-gamescope`
+- `game-session-cyberpunk-gamescope-wayland`
 - `game-session-cyberpunk-hdr` (HDR + `--launcher-skip`)
+- `game-session-cyberpunk-hdr-wayland` (HDR + Wayland + `--launcher-skip`)
 - `game-ready-check`
 
 ## Heroic
