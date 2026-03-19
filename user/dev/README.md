@@ -32,6 +32,9 @@ Notable controls:
 - `settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey`: optional SOPS path for automatic key loading into the keyring-backed agent
 - The automatic loader waits for the `gcr` SSH socket and retries `ssh-add`, so key loading is resilient to slower desktop startup ordering
 - `settings.dev.ai.installScope`: install shared AI CLIs as `system` packages or per-user via Home Manager
-- `settings.dev.ai.codex.mcp.nixos`: install `mcp-nixos` and register it in `~/.codex/config.toml` as the `nixos` MCP server without clobbering other Codex settings
+- `settings.dev.ai.codex.mcp.nixos`: install `mcp-nixos` and register it in `~/.codex/config.toml` as the `nixos` MCP server
+- `settings.dev.ai.codex.mcp.github`: install `github-mcp-server` and register it in `~/.codex/config.toml` as the `github` MCP server
+- `settings.dev.ai.ncp`: install the `ncp` (`@portel/ncp`) CLI as a unified MCP host/helper in the shared AI tool scope
 - `settings.dev.ai.opencode`: install the `opencode` terminal coding agent in the shared AI tool scope
 - `settings.dev.ai.claudeCode`: install the `claude-code` CLI in the same AI tool scope as Codex/Gemini
+- The Codex MCP sync manages the repo-owned MCP blocks (`nixos`, `github`) without clobbering other Codex settings

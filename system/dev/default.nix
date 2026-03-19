@@ -20,6 +20,14 @@ let
   aiInstallScope = ai.installScope or "system"; # "system" | "user"
   codex = import ./codex.nix { inherit inputs lib pkgs settings; };
   codexEnabled = codex.enabled;
+  ncpEnabled = ai.ncp or true;
+  ncpPackage = pkgs.writeShellApplication {
+    name = "ncp";
+    runtimeInputs = [ pkgs.nodejs ];
+    text = ''
+      exec ${pkgs.nodejs}/bin/npx --yes @portel/ncp "$@"
+    '';
+  };
   opencodeEnabled = ai.opencode or true;
   opencodePackage = if builtins.hasAttr "opencode" pkgs then pkgs.opencode else null;
   claudeCodeEnabled = ai.claudeCode or true;
@@ -99,7 +107,8 @@ in
     ]) ++ lib.optionals keyringEnable [
     pkgs.seahorse
   ] ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
-    ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled && codex.mcpNixosEnable && codex.mcpNixosPackage != null) [ codex.mcpNixosPackage ]
+    ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled) (map (server: server.package) (builtins.attrValues codex.mcpServers))
+    ++ lib.optionals (aiEnabled && aiInstallScope == "system" && ncpEnabled) [ ncpPackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && opencodeEnabled && opencodePackage != null) [ opencodePackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && claudeCodeEnabled && claudeCodePackage != null) [ claudeCodePackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && geminiEnabled && hasGeminiPackage) [
@@ -127,6 +136,10 @@ in
     {
       assertion = (!codex.mcpNixosEnable) || codex.mcpNixosPackage != null;
       message = "settings.dev.ai.codex.mcp.nixos=true but pkgs.mcp-nixos is unavailable";
+    }
+    {
+      assertion = (!codex.mcpGithubEnable) || codex.mcpGithubPackage != null;
+      message = "settings.dev.ai.codex.mcp.github=true but pkgs.github-mcp-server is unavailable";
     }
     {
       assertion = (!opencodeEnabled) || opencodePackage != null;
