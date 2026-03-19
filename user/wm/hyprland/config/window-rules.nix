@@ -16,6 +16,7 @@
     "match:class ^(polkit-gnome-authentication-agent-1)$, float 1, center 1"
     "match:class ^(org\\.freedesktop\\.secrets)$, float 1, center 1"
     "match:class ^(org\\.gnome\\.FileRoller)$, float 1, center 1"
+    "match:class ^(file-pdf-load)$, float 1, center 1"
     "match:class ^(qt5ct|qt6ct)$, float 1, center 1"
     "match:class ^(xdg-desktop-portal-gtk)$, float 1, center 1"
     "match:class ^(org\\.freedesktop\\.impl\\.portal\\.FileChooser)$, float 1, center 1"
