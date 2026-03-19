@@ -82,6 +82,7 @@ lib.mkIf enabled {
   j0nix.user.software.packages =
     lib.optionals (installScope == "user" && codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
     ++ lib.optionals (installScope == "user" && codexEnabled) (map (server: server.package) (builtins.attrValues codex.mcpServers))
+    ++ lib.optionals (installScope == "user" && codexEnabled && codex.mcpLspEnable) codex.mcpLspRuntimePackages
     ++ lib.optionals (installScope == "user" && ncpEnabled) [ ncpPackage ]
     ++ lib.optionals (installScope == "user" && opencodeEnabled && opencodePackage != null) [ opencodePackage ]
     ++ lib.optionals (installScope == "user" && claudeCodeEnabled && claudeCodePackage != null) [ claudeCodePackage ]
@@ -139,6 +140,14 @@ lib.mkIf enabled {
     {
       assertion = (!codex.mcpGithubEnable) || codex.mcpGithubPackage != null;
       message = "settings.dev.ai.codex.mcp.github=true but pkgs.github-mcp-server is unavailable";
+    }
+    {
+      assertion = (!codex.mcpLspEnable) || codex.mcpLspPackage != null;
+      message = "settings.dev.ai.codex.mcp.lsp.enable=true but pkgs.mcp-language-server-j0nix is unavailable";
+    }
+    {
+      assertion = codex.validMcpLspLanguages;
+      message = "settings.dev.ai.codex.mcp.lsp.languages contains unsupported values. Supported languages: ${lib.concatStringsSep ", " codex.supportedMcpLspLanguages}";
     }
     {
       assertion = (!opencodeEnabled) || opencodePackage != null;

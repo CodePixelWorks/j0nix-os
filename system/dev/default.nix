@@ -108,6 +108,7 @@ in
     pkgs.seahorse
   ] ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled) (map (server: server.package) (builtins.attrValues codex.mcpServers))
+    ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled && codex.mcpLspEnable) codex.mcpLspRuntimePackages
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && ncpEnabled) [ ncpPackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && opencodeEnabled && opencodePackage != null) [ opencodePackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && claudeCodeEnabled && claudeCodePackage != null) [ claudeCodePackage ]
@@ -140,6 +141,14 @@ in
     {
       assertion = (!codex.mcpGithubEnable) || codex.mcpGithubPackage != null;
       message = "settings.dev.ai.codex.mcp.github=true but pkgs.github-mcp-server is unavailable";
+    }
+    {
+      assertion = (!codex.mcpLspEnable) || codex.mcpLspPackage != null;
+      message = "settings.dev.ai.codex.mcp.lsp.enable=true but pkgs.mcp-language-server-j0nix is unavailable";
+    }
+    {
+      assertion = codex.validMcpLspLanguages;
+      message = "settings.dev.ai.codex.mcp.lsp.languages contains unsupported values. Supported languages: ${lib.concatStringsSep ", " codex.supportedMcpLspLanguages}";
     }
     {
       assertion = (!opencodeEnabled) || opencodePackage != null;
