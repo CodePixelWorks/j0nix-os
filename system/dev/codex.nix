@@ -12,8 +12,26 @@ let
   provider = codexCfg.provider or "upstream";
   vscodeEnable = codexCfg.vscode or true;
   mcp = codexCfg.mcp or { };
+  rawLsp = mcp.lsp or false;
+  lspCfg =
+    if builtins.isAttrs rawLsp then
+      rawLsp
+    else
+      { enable = rawLsp; };
   mcpNixosEnable = enabled && (mcp.nixos or false);
   mcpGithubEnable = enabled && (mcp.github or false);
+  mcpLspEnable = enabled && (lspCfg.enable or false);
+  mcpLspLanguages =
+    if mcpLspEnable then
+      (lspCfg.languages or [
+        "nix"
+        "rust"
+        "python"
+        "typescript"
+        "go"
+      ])
+    else
+      [ ];
   mcpNixosPackage =
     if pkgs ? mcp-nixos then
       pkgs.mcp-nixos.overridePythonAttrs (_: {
@@ -29,10 +47,101 @@ let
       pkgs.github-mcp-server
     else
       null;
-  mcpManagedServerNames = [ "nixos" "github" ];
+  mcpLspPackage =
+    if pkgs ? mcp-language-server-j0nix then
+      pkgs.mcp-language-server-j0nix
+    else
+      null;
+
+  lspLanguageSpecs = {
+    nix = {
+      serverName = "lsp-nix";
+      wrapperName = "j0nix-mcp-lsp-nix";
+      runtimeInputs = [ mcpLspPackage pkgs.nixd ];
+      lspCommand = "${pkgs.nixd}/bin/nixd";
+      lspArgs = [ ];
+    };
+    rust = {
+      serverName = "lsp-rust";
+      wrapperName = "j0nix-mcp-lsp-rust";
+      runtimeInputs = [ mcpLspPackage pkgs.rust-analyzer ];
+      lspCommand = "${pkgs.rust-analyzer}/bin/rust-analyzer";
+      lspArgs = [ ];
+    };
+    python = {
+      serverName = "lsp-python";
+      wrapperName = "j0nix-mcp-lsp-python";
+      runtimeInputs = [ mcpLspPackage pkgs.pyright ];
+      lspCommand = "${pkgs.pyright}/bin/pyright-langserver";
+      lspArgs = [ "--stdio" ];
+    };
+    typescript = {
+      serverName = "lsp-typescript";
+      wrapperName = "j0nix-mcp-lsp-typescript";
+      runtimeInputs = [ mcpLspPackage pkgs.typescript-language-server pkgs.nodejs ];
+      lspCommand = "${pkgs.typescript-language-server}/bin/typescript-language-server";
+      lspArgs = [ "--stdio" ];
+    };
+    go = {
+      serverName = "lsp-go";
+      wrapperName = "j0nix-mcp-lsp-go";
+      runtimeInputs = [ mcpLspPackage pkgs.gopls ];
+      lspCommand = "${pkgs.gopls}/bin/gopls";
+      lspArgs = [ ];
+    };
+  };
+  supportedMcpLspLanguages = builtins.attrNames lspLanguageSpecs;
+  validMcpLspLanguages = lib.all (lang: builtins.elem lang supportedMcpLspLanguages) mcpLspLanguages;
+
+  mkLspWrapper = language: spec:
+    pkgs.writeShellApplication {
+      name = spec.wrapperName;
+      runtimeInputs = spec.runtimeInputs;
+      text =
+        let
+          lspArgsFragment =
+            if spec.lspArgs == [ ] then
+              ""
+            else
+              " -- ${lib.concatMapStringsSep " " lib.escapeShellArg spec.lspArgs}";
+        in
+        ''
+          set -eu
+          workspace="$(${pkgs.git}/bin/git rev-parse --show-toplevel 2>/dev/null || pwd)"
+          exec ${lib.getExe mcpLspPackage} --workspace "$workspace" --lsp ${lib.escapeShellArg spec.lspCommand}${lspArgsFragment}
+        '';
+    };
+
+  mcpLspServers =
+    if !mcpLspEnable || mcpLspPackage == null || !validMcpLspLanguages then
+      { }
+    else
+      builtins.listToAttrs (map
+        (language:
+          let
+            spec = lspLanguageSpecs.${language};
+            wrapper = mkLspWrapper language spec;
+          in
+          {
+            name = spec.serverName;
+            value = {
+              enable = true;
+              package = wrapper;
+              command = spec.wrapperName;
+            };
+          })
+        mcpLspLanguages);
+
+  mcpManagedServerNames = [ "nixos" "github" ] ++ map (language: lspLanguageSpecs.${language}.serverName) (lib.filter (language: builtins.hasAttr language lspLanguageSpecs) mcpLspLanguages);
+
+  mcpLspRuntimePackages =
+    if !mcpLspEnable || !validMcpLspLanguages then
+      [ ]
+    else
+      lib.unique (lib.concatMap (language: lspLanguageSpecs.${language}.runtimeInputs) mcpLspLanguages);
 
   mcpServers =
-    lib.filterAttrs (_: server: server.enable && server.package != null) {
+    lib.filterAttrs (_: server: server.enable && server.package != null) ({
       nixos = {
         enable = mcpNixosEnable;
         package = mcpNixosPackage;
@@ -43,7 +152,7 @@ let
         package = mcpGithubPackage;
         command = "github-mcp-server";
       };
-    };
+    } // mcpLspServers);
 
   compatAvailable =
     (inputs ? codex-cli-nix)
@@ -80,8 +189,14 @@ in
     mcpNixosPackage
     mcpGithubEnable
     mcpGithubPackage
+    mcpLspEnable
+    mcpLspLanguages
+    mcpLspPackage
+    mcpLspRuntimePackages
     mcpManagedServerNames
     mcpServers
+    validMcpLspLanguages
+    supportedMcpLspLanguages
     ;
 
   validProvider = builtins.elem provider [ "upstream" "compat" ];
