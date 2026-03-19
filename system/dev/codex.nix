@@ -13,6 +13,7 @@ let
   vscodeEnable = codexCfg.vscode or true;
   mcp = codexCfg.mcp or { };
   mcpNixosEnable = enabled && (mcp.nixos or false);
+  mcpGithubEnable = enabled && (mcp.github or false);
   mcpNixosPackage =
     if pkgs ? mcp-nixos then
       pkgs.mcp-nixos.overridePythonAttrs (_: {
@@ -23,6 +24,26 @@ let
       })
     else
       null;
+  mcpGithubPackage =
+    if pkgs ? github-mcp-server then
+      pkgs.github-mcp-server
+    else
+      null;
+  mcpManagedServerNames = [ "nixos" "github" ];
+
+  mcpServers =
+    lib.filterAttrs (_: server: server.enable && server.package != null) {
+      nixos = {
+        enable = mcpNixosEnable;
+        package = mcpNixosPackage;
+        command = "mcp-nixos";
+      };
+      github = {
+        enable = mcpGithubEnable;
+        package = mcpGithubPackage;
+        command = "github-mcp-server";
+      };
+    };
 
   compatAvailable =
     (inputs ? codex-cli-nix)
@@ -48,7 +69,20 @@ let
   vscodeExtension = lib.attrByPath [ "openai" "chatgpt" ] null marketplace;
 in
 {
-  inherit enabled provider vscodeEnable compatAvailable cliPackage vscodeExtension mcpNixosEnable mcpNixosPackage;
+  inherit
+    enabled
+    provider
+    vscodeEnable
+    compatAvailable
+    cliPackage
+    vscodeExtension
+    mcpNixosEnable
+    mcpNixosPackage
+    mcpGithubEnable
+    mcpGithubPackage
+    mcpManagedServerNames
+    mcpServers
+    ;
 
   validProvider = builtins.elem provider [ "upstream" "compat" ];
 
