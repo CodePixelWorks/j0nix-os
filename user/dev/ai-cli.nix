@@ -7,52 +7,68 @@ let
   preferredTerminal = settings.preferredTerminal or "kitty";
   codex = import ../../system/dev/codex.nix { inherit inputs lib pkgs settings; };
   codexEnabled = codex.enabled;
+  ncpEnabled = ai.ncp or true;
   opencodeEnabled = ai.opencode or true;
   claudeCodeEnabled = ai.claudeCode or true;
   geminiEnabled = ai.gemini or true;
+  ncpPackage = pkgs.writeShellApplication {
+    name = "ncp";
+    runtimeInputs = [ pkgs.nodejs ];
+    text = ''
+      exec ${pkgs.nodejs}/bin/npx --yes @portel/ncp "$@"
+    '';
+  };
   opencodePackage = if builtins.hasAttr "opencode" pkgs then pkgs.opencode else null;
   claudeCodePackage = if builtins.hasAttr "claude-code" pkgs then pkgs."claude-code" else null;
-  codexMcpNixosSync = pkgs.writeShellApplication {
-    name = "codex-mcp-nixos-sync";
+  codexMcpSync = pkgs.writeShellApplication {
+    name = "codex-mcp-sync";
     runtimeInputs = [ pkgs.python3 ];
     text = ''
-      mode="sync"
-      if [ "''${1:-}" = "--remove" ]; then
-        mode="remove"
-      elif [ -n "''${1:-}" ] && [ "''${1:-}" != "sync" ]; then
-        echo "Usage: codex-mcp-nixos-sync [--remove]" >&2
+      if [ "''${1:-}" = "--remove-all" ]; then
+        mode="remove-all"
+      elif [ -z "''${1:-}" ] || [ "''${1:-}" = "sync" ]; then
+        mode="sync"
+      else
+        echo "Usage: codex-mcp-sync [sync|--remove-all]" >&2
         exit 2
       fi
 
       config_file="$HOME/.codex/config.toml"
       mkdir -p "$(dirname "$config_file")"
 
-      MCP_MODE="$mode" MCP_CONFIG_FILE="$config_file" ${pkgs.python3}/bin/python <<'PY'
+      MCP_MODE="$mode" MCP_CONFIG_FILE="$config_file" MCP_SERVERS_JSON='${builtins.toJSON codex.mcpServers}' MCP_MANAGED_NAMES_JSON='${builtins.toJSON codex.mcpManagedServerNames}' ${pkgs.python3}/bin/python <<'PY'
 from pathlib import Path
 import os
 import re
+import json
 
 path = Path(os.environ["MCP_CONFIG_FILE"])
 mode = os.environ["MCP_MODE"]
-block = '[mcp_servers.nixos]\ncommand = "mcp-nixos"\n'
-pattern = re.compile(r'(?ms)^\[mcp_servers\.nixos\]\n.*?(?=^\[|\Z)')
+servers = json.loads(os.environ["MCP_SERVERS_JSON"])
+managed_names = json.loads(os.environ["MCP_MANAGED_NAMES_JSON"])
 
 text = path.read_text(encoding="utf-8") if path.exists() else ""
 
-if mode == "remove":
-    updated = pattern.sub("", text, count=1)
-    updated = re.sub(r"\n{3,}", "\n\n", updated).lstrip("\n")
-else:
-    replacement = block + "\n"
-    if pattern.search(text):
-        updated = pattern.sub(replacement, text, count=1)
-    else:
+def render_block(name, server):
+    lines = [f"[mcp_servers.{name}]", f'command = "{server["command"]}"']
+    return "\n".join(lines) + "\n"
+
+updated = text
+for name in managed_names:
+    pattern = re.compile(rf'(?ms)^\[mcp_servers\.{re.escape(name)}\]\n.*?(?=^\[|\Z)')
+    updated = pattern.sub("", updated, count=1)
+
+if mode != "remove-all":
+    for name, server in servers.items():
+        block = render_block(name, server)
         suffix = ""
-        if text and not text.endswith("\n"):
+        if updated and not updated.endswith("\n"):
             suffix += "\n"
-        if text and not text.endswith("\n\n"):
+        if updated and not updated.endswith("\n\n"):
             suffix += "\n"
-        updated = f"{text}{suffix}{block}"
+        updated = f"{updated}{suffix}{block}"
+
+updated = re.sub(r"\n{3,}", "\n\n", updated).lstrip("\n")
 
 if updated != text:
     path.write_text(updated, encoding="utf-8")
@@ -65,7 +81,8 @@ in
 lib.mkIf enabled {
   j0nix.user.software.packages =
     lib.optionals (installScope == "user" && codexEnabled && codex.cliPackage != null) [ codex.cliPackage ]
-    ++ lib.optionals (installScope == "user" && codexEnabled && codex.mcpNixosEnable && codex.mcpNixosPackage != null) [ codex.mcpNixosPackage ]
+    ++ lib.optionals (installScope == "user" && codexEnabled) (map (server: server.package) (builtins.attrValues codex.mcpServers))
+    ++ lib.optionals (installScope == "user" && ncpEnabled) [ ncpPackage ]
     ++ lib.optionals (installScope == "user" && opencodeEnabled && opencodePackage != null) [ opencodePackage ]
     ++ lib.optionals (installScope == "user" && claudeCodeEnabled && claudeCodePackage != null) [ claudeCodePackage ]
     ++ lib.optionals (installScope == "user" && geminiEnabled && hasGeminiPackage) [ pkgs.gemini-cli ]
@@ -86,8 +103,8 @@ lib.mkIf enabled {
       '')
     ];
 
-  home.activation.codexMcpNixosSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    $DRY_RUN_CMD ${codexMcpNixosSync}/bin/codex-mcp-nixos-sync ${lib.optionalString (!codex.mcpNixosEnable) "--remove"}
+  home.activation.codexMcpSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    $DRY_RUN_CMD ${codexMcpSync}/bin/codex-mcp-sync
   '';
 
   xdg.desktopEntries.gemini-cli = lib.mkIf (geminiEnabled && (ai.geminiDesktopEntry or true)) {
@@ -118,6 +135,10 @@ lib.mkIf enabled {
     {
       assertion = (!codex.mcpNixosEnable) || codex.mcpNixosPackage != null;
       message = "settings.dev.ai.codex.mcp.nixos=true but pkgs.mcp-nixos is unavailable";
+    }
+    {
+      assertion = (!codex.mcpGithubEnable) || codex.mcpGithubPackage != null;
+      message = "settings.dev.ai.codex.mcp.github=true but pkgs.github-mcp-server is unavailable";
     }
     {
       assertion = (!opencodeEnabled) || opencodePackage != null;
