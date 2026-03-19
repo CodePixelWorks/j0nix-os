@@ -34,7 +34,11 @@ Notable controls:
 - `settings.dev.ai.installScope`: install shared AI CLIs as `system` packages or per-user via Home Manager
 - `settings.dev.ai.codex.mcp.nixos`: install `mcp-nixos` and register it in `~/.codex/config.toml` as the `nixos` MCP server
 - `settings.dev.ai.codex.mcp.github`: install `github-mcp-server` and register it in `~/.codex/config.toml` as the `github` MCP server
+- `settings.dev.ai.codex.mcp.lsp.enable`: install a dedicated LSP-to-MCP bridge and register per-language Codex MCP servers
+- `settings.dev.ai.codex.mcp.lsp.languages`: choose which language-specific MCP bridges to generate; supported values are `nix`, `rust`, `python`, `typescript`, `go`
+- LSP MCP server names follow `lsp-<language>` in `~/.codex/config.toml` (for example `lsp-nix`, `lsp-rust`, `lsp-python`)
+- Each generated LSP MCP wrapper resolves the workspace from the current git root (or the current working directory when outside git) and starts the matching language server with the right stdio flags
 - `settings.dev.ai.ncp`: install the `ncp` (`@portel/ncp`) CLI as a unified MCP host/helper in the shared AI tool scope
 - `settings.dev.ai.opencode`: install the `opencode` terminal coding agent in the shared AI tool scope
 - `settings.dev.ai.claudeCode`: install the `claude-code` CLI in the same AI tool scope as Codex/Gemini
-- The Codex MCP sync manages the repo-owned MCP blocks (`nixos`, `github`) without clobbering other Codex settings
+- The Codex MCP sync manages the repo-owned MCP blocks (`nixos`, `github`, and any enabled `lsp-*` entries) without clobbering other Codex settings

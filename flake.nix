@@ -27,6 +27,9 @@
           '';
         });
         qmlgreet = final.callPackage ./system/software/pkgs/greetd/qmlgreet.nix { };
+        mcp-language-server-j0nix = final.callPackage ./system/software/pkgs/dev/mcp-language-server.nix {
+          src = inputs.mcp-language-server-src;
+        };
         hyprland-minimizer-orteip = prev.rustPlatform.buildRustPackage {
           pname = "hyprland_minimizer";
           version = "unstable";
@@ -326,6 +329,11 @@
     };
 
     codex-cli-nix.url = "github:sadjow/codex-cli-nix";
+
+    mcp-language-server-src = {
+      url = "github:isaacphi/mcp-language-server";
+      flake = false;
+    };
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
