@@ -42,7 +42,11 @@ let
     "${shellConfigDir}/95-shell.conf"
   ];
 
-  monitorLines = staticMonitorLines ++ managedMonitorLines ++ [ ",preferred,auto,1" ];
+  monitorLines =
+    staticMonitorLines
+    ++ managedMonitorLines
+    ++ lib.optionals (staticMonitorLines == [ ] && managedMonitorLines == [ ]) [ ",preferred,auto,1" ];
+
 
   startupLines =
     [
