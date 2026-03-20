@@ -208,16 +208,17 @@ Runtime commands:
 
 The toggle layer saves the output's workspace/focus state before disabling it, moves those workspaces onto the configured fallback monitor, and restores them when the output comes back. The same workspace handoff logic is also exposed through the numeric `SUPER+ALT+<number>` and `SUPER+CTRL+ALT+<number>` monitor binds. The “move all” variant only targets normal numbered workspaces (`id > 0`) and leaves special workspaces alone.
 
-Manual `wm-monitor-*` actions may rewrite `11-runtime-monitors.conf` during the active session so ad-hoc monitor changes survive later Hyprland reloads. That file is reset at the next login, so `settings.hyprland.initialOutputStates` remains the authoritative startup state.
+Manual `wm-monitor-*` actions may rewrite the mutable runtime monitor state file during the active session so ad-hoc monitor changes survive later Hyprland reloads. That state file is reset at the next login from `settings.hyprland.initialOutputStates`, so the declarative startup state remains authoritative.
 
 Initial output states are now expressed in two layers:
 
-- `10-monitors.conf` renders the declarative startup defaults for managed physical outputs
-- `11-runtime-monitors.conf` is reset at each login and then reserved for in-session runtime overrides
+- `10-monitors.conf` renders only unmanaged/static monitor lines
+- `11-runtime-monitors.conf` is a declarative bridge that sources the mutable runtime monitor state file
+- the runtime monitor state file is bootstrapped from `settings.hyprland.initialOutputStates` at activation and reset from the same data at each login
 - the fallback `monitor = ,preferred,auto,1` line is only emitted when no explicit monitor defaults exist
 - once `toggleableOutputs` are configured, j0nix stops auto-starting `hyprdynamicmonitors` services so the manual monitor layer remains the only runtime writer
 
-This keeps boot-time monitor state deterministic and reduces monitor races to a single runtime control path.
+This keeps boot-time monitor state deterministic and avoids conflicting `monitor` rules for the same output during later hotplug events.
 
 Monitor tooling:
 
@@ -225,7 +226,7 @@ Monitor tooling:
 - `wm-monitor-config-tui`: force `hyprdynamicmonitors tui`
 - `wm-monitor-config-gui`: open `nwg-displays`
 
-j0nix still generates a baseline `hyprdynamicmonitors` config for manual use, but once `toggleableOutputs` are configured the auto-started `hyprdynamicmonitors` services are disabled and the manual `wm-monitor-*` layer remains the source of truth for those outputs.
+j0nix still generates a baseline `hyprdynamicmonitors` config for manual use, but once `toggleableOutputs` are configured the auto-started `hyprdynamicmonitors` services are disabled and the manual `wm-monitor-*` layer remains the source of truth for those outputs. `hyprdynamicmonitors` and `wm-monitor-*` now both target the same mutable runtime state file instead of fighting declarative monitor lines in `10-monitors.conf`.
 
 ## Caelestia App Binds
 
