@@ -130,7 +130,8 @@ let
   monitorToolsAutoStart = monitorToolsCfg.autoStart or true;
   hyprdynamicmonitorsPrepareEnabled =
     installHyprdynamicmonitors
-    && monitorToolsAutoStart;
+    && monitorToolsAutoStart
+    && toggleableOutputs == [ ];
   hyprdynamicmonitorsServiceEnabled =
     hyprdynamicmonitorsPrepareEnabled
     && toggleableOutputs == [ ];
@@ -836,6 +837,20 @@ let
   monitorConfigGuiScript = pkgs.writeShellScriptBin "wm-monitor-config-gui" ''
     exec ${lib.getExe pkgs.nwg-displays} "$@"
   '';
+  hyprlandRuntimeMonitorResetScript = pkgs.writeShellScriptBin "wm-hypr-reset-runtime-monitors" ''
+    set -eu
+
+    runtime_config_path=${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath}
+
+    mkdir -p "$(dirname "$runtime_config_path")"
+    cat >"$runtime_config_path" <<'EOF'
+# ------------------------------------------------------------------
+# Runtime Monitor Overrides
+# ------------------------------------------------------------------
+# Reset on each login so declarative startup monitor defaults stay authoritative.
+# Manual wm-monitor actions may rewrite this file later during the session.
+EOF
+  '';
   startGraphicalSessionTargetScript = pkgs.writeShellScriptBin "wm-start-graphical-session-target" ''
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     if [ -S "$runtime_dir/bus" ]; then
@@ -1098,6 +1113,23 @@ EOF
       ExecStop = lib.getExe headlessOutputsRemoveScript;
     };
   };
+
+  systemd.user.services.hyprland-runtime-monitor-overrides-reset =
+    lib.mkIf (initialOutputStates != [ ]) {
+      Unit = {
+        Description = "Reset Hyprland runtime monitor overrides before login";
+        Before = [ "graphical-session-pre.target" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+
+      Install.WantedBy = [ "graphical-session-pre.target" ];
+
+      Service = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = lib.getExe hyprlandRuntimeMonitorResetScript;
+      };
+    };
 
   systemd.user.services.hyprdynamicmonitors-prepare = lib.mkIf hyprdynamicmonitorsPrepareEnabled {
     Unit = {
