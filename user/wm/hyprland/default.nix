@@ -312,6 +312,7 @@ let
   userHyprConfigPath = "${userHyprShellOverridesDir}/user-overrides.conf";
   mainHyprConfigDir = "${config.home.homeDirectory}/.config/hypr/conf.d";
   hyprlandRuntimeMonitorConfigPath = "${mainHyprConfigDir}/11-runtime-monitors.conf";
+  hyprlandRuntimeMonitorStatePath = "${config.home.homeDirectory}/.local/state/hypr/runtime-monitors.conf";
   shellGeneratedConfigDir = "${config.home.homeDirectory}/.config/hypr/shells/${selectedShell}/generated";
   hyprlandWindowRules = import ./config/window-rules.nix;
   hyprlandKeybinds = import ./config/keybinds.nix {
@@ -425,7 +426,7 @@ let
     outputs_json=${lib.escapeShellArg toggleableOutputsJson}
     bindings_json=${lib.escapeShellArg outputBindingsJson}
     headless_outputs_json=${lib.escapeShellArg headlessOutputsJson}
-    runtime_config_path=${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath}
+    runtime_config_path=${lib.escapeShellArg hyprlandRuntimeMonitorStatePath}
     runtime_dir="''${XDG_RUNTIME_DIR:-}"
     if [ -n "$runtime_dir" ] && [ -d "$runtime_dir" ] && [ -w "$runtime_dir" ]; then
       state_dir="$runtime_dir/hyprland-monitor-state"
@@ -811,8 +812,11 @@ let
     echo "== Startup monitor defaults =="
     cat ${lib.escapeShellArg "${config.home.homeDirectory}/.config/hypr/conf.d/10-monitors.conf"} || true
     echo
-    echo "== Runtime monitor overrides =="
+    echo "== Runtime monitor bridge =="
     cat ${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath} || true
+    echo
+    echo "== Runtime monitor state =="
+    cat ${lib.escapeShellArg hyprlandRuntimeMonitorStatePath} || true
     echo
     echo "== hyprdynamicmonitors config =="
     cat ${lib.escapeShellArg "${config.home.homeDirectory}/.config/${hyprdynamicmonitorsConfigPath}"} || true
@@ -840,15 +844,17 @@ let
   hyprlandRuntimeMonitorResetScript = pkgs.writeShellScriptBin "wm-hypr-reset-runtime-monitors" ''
     set -eu
 
-    runtime_config_path=${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath}
+    runtime_config_path=${lib.escapeShellArg hyprlandRuntimeMonitorStatePath}
 
     mkdir -p "$(dirname "$runtime_config_path")"
     cat >"$runtime_config_path" <<'EOF'
 # ------------------------------------------------------------------
 # Runtime Monitor Overrides
 # ------------------------------------------------------------------
-# Reset on each login so declarative startup monitor defaults stay authoritative.
-# Manual wm-monitor actions may rewrite this file later during the session.
+# Reset on each login from settings.hyprland.initialOutputStates so startup
+# monitor defaults stay authoritative. Manual wm-monitor actions may rewrite
+# this file later during the session.
+${lib.concatStringsSep "\n" (map (line: "monitor = ${line}") runtimeManagedMonitorLines)}
 EOF
   '';
   startGraphicalSessionTargetScript = pkgs.writeShellScriptBin "wm-start-graphical-session-target" ''
@@ -899,11 +905,12 @@ EOF
   managedConfigMonitorLines =
     map initialOutputStateToMonitorLine
       (builtins.filter (output: !(builtins.elem (output.name or "") headlessOutputNames)) initialOutputStates);
+  runtimeManagedMonitorLines = map initialOutputStateToMonitorLine initialOutputStates;
   hyprdynamicmonitorsConfigPath = "hyprdynamicmonitors/config.toml";
   hyprdynamicmonitorsRenderedStartupProfilePath = "hyprdynamicmonitors/hyprconfigs/j0nix-startup.conf";
   hyprdynamicmonitorsConfigText = ''
     [general]
-    destination = ${builtins.toJSON hyprlandRuntimeMonitorConfigPath}
+    destination = ${builtins.toJSON hyprlandRuntimeMonitorStatePath}
     hot_reload = true
 
     [fallback_profile]
@@ -911,7 +918,7 @@ EOF
     config_file_type = "static"
   '';
   hyprdynamicmonitorsStartupProfileText =
-    (lib.concatStringsSep "\n" (map (line: "monitor = ${line}") managedConfigMonitorLines))
+    (lib.concatStringsSep "\n" (map (line: "monitor = ${line}") runtimeManagedMonitorLines))
     + "\n";
   monitorNameFromLine =
     line:
@@ -951,7 +958,8 @@ EOF
     swwwDaemonCommand = lib.getExe' pkgs.swww "swww-daemon";
     startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
     keybindDiagnosticsStartupCommand = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
-    managedMonitorLines = managedConfigMonitorLines;
+    managedMonitorLines = runtimeManagedMonitorLines;
+    runtimeMonitorStatePath = hyprlandRuntimeMonitorStatePath;
   };
   hyprlandFragmentFiles =
     lib.mapAttrs'
@@ -972,6 +980,21 @@ EOF
     source = ${userHyprConfigPath}
   '';
 in {
+  home.activation.hyprlandRuntimeMonitorStateBootstrap =
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      runtime_config_path=${lib.escapeShellArg hyprlandRuntimeMonitorStatePath}
+      mkdir -p "$(dirname "$runtime_config_path")"
+      cat >"$runtime_config_path" <<'EOF'
+# ------------------------------------------------------------------
+# Runtime Monitor Overrides
+# ------------------------------------------------------------------
+# Reset on each login from settings.hyprland.initialOutputStates so startup
+# monitor defaults stay authoritative. Manual wm-monitor actions may rewrite
+# this file later during the session.
+${lib.concatStringsSep "\n" (map (line: "monitor = ${line}") runtimeManagedMonitorLines)}
+EOF
+    '';
+
   j0nix.user.software.packages = with pkgs; [
     swww
     wayvnc
