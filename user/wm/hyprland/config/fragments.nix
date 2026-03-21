@@ -18,6 +18,7 @@
   swwwDaemonCommand,
   startupAppsCommand,
   keybindDiagnosticsStartupCommand,
+  runtimeMonitorResetCommand,
   managedMonitorLines,
   mainConfigDir,
   shellConfigDir,
@@ -47,13 +48,13 @@ let
     ++ managedMonitorLines
     ++ lib.optionals (staticMonitorLines == [ ] && managedMonitorLines == [ ]) [ ",preferred,auto,1" ];
 
-
   startupLines =
     [
       sessionEnvImportCommand
     ]
     ++ [
       startGraphicalSessionTargetCommand
+      runtimeMonitorResetCommand
       swwwDaemonCommand
       startupAppsCommand
     ]
