@@ -35,6 +35,7 @@ let
     use_hdr=0
     use_gamemode=0
     use_mangoapp=0
+    grab_cursor=1
     launcher_skip=0
     gamescope_host_mode="borderless"
 
@@ -49,6 +50,8 @@ Options:
   --hdr             Enable HDR in gamescope
   --gamemode        Run the game through gamemoderun
   --mangoapp        Enable gamescope's --mangoapp flag when available
+  --grab-cursor     Force relative cursor grab in gamescope (default)
+  --no-grab-cursor  Disable forced cursor grab in gamescope
   --host-fullscreen Run the host gamescope window in fullscreen mode
   --launcher-skip   Append --launcher-skip to the game command
 EOF
@@ -89,6 +92,14 @@ EOF
           use_mangoapp=1
           shift
           ;;
+        --grab-cursor)
+          grab_cursor=1
+          shift
+          ;;
+        --no-grab-cursor)
+          grab_cursor=0
+          shift
+          ;;
         --host-fullscreen)
           gamescope_host_mode="fullscreen"
           shift
@@ -119,7 +130,7 @@ EOF
       cmd+=( --launcher-skip )
     fi
 
-    log "mode=$proton_mode gamescope=$use_gamescope hdr=$use_hdr gamemode=$use_gamemode mangoapp=$use_mangoapp launcher_skip=$launcher_skip host_mode=$gamescope_host_mode"
+    log "mode=$proton_mode gamescope=$use_gamescope hdr=$use_hdr gamemode=$use_gamemode mangoapp=$use_mangoapp grab_cursor=$grab_cursor launcher_skip=$launcher_skip host_mode=$gamescope_host_mode"
     log "host-env DISPLAY=''${DISPLAY:-} WAYLAND_DISPLAY=''${WAYLAND_DISPLAY:-} XDG_SESSION_TYPE=''${XDG_SESSION_TYPE:-} PROTON_ENABLE_WAYLAND=''${PROTON_ENABLE_WAYLAND:-}"
     printf '[%s] argv:' "$(${pkgs.coreutils}/bin/date -Iseconds)" >> "$log_file"
     for arg in "''${cmd[@]}"; do
@@ -172,6 +183,10 @@ EOF
         else
           log "mangoapp requested but not available; continuing without --mangoapp"
         fi
+      fi
+
+      if [ "$grab_cursor" = "1" ]; then
+        gamescope_args+=(--force-grab-cursor)
       fi
 
       log "gamescope-args=''${gamescope_args[*]}"
