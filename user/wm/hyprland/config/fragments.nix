@@ -27,6 +27,7 @@ let
   renderLines = key: values:
     lib.concatStringsSep "\n" (map (value: "${key} = ${value}") values);
   staticMonitorLines = profileDetails.hyprlandMonitors or [ ];
+  useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
 
   includePaths = [
     "${mainConfigDir}/00-vars.conf"
@@ -37,6 +38,7 @@ let
     "${mainConfigDir}/30-input.conf"
     "${mainConfigDir}/40-general.conf"
     "${mainConfigDir}/50-decoration.conf"
+    "${mainConfigDir}/55-render-opengl.conf"
     "${mainConfigDir}/60-misc-debug.conf"
     "${mainConfigDir}/70-window-rules.conf"
     "${mainConfigDir}/80-keybinds.conf"
@@ -189,6 +191,22 @@ in
           passes = 2
         }
       }
+    '';
+
+    "hypr/conf.d/55-render-opengl.conf" = ''
+      # ------------------------------------------------------------------
+      # Render / OpenGL
+      # ------------------------------------------------------------------
+      ${lib.optionalString useNvidia ''
+        # Conservative NVIDIA path to reduce flicker on some displays.
+        opengl {
+          nvidia_anti_flicker = true
+        }
+
+        render {
+          direct_scanout = 0
+        }
+      ''}
     '';
 
     "hypr/conf.d/60-misc-debug.conf" = ''
