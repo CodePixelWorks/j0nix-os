@@ -21,9 +21,10 @@ Managed by `j0nix.desktop.gaming.*` (typically set in `profiles/desktop/modules/
 
 ## Steam Helpers
 
-- `steam-session-run`: core Steam launch wrapper with explicit `--gamescope`, `--x11`, `--wayland`, `--hdr`, `--gamemode`, `--mangoapp`, `--host-fullscreen`, and `--launcher-skip`
+- `steam-session-run`: core Steam launch wrapper with explicit `--gamescope`, `--x11`, `--wayland`, `--hdr`, `--gamemode`, `--mangoapp`, `--grab-cursor`, `--no-grab-cursor`, `--host-fullscreen`, and `--launcher-skip`
 - `steam-session-run` writes debug logs to `~/.local/state/j0nix/gaming/steam-session-run.log`
 - In nested Gamescope mode the default host window is now borderless and sized to the focused monitor. Use `--host-fullscreen` only when you explicitly want the old fullscreen host window behavior.
+- In nested Gamescope mode forced cursor grab is enabled by default. Use `--no-grab-cursor` when a game needs the old cursor behavior.
 - Default recommendation: do not put Gamescope in the normal Steam launch path unless you specifically need it. Use:
   - `steam-session-run --gamemode %command%`
   - `steam-session-run --wayland --gamemode %command%`
