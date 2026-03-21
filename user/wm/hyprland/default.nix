@@ -34,6 +34,13 @@ let
   workspaceSwitchBinds = map (pair: "$mainMod, ${pair.key}, workspace, ${pair.workspace}") workspaceKeyPairs;
   workspaceMoveBinds = map (pair: "$mainMod SHIFT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
   hyprlandCfg = settings.hyprland or { };
+  monitorToolsCfg = hyprlandCfg.monitorTools or { };
+  installNwgDisplays = monitorToolsCfg.installNwgDisplays or false;
+  nwgDisplaysPackage =
+    if installNwgDisplays && builtins.hasAttr "nwg-displays" pkgs then
+      pkgs."nwg-displays"
+    else
+      null;
   sessionEnvCfg = hyprlandCfg.sessionEnv or { };
   hyprlandDebug = hyprlandCfg.debug or { };
   sessionEnvBase = {
@@ -922,6 +929,7 @@ in {
   ]
   ++ lib.optionals hasHyprKcsPackage [ hyprKcsPackage ]
   ++ lib.optional (installRawQuickshell && (pkgs ? quickshell)) pkgs.quickshell
+  ++ lib.optional (nwgDisplaysPackage != null) nwgDisplaysPackage
   ++ lib.optionals (minimizerEnabled && minimizerPackage != null) [ minimizerPackage ];
 
   wayland.windowManager.hyprland = {
@@ -1100,6 +1108,10 @@ EOF
     {
       assertion = hasHyprKcsPackage;
       message = "Hyprland keybind help requires inputs.hyprkcs.packages.<system>.default to be available.";
+    }
+    {
+      assertion = !installNwgDisplays || nwgDisplaysPackage != null;
+      message = "settings.hyprland.monitorTools.installNwgDisplays is enabled, but pkgs.\"nwg-displays\" is not available in the active nixpkgs.";
     }
   ];
 }
