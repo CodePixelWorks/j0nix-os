@@ -335,6 +335,9 @@ in {
 
   environment.etc."regreet/hyprland.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "regreet" && regreetCompositor == "hyprland") {
     text = ''
+      # Greeter sessions should light up every connected display instead of inheriting any user-session monitor policy.
+      monitor = ,preferred,auto,1
+
       misc {
         disable_hyprland_logo = true
         disable_splash_rendering = true
@@ -510,6 +513,9 @@ in {
 
   environment.etc."qmlgreet/hyprland.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet" && regreetCompositor == "hyprland") {
     text = ''
+      # Greeter sessions should light up every connected display instead of inheriting any user-session monitor policy.
+      monitor = ,preferred,auto,1
+
       general {
         gaps_in = 0
         gaps_out = 0
