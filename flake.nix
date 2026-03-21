@@ -363,6 +363,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    hyprmcp-src = {
+      url = "github:stefanoamorelli/hyprmcp";
+      flake = false;
+    };
+
     quickshell-stable = {
       url = "github:quickshell-mirror/quickshell?ref=v0.2.1";
       inputs.nixpkgs.follows = "nixpkgs";
