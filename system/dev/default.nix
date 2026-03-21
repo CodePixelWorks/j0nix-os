@@ -143,6 +143,10 @@ in
       message = "settings.dev.ai.codex.mcp.github=true but pkgs.github-mcp-server is unavailable";
     }
     {
+      assertion = (!codex.mcpHyprlandEnable) || codex.mcpHyprlandPackage != null;
+      message = "settings.dev.ai.codex.mcp.hyprland=true but the hyprmcp wrapper package is unavailable";
+    }
+    {
       assertion = (!codex.mcpLspEnable) || codex.mcpLspPackage != null;
       message = "settings.dev.ai.codex.mcp.lsp.enable=true but pkgs.mcp-language-server-j0nix is unavailable";
     }
