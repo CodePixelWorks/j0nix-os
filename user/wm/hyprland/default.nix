@@ -848,6 +848,19 @@ EOF
       activate_workspace_on_monitor "$target_monitor" "$workspace_name"
     }
 
+    move_other_monitors_workspaces_to_target() {
+      local target_monitor="$1"
+
+      [ -n "$target_monitor" ] || return 0
+
+      "$hyprctl_bin" -j monitors         | "$jq_bin" -r --arg target "$target_monitor" '.[] | select((.disabled // false) == false and (.name // "") != "" and .name != $target) | .name'         | while IFS= read -r source_monitor; do
+            [ -n "$source_monitor" ] || continue
+            move_monitor_workspaces_to_target "$source_monitor" "$target_monitor"
+          done
+
+      focus_monitor "$target_monitor"
+    }
+
     ensure_output_ready_for_workspace_move() {
       local target_monitor="$1"
       local output_json prefix
@@ -1088,7 +1101,7 @@ EOF
         ;;
       focused-workspaces-to)
         ensure_output_ready_for_workspace_move "$output_name"
-        move_monitor_workspaces_to_target "$(get_focused_monitor)" "$output_name"
+        move_other_monitors_workspaces_to_target "$output_name"
         ;;
     esac
   '';
