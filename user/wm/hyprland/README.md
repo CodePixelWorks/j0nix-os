@@ -181,7 +181,9 @@ Current default TV setup:
 - `outputBindings` maps:
   - `1` -> `DP-1` (Primary PC Monitor)
   - `2` -> `DP-3` (Living Room TV)
-  - `3` -> `SUNSHINE-HEADLESS` (Adaptive Display)
+  - `3` -> the active Sunshine display target
+- with `settings.sunshine.displayTarget.backend = "physical-output"`, monitor `3` is `DP-2` (Sunshine Dummy Plug)
+- with `settings.sunshine.displayTarget.backend = "hyprland-headless"`, monitor `3` is `SUNSHINE-HEADLESS` (Adaptive Display)
 - `DP-3` is declared as a toggleable output
 - `DP-3` uses `bindIndex = 2`
 - it starts disabled by default
@@ -198,6 +200,9 @@ Runtime commands:
 
 - `wm-monitor-list`
 - `wm-monitor-debug`
+- `wm-monitor-discover`
+- `wm-monitor-suggest <monitor-name>`
+- `wm-monitor-new-dialog`
 - `wm-monitor-toggle DP-3`
 - `wm-monitor-on DP-3`
 - `wm-monitor-off DP-3`
@@ -208,7 +213,13 @@ Runtime commands:
 
 The toggle layer saves the output's workspace/focus state before disabling it, moves those workspaces onto the configured fallback monitor, and restores them when the output comes back. The same workspace handoff logic is also exposed through the numeric `SUPER+ALT+<number>` and `SUPER+CTRL+ALT+<number>` monitor binds. The “move all” variant only targets normal numbered workspaces (`id > 0`) and leaves special workspaces alone.
 
-Manual `wm-monitor-*` actions also rewrite `11-runtime-monitors.conf`, so the currently chosen monitor state survives later Hyprland config reloads instead of snapping back to the startup defaults.
+Runtime monitor state now has a single writer contract:
+
+- `10-monitors.conf` contains the declarative startup defaults
+- `11-runtime-monitors.conf` contains runtime overrides only
+- `wm-monitor-reset-runtime` resets the runtime file to the declarative defaults once per Hyprland session startup
+- `wm-monitor` is the only runtime tool that rewrites `11-runtime-monitors.conf`
+- both the reset path and the runtime toggle path share the same lock file, so they cannot clobber each other during reloads or rapid keybind toggles
 
 Initial output states are now expressed in two layers:
 
@@ -217,6 +228,12 @@ Initial output states are now expressed in two layers:
 - the fallback `monitor = ,preferred,auto,1` line is only emitted when no explicit monitor defaults exist
 
 This keeps boot-time monitor state deterministic and gives runtime tools a separate override file instead of racing the startup config.
+
+Unknown physical monitors are intentionally not auto-written into `settings.nix`. Instead:
+
+- `wm-monitor-discover` lists connected outputs that are not yet part of the declarative monitor map
+- `wm-monitor-new-dialog` offers a YAD picker to either enable a newly seen monitor temporarily, open `nwg-displays`, or show a suggested Nix snippet
+- `wm-monitor-suggest <monitor-name>` prints a candidate `settings.nix` fragment for declarative adoption
 
 All extra monitor profile tooling is intentionally disabled for now. The only supported runtime path is the built-in `wm-monitor-*` command set and the corresponding Hyprland binds.
 

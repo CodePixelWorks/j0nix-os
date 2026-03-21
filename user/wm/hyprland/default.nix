@@ -367,9 +367,13 @@ let
 
     hyprctl_bin="${hyprctlExec}"
     jq_bin="${pkgs.jq}/bin/jq"
+    flock_bin="${pkgs.util-linux}/bin/flock"
     initial_states_json=${lib.escapeShellArg initialOutputStatesJson}
     runtime_config_path=${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath}
     headless_outputs_json=${lib.escapeShellArg headlessOutputsJson}
+    state_home="''${XDG_STATE_HOME:-$HOME/.local/state}"
+    state_dir="$state_home/hyprland-monitor-state"
+    lock_file="$state_dir/runtime-monitors.lock"
 
     output_is_headless() {
       local name="$1"
@@ -390,7 +394,9 @@ let
       fi
     }
 
-    mkdir -p "$(dirname "$runtime_config_path")"
+    mkdir -p "$(dirname "$runtime_config_path")" "$state_dir"
+    exec 9>"$lock_file"
+    "$flock_bin" -x 9
     tmp_file="$(mktemp "$(dirname "$runtime_config_path")/.11-runtime-monitors.conf.XXXXXX")"
     {
       echo "# ------------------------------------------------------------------"
@@ -494,6 +500,7 @@ let
 
     hyprctl_bin="${hyprctlExec}"
     jq_bin="${pkgs.jq}/bin/jq"
+    flock_bin="${pkgs.util-linux}/bin/flock"
     outputs_json=${lib.escapeShellArg toggleableOutputsJson}
     bindings_json=${lib.escapeShellArg outputBindingsJson}
     headless_outputs_json=${lib.escapeShellArg headlessOutputsJson}
@@ -511,9 +518,12 @@ let
     [ -x "$hyprctl_bin" ] || exit 0
     [ -x "$jq_bin" ] || exit 0
     mkdir -p "$state_dir"
+    lock_file="$state_dir/runtime-monitors.lock"
+    exec 9>"$lock_file"
+    "$flock_bin" -x 9
 
     usage() {
-      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list> [output-name]" >&2
+      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list|discover|enable-discovered|suggest> [output-name]" >&2
       exit 2
     }
 
@@ -540,6 +550,11 @@ let
       "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' "$headless_outputs_json" >/dev/null 2>&1
     }
 
+    output_is_known() {
+      local name="$1"
+      "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' "$bindings_json" >/dev/null 2>&1
+    }
+
     require_output_name() {
       [ -n "$output_name" ] || usage
     }
@@ -553,6 +568,171 @@ let
     output_is_active() {
       local name="$1"
       "$hyprctl_bin" -j monitors | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name and (.disabled // false) == false)' >/dev/null 2>&1
+    }
+
+    describe_monitor_json() {
+      local monitor_json="$1"
+      printf '%s' "$monitor_json" \
+        | "$jq_bin" -r '
+            if (.description // "") != "" then
+              .description
+            else
+              ([.make // "", .model // ""] | map(select(. != "")) | join(" "))
+            end
+          '
+    }
+
+    parse_mode_dimensions() {
+      local mode="$1"
+      printf '%s\n' "$mode" | sed -n 's/^\([0-9]\+\)x\([0-9]\+\)@.*$/\1 \2/p'
+    }
+
+    compute_unknown_monitor_position() {
+      local width="$1"
+      local height="$2"
+      local left_x bottom_y pos_x pos_y
+
+      read -r left_x bottom_y <<EOF
+$("$hyprctl_bin" -j monitors | "$jq_bin" -r '
+  [ .[] | select((.disabled // false) == false) | {
+      x: (.x // 0),
+      y: (.y // 0),
+      width: (.width // 0),
+      height: (.height // 0),
+      scale: (.scale // 1)
+    } ] as $monitors
+  | if ($monitors | length) == 0 then
+      "-1 0"
+    else
+      [
+        ($monitors | map(.x) | min),
+        ($monitors | map(.y + ((.height / .scale) | floor)) | max)
+      ]
+      | @tsv
+    end
+')
+EOF
+
+      [ -n "''${left_x:-}" ] || left_x=0
+      [ -n "''${bottom_y:-}" ] || bottom_y=0
+      pos_x=$((left_x - width))
+      pos_y=$((bottom_y - height))
+      printf '%sx%s\n' "$pos_x" "$pos_y"
+    }
+
+    get_unknown_monitor_json() {
+      local name="$1"
+      "$hyprctl_bin" -j monitors all | "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name)'
+    }
+
+    unknown_monitor_mode() {
+      local monitor_json="$1"
+      printf '%s' "$monitor_json" | "$jq_bin" -r '
+        if (.disabled // false) == false and (.width // 0) > 0 and (.height // 0) > 0 then
+          "\(.width)x\(.height)@\((.refreshRate // 60) | tostring)"
+        else
+          (.availableModes[0] // "1920x1080@60.00Hz")
+        end
+      ' | sed 's/Hz$//'
+    }
+
+    unknown_monitor_scale() {
+      printf '1\n'
+    }
+
+    unknown_monitor_position() {
+      local monitor_json="$1"
+      local mode width height dims
+
+      mode="$(unknown_monitor_mode "$monitor_json")"
+      dims="$(parse_mode_dimensions "$mode" || true)"
+      width="$(printf '%s' "$dims" | awk '{print $1}')"
+      height="$(printf '%s' "$dims" | awk '{print $2}')"
+
+      if [ -z "''${width:-}" ] || [ -z "''${height:-}" ]; then
+        printf '%s\n' "-1920x0"
+        return 0
+      fi
+
+      compute_unknown_monitor_position "$width" "$height"
+    }
+
+    list_unknown_monitors() {
+      "$hyprctl_bin" -j monitors all \
+        | "$jq_bin" -r --argfile bindings "$bindings_json" '
+            .[] as $monitor
+            | select(($monitor.name // "") != "")
+            | select(([$bindings[]?.name] | index($monitor.name)) == null)
+            | [
+                $monitor.name,
+                (if ($monitor.disabled // false) then "disabled" else "active" end),
+                (if ($monitor.description // "") != "" then $monitor.description else ([$monitor.make // "", $monitor.model // ""] | map(select(. != "")) | join(" ")) end),
+                (
+                  if ($monitor.disabled // false) == false and ($monitor.width // 0) > 0 and ($monitor.height // 0) > 0 then
+                    "\($monitor.width)x\($monitor.height)@\(($monitor.refreshRate // 60) | tostring)"
+                  else
+                    ($monitor.availableModes[0] // "1920x1080@60.00Hz")
+                  end
+                ),
+                ""
+              ]
+            | @tsv
+          ' \
+        | while IFS=$'\t' read -r name state description mode _; do
+            [ -n "$name" ] || continue
+            position="$(unknown_monitor_position "$(get_unknown_monitor_json "$name")")"
+            printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$state" "$description" "$(printf '%s' "$mode" | sed 's/Hz$//')" "$position"
+          done
+    }
+
+    enable_unknown_monitor() {
+      local name="$1"
+      local monitor_json mode position scale
+
+      monitor_json="$(get_unknown_monitor_json "$name")" || {
+        echo "Unknown monitor: $name" >&2
+        exit 1
+      }
+
+      if output_is_known "$name"; then
+        echo "Monitor $name is already managed. Use wm-monitor on/off/toggle instead." >&2
+        exit 1
+      fi
+
+      mode="$(unknown_monitor_mode "$monitor_json")"
+      position="$(unknown_monitor_position "$monitor_json")"
+      scale="$(unknown_monitor_scale)"
+
+      "$hyprctl_bin" keyword monitor "$name,$mode,$position,$scale" >/dev/null 2>&1 || true
+      wait_for_output_state "$name" active
+      printf '%s enabled temporarily at %s with %s scale %s\n' "$name" "$position" "$mode" "$scale"
+    }
+
+    suggest_unknown_monitor_config() {
+      local name="$1"
+      local monitor_json description mode position
+
+      monitor_json="$(get_unknown_monitor_json "$name")" || {
+        echo "Unknown monitor: $name" >&2
+        exit 1
+      }
+
+      description="$(describe_monitor_json "$monitor_json")"
+      mode="$(unknown_monitor_mode "$monitor_json")"
+      position="$(unknown_monitor_position "$monitor_json")"
+
+      cat <<EOF
+# Suggested settings.nix snippet for $name
+# Description: $description
+
+{
+  name = "$name";
+  enabledByDefault = false;
+  mode = "$mode";
+  position = "$position";
+  scale = 1;
+}
+EOF
     }
 
     wait_for_output_state() {
@@ -812,6 +992,13 @@ let
         monitor_list
         exit 0
         ;;
+      discover)
+        list_unknown_monitors
+        exit 0
+        ;;
+      enable-discovered|suggest)
+        require_output_name
+        ;;
       on|off|toggle|restore|status)
         require_output_name
         output_json="$(load_output_config "$output_name")" || {
@@ -858,6 +1045,15 @@ let
       status)
         monitor_status "$output_json" "$output_name" "$prefix"
         ;;
+      discover)
+        list_unknown_monitors
+        ;;
+      enable-discovered)
+        enable_unknown_monitor "$output_name"
+        ;;
+      suggest)
+        suggest_unknown_monitor_config "$output_name"
+        ;;
       workspace-to)
         move_active_workspace_to_output "$output_name"
         ;;
@@ -874,6 +1070,81 @@ let
   monitorWorkspaceToScript = pkgs.writeShellScriptBin "wm-monitor-workspace-to" ''exec ${lib.getExe monitorStateScript} workspace-to "$@"'';
   monitorFocusedWorkspacesToScript = pkgs.writeShellScriptBin "wm-monitor-focused-workspaces-to" ''exec ${lib.getExe monitorStateScript} focused-workspaces-to "$@"'';
   monitorListScript = pkgs.writeShellScriptBin "wm-monitor-list" ''exec ${lib.getExe monitorStateScript} list "$@"'';
+  monitorDiscoverScript = pkgs.writeShellScriptBin "wm-monitor-discover" ''exec ${lib.getExe monitorStateScript} discover "$@"'';
+  monitorSuggestScript = pkgs.writeShellScriptBin "wm-monitor-suggest" ''exec ${lib.getExe monitorStateScript} suggest "$@"'';
+  monitorNewDialogScript = pkgs.writeShellScriptBin "wm-monitor-new-dialog" ''
+    set -eu
+
+    monitor_bin=${lib.escapeShellArg (lib.getExe monitorStateScript)}
+    yad_bin="$(command -v yad || true)"
+    nwg_displays_bin="$(command -v nwg-displays || true)"
+    wl_copy_bin="$(command -v wl-copy || true)"
+    mode="''${1:-interactive}"
+    session_marker_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}/hyprland-monitor-state"
+    session_marker="$session_marker_dir/new-monitor-dialog.prompted"
+
+    mkdir -p "$session_marker_dir"
+
+    if [ "$mode" = "--auto" ] && [ -e "$session_marker" ]; then
+      exit 0
+    fi
+
+    unknown_lines="$("$monitor_bin" discover || true)"
+    [ -n "$unknown_lines" ] || exit 0
+
+    if [ "$mode" = "--auto" ]; then
+      : >"$session_marker"
+    fi
+
+    if [ -z "$yad_bin" ]; then
+      printf '%s\n' "$unknown_lines"
+      exit 0
+    fi
+
+    if selected_name="$(
+      printf '%s\n' "$unknown_lines" | "$yad_bin" \
+        --list \
+        --title="New Monitor Detected" \
+        --text="Select how to handle the newly detected monitor." \
+        --column="Name" \
+        --column="State" \
+        --column="Description" \
+        --column="Suggested Mode" \
+        --column="Suggested Position" \
+        --separator=$'\t' \
+        --print-column=1 \
+        --button="Enable Temporarily:0" \
+        --button="Show Suggested Nix Snippet:2" \
+        --button="Open nwg-displays:3" \
+        --button="Cancel:1"
+    )"; then
+      action_rc=0
+    else
+      action_rc=$?
+    fi
+
+    [ -n "$selected_name" ] || exit 0
+
+    case "$action_rc" in
+      0)
+        "$monitor_bin" enable-discovered "$selected_name"
+        ;;
+      2)
+        snippet_file="$(mktemp)"
+        "$monitor_bin" suggest "$selected_name" >"$snippet_file"
+        if [ -n "$wl_copy_bin" ]; then
+          "$wl_copy_bin" <"$snippet_file" >/dev/null 2>&1 || true
+        fi
+        "$yad_bin" --text-info --title="Suggested Nix Snippet" --filename="$snippet_file" --width=760 --height=420
+        rm -f "$snippet_file"
+        ;;
+      3)
+        if [ -n "$nwg_displays_bin" ]; then
+          "$nwg_displays_bin" >/dev/null 2>&1 &
+        fi
+        ;;
+    esac
+  '';
   monitorDebugScript = pkgs.writeShellScriptBin "wm-monitor-debug" ''
     set -eu
 
@@ -1024,6 +1295,9 @@ in {
     monitorWorkspaceToScript
     monitorFocusedWorkspacesToScript
     monitorListScript
+    monitorDiscoverScript
+    monitorSuggestScript
+    monitorNewDialogScript
     monitorDebugScript
   ]
   ++ lib.optionals hasHyprKcsPackage [ hyprKcsPackage ]
