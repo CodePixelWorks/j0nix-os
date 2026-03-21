@@ -20,6 +20,9 @@ Primary goals:
 3. Active configuration must live under `j0nix-os/` and be wired by root `flake.nix`.
 4. Keep user-facing configuration centralized in `j0nix-os/settings.nix`.
 5. Validate changes with `nix flake check --no-build` before finishing.
+6. Before adding a new system script, evaluate whether an existing script, module, or settings contract should be extended instead.
+7. System scripts must have a single clear authority, high-quality input/output handling, and no overlapping side effects with other scripts.
+8. User-facing outputs from scripts and tooling must be written in English and kept localization-friendly so multilingual usage remains possible.
 
 ## Agent Workflow (Required)
 
@@ -206,6 +209,9 @@ Controlled by:
 
 ### Do
 - Keep modules small and purpose-specific.
+- Evaluate whether existing scripts or modules can absorb the requested behavior before introducing a new script.
+- Keep each system script responsible for one clear contract and one authoritative state path.
+- Make system scripts robust: explicit inputs, deterministic outputs, predictable cleanup, and no hidden cross-script coupling.
 - Keep `profiles/*/modules/` focused on theme/profile configuration (data + simple toggles), not heavy transformation logic.
 - Put reusable processing logic (generators, validations, mappers) into `j0nix-os/system/*` modules and `j0nix-os/system/lib/*` helpers.
 - Prefer generic list/attr-driven models (e.g. declarative mount lists) over one-off `fooDisk*` variable trees.
@@ -218,6 +224,9 @@ Controlled by:
 
 ### Don't
 - Don’t add imports to reference folders.
+- Don’t create a new system script when extending an existing script or module would keep the architecture simpler.
+- Don’t let multiple scripts mutate the same runtime file, service, or state path without a single declared owner.
+- Don’t ship user-facing script output in ad-hoc mixed languages; default to English and keep phrasing localization-friendly.
 - Don’t hardcode host-specific absolute paths.
 - Don’t duplicate package declarations across system/home modules without reason.
 - Don’t put host/profile-specific data into `system/lib/*`.
