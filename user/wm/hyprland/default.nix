@@ -123,17 +123,6 @@ let
   managedOutputsWithBindings = toggleableOutputsWithBindings ++ (builtins.filter (output: output ? bindIndex) headlessOutputsWithBindings);
   managedOutputBindIndices = map (output: output.bindIndex) managedOutputsWithBindings;
   toggleableOutputsJson = pkgs.writeText "hyprland-toggleable-outputs.json" (builtins.toJSON managedOutputsWithBindings);
-  monitorToolsCfg = hyprlandCfg.monitorTools or { };
-  installHyprdynamicmonitors = monitorToolsCfg.installHyprdynamicmonitors or true;
-  installNwgDisplays = monitorToolsCfg.installNwgDisplays or true;
-  defaultMonitorTool = monitorToolsCfg.default or "hyprdynamicmonitors";
-  monitorToolsAutoStart = monitorToolsCfg.autoStart or true;
-  hyprdynamicmonitorsPrepareEnabled =
-    installHyprdynamicmonitors
-    && monitorToolsAutoStart;
-  hyprdynamicmonitorsServiceEnabled =
-    hyprdynamicmonitorsPrepareEnabled
-    && toggleableOutputs == [ ];
   keybindDiagnosticsCfg = hyprlandDebug.keybindDiagnostics or { };
   keybindDiagnosticsEnable = keybindDiagnosticsCfg.enable or false;
   keybindDiagnosticsDelaySeconds = keybindDiagnosticsCfg.delaySeconds or 8;
@@ -440,7 +429,7 @@ let
     mkdir -p "$state_dir"
 
     usage() {
-      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list|config> [output-name]" >&2
+      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list> [output-name]" >&2
       exit 2
     }
 
@@ -716,25 +705,7 @@ let
       mv -f "$tmp_file" "$runtime_config_path"
     }
 
-    run_config_tool() {
-      case ${lib.escapeShellArg defaultMonitorTool} in
-        hyprdynamicmonitors)
-          exec ${lib.getExe pkgs.hyprdynamicmonitors}
-          ;;
-        nwg-displays)
-          exec ${lib.getExe pkgs.nwg-displays}
-          ;;
-        *)
-          echo "Unknown settings.hyprland.monitorTools.default: ${defaultMonitorTool}" >&2
-          exit 1
-          ;;
-      esac
-    }
-
     case "$command" in
-      config)
-        exec ${homeBinDir}/wm-monitor-config
-        ;;
       list)
         monitor_list
         exit 0
@@ -812,29 +783,6 @@ let
     echo
     echo "== Runtime monitor overrides =="
     cat ${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath} || true
-    echo
-    echo "== hyprdynamicmonitors config =="
-    cat ${lib.escapeShellArg "${config.home.homeDirectory}/.config/${hyprdynamicmonitorsConfigPath}"} || true
-  '';
-  monitorConfigScript = pkgs.writeShellScriptBin "wm-monitor-config" ''
-    case ${lib.escapeShellArg defaultMonitorTool} in
-      hyprdynamicmonitors)
-        exec ${lib.getExe pkgs.hyprdynamicmonitors} tui "$@"
-        ;;
-      nwg-displays)
-        exec ${lib.getExe pkgs.nwg-displays} "$@"
-        ;;
-      *)
-        echo "Unknown settings.hyprland.monitorTools.default: ${defaultMonitorTool}" >&2
-        exit 1
-        ;;
-    esac
-  '';
-  monitorConfigTuiScript = pkgs.writeShellScriptBin "wm-monitor-config-tui" ''
-    exec ${lib.getExe pkgs.hyprdynamicmonitors} tui "$@"
-  '';
-  monitorConfigGuiScript = pkgs.writeShellScriptBin "wm-monitor-config-gui" ''
-    exec ${lib.getExe pkgs.nwg-displays} "$@"
   '';
   startGraphicalSessionTargetScript = pkgs.writeShellScriptBin "wm-start-graphical-session-target" ''
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
@@ -884,20 +832,6 @@ let
   managedConfigMonitorLines =
     map initialOutputStateToMonitorLine
       (builtins.filter (output: !(builtins.elem (output.name or "") headlessOutputNames)) initialOutputStates);
-  hyprdynamicmonitorsConfigPath = "hyprdynamicmonitors/config.toml";
-  hyprdynamicmonitorsRenderedStartupProfilePath = "hyprdynamicmonitors/hyprconfigs/j0nix-startup.conf";
-  hyprdynamicmonitorsConfigText = ''
-    [general]
-    destination = ${builtins.toJSON hyprlandRuntimeMonitorConfigPath}
-    hot_reload = true
-
-    [fallback_profile]
-    config_file = ${builtins.toJSON "${config.home.homeDirectory}/.config/${hyprdynamicmonitorsRenderedStartupProfilePath}"}
-    config_file_type = "static"
-  '';
-  hyprdynamicmonitorsStartupProfileText =
-    (lib.concatStringsSep "\n" (map (line: "monitor = ${line}") managedConfigMonitorLines))
-    + "\n";
   monitorNameFromLine =
     line:
       let
@@ -985,12 +919,7 @@ in {
     monitorFocusedWorkspacesToScript
     monitorListScript
     monitorDebugScript
-    monitorConfigScript
-    monitorConfigTuiScript
-    monitorConfigGuiScript
   ]
-  ++ lib.optionals installHyprdynamicmonitors [ pkgs.hyprdynamicmonitors ]
-  ++ lib.optionals installNwgDisplays [ pkgs.nwg-displays ]
   ++ lib.optionals hasHyprKcsPackage [ hyprKcsPackage ]
   ++ lib.optional (installRawQuickshell && (pkgs ? quickshell)) pkgs.quickshell
   ++ lib.optionals (minimizerEnabled && minimizerPackage != null) [ minimizerPackage ];
@@ -1045,23 +974,6 @@ EOF
     ''}
   '';
 
-  home.activation.hyprdynamicmonitorsSync = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
-    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
-    if [ -S "$runtime_dir/bus" ]; then
-      ${pkgs.systemd}/bin/systemctl --user daemon-reload >/dev/null 2>&1 || true
-      if [ "${if hyprdynamicmonitorsPrepareEnabled then "1" else "0"}" = "1" ]; then
-        ${pkgs.systemd}/bin/systemctl --user start hyprdynamicmonitors-prepare.service >/dev/null 2>&1 || true
-      else
-        ${pkgs.systemd}/bin/systemctl --user stop hyprdynamicmonitors-prepare.service >/dev/null 2>&1 || true
-      fi
-      if [ "${if hyprdynamicmonitorsServiceEnabled then "1" else "0"}" = "1" ]; then
-        ${pkgs.systemd}/bin/systemctl --user start hyprdynamicmonitors.service >/dev/null 2>&1 || true
-      else
-        ${pkgs.systemd}/bin/systemctl --user stop hyprdynamicmonitors.service >/dev/null 2>&1 || true
-      fi
-    fi
-  '';
-
   xdg.configFile =
     hyprlandFragmentFiles
     // lib.optionalAttrs useUWSM {
@@ -1072,11 +984,6 @@ EOF
       "hypr/conf.d/11-runtime-monitors.conf" =
         (hyprlandFragmentFiles."hypr/conf.d/11-runtime-monitors.conf" or { text = ""; })
         // { force = true; };
-      "${hyprdynamicmonitorsConfigPath}".text = hyprdynamicmonitorsConfigText;
-      "${hyprdynamicmonitorsRenderedStartupProfilePath}" = {
-        text = hyprdynamicmonitorsStartupProfileText;
-        force = true;
-      };
     };
 
   systemd.user.services.hyprland-headless-outputs = lib.mkIf headlessOutputsAutoEnsure {
@@ -1096,46 +1003,6 @@ EOF
       RemainAfterExit = true;
       ExecStart = lib.getExe headlessOutputsEnsureScript;
       ExecStop = lib.getExe headlessOutputsRemoveScript;
-    };
-  };
-
-  systemd.user.services.hyprdynamicmonitors-prepare = lib.mkIf hyprdynamicmonitorsPrepareEnabled {
-    Unit = {
-      Description = "Prepare Hyprland dynamic monitor runtime config";
-      Before = [ "graphical-session-pre.target" ];
-      PartOf = [ "graphical-session.target" ];
-      ConditionPathExists = "%h/.config/hyprdynamicmonitors/config.toml";
-    };
-
-    Install.WantedBy = [ "graphical-session-pre.target" ];
-
-    Service = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      ExecStart = "${lib.getExe pkgs.hyprdynamicmonitors} prepare --config %h/.config/hyprdynamicmonitors/config.toml";
-    };
-  };
-
-  systemd.user.services.hyprdynamicmonitors = lib.mkIf hyprdynamicmonitorsServiceEnabled {
-    Unit = {
-      Description = "Hyprland dynamic monitor profile daemon";
-      PartOf = [ "graphical-session.target" ];
-      After =
-        [ "graphical-session.target" "hyprdynamicmonitors-prepare.service" ]
-        ++ lib.optionals headlessOutputsAutoEnsure [ "hyprland-headless-outputs.service" ];
-      Wants = [ "graphical-session.target" "hyprdynamicmonitors-prepare.service" ];
-      ConditionPathExists = "%h/.config/hyprdynamicmonitors/config.toml";
-    };
-
-    Install = {
-      WantedBy = [ "graphical-session.target" ];
-    };
-
-    Service = {
-      Type = "simple";
-      ExecStart = "${lib.getExe pkgs.hyprdynamicmonitors} run --config %h/.config/hyprdynamicmonitors/config.toml";
-      Restart = "on-failure";
-      RestartSec = 2;
     };
   };
 
@@ -1223,14 +1090,6 @@ EOF
     {
       assertion = (builtins.length managedOutputBindIndices) == (builtins.length (lib.unique managedOutputBindIndices));
       message = "Managed output bindIndex values must be unique.";
-    }
-    {
-      assertion = builtins.elem defaultMonitorTool [ "hyprdynamicmonitors" "nwg-displays" ];
-      message = "settings.hyprland.monitorTools.default must be one of: hyprdynamicmonitors, nwg-displays.";
-    }
-    {
-      assertion = builtins.isBool monitorToolsAutoStart;
-      message = "settings.hyprland.monitorTools.autoStart must be a boolean.";
     }
     {
       assertion = lib.all
