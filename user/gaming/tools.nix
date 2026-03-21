@@ -36,6 +36,7 @@ let
     use_gamemode=0
     use_mangoapp=0
     launcher_skip=0
+    gamescope_host_mode="borderless"
 
     usage() {
       cat <<'EOF' >&2
@@ -48,6 +49,7 @@ Options:
   --hdr             Enable HDR in gamescope
   --gamemode        Run the game through gamemoderun
   --mangoapp        Enable gamescope's --mangoapp flag when available
+  --host-fullscreen Run the host gamescope window in fullscreen mode
   --launcher-skip   Append --launcher-skip to the game command
 EOF
       exit 2
@@ -87,6 +89,10 @@ EOF
           use_mangoapp=1
           shift
           ;;
+        --host-fullscreen)
+          gamescope_host_mode="fullscreen"
+          shift
+          ;;
         --launcher-skip)
           launcher_skip=1
           shift
@@ -113,7 +119,7 @@ EOF
       cmd+=( --launcher-skip )
     fi
 
-    log "mode=$proton_mode gamescope=$use_gamescope hdr=$use_hdr gamemode=$use_gamemode mangoapp=$use_mangoapp launcher_skip=$launcher_skip"
+    log "mode=$proton_mode gamescope=$use_gamescope hdr=$use_hdr gamemode=$use_gamemode mangoapp=$use_mangoapp launcher_skip=$launcher_skip host_mode=$gamescope_host_mode"
     log "host-env DISPLAY=''${DISPLAY:-} WAYLAND_DISPLAY=''${WAYLAND_DISPLAY:-} XDG_SESSION_TYPE=''${XDG_SESSION_TYPE:-} PROTON_ENABLE_WAYLAND=''${PROTON_ENABLE_WAYLAND:-}"
     printf '[%s] argv:' "$(${pkgs.coreutils}/bin/date -Iseconds)" >> "$log_file"
     for arg in "''${cmd[@]}"; do
@@ -126,8 +132,31 @@ EOF
       child_prefix+=(${pkgs.gamemode}/bin/gamemoderun)
     fi
 
+    focused_monitor_gamescope_args() {
+      if ! command -v hyprctl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+        return 0
+      fi
+
+      hyprctl -j monitors 2>/dev/null         | jq -r '.[] | select(.focused == true and (.disabled // false) == false and (.width // 0) > 0 and (.height // 0) > 0) | "-W\(.width) -H\(.height)"'         | head -n 1
+    }
+
     if [ "$use_gamescope" = "1" ]; then
-      gamescope_args=(-f)
+      gamescope_args=()
+      case "$gamescope_host_mode" in
+        fullscreen)
+          gamescope_args+=(-f)
+          ;;
+        *)
+          gamescope_args+=(-b)
+          ;;
+      esac
+
+      monitor_args="$(focused_monitor_gamescope_args || true)"
+      if [ -n "$monitor_args" ]; then
+        # Match the focused monitor size in nested mode so the host window behaves like a proper full-screen surface without trapping Alt-Tab behind a real fullscreen host window.
+        # shellcheck disable=SC2206
+        gamescope_args+=($monitor_args)
+      fi
 
       if [ "$use_hdr" = "1" ]; then
         gamescope_args=(--hdr-enabled "''${gamescope_args[@]}")
@@ -376,6 +405,7 @@ lib.mkIf enabled {
       #   game-session-gamescope %command%
       #   game-session-gamescope-wayland %command%
       #   game-session-gamescope --wayland %command%
+      #   game-session-gamescope --host-fullscreen %command%
       #   game-session-gamescope --hdr --wayland %command%
       (pkgs.writeShellScriptBin "game-session-gamescope" ''
         exec ${lib.getExe steamSessionRun} --gamescope --gamemode --mangoapp "$@"
