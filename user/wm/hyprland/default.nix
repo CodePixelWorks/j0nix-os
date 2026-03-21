@@ -478,6 +478,22 @@ let
       "$hyprctl_bin" -j monitors | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name and (.disabled // false) == false)' >/dev/null 2>&1
     }
 
+    wait_for_output_state() {
+      local name="$1"
+      local desired_state="$2"
+
+      for _ in $(seq 1 50); do
+        if [ "$desired_state" = "active" ]; then
+          output_is_active "$name" && return 0
+        else
+          output_is_active "$name" || return 0
+        fi
+        sleep 0.1
+      done
+
+      return 0
+    }
+
     save_output_state() {
       local name="$1"
       local prefix="$2"
@@ -589,6 +605,7 @@ let
       fi
 
       "$hyprctl_bin" keyword monitor "$name,disable" >/dev/null 2>&1 || true
+      wait_for_output_state "$name" inactive
     }
 
     enable_output() {
@@ -613,6 +630,7 @@ let
       fi
 
       "$hyprctl_bin" keyword monitor "$name,$output_mode,$output_position,$output_scale" >/dev/null 2>&1 || true
+      wait_for_output_state "$name" active
 
       if [ -f "$prefix.workspaces" ]; then
         active_workspace="$(cat "$prefix.active-workspace" 2>/dev/null || true)"
@@ -685,7 +703,7 @@ let
       local tmp_file monitor_line
 
       mkdir -p "$(dirname "$runtime_config_path")"
-      tmp_file="$(mktemp "$state_dir/runtime-monitors.XXXXXX")"
+      tmp_file="$(mktemp "$(dirname "$runtime_config_path")/.11-runtime-monitors.conf.XXXXXX")"
       {
         echo "# ------------------------------------------------------------------"
         echo "# Runtime Monitor Overrides"
