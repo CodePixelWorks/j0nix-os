@@ -1400,6 +1400,26 @@ EOF
     };
   };
 
+  systemd.user.services.hyprland-runtime-monitor-defaults = lib.mkIf (initialOutputStates != [ ]) {
+    Unit = {
+      Description = "Reset Hyprland runtime monitor overrides on session stop";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+      Wants = [ "graphical-session.target" ];
+    };
+
+    Install = {
+      WantedBy = [ "graphical-session.target" ];
+    };
+
+    Service = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.coreutils}/bin/true";
+      ExecStop = lib.getExe runtimeMonitorResetScript;
+    };
+  };
+
   assertions = [
     {
       assertion = !(installRawQuickshell && isDmsShell);
