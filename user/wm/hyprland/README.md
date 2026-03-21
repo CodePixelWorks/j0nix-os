@@ -214,19 +214,11 @@ Initial output states are now expressed in two layers:
 
 - `10-monitors.conf` renders the declarative startup defaults for managed physical outputs
 - `11-runtime-monitors.conf` stays empty in the declarative baseline and is reserved for runtime overrides
-- `hyprdynamicmonitors-prepare.service` sanitizes the runtime override file before the graphical session comes up
 - the fallback `monitor = ,preferred,auto,1` line is only emitted when no explicit monitor defaults exist
-- once `toggleableOutputs` are configured, j0nix stops auto-starting `hyprdynamicmonitors` services so the manual monitor layer remains the only runtime writer
 
 This keeps boot-time monitor state deterministic and gives runtime tools a separate override file instead of racing the startup config.
 
-Monitor tooling:
-
-- `wm-monitor-config`: open the default monitor tool (`hyprdynamicmonitors` TUI by default)
-- `wm-monitor-config-tui`: force `hyprdynamicmonitors tui`
-- `wm-monitor-config-gui`: open `nwg-displays`
-
-j0nix now always generates a baseline `hyprdynamicmonitors` config that targets the dedicated runtime override file. The prepare step is started declaratively so stale `disable` lines never brick the session. The live daemon still only auto-starts when there are no declarative `toggleableOutputs`; once toggleable outputs are configured, the manual `wm-monitor-*` layer remains the source of truth for those outputs.
+All extra monitor profile tooling is intentionally disabled for now. The only supported runtime path is the built-in `wm-monitor-*` command set and the corresponding Hyprland binds.
 
 ## Caelestia App Binds
 
