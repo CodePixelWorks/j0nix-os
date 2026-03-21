@@ -832,6 +832,22 @@
         "type": "github"
       }
     },
+    "hyprmcp-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1745782233,
+        "narHash": "sha256-B6YwMm8yGLqahYDxgDEWk0Te2QmQPdCsIQ4+lqu6s44=",
+        "owner": "stefanoamorelli",
+        "repo": "hyprmcp",
+        "rev": "13d5195e6a474078183cb031771be7a71b330bb6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stefanoamorelli",
+        "repo": "hyprmcp",
+        "type": "github"
+      }
+    },
     "hyprtoolkit": {
       "inputs": {
         "aquamarine": [
@@ -1361,6 +1377,7 @@
         "hyprland": "hyprland",
         "hyprland-minimizer-orteip": "hyprland-minimizer-orteip",
         "hyprland-plugins": "hyprland-plugins",
+        "hyprmcp-src": "hyprmcp-src",
         "mcp-language-server-src": "mcp-language-server-src",
         "nix-cachyos-kernel": "nix-cachyos-kernel",
         "nix-vscode-extensions": "nix-vscode-extensions",
