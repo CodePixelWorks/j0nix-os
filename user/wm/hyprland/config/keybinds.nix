@@ -81,9 +81,9 @@ let
       "$mainMod CTRL, Backslash, centerwindow, 1"
     ] ++ mainFocusBinds ++ mainMoveBinds;
     binde = mainResizeBinds ++ [
-      "$mainMod, minus, splitratio, -0.1"
-      "$mainMod, equal, splitratio, 0.1"
-      "$mainMod, plus, splitratio, 0.1"
+      "$mainMod, minus, splitratio, 0.1"
+      "$mainMod, equal, splitratio, -0.1"
+      "$mainMod, plus, splitratio, -0.1"
       "$mainMod, Page_Up, workspace, -1"
       "$mainMod, Page_Down, workspace, +1"
       "$mainMod ALT, Page_Up, movetoworkspace, -1"
@@ -200,9 +200,9 @@ let
           "$mainMod, Page_Down, workspace, +1"
           "CTRL ALT, Tab, changegroupactive, f"
           "CTRL SHIFT ALT, Tab, changegroupactive, b"
-          "$mainMod, minus, splitratio, -0.1"
-          "$mainMod, equal, splitratio, 0.1"
-          "$mainMod, plus, splitratio, 0.1"
+          "$mainMod, minus, splitratio, 0.1"
+          "$mainMod, equal, splitratio, -0.1"
+          "$mainMod, plus, splitratio, -0.1"
         ];
         bindr = [
           "CTRL SUPER SHIFT, R, exec, qs -c caelestia kill"
