@@ -363,7 +363,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    quickshell = {
+    quickshell-stable = {
+      url = "github:quickshell-mirror/quickshell?ref=v0.2.1";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    quickshell-dev = {
       url = "github:quickshell-mirror/quickshell?ref=master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -371,13 +376,13 @@
     caelestia-shell = {
       url = "github:caelestia-dots/shell";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.quickshell.follows = "quickshell";
+      inputs.quickshell.follows = "quickshell-stable";
     };
 
     caelestia-shell-dev = {
       url = "github:caelestia-dots/shell?ref=main";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.quickshell.follows = "quickshell";
+      inputs.quickshell.follows = "quickshell-dev";
     };
 
     hyprland = {
