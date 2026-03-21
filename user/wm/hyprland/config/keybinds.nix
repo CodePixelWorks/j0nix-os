@@ -73,6 +73,7 @@ let
   baseHyprKeybinds = {
     bind = [
       "$mainMod CTRL, Tab, workspace, previous_per_monitor"
+      "$mainMod CTRL, G, workspace, previous_per_monitor"
       "$mainMod, left, workspace, -1"
       "$mainMod, right, workspace, +1"
       "$mainMod SHIFT, left, movetoworkspace, -1"
