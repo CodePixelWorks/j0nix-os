@@ -308,6 +308,7 @@ let
   mainHyprConfigDir = "${config.home.homeDirectory}/.config/hypr/conf.d";
   hyprlandRuntimeMonitorConfigPath = "${mainHyprConfigDir}/11-runtime-monitors.conf";
   shellGeneratedConfigDir = "${config.home.homeDirectory}/.config/hypr/shells/${selectedShell}/generated";
+  initialOutputStatesJson = pkgs.writeText "hyprland-initial-output-states.json" (builtins.toJSON initialOutputStates);
   hyprlandWindowRules = import ./config/window-rules.nix;
   hyprlandKeybinds = import ./config/keybinds.nix {
     inherit
@@ -358,7 +359,83 @@ let
         WAYLAND_DISPLAY \
         XDG_RUNTIME_DIR \
         HYPRLAND_INSTANCE_SIGNATURE \
-        ${importSessionEnvArgs} >/dev/null 2>&1 || true
+      ${importSessionEnvArgs} >/dev/null 2>&1 || true
+    fi
+  '';
+  runtimeMonitorResetScript = pkgs.writeShellScriptBin "wm-monitor-reset-runtime" ''
+    set -eu
+
+    hyprctl_bin="${hyprctlExec}"
+    jq_bin="${pkgs.jq}/bin/jq"
+    initial_states_json=${lib.escapeShellArg initialOutputStatesJson}
+    runtime_config_path=${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath}
+    headless_outputs_json=${lib.escapeShellArg headlessOutputsJson}
+
+    output_is_headless() {
+      local name="$1"
+      "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' "$headless_outputs_json" >/dev/null 2>&1
+    }
+
+    ensure_headless_output() {
+      local name="$1"
+
+      if ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
+        "$hyprctl_bin" output create headless "$name" >/dev/null 2>&1 || true
+        for _ in $(seq 1 50); do
+          if "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
+            break
+          fi
+          sleep 0.1
+        done
+      fi
+    }
+
+    mkdir -p "$(dirname "$runtime_config_path")"
+    tmp_file="$(mktemp "$(dirname "$runtime_config_path")/.11-runtime-monitors.conf.XXXXXX")"
+    {
+      echo "# ------------------------------------------------------------------"
+      echo "# Runtime Monitor Overrides"
+      echo "# ------------------------------------------------------------------"
+      echo "# Managed by wm-monitor. This file intentionally persists the current"
+      echo "# toggleable output state across Hyprland reloads."
+      "$jq_bin" -c '.[]' "$initial_states_json" | while IFS= read -r output; do
+        name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
+        enabled="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
+        mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
+        position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "auto"')"
+        scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
+
+        [ -n "$name" ] || continue
+
+        if [ "$enabled" = "1" ]; then
+          printf 'monitor = %s,%s,%s,%s\n' "$name" "$mode" "$position" "$scale"
+        else
+          printf 'monitor = %s,disable\n' "$name"
+        fi
+      done
+    } >"$tmp_file"
+    mv -f "$tmp_file" "$runtime_config_path"
+
+    if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -x "$hyprctl_bin" ]; then
+      "$jq_bin" -c '.[]' "$initial_states_json" | while IFS= read -r output; do
+        name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
+        enabled="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
+        mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
+        position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "auto"')"
+        scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
+
+        [ -n "$name" ] || continue
+
+        if [ "$enabled" = "1" ] && output_is_headless "$name"; then
+          ensure_headless_output "$name"
+        fi
+
+        if [ "$enabled" = "1" ]; then
+          "$hyprctl_bin" keyword monitor "$name,$mode,$position,$scale" >/dev/null 2>&1 || true
+        else
+          "$hyprctl_bin" keyword monitor "$name,disable" >/dev/null 2>&1 || true
+        fi
+      done
     fi
   '';
   headlessOutputsEnsureScript = pkgs.writeShellScriptBin "wm-headless-output-ensure" ''
@@ -895,12 +972,16 @@ let
     swwwDaemonCommand = lib.getExe' pkgs.swww "swww-daemon";
     startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
     keybindDiagnosticsStartupCommand = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
+    runtimeMonitorResetCommand = lib.getExe runtimeMonitorResetScript;
     managedMonitorLines = managedConfigMonitorLines;
   };
   hyprlandFragmentFiles =
     lib.mapAttrs'
       (path: text: lib.nameValuePair path { inherit text; })
       hyprlandFragments.files;
+  hyprlandMutableConfigPaths = [
+    "hypr/conf.d/11-runtime-monitors.conf"
+  ];
   hyprlandMainConfig = ''
     # ------------------------------------------------------------------
     # j0nix Hyprland main config
@@ -990,6 +1071,22 @@ EOF
     fi
   '';
 
+  home.activation.hyprlandRuntimeMonitorOverridesInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    cfg_dir="$HOME/.config/hypr/conf.d"
+    cfg_file="$cfg_dir/11-runtime-monitors.conf"
+
+    if [ -L "$cfg_file" ]; then
+      $DRY_RUN_CMD rm -f "$cfg_file"
+    fi
+
+    $DRY_RUN_CMD mkdir -p "$cfg_dir"
+
+    if [ ! -e "$cfg_file" ]; then
+      $DRY_RUN_CMD ${lib.getExe runtimeMonitorResetScript}
+      $DRY_RUN_CMD chmod 0644 "$cfg_file"
+    fi
+  '';
+
   home.activation.hyprlandHeadlessOutputsReload = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
     ${lib.optionalString headlessOutputsAutoEnsure ''
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
@@ -1001,15 +1098,12 @@ EOF
   '';
 
   xdg.configFile =
-    hyprlandFragmentFiles
+    builtins.removeAttrs hyprlandFragmentFiles hyprlandMutableConfigPaths
     // lib.optionalAttrs useUWSM {
       "uwsm/env".text = uwsmEnvText;
     }
     // {
       "hypr/hyprland.conf".force = true;
-      "hypr/conf.d/11-runtime-monitors.conf" =
-        (hyprlandFragmentFiles."hypr/conf.d/11-runtime-monitors.conf" or { text = ""; })
-        // { force = true; };
     };
 
   systemd.user.services.hyprland-headless-outputs = lib.mkIf headlessOutputsAutoEnsure {
