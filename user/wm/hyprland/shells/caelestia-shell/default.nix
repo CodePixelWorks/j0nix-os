@@ -25,11 +25,10 @@ let
   caelestiaChannel = caelestiaSettings.channel or "stable";
   caelestiaInputName = if caelestiaChannel == "dev" then "caelestia-shell-dev" else "caelestia-shell";
   hasValue = value: value != null && value != "";
-  hasStableInput = inputs ? caelestia-shell;
   selectedInput =
     if caelestiaChannel == "dev" then
       (if inputs ? caelestia-shell-dev then inputs.caelestia-shell-dev else null)
-    else if hasStableInput then
+    else if inputs ? caelestia-shell then
       inputs.caelestia-shell
     else
       null;
@@ -104,10 +103,6 @@ let
       quickshellInputPackageSet.default
     else
       null;
-  hasHomeModule =
-    hasStableInput
-    && (inputs.caelestia-shell ? homeManagerModules)
-    && (inputs.caelestia-shell.homeManagerModules ? default);
   hasSystemPackages =
     hasInput
     && (selectedInput ? packages)
@@ -834,8 +829,6 @@ EOF
       null;
 in
 {
-  imports = lib.optional hasHomeModule inputs.caelestia-shell.homeManagerModules.default;
-
   programs.waybar.enable = lib.mkForce false;
 
   j0nix.user.shells.quickshell.packages = lib.mkAfter (listMerge.mergeUnique [
@@ -1015,11 +1008,10 @@ EOF
       message = "settings.programs.caelestia.quickshellRuntime must be one of: wrapped, upstream (legacy upstream-dev is also accepted)";
     }
     {
-      assertion = hasHomeModule || (caelestiaShellPkg != null);
+      assertion = caelestiaShellPkg != null;
       message = ''
-        inputs.${caelestiaInputName} must expose either:
-        - homeManagerModules.default
-        - packages.${pkgs.stdenv.hostPlatform.system}.with-cli (or default)
+        inputs.${caelestiaInputName} must expose packages.${pkgs.stdenv.hostPlatform.system}.with-cli
+        (or default) for the selected Caelestia channel.
       '';
     }
     {
