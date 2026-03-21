@@ -769,7 +769,7 @@ EOF
       local target_monitor="$2"
       [ -n "$workspace_name" ] || return 0
       [ -n "$target_monitor" ] || return 0
-      "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name" "$target_monitor" >/dev/null 2>&1 || true
+      "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name $target_monitor" >/dev/null 2>&1 || true
     }
 
     get_monitor_active_workspace() {
@@ -779,6 +779,18 @@ EOF
 
     get_focused_monitor() {
       "$hyprctl_bin" -j monitors | "$jq_bin" -r '.[] | select(.focused == true) | .name // empty'
+    }
+
+    pick_handoff_monitor() {
+      local source_monitor="$1"
+      local preferred_monitor="$2"
+
+      if [ -n "$preferred_monitor" ] && [ "$preferred_monitor" != "$source_monitor" ] && output_is_active "$preferred_monitor"; then
+        printf '%s\n' "$preferred_monitor"
+        return 0
+      fi
+
+      "$hyprctl_bin" -j monitors         | "$jq_bin" -r --arg source "$source_monitor" '.[] | select((.disabled // false) == false and (.name // "") != "" and .name != $source) | .name'         | head -n 1
     }
 
     focus_monitor() {
@@ -847,6 +859,7 @@ EOF
       output_mode="$(get_output_field "$output_json" '.mode // "preferred"')"
       output_position="$(get_output_field "$output_json" '.position // "auto"')"
       output_scale="$(get_output_field "$output_json" '(.scale // 1) | tostring')"
+      target_monitor="$(pick_handoff_monitor "$name" "$target_monitor")"
 
       printf '%s\n' "$output_mode" >"$prefix.mode"
       printf '%s\n' "$output_position" >"$prefix.position"
