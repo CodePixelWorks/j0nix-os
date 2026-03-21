@@ -19,7 +19,6 @@
   startupAppsCommand,
   keybindDiagnosticsStartupCommand,
   managedMonitorLines,
-  runtimeMonitorStatePath,
   mainConfigDir,
   shellConfigDir,
 }:
@@ -45,6 +44,7 @@ let
 
   monitorLines =
     staticMonitorLines
+    ++ managedMonitorLines
     ++ lib.optionals (staticMonitorLines == [ ] && managedMonitorLines == [ ]) [ ",preferred,auto,1" ];
 
 
@@ -120,12 +120,12 @@ in
 
     "hypr/conf.d/11-runtime-monitors.conf" = ''
       # ------------------------------------------------------------------
-      # Runtime Monitor Override Bridge
+      # Runtime Monitor Overrides
       # ------------------------------------------------------------------
-      # This file stays declarative and only sources the mutable runtime state
-      # file. The runtime state is reset from initialOutputStates at login and
-      # may then be rewritten by wm-monitor / hyprdynamicmonitors.
-      source = ${runtimeMonitorStatePath}
+      # This file is intentionally managed by tooling such as
+      # hyprdynamicmonitors. Keep it empty in the declarative baseline so the
+      # startup monitor defaults remain authoritative until a runtime profile
+      # explicitly overrides them.
     '';
 
     "hypr/conf.d/20-startup.conf" = ''
