@@ -41,7 +41,7 @@ let
     else
       null;
   hasInput = selectedInput != null;
-  useUpstreamQuickshell = quickshellRuntime == "upstream-dev";
+  useUpstreamQuickshell = builtins.elem quickshellRuntime [ "upstream" "upstream-dev" ];
   quickshellInput =
     if hasInput && (selectedInput ? inputs) && (selectedInput.inputs ? quickshell) then
       selectedInput.inputs.quickshell
@@ -67,7 +67,7 @@ let
   upstreamQuickshellFromSource =
     if useUpstreamQuickshell && quickshellSource != null then
       pkgs.quickshell.overrideAttrs (old: {
-        pname = "quickshell-upstream-dev";
+        pname = "quickshell-upstream";
         version =
           if quickshellRev != null then
             "unstable-${builtins.substring 0 8 quickshellRev}"
@@ -1011,8 +1011,8 @@ EOF
       message = "settings.programs.caelestia.channel must be one of: stable, dev";
     }
     {
-      assertion = builtins.elem quickshellRuntime [ "wrapped" "upstream-dev" ];
-      message = "settings.programs.caelestia.quickshellRuntime must be one of: wrapped, upstream-dev";
+      assertion = builtins.elem quickshellRuntime [ "wrapped" "upstream" "upstream-dev" ];
+      message = "settings.programs.caelestia.quickshellRuntime must be one of: wrapped, upstream (legacy upstream-dev is also accepted)";
     }
     {
       assertion = hasHomeModule || (caelestiaShellPkg != null);
@@ -1025,7 +1025,7 @@ EOF
     {
       assertion = (!useUpstreamQuickshell) || (upstreamQuickshellPkg != null && caelestiaShellPkg != null);
       message = ''
-        settings.programs.caelestia.quickshellRuntime=upstream-dev requires:
+        settings.programs.caelestia.quickshellRuntime=upstream requires:
         - inputs.${caelestiaInputName}.inputs.quickshell.packages.${pkgs.stdenv.hostPlatform.system}
         - inputs.${caelestiaInputName}.packages.${pkgs.stdenv.hostPlatform.system}.caelestia-shell (or default)
       '';

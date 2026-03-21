@@ -87,12 +87,15 @@ Use `settings.programs.caelestia.quickshellRuntime` to choose how `caelestia-she
 ```nix
 programs.caelestia = {
   channel = "dev";
-  quickshellRuntime = "upstream-dev"; # "wrapped" | "upstream-dev"
+  quickshellRuntime = "upstream"; # "wrapped" | "upstream"
 };
 ```
 
 - `wrapped` (default): use the shell package's bundled quickshell wrapper.
-- `upstream-dev`: run Caelestia with the upstream quickshell input package (`qs`) from the selected Caelestia channel input.
+- `upstream`: run Caelestia with the upstream quickshell input package (`qs`) from the selected Caelestia channel input.
+- Channel wiring:
+  - `stable` -> `quickshell-stable` (release input)
+  - `dev` -> `quickshell-dev` (latest master)
 
 ## Referenz: `shell.json` Optionen
 
