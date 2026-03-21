@@ -23,8 +23,16 @@ in {
       gsp = lib.mkOption { type = lib.types.bool; default = false; };
       persistenced = lib.mkOption { type = lib.types.bool; default = true; };
       package = lib.mkOption {
-        type = lib.types.enum [ "production" "latest" "beta" ];
+        type = lib.types.enum [ "production" "latest" "beta" "vulkan_beta" ];
         default = "production";
+      };
+      expectedVersion = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+      };
+      lact.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
       };
     };
     nvidiaPrime = {

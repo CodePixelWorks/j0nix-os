@@ -17,3 +17,6 @@ Driver stack controlled by `settings.drivers.*`.
 
 - Bare-metal NVIDIA should keep `settings.drivers.vmGuestServices.enable = false`.
 - PRIME requires both Intel and NVIDIA enabled.
+- NVIDIA package selection is controlled through `settings.drivers.nvidia.package`.
+- `settings.drivers.nvidia.expectedVersion` can pin the selected branch to an exact evaluated version.
+- LACT can be enabled through `settings.drivers.nvidia.lact.enable`.
