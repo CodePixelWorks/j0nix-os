@@ -61,6 +61,16 @@ let
     hicolor-icon-theme
     adwaita-icon-theme
   ];
+  obsidianWayland = pkgs.symlinkJoin {
+    name = "obsidian-wayland";
+    paths = [ pkgs.obsidian ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      rm -f "$out/bin/obsidian"
+      makeWrapper ${pkgs.obsidian}/bin/obsidian "$out/bin/obsidian" \
+        --add-flags "--ozone-platform-hint=auto"
+    '';
+  };
 in
 {
   j0nix.user.software.packages =
@@ -80,7 +90,6 @@ in
       qbittorrent
       telegram-desktop
       nextcloud-client
-      obsidian
       drawio
       simplescreenrecorder
       gpu-screen-recorder
@@ -103,6 +112,7 @@ in
       android-tools
       xdg-utils
     ])
+    ++ [ obsidianWayland ]
     ++ fileManagerPackages
     ++ lib.optionals (preferredTerminalPackage != null) [ preferredTerminalPackage ]
     ++ lib.optionals enableUdiskieAutomount [ pkgs.udiskie ]
