@@ -1,4 +1,9 @@
-{ lib, pkgs, settings, ... }:
+{
+  lib,
+  pkgs,
+  settings,
+  ...
+}:
 let
   programsCfg = settings.programs or { };
   bambuCfg = programsCfg.bambulab or { };
