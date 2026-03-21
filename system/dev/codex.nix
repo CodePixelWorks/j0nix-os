@@ -20,6 +20,7 @@ let
       { enable = rawLsp; };
   mcpNixosEnable = enabled && (mcp.nixos or false);
   mcpGithubEnable = enabled && (mcp.github or false);
+  mcpHyprlandEnable = enabled && (mcp.hyprland or false);
   mcpLspEnable = enabled && (lspCfg.enable or false);
   mcpLspLanguages =
     if mcpLspEnable then
@@ -45,6 +46,20 @@ let
   mcpGithubPackage =
     if pkgs ? github-mcp-server then
       pkgs.github-mcp-server
+    else
+      null;
+  mcpHyprlandPackage =
+    if inputs ? hyprmcp-src then
+      let
+        pythonWithMcp = pkgs.python3.withPackages (ps: [ ps.mcp ]);
+      in
+      pkgs.writeShellApplication {
+        name = "j0nix-mcp-hyprland";
+        runtimeInputs = [ pkgs.hyprland pythonWithMcp ];
+        text = ''
+          exec ${pythonWithMcp}/bin/python ${inputs.hyprmcp-src}/hyprmcp/server.py
+        '';
+      }
     else
       null;
   mcpLspPackage =
@@ -132,7 +147,7 @@ let
           })
         mcpLspLanguages);
 
-  mcpManagedServerNames = [ "nixos" "github" ] ++ map (language: lspLanguageSpecs.${language}.serverName) (lib.filter (language: builtins.hasAttr language lspLanguageSpecs) mcpLspLanguages);
+  mcpManagedServerNames = [ "nixos" "github" "hyprland" ] ++ map (language: lspLanguageSpecs.${language}.serverName) (lib.filter (language: builtins.hasAttr language lspLanguageSpecs) mcpLspLanguages);
 
   mcpLspRuntimePackages =
     if !mcpLspEnable || !validMcpLspLanguages then
@@ -151,6 +166,11 @@ let
         enable = mcpGithubEnable;
         package = mcpGithubPackage;
         command = "github-mcp-server";
+      };
+      hyprland = {
+        enable = mcpHyprlandEnable;
+        package = mcpHyprlandPackage;
+        command = "j0nix-mcp-hyprland";
       };
     } // mcpLspServers);
 
@@ -189,6 +209,8 @@ in
     mcpNixosPackage
     mcpGithubEnable
     mcpGithubPackage
+    mcpHyprlandEnable
+    mcpHyprlandPackage
     mcpLspEnable
     mcpLspLanguages
     mcpLspPackage
