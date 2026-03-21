@@ -190,11 +190,11 @@ Current default TV setup:
 - `SUPER+CTRL+2`: toggle monitor `2`
 - `SUPER+CTRL+SHIFT+2`: restore monitor `2` and move its saved workspaces back
 - `SUPER+ALT+1`: move the active workspace to monitor `1`
-- `SUPER+CTRL+ALT+1`: move all normal workspaces from the focused monitor to monitor `1`
+- `SUPER+CTRL+ALT+1`: move all normal workspaces from the other active monitors to monitor `1`
 - `SUPER+ALT+2`: move the active workspace to monitor `2`
-- `SUPER+CTRL+ALT+2`: move all normal workspaces from the focused monitor to monitor `2`
+- `SUPER+CTRL+ALT+2`: move all normal workspaces from the other active monitors to monitor `2`
 - `SUPER+ALT+3`: move the active workspace to monitor `3`
-- `SUPER+CTRL+ALT+3`: move all normal workspaces from the focused monitor to monitor `3`
+- `SUPER+CTRL+ALT+3`: move all normal workspaces from the other active monitors to monitor `3`
 
 Runtime commands:
 
