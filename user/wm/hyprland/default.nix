@@ -848,6 +848,21 @@ EOF
       activate_workspace_on_monitor "$target_monitor" "$workspace_name"
     }
 
+    ensure_output_ready_for_workspace_move() {
+      local target_monitor="$1"
+      local output_json prefix
+
+      [ -n "$target_monitor" ] || return 0
+      output_json="$(load_output_config "$target_monitor" 2>/dev/null || true)"
+      [ -n "$output_json" ] || return 0
+
+      if ! output_is_active "$target_monitor"; then
+        prefix="$(state_prefix "$target_monitor")"
+        enable_output "$output_json" "$target_monitor" "$prefix"
+        sync_runtime_monitor_overrides
+      fi
+    }
+
     disable_output() {
       local output_json="$1"
       local name="$2"
@@ -1068,9 +1083,11 @@ EOF
         suggest_unknown_monitor_config "$output_name"
         ;;
       workspace-to)
+        ensure_output_ready_for_workspace_move "$output_name"
         move_active_workspace_to_output "$output_name"
         ;;
       focused-workspaces-to)
+        ensure_output_ready_for_workspace_move "$output_name"
         move_monitor_workspaces_to_target "$(get_focused_monitor)" "$output_name"
         ;;
     esac
