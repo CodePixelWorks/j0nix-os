@@ -122,10 +122,9 @@ in
       # ------------------------------------------------------------------
       # Runtime Monitor Overrides
       # ------------------------------------------------------------------
-      # This file is intentionally managed by tooling such as
-      # hyprdynamicmonitors. Keep it empty in the declarative baseline so the
-      # startup monitor defaults remain authoritative until a runtime profile
-      # explicitly overrides them.
+      # This file is intentionally reserved for runtime monitor tooling. Keep
+      # it empty in the declarative baseline so the startup monitor defaults
+      # remain authoritative until an explicit runtime override is applied.
     '';
 
     "hypr/conf.d/20-startup.conf" = ''
