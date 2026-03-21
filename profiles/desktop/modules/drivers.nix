@@ -2,6 +2,8 @@
 let
   drivers = settings.drivers or { };
   firmware = drivers.firmware or { };
+  nvidia = drivers.nvidia or { };
+  nvidiaLact = nvidia.lact or { };
 in
 {
   # Host-specific driver profile for the physical desktop.
@@ -13,11 +15,13 @@ in
     intel.enable = false;
 
     nvidia = {
-      enable = true;
-      open = false;
-      gsp = false;
-      persistenced = false;
-      package = "latest"; # "production" | "latest" | "beta"
+      enable = nvidia.enable or true;
+      open = nvidia.open or false;
+      gsp = nvidia.gsp or false;
+      persistenced = nvidia.persistenced or false;
+      package = nvidia.package or "latest"; # "production" | "latest" | "beta" | "vulkan_beta"
+      expectedVersion = nvidia.expectedVersion or null;
+      lact.enable = nvidiaLact.enable or false;
     };
 
     nvidiaPrime = {
