@@ -1565,11 +1565,8 @@ EOF
     fi
 
     $DRY_RUN_CMD mkdir -p "$cfg_dir"
-
-    if [ ! -e "$cfg_file" ]; then
-      $DRY_RUN_CMD ${lib.getExe runtimeMonitorResetScript}
-      $DRY_RUN_CMD chmod 0644 "$cfg_file"
-    fi
+    $DRY_RUN_CMD ${lib.getExe runtimeMonitorResetScript}
+    $DRY_RUN_CMD chmod 0644 "$cfg_file"
   '';
 
   home.activation.hyprlandHeadlessOutputsReload = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
@@ -1613,7 +1610,7 @@ EOF
 
   systemd.user.services.hyprland-runtime-monitor-defaults = lib.mkIf (initialOutputStates != [ ]) {
     Unit = {
-      Description = "Reset Hyprland runtime monitor overrides on session stop";
+      Description = "Reset Hyprland runtime monitor overrides on session start and stop";
       PartOf = [ "graphical-session.target" ];
       After = [ "graphical-session.target" ];
       Wants = [ "graphical-session.target" ];
@@ -1626,7 +1623,7 @@ EOF
     Service = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${pkgs.coreutils}/bin/true";
+      ExecStart = lib.getExe runtimeMonitorResetScript;
       ExecStop = lib.getExe runtimeMonitorResetScript;
     };
   };
