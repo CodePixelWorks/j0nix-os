@@ -425,6 +425,14 @@ let
     state_dir="$state_home/hyprland-monitor-state"
     lock_file="$state_dir/runtime-monitors.lock"
 
+    write_runtime_header() {
+      echo "# ------------------------------------------------------------------"
+      echo "# Runtime Monitor Overrides"
+      echo "# ------------------------------------------------------------------"
+      echo "# Managed by wm-monitor. This file intentionally persists the current"
+      echo "# toggleable output state across Hyprland reloads."
+    }
+
     output_is_headless() {
       local name="$1"
       "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' "$headless_outputs_json" >/dev/null 2>&1
@@ -444,33 +452,85 @@ let
       fi
     }
 
+    monitor_spec_from_declared_output() {
+      local output_json="$1"
+      local name mode position scale
+
+      name="$(printf '%s' "$output_json" | "$jq_bin" -r '.name // empty')"
+      mode="$(printf '%s' "$output_json" | "$jq_bin" -r '.mode // "preferred"')"
+      position="$(printf '%s' "$output_json" | "$jq_bin" -r '.position // "auto"')"
+      scale="$(printf '%s' "$output_json" | "$jq_bin" -r '(.scale // 1) | tostring')"
+
+      [ -n "$name" ] || return 1
+      printf '%s,%s,%s,%s\n' "$name" "$mode" "$position" "$scale"
+    }
+
+    get_live_monitor_json() {
+      local name="$1"
+      "$hyprctl_bin" -j monitors all | "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name and (.disabled // false) == false)'
+    }
+
+    monitor_spec_from_live_or_declared_output() {
+      local output_json="$1"
+      local name monitor_json mode position scale
+
+      name="$(printf '%s' "$output_json" | "$jq_bin" -r '.name // empty')"
+      [ -n "$name" ] || return 1
+      monitor_json="$(get_live_monitor_json "$name" 2>/dev/null || true)"
+
+      if [ -n "$monitor_json" ]; then
+        mode="$(printf '%s' "$monitor_json" | "$jq_bin" -r '"\(.width)x\(.height)@\((.refreshRate // 60) | tostring)"')"
+        position="$(printf '%s' "$monitor_json" | "$jq_bin" -r '"\((.x // 0) | floor)x\((.y // 0) | floor)"')"
+        scale="$(printf '%s' "$monitor_json" | "$jq_bin" -r '(.scale // 1) | tostring')"
+        printf '%s,%s,%s,%s\n' "$name" "$mode" "$position" "$scale"
+      else
+        monitor_spec_from_declared_output "$output_json"
+      fi
+    }
+
+    write_runtime_config_from_json() {
+      local source_json="$1"
+      local mode="$2"
+      local tmp_file output name enabled monitor_line
+
+      tmp_file="$(mktemp "$(dirname "$runtime_config_path")/.11-runtime-monitors.conf.XXXXXX")"
+      {
+        write_runtime_header
+        "$jq_bin" -c '.[]' "$source_json" | while IFS= read -r output; do
+          name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
+          [ -n "$name" ] || continue
+
+          case "$mode" in
+            defaults)
+              enabled="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
+              if [ "$enabled" = "1" ]; then
+                monitor_line="$(monitor_spec_from_declared_output "$output")"
+              else
+                monitor_line="$name,disable"
+              fi
+              ;;
+            live)
+              if output_is_active "$name"; then
+                monitor_line="$(monitor_spec_from_live_or_declared_output "$output")"
+              else
+                monitor_line="$name,disable"
+              fi
+              ;;
+            *)
+              return 1
+              ;;
+          esac
+
+          printf 'monitor = %s\n' "$monitor_line"
+        done
+      } >"$tmp_file"
+      mv -f "$tmp_file" "$runtime_config_path"
+    }
+
     mkdir -p "$(dirname "$runtime_config_path")" "$state_dir"
     exec 9>"$lock_file"
     "$flock_bin" -x 9
-    tmp_file="$(mktemp "$(dirname "$runtime_config_path")/.11-runtime-monitors.conf.XXXXXX")"
-    {
-      echo "# ------------------------------------------------------------------"
-      echo "# Runtime Monitor Overrides"
-      echo "# ------------------------------------------------------------------"
-      echo "# Managed by wm-monitor. This file intentionally persists the current"
-      echo "# toggleable output state across Hyprland reloads."
-      "$jq_bin" -c '.[]' "$initial_states_json" | while IFS= read -r output; do
-        name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
-        enabled="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
-        mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
-        position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "auto"')"
-        scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
-
-        [ -n "$name" ] || continue
-
-        if [ "$enabled" = "1" ]; then
-          printf 'monitor = %s,%s,%s,%s\n' "$name" "$mode" "$position" "$scale"
-        else
-          printf 'monitor = %s,disable\n' "$name"
-        fi
-      done
-    } >"$tmp_file"
-    mv -f "$tmp_file" "$runtime_config_path"
+    write_runtime_config_from_json "$initial_states_json" defaults
 
     if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -x "$hyprctl_bin" ]; then
       "$jq_bin" -c '.[]' "$initial_states_json" | while IFS= read -r output; do
@@ -615,9 +675,80 @@ let
       printf '%s' "$output_json" | "$jq_bin" -r "$query"
     }
 
+    write_runtime_header() {
+      echo "# ------------------------------------------------------------------"
+      echo "# Runtime Monitor Overrides"
+      echo "# ------------------------------------------------------------------"
+      echo "# Managed by wm-monitor. This file intentionally persists the current"
+      echo "# toggleable output state across Hyprland reloads."
+    }
+
     output_is_active() {
       local name="$1"
       "$hyprctl_bin" -j monitors | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name and (.disabled // false) == false)' >/dev/null 2>&1
+    }
+
+    get_live_monitor_json() {
+      local name="$1"
+      "$hyprctl_bin" -j monitors all | "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name and (.disabled // false) == false)'
+    }
+
+    monitor_spec_from_declared_output() {
+      local output_json="$1"
+      local name mode position scale
+
+      name="$(printf '%s' "$output_json" | "$jq_bin" -r '.name // empty')"
+      mode="$(printf '%s' "$output_json" | "$jq_bin" -r '.mode // "preferred"')"
+      position="$(printf '%s' "$output_json" | "$jq_bin" -r '.position // "auto"')"
+      scale="$(printf '%s' "$output_json" | "$jq_bin" -r '(.scale // 1) | tostring')"
+      [ -n "$name" ] || return 1
+      printf '%s,%s,%s,%s\n' "$name" "$mode" "$position" "$scale"
+    }
+
+    monitor_spec_from_live_or_declared_output() {
+      local output_json="$1"
+      local name monitor_json mode position scale
+
+      name="$(printf '%s' "$output_json" | "$jq_bin" -r '.name // empty')"
+      [ -n "$name" ] || return 1
+      monitor_json="$(get_live_monitor_json "$name" 2>/dev/null || true)"
+
+      if [ -n "$monitor_json" ]; then
+        mode="$(printf '%s' "$monitor_json" | "$jq_bin" -r '"\(.width)x\(.height)@\((.refreshRate // 60) | tostring)"')"
+        position="$(printf '%s' "$monitor_json" | "$jq_bin" -r '"\((.x // 0) | floor)x\((.y // 0) | floor)"')"
+        scale="$(printf '%s' "$monitor_json" | "$jq_bin" -r '(.scale // 1) | tostring')"
+        printf '%s,%s,%s,%s\n' "$name" "$mode" "$position" "$scale"
+      else
+        monitor_spec_from_declared_output "$output_json"
+      fi
+    }
+
+    save_output_runtime_spec() {
+      local output_json="$1"
+      local prefix="$2"
+      local current_spec _name output_mode output_position output_scale
+
+      current_spec="$(monitor_spec_from_live_or_declared_output "$output_json")" || return 0
+      IFS=, read -r _name output_mode output_position output_scale <<EOF
+$current_spec
+EOF
+      printf '%s\n' "$output_mode" >"$prefix.mode"
+      printf '%s\n' "$output_position" >"$prefix.position"
+      printf '%s\n' "$output_scale" >"$prefix.scale"
+    }
+
+    read_saved_or_declared_output_field() {
+      local prefix="$1"
+      local file_suffix="$2"
+      local output_json="$3"
+      local query="$4"
+      local file_path="$prefix.$file_suffix"
+
+      if [ -f "$file_path" ]; then
+        cat "$file_path" 2>/dev/null || true
+      else
+        get_output_field "$output_json" "$query"
+      fi
     }
 
     describe_monitor_json() {
@@ -804,6 +935,7 @@ EOF
     save_output_state() {
       local name="$1"
       local prefix="$2"
+      local output_json="$3"
 
       "$hyprctl_bin" -j workspaces \
         | "$jq_bin" -r --arg output "$name" '.[] | select(.monitor == $output and (.id // -1) > 0 and (.name // "") != "") | [.name, .monitor] | @tsv' >"$prefix.workspaces.tmp"
@@ -812,6 +944,7 @@ EOF
         | "$jq_bin" -r --arg output "$name" '.[] | select(.name == $output) | .activeWorkspace.name // empty' >"$prefix.active-workspace"
       "$hyprctl_bin" -j monitors \
         | "$jq_bin" -r '.[] | select(.focused == true) | .name // empty' >"$prefix.focused-monitor"
+      save_output_runtime_spec "$output_json" "$prefix"
     }
 
     move_workspace() {
@@ -930,22 +1063,15 @@ EOF
       local output_json="$1"
       local name="$2"
       local prefix="$3"
-      local handoff_enabled target_monitor output_mode output_position output_scale
+      local handoff_enabled target_monitor
 
       handoff_enabled="$(get_output_field "$output_json" 'if (.workspaceHandoff.enable // false) then "1" else "0" end')"
       target_monitor="$(get_output_field "$output_json" '.workspaceHandoff.targetMonitor // ""')"
-      output_mode="$(get_output_field "$output_json" '.mode // "preferred"')"
-      output_position="$(get_output_field "$output_json" '.position // "auto"')"
-      output_scale="$(get_output_field "$output_json" '(.scale // 1) | tostring')"
       target_monitor="$(pick_handoff_monitor "$name" "$target_monitor")"
-
-      printf '%s\n' "$output_mode" >"$prefix.mode"
-      printf '%s\n' "$output_position" >"$prefix.position"
-      printf '%s\n' "$output_scale" >"$prefix.scale"
       printf '%s\n' "$target_monitor" >"$prefix.target-monitor"
 
       if output_is_active "$name"; then
-        save_output_state "$name" "$prefix"
+        save_output_state "$name" "$prefix" "$output_json"
 
         if [ "$handoff_enabled" = "1" ] && [ -n "$target_monitor" ]; then
           move_monitor_workspaces_to_target "$name" "$target_monitor"
@@ -962,9 +1088,9 @@ EOF
       local prefix="$3"
       local output_mode output_position output_scale focus_on_enable focused_monitor active_workspace
 
-      output_mode="$(get_output_field "$output_json" '.mode // "preferred"')"
-      output_position="$(get_output_field "$output_json" '.position // "auto"')"
-      output_scale="$(get_output_field "$output_json" '(.scale // 1) | tostring')"
+      output_mode="$(read_saved_or_declared_output_field "$prefix" mode "$output_json" '.mode // "preferred"')"
+      output_position="$(read_saved_or_declared_output_field "$prefix" position "$output_json" '.position // "auto"')"
+      output_scale="$(read_saved_or_declared_output_field "$prefix" scale "$output_json" '(.scale // 1) | tostring')"
       focus_on_enable="$(get_output_field "$output_json" 'if (.focusOnEnable // false) then "1" else "0" end')"
 
        if output_is_headless "$name" && ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
@@ -1048,26 +1174,18 @@ EOF
     }
 
     sync_runtime_monitor_overrides() {
-      local tmp_file monitor_line
+      local tmp_file monitor_line output name
 
       mkdir -p "$(dirname "$runtime_config_path")"
       tmp_file="$(mktemp "$(dirname "$runtime_config_path")/.11-runtime-monitors.conf.XXXXXX")"
       {
-        echo "# ------------------------------------------------------------------"
-        echo "# Runtime Monitor Overrides"
-        echo "# ------------------------------------------------------------------"
-        echo "# Managed by wm-monitor. This file intentionally persists the current"
-        echo "# toggleable output state across Hyprland reloads."
+        write_runtime_header
         "$jq_bin" -c '.[]' "$outputs_json" | while IFS= read -r output; do
           name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
-          mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
-          position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "auto"')"
-          scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
-
           [ -n "$name" ] || continue
 
           if output_is_active "$name"; then
-            monitor_line="''${name},''${mode},''${position},''${scale}"
+            monitor_line="$(monitor_spec_from_live_or_declared_output "$output")"
           else
             monitor_line="''${name},disable"
           fi
