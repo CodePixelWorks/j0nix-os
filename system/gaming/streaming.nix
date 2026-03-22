@@ -37,6 +37,9 @@ let
   sunshineDisplayTargetCapture = if sunshineDisplayTargetCaptureAuto then null else sunshineDisplayTargetCaptureRaw;
   sunshineDisplayTargetIsHeadless = sunshineDisplayTargetBackend == "hyprland-headless";
   sunshineDisplayTargetIsPhysical = sunshineDisplayTargetBackend == "physical-output";
+  profileDetails = settings.profileDetails or { };
+  profileHeadlessOutput = profileDetails.hyprlandSunshineHeadlessOutput or null;
+  profileInitialOutputStatesBase = profileDetails.hyprlandInitialOutputStatesBase or [ ];
   sunshineUsesWaylandCapture =
     sunshineDisplayTargetEnabled
     && (
@@ -67,9 +70,28 @@ let
       "${config.hardware.nvidia.package}/lib"
       "${config.hardware.nvidia.package}/lib64"
     ];
-  configuredHeadlessOutputs = (settings.hyprland or { }).headlessOutputs or [ ];
+  configuredHeadlessOutputs =
+    if ((settings.hyprland or { }) ? headlessOutputs) then
+      (settings.hyprland or { }).headlessOutputs
+    else if sunshineDisplayTargetIsHeadless && profileHeadlessOutput != null then
+      [ profileHeadlessOutput ]
+    else
+      [ ];
   configuredHeadlessOutputMap = lib.listToAttrs (map (output: lib.nameValuePair output.name output) configuredHeadlessOutputs);
-  configuredInitialOutputStates = (settings.hyprland or { }).initialOutputStates or [ ];
+  configuredInitialOutputStates =
+    if ((settings.hyprland or { }) ? initialOutputStates) then
+      (settings.hyprland or { }).initialOutputStates
+    else
+      profileInitialOutputStatesBase
+      ++ lib.optionals (sunshineDisplayTargetIsHeadless && profileHeadlessOutput != null) [
+        {
+          name = profileHeadlessOutput.name;
+          enabledByDefault = false;
+          mode = profileHeadlessOutput.mode or "2880x1800@60";
+          position = profileHeadlessOutput.position or "10000x10000";
+          scale = profileHeadlessOutput.scale or 1;
+        }
+      ];
   configuredInitialOutputStateMap = lib.listToAttrs (map (output: lib.nameValuePair output.name output) configuredInitialOutputStates);
   configuredHeadlessOutputNames = map (output: output.name or "") configuredHeadlessOutputs;
   configuredPhysicalOutputStates =
