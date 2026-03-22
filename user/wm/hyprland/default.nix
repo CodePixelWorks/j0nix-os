@@ -573,9 +573,10 @@ let
     list_unknown_active_monitors() {
       "$hyprctl_bin" -j monitors all \
         | "$jq_bin" -c --slurpfile bindings "$bindings_json" '
-            .[]
-            | select((.disabled // false) == false and (.name // "") != "")
-            | select(([$bindings[0][]?.name] | index(.name)) == null)
+            .[] as $monitor
+            | select(($monitor.disabled // false) == false and ($monitor.name // "") != "")
+            | select(((($bindings[0] // []) | map(.name)) | index($monitor.name)) == null)
+            | $monitor
           '
     }
 
@@ -781,7 +782,7 @@ EOF
         | "$jq_bin" -r --slurpfile bindings "$bindings_json" '
             .[] as $monitor
             | select(($monitor.name // "") != "")
-            | select(([$bindings[0][]?.name] | index($monitor.name)) == null)
+            | select(((($bindings[0] // []) | map(.name)) | index($monitor.name)) == null)
             | [
                 $monitor.name,
                 (if ($monitor.disabled // false) then "disabled" else "active" end),
