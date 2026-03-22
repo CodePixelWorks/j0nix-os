@@ -230,7 +230,7 @@ Initial output states are now expressed in two layers:
 
 - `10-monitors.conf` renders the declarative startup defaults for managed physical outputs
 - `11-runtime-monitors.conf` stays empty in the declarative baseline and is reserved for runtime overrides
-- the fallback `monitor = ,preferred,auto,1` line is only emitted when no explicit monitor defaults exist
+- the fallback `monitor = ,preferred,auto,1` line is always emitted last unless `settings.hyprland.unknownMonitorFallbackRule = null`
 
 This keeps boot-time monitor state deterministic and gives runtime tools a separate override file instead of racing the startup config.
 
