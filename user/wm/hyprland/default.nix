@@ -414,145 +414,7 @@ let
   '';
   runtimeMonitorResetScript = pkgs.writeShellScriptBin "wm-monitor-reset-runtime" ''
     set -eu
-
-    hyprctl_bin="${hyprctlExec}"
-    jq_bin="${pkgs.jq}/bin/jq"
-    flock_bin="${pkgs.util-linux}/bin/flock"
-    initial_states_json=${lib.escapeShellArg initialOutputStatesJson}
-    runtime_config_path=${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath}
-    headless_outputs_json=${lib.escapeShellArg headlessOutputsJson}
-    state_home="''${XDG_STATE_HOME:-$HOME/.local/state}"
-    state_dir="$state_home/hyprland-monitor-state"
-    lock_file="$state_dir/runtime-monitors.lock"
-
-    write_runtime_header() {
-      echo "# ------------------------------------------------------------------"
-      echo "# Runtime Monitor Overrides"
-      echo "# ------------------------------------------------------------------"
-      echo "# Managed by wm-monitor. This file intentionally persists the current"
-      echo "# toggleable output state across Hyprland reloads."
-    }
-
-    output_is_headless() {
-      local name="$1"
-      "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' "$headless_outputs_json" >/dev/null 2>&1
-    }
-
-    ensure_headless_output() {
-      local name="$1"
-
-      if ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
-        "$hyprctl_bin" output create headless "$name" >/dev/null 2>&1 || true
-        for _ in $(seq 1 50); do
-          if "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
-            break
-          fi
-          sleep 0.1
-        done
-      fi
-    }
-
-    monitor_spec_from_declared_output() {
-      local output_json="$1"
-      local name mode position scale
-
-      name="$(printf '%s' "$output_json" | "$jq_bin" -r '.name // empty')"
-      mode="$(printf '%s' "$output_json" | "$jq_bin" -r '.mode // "preferred"')"
-      position="$(printf '%s' "$output_json" | "$jq_bin" -r '.position // "auto"')"
-      scale="$(printf '%s' "$output_json" | "$jq_bin" -r '(.scale // 1) | tostring')"
-
-      [ -n "$name" ] || return 1
-      printf '%s,%s,%s,%s\n' "$name" "$mode" "$position" "$scale"
-    }
-
-    get_live_monitor_json() {
-      local name="$1"
-      "$hyprctl_bin" -j monitors all | "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name and (.disabled // false) == false)'
-    }
-
-    monitor_spec_from_live_or_declared_output() {
-      local output_json="$1"
-      local name monitor_json mode position scale
-
-      name="$(printf '%s' "$output_json" | "$jq_bin" -r '.name // empty')"
-      [ -n "$name" ] || return 1
-      monitor_json="$(get_live_monitor_json "$name" 2>/dev/null || true)"
-
-      if [ -n "$monitor_json" ]; then
-        mode="$(printf '%s' "$monitor_json" | "$jq_bin" -r '"\(.width)x\(.height)@\((.refreshRate // 60) | tostring)"')"
-        position="$(printf '%s' "$monitor_json" | "$jq_bin" -r '"\((.x // 0) | floor)x\((.y // 0) | floor)"')"
-        scale="$(printf '%s' "$monitor_json" | "$jq_bin" -r '(.scale // 1) | tostring')"
-        printf '%s,%s,%s,%s\n' "$name" "$mode" "$position" "$scale"
-      else
-        monitor_spec_from_declared_output "$output_json"
-      fi
-    }
-
-    write_runtime_config_from_json() {
-      local source_json="$1"
-      local mode="$2"
-      local tmp_file output name enabled monitor_line
-
-      tmp_file="$(mktemp "$(dirname "$runtime_config_path")/.11-runtime-monitors.conf.XXXXXX")"
-      {
-        write_runtime_header
-        "$jq_bin" -c '.[]' "$source_json" | while IFS= read -r output; do
-          name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
-          [ -n "$name" ] || continue
-
-          case "$mode" in
-            defaults)
-              enabled="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
-              if [ "$enabled" = "1" ]; then
-                monitor_line="$(monitor_spec_from_declared_output "$output")"
-              else
-                monitor_line="$name,disable"
-              fi
-              ;;
-            live)
-              if output_is_active "$name"; then
-                monitor_line="$(monitor_spec_from_live_or_declared_output "$output")"
-              else
-                monitor_line="$name,disable"
-              fi
-              ;;
-            *)
-              return 1
-              ;;
-          esac
-
-          printf 'monitor = %s\n' "$monitor_line"
-        done
-      } >"$tmp_file"
-      mv -f "$tmp_file" "$runtime_config_path"
-    }
-
-    mkdir -p "$(dirname "$runtime_config_path")" "$state_dir"
-    exec 9>"$lock_file"
-    "$flock_bin" -x 9
-    write_runtime_config_from_json "$initial_states_json" defaults
-
-    if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -x "$hyprctl_bin" ]; then
-      "$jq_bin" -c '.[]' "$initial_states_json" | while IFS= read -r output; do
-        name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
-        enabled="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
-        mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
-        position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "auto"')"
-        scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
-
-        [ -n "$name" ] || continue
-
-        if [ "$enabled" = "1" ] && output_is_headless "$name"; then
-          ensure_headless_output "$name"
-        fi
-
-        if [ "$enabled" = "1" ]; then
-          "$hyprctl_bin" keyword monitor "$name,$mode,$position,$scale" >/dev/null 2>&1 || true
-        else
-          "$hyprctl_bin" keyword monitor "$name,disable" >/dev/null 2>&1 || true
-        fi
-      done
-    fi
+    exec ${lib.getExe monitorStateScript} sync-defaults
   '';
   headlessOutputsEnsureScript = pkgs.writeShellScriptBin "wm-headless-output-ensure" ''
     set -eu
@@ -612,6 +474,7 @@ let
     jq_bin="${pkgs.jq}/bin/jq"
     flock_bin="${pkgs.util-linux}/bin/flock"
     outputs_json=${lib.escapeShellArg toggleableOutputsJson}
+    initial_states_json=${lib.escapeShellArg initialOutputStatesJson}
     bindings_json=${lib.escapeShellArg outputBindingsJson}
     headless_outputs_json=${lib.escapeShellArg headlessOutputsJson}
     runtime_config_path=${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath}
@@ -629,12 +492,31 @@ let
     [ -x "$jq_bin" ] || exit 0
     mkdir -p "$state_dir"
     lock_file="$state_dir/runtime-monitors.lock"
-    exec 9>"$lock_file"
-    "$flock_bin" -x 9
 
     usage() {
-      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list|discover|enable-discovered|suggest> [output-name]" >&2
+      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list|discover|enable-discovered|suggest|sync-live|sync-defaults|watch> [output-name]" >&2
       exit 2
+    }
+
+    acquire_runtime_lock() {
+      exec 8>"$lock_file"
+      "$flock_bin" -x 8
+    }
+
+    release_runtime_lock() {
+      "$flock_bin" -u 8 >/dev/null 2>&1 || true
+      exec 8>&-
+    }
+
+    with_runtime_lock() {
+      local rc
+      acquire_runtime_lock
+      set +e
+      "$@"
+      rc=$?
+      set -e
+      release_runtime_lock
+      return "$rc"
     }
 
     sanitize_name() {
@@ -686,6 +568,15 @@ let
     output_is_active() {
       local name="$1"
       "$hyprctl_bin" -j monitors | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name and (.disabled // false) == false)' >/dev/null 2>&1
+    }
+
+    list_unknown_active_monitors() {
+      "$hyprctl_bin" -j monitors all \
+        | "$jq_bin" -c --argfile bindings "$bindings_json" '
+            .[]
+            | select((.disabled // false) == false and (.name // "") != "")
+            | select(([$bindings[]?.name] | index(.name)) == null)
+          '
     }
 
     get_live_monitor_json() {
@@ -749,6 +640,53 @@ EOF
       else
         get_output_field "$output_json" "$query"
       fi
+    }
+
+    sync_default_monitor_overrides_locked() {
+      local tmp_file output name enabled monitor_line
+
+      mkdir -p "$(dirname "$runtime_config_path")"
+      tmp_file="$(mktemp "$(dirname "$runtime_config_path")/.11-runtime-monitors.conf.XXXXXX")"
+      {
+        write_runtime_header
+        "$jq_bin" -c '.[]' "$initial_states_json" | while IFS= read -r output; do
+          name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
+          [ -n "$name" ] || continue
+          enabled="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
+
+          if [ "$enabled" = "1" ]; then
+            monitor_line="$(monitor_spec_from_declared_output "$output")"
+          else
+            monitor_line="$name,disable"
+          fi
+
+          printf 'monitor = %s\n' "$monitor_line"
+        done
+      } >"$tmp_file"
+      mv -f "$tmp_file" "$runtime_config_path"
+
+      if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        "$jq_bin" -c '.[]' "$initial_states_json" | while IFS= read -r output; do
+          name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
+          enabled="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault // true) then "1" else "0" end')"
+          monitor_line="$(monitor_spec_from_declared_output "$output")"
+          [ -n "$name" ] || continue
+
+          if [ "$enabled" = "1" ] && output_is_headless "$name"; then
+            ensure_headless_output "$name"
+          fi
+
+          if [ "$enabled" = "1" ]; then
+            "$hyprctl_bin" keyword monitor "$monitor_line" >/dev/null 2>&1 || true
+          else
+            "$hyprctl_bin" keyword monitor "$name,disable" >/dev/null 2>&1 || true
+          fi
+        done
+      fi
+    }
+
+    sync_default_monitor_overrides() {
+      with_runtime_lock sync_default_monitor_overrides_locked
     }
 
     describe_monitor_json() {
@@ -1173,8 +1111,8 @@ EOF
           done
     }
 
-    sync_runtime_monitor_overrides() {
-      local tmp_file monitor_line output name
+    sync_runtime_monitor_overrides_locked() {
+      local tmp_file monitor_line output name unknown_monitor_json unknown_name unknown_spec
 
       mkdir -p "$(dirname "$runtime_config_path")"
       tmp_file="$(mktemp "$(dirname "$runtime_config_path")/.11-runtime-monitors.conf.XXXXXX")"
@@ -1192,13 +1130,43 @@ EOF
 
           printf 'monitor = %s\n' "$monitor_line"
         done
+
+        list_unknown_active_monitors | while IFS= read -r unknown_monitor_json; do
+          unknown_name="$(printf '%s' "$unknown_monitor_json" | "$jq_bin" -r '.name // empty')"
+          [ -n "$unknown_name" ] || continue
+          unknown_spec="$(printf '%s' "$unknown_monitor_json" | "$jq_bin" -r '"\(.name),\(.width)x\(.height)@\((.refreshRate // 60) | tostring),\((.x // 0) | floor)x\((.y // 0) | floor),\((.scale // 1) | tostring)"')"
+          printf 'monitor = %s\n' "$unknown_spec"
+        done
       } >"$tmp_file"
       mv -f "$tmp_file" "$runtime_config_path"
+    }
+
+    sync_runtime_monitor_overrides() {
+      with_runtime_lock sync_runtime_monitor_overrides_locked
+    }
+
+    watch_monitor_events() {
+      while :; do
+        sync_runtime_monitor_overrides || true
+        sleep 2
+      done
     }
 
     case "$command" in
       list)
         monitor_list
+        exit 0
+        ;;
+      sync-live)
+        sync_runtime_monitor_overrides
+        exit 0
+        ;;
+      sync-defaults)
+        sync_default_monitor_overrides
+        exit 0
+        ;;
+      watch)
+        watch_monitor_events
         exit 0
         ;;
       discover)
@@ -1570,13 +1538,15 @@ EOF
   '';
 
   home.activation.hyprlandHeadlessOutputsReload = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
-    ${lib.optionalString headlessOutputsAutoEnsure ''
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     if [ -S "$runtime_dir/bus" ]; then
+      ${lib.optionalString headlessOutputsAutoEnsure ''
       ${pkgs.systemd}/bin/systemctl --user daemon-reload >/dev/null 2>&1 || true
       ${pkgs.systemd}/bin/systemctl --user restart hyprland-headless-outputs.service >/dev/null 2>&1 || true
+      ''}
+      ${pkgs.systemd}/bin/systemctl --user daemon-reload >/dev/null 2>&1 || true
+      ${pkgs.systemd}/bin/systemctl --user restart hyprland-runtime-monitor-defaults.service >/dev/null 2>&1 || true
     fi
-    ''}
   '';
 
   xdg.configFile =
@@ -1610,7 +1580,7 @@ EOF
 
   systemd.user.services.hyprland-runtime-monitor-defaults = lib.mkIf (initialOutputStates != [ ]) {
     Unit = {
-      Description = "Reset Hyprland runtime monitor overrides on session start and stop";
+      Description = "Manage Hyprland runtime monitor overrides";
       PartOf = [ "graphical-session.target" ];
       After = [ "graphical-session.target" ];
       Wants = [ "graphical-session.target" ];
@@ -1621,10 +1591,12 @@ EOF
     };
 
     Service = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      ExecStart = lib.getExe runtimeMonitorResetScript;
-      ExecStop = lib.getExe runtimeMonitorResetScript;
+      Type = "simple";
+      Restart = "always";
+      RestartSec = 1;
+      ExecStartPre = "${lib.getExe monitorStateScript} sync-defaults";
+      ExecStart = "${lib.getExe monitorStateScript} watch";
+      ExecStopPost = "${lib.getExe monitorStateScript} sync-defaults";
     };
   };
 
