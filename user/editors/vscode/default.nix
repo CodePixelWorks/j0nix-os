@@ -8,7 +8,10 @@ let
   vscodeCfg = settings.vscode or { };
   themeCfg = vscodeCfg.theme or { };
   extensionCfg = vscodeCfg.extensions or { };
+  aiCfg = ((settings.dev or { }).ai or { });
   codex = import ../../../system/dev/codex.nix { inherit inputs lib pkgs settings; };
+  kiloCodeEnabled = aiCfg.kiloCode or true;
+  kiloCodeExtension = mkExtFromId marketplace "kilocode.kilo-code";
   openVSXIds = extensionCfg.openVSX or [ ];
   marketplaceIds = extensionCfg.marketplace or [ ];
   colorTheme = themeCfg.colorTheme or null;
@@ -53,6 +56,7 @@ in {
       extensions =
         resolveExts pkgs.vscode-extensions openVSXIds
         ++ resolveExts marketplace marketplaceIds
+        ++ lib.optionals (kiloCodeEnabled && kiloCodeExtension != null) [ kiloCodeExtension ]
         ++ lib.optionals (codex.enabled && codex.vscodeEnable && codex.vscodeExtension != null) [ codex.vscodeExtension ];
     };
   };
@@ -147,6 +151,10 @@ PY
     {
       assertion = (!codex.enabled) || (!codex.vscodeEnable) || codex.vscodeExtension != null;
       message = "Codex VSCode integration is enabled, but the OpenAI VSCode extension is unavailable in nix-vscode-extensions.";
+    }
+    {
+      assertion = (!kiloCodeEnabled) || kiloCodeExtension != null;
+      message = "settings.dev.ai.kiloCode=true but the Kilo Code VS Code extension is unavailable in nix-vscode-extensions.";
     }
   ];
 }
