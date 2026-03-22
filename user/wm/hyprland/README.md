@@ -240,6 +240,7 @@ Unknown physical monitors are intentionally not auto-written into `settings.nix`
 - `wm-monitor-new-dialog` offers a YAD picker to either enable a newly seen monitor temporarily, open `nwg-displays`, or show a suggested Nix snippet
 - the auto mode keeps a small session signature, so the same unknown monitor set does not keep reopening the dialog every polling cycle
 - `wm-monitor-suggest <monitor-name>` prints a candidate `settings.nix` fragment for declarative adoption
+- unknown active outputs are persisted into `11-runtime-monitors.conf` as `preferred` mode lines so reloads do not pin them to a stale one-off mode string
 
 All extra monitor profile tooling is intentionally disabled for now. The only supported runtime path is the built-in `wm-monitor-*` command set and the corresponding Hyprland binds.
 
