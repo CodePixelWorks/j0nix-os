@@ -27,6 +27,9 @@ let
   renderLines = key: values:
     lib.concatStringsSep "\n" (map (value: "${key} = ${value}") values);
   staticMonitorLines = profileDetails.hyprlandMonitors or [ ];
+  hyprlandCfg = settings.hyprland or { };
+  unknownMonitorFallbackRule = hyprlandCfg.unknownMonitorFallbackRule or ",preferred,auto,1";
+  hasUnknownMonitorFallbackRule = unknownMonitorFallbackRule != null && unknownMonitorFallbackRule != "";
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
 
   includePaths = [
@@ -48,7 +51,7 @@ let
   monitorLines =
     staticMonitorLines
     ++ managedMonitorLines
-    ++ lib.optionals (staticMonitorLines == [ ] && managedMonitorLines == [ ]) [ ",preferred,auto,1" ];
+    ++ lib.optionals hasUnknownMonitorFallbackRule [ unknownMonitorFallbackRule ];
 
   startupLines =
     [
