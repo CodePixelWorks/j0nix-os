@@ -1218,7 +1218,7 @@ EOF
         list_unknown_active_monitors | while IFS= read -r unknown_monitor_json; do
           unknown_name="$(printf '%s' "$unknown_monitor_json" | "$jq_bin" -r '.name // empty')"
           [ -n "$unknown_name" ] || continue
-          unknown_spec="$(printf '%s' "$unknown_monitor_json" | "$jq_bin" -r '"\(.name),\(.width)x\(.height)@\((.refreshRate // 60) | tostring),\((.x // 0) | floor)x\((.y // 0) | floor),\((.scale // 1) | tostring)"')"
+          unknown_spec="$(printf '%s' "$unknown_monitor_json" | "$jq_bin" -r '"\(.name),preferred,\((.x // 0) | floor)x\((.y // 0) | floor),\((.scale // 1) | tostring)"')"
           printf 'monitor = %s\n' "$unknown_spec"
         done
       } >"$tmp_file"
