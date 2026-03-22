@@ -34,6 +34,14 @@ let
   workspaceSwitchBinds = map (pair: "$mainMod, ${pair.key}, workspace, ${pair.workspace}") workspaceKeyPairs;
   workspaceMoveBinds = map (pair: "$mainMod SHIFT, ${pair.key}, movetoworkspace, ${pair.workspace}") workspaceKeyPairs;
   hyprlandCfg = settings.hyprland or { };
+  sunshineDisplayTargetBackend = (((settings.sunshine or { }).displayTarget or { }).backend or "hyprland-headless");
+  sunshineUsesPhysicalOutput = sunshineDisplayTargetBackend == "physical-output";
+  sunshineUsesHeadlessOutput = sunshineDisplayTargetBackend == "hyprland-headless";
+  profileHeadlessOutput = profileDetails.hyprlandSunshineHeadlessOutput or null;
+  profilePhysicalOutput = profileDetails.hyprlandSunshinePhysicalOutput or null;
+  profileOutputBindingsBase = profileDetails.hyprlandOutputBindingsBase or [ ];
+  profileInitialOutputStatesBase = profileDetails.hyprlandInitialOutputStatesBase or [ ];
+  profileToggleableOutputsBase = profileDetails.hyprlandToggleableOutputsBase or [ ];
   monitorToolsCfg = hyprlandCfg.monitorTools or { };
   installNwgDisplays = monitorToolsCfg.installNwgDisplays or false;
   nwgDisplaysPackage =
@@ -68,7 +76,13 @@ let
   importedSessionEnvNames = builtins.attrNames sessionEnv;
   importSessionEnvArgs = lib.concatStringsSep " \\\n        " (map lib.escapeShellArg importedSessionEnvNames);
   uwsmEnvText = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg (toString value)}") sessionEnv) + "\n";
-  headlessOutputs = hyprlandCfg.headlessOutputs or [ ];
+  headlessOutputs =
+    if hyprlandCfg ? headlessOutputs then
+      hyprlandCfg.headlessOutputs
+    else if sunshineUsesHeadlessOutput && profileHeadlessOutput != null then
+      [ profileHeadlessOutput ]
+    else
+      [ ];
   headlessOutputIsEnabledByDefault =
     name:
       let
@@ -88,7 +102,25 @@ let
   headlessOutputNames = map (output: output.name or "") headlessOutputs;
   headlessOutputsAutoEnsure = builtins.any (output: headlessOutputIsEnabledByDefault (output.name or "")) headlessOutputs;
   headlessOutputsJson = pkgs.writeText "hyprland-headless-outputs.json" (builtins.toJSON headlessOutputs);
-  outputBindings = hyprlandCfg.outputBindings or [ ];
+  outputBindings =
+    if hyprlandCfg ? outputBindings then
+      hyprlandCfg.outputBindings
+    else
+      profileOutputBindingsBase
+      ++ lib.optionals (sunshineUsesPhysicalOutput && profilePhysicalOutput != null) [
+        {
+          name = profilePhysicalOutput.name;
+          description = profilePhysicalOutput.description or "";
+          bindIndex = profilePhysicalOutput.bindIndex;
+        }
+      ]
+      ++ lib.optionals (sunshineUsesHeadlessOutput && profileHeadlessOutput != null) [
+        {
+          name = profileHeadlessOutput.name;
+          description = profileHeadlessOutput.description or "";
+          bindIndex = profileHeadlessOutput.bindIndex;
+        }
+      ];
   outputBindingsWithKeys = map
     (binding:
       binding // { bindKey = if binding.bindIndex == 10 then "0" else toString binding.bindIndex; })
@@ -97,7 +129,20 @@ let
   outputBindingIndices = map (binding: binding.bindIndex) outputBindingsWithKeys;
   outputBindingsJson = pkgs.writeText "hyprland-output-bindings.json" (builtins.toJSON outputBindingsWithKeys);
   initialOutputStates =
-    let configured = hyprlandCfg.initialOutputStates or [ ];
+    let configured =
+      if hyprlandCfg ? initialOutputStates then
+        hyprlandCfg.initialOutputStates
+      else
+        profileInitialOutputStatesBase
+        ++ lib.optionals (sunshineUsesHeadlessOutput && profileHeadlessOutput != null) [
+          {
+            name = profileHeadlessOutput.name;
+            enabledByDefault = false;
+            mode = profileHeadlessOutput.mode or "2880x1800@60";
+            position = profileHeadlessOutput.position or "10000x10000";
+            scale = profileHeadlessOutput.scale or 1;
+          }
+        ];
     in
       if configured != [ ] then
         configured
@@ -112,7 +157,12 @@ let
           })
           toggleableOutputs;
   initialOutputStateNames = map (output: output.name or "") initialOutputStates;
-  toggleableOutputs = hyprlandCfg.toggleableOutputs or [ ];
+  toggleableOutputs =
+    if hyprlandCfg ? toggleableOutputs then
+      hyprlandCfg.toggleableOutputs
+    else
+      profileToggleableOutputsBase
+      ++ lib.optionals (sunshineUsesPhysicalOutput && profilePhysicalOutput != null) [ profilePhysicalOutput ];
   toggleableOutputsWithBindings =
     builtins.genList
       (idx:
