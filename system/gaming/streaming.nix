@@ -207,7 +207,7 @@ let
     target_name=${lib.escapeShellArg (if sunshineDisplayTargetOutputName != null then sunshineDisplayTargetOutputName else "")}
     default_mode=${lib.escapeShellArg defaultTargetMode}
     staging_position=${lib.escapeShellArg defaultTargetPosition}
-    stream_position='0x0'
+    stream_position=${lib.escapeShellArg (if sunshineDisplayTargetIsHeadless then "0x0" else defaultTargetPosition)}
     target_scale=${lib.escapeShellArg defaultTargetScale}
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$("$coreutils_bin"/id -u)}"
     state_dir="$runtime_dir/sunshine-j0nix"
@@ -251,7 +251,7 @@ let
     move_workspace_to_target() {
       local workspace_name="$1"
       [ -n "$workspace_name" ] || return 0
-      "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name" "$target_name" >/dev/null 2>&1 || true
+      "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name $target_name" >/dev/null 2>&1 || true
     }
 
     active_workspace=""
@@ -312,7 +312,7 @@ let
       local monitor_name="$2"
       [ -n "$workspace_name" ] || return 0
       [ -n "$monitor_name" ] || return 0
-      "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name" "$monitor_name" >/dev/null 2>&1 || true
+      "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name $monitor_name" >/dev/null 2>&1 || true
     }
 
     if [ -f "$workspace_state" ]; then
