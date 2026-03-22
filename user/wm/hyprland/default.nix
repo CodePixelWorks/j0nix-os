@@ -494,7 +494,7 @@ let
     lock_file="$state_dir/runtime-monitors.lock"
 
     usage() {
-      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list|discover|enable-discovered|suggest|sync-live|sync-defaults|watch> [output-name]" >&2
+      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list|discover|enable-discovered|suggest|prompt-new|sync-live|sync-defaults|watch> [output-name]" >&2
       exit 2
     }
 
@@ -854,6 +854,90 @@ EOF
 EOF
     }
 
+    prompt_new_monitor_dialog() {
+      local mode unknown_lines unknown_signature signature_file yad_bin nwg_displays_bin wl_copy_bin
+      local selected_name action_rc snippet_file
+
+      mode="''${1:-interactive}"
+      signature_file="$state_dir/new-monitor-dialog.signature"
+      yad_bin="$(command -v yad || true)"
+      nwg_displays_bin="$(command -v nwg-displays || true)"
+      wl_copy_bin="$(command -v wl-copy || true)"
+
+      unknown_lines="$(list_unknown_monitors || true)"
+      if [ -z "$unknown_lines" ]; then
+        rm -f "$signature_file"
+        return 0
+      fi
+
+      unknown_signature="$(
+        printf '%s\n' "$unknown_lines" \
+          | cut -f1 \
+          | sort \
+          | tr '\n' ',' \
+          | sed 's/,$//'
+      )"
+
+      if [ "$mode" = "--auto" ]; then
+        if [ -f "$signature_file" ] && [ "$(cat "$signature_file" 2>/dev/null || true)" = "$unknown_signature" ]; then
+          return 0
+        fi
+        printf '%s\n' "$unknown_signature" >"$signature_file"
+      fi
+
+      if [ -z "$yad_bin" ]; then
+        if [ "$mode" != "--auto" ]; then
+          printf '%s\n' "$unknown_lines"
+        fi
+        return 0
+      fi
+
+      if selected_name="$(
+        printf '%s\n' "$unknown_lines" | "$yad_bin" \
+          --list \
+          --title="New Monitor Detected" \
+          --text="Select how to handle the newly detected monitor." \
+          --column="Name" \
+          --column="State" \
+          --column="Description" \
+          --column="Suggested Mode" \
+          --column="Suggested Position" \
+          --separator=$'\t' \
+          --print-column=1 \
+          --button="Enable Temporarily:0" \
+          --button="Show Suggested Nix Snippet:2" \
+          --button="Open nwg-displays:3" \
+          --button="Cancel:1"
+      )"; then
+        action_rc=0
+      else
+        action_rc=$?
+      fi
+
+      [ -n "$selected_name" ] || return 0
+
+      case "$action_rc" in
+        0)
+          enable_unknown_monitor "$selected_name"
+          sync_runtime_monitor_overrides
+          ;;
+        2)
+          snippet_file="$(mktemp)"
+          suggest_unknown_monitor_config "$selected_name" >"$snippet_file"
+          if [ -n "$wl_copy_bin" ]; then
+            "$wl_copy_bin" <"$snippet_file" >/dev/null 2>&1 || true
+          fi
+          "$yad_bin" --text-info --title="Suggested Nix Snippet" --filename="$snippet_file" --width=760 --height=420
+          rm -f "$snippet_file"
+          ;;
+        3)
+          if [ -n "$nwg_displays_bin" ]; then
+            "$nwg_displays_bin" >/dev/null 2>&1 &
+          fi
+          ;;
+      esac
+    }
+
     wait_for_output_state() {
       local name="$1"
       local desired_state="$2"
@@ -1148,6 +1232,7 @@ EOF
     watch_monitor_events() {
       while :; do
         sync_runtime_monitor_overrides || true
+        prompt_new_monitor_dialog --auto || true
         sleep 2
       done
     }
@@ -1167,6 +1252,10 @@ EOF
         ;;
       watch)
         watch_monitor_events
+        exit 0
+        ;;
+      prompt-new)
+        prompt_new_monitor_dialog "$output_name"
         exit 0
         ;;
       discover)
@@ -1231,6 +1320,9 @@ EOF
       suggest)
         suggest_unknown_monitor_config "$output_name"
         ;;
+      prompt-new)
+        prompt_new_monitor_dialog "$output_name"
+        ;;
       workspace-to)
         ensure_output_ready_for_workspace_move "$output_name"
         move_active_workspace_to_output "$output_name"
@@ -1251,79 +1343,7 @@ EOF
   monitorListScript = pkgs.writeShellScriptBin "wm-monitor-list" ''exec ${lib.getExe monitorStateScript} list "$@"'';
   monitorDiscoverScript = pkgs.writeShellScriptBin "wm-monitor-discover" ''exec ${lib.getExe monitorStateScript} discover "$@"'';
   monitorSuggestScript = pkgs.writeShellScriptBin "wm-monitor-suggest" ''exec ${lib.getExe monitorStateScript} suggest "$@"'';
-  monitorNewDialogScript = pkgs.writeShellScriptBin "wm-monitor-new-dialog" ''
-    set -eu
-
-    monitor_bin=${lib.escapeShellArg (lib.getExe monitorStateScript)}
-    yad_bin="$(command -v yad || true)"
-    nwg_displays_bin="$(command -v nwg-displays || true)"
-    wl_copy_bin="$(command -v wl-copy || true)"
-    mode="''${1:-interactive}"
-    session_marker_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}/hyprland-monitor-state"
-    session_marker="$session_marker_dir/new-monitor-dialog.prompted"
-
-    mkdir -p "$session_marker_dir"
-
-    if [ "$mode" = "--auto" ] && [ -e "$session_marker" ]; then
-      exit 0
-    fi
-
-    unknown_lines="$("$monitor_bin" discover || true)"
-    [ -n "$unknown_lines" ] || exit 0
-
-    if [ "$mode" = "--auto" ]; then
-      : >"$session_marker"
-    fi
-
-    if [ -z "$yad_bin" ]; then
-      printf '%s\n' "$unknown_lines"
-      exit 0
-    fi
-
-    if selected_name="$(
-      printf '%s\n' "$unknown_lines" | "$yad_bin" \
-        --list \
-        --title="New Monitor Detected" \
-        --text="Select how to handle the newly detected monitor." \
-        --column="Name" \
-        --column="State" \
-        --column="Description" \
-        --column="Suggested Mode" \
-        --column="Suggested Position" \
-        --separator=$'\t' \
-        --print-column=1 \
-        --button="Enable Temporarily:0" \
-        --button="Show Suggested Nix Snippet:2" \
-        --button="Open nwg-displays:3" \
-        --button="Cancel:1"
-    )"; then
-      action_rc=0
-    else
-      action_rc=$?
-    fi
-
-    [ -n "$selected_name" ] || exit 0
-
-    case "$action_rc" in
-      0)
-        "$monitor_bin" enable-discovered "$selected_name"
-        ;;
-      2)
-        snippet_file="$(mktemp)"
-        "$monitor_bin" suggest "$selected_name" >"$snippet_file"
-        if [ -n "$wl_copy_bin" ]; then
-          "$wl_copy_bin" <"$snippet_file" >/dev/null 2>&1 || true
-        fi
-        "$yad_bin" --text-info --title="Suggested Nix Snippet" --filename="$snippet_file" --width=760 --height=420
-        rm -f "$snippet_file"
-        ;;
-      3)
-        if [ -n "$nwg_displays_bin" ]; then
-          "$nwg_displays_bin" >/dev/null 2>&1 &
-        fi
-        ;;
-    esac
-  '';
+  monitorNewDialogScript = pkgs.writeShellScriptBin "wm-monitor-new-dialog" ''exec ${lib.getExe monitorStateScript} prompt-new "$@"'';
   monitorDebugScript = pkgs.writeShellScriptBin "wm-monitor-debug" ''
     set -eu
 
