@@ -253,6 +253,59 @@ in
         notify-send "Screenshot saved" "$out_file" >/dev/null 2>&1 || true
       fi
     '')
+    (writeShellScriptBin "wm-lock-screen" ''
+      set -eu
+
+      loginctl_bin="${pkgs.systemd}/bin/loginctl"
+      procps_bin="${pkgs.procps}/bin"
+      runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+      sunshine_state_dir="$runtime_dir/sunshine-j0nix"
+      lockscreen_disable_marker="$sunshine_state_dir/disable-lock-screen"
+      background=0
+      force=0
+
+      while [ "$#" -gt 0 ]; do
+        case "$1" in
+          --background)
+            background=1
+            ;;
+          --force)
+            force=1
+            ;;
+          *)
+            echo "Usage: wm-lock-screen [--background] [--force]" >&2
+            exit 2
+            ;;
+        esac
+        shift
+      done
+
+      if [ "$force" != "1" ] && [ -f "$lockscreen_disable_marker" ]; then
+        exit 0
+      fi
+
+      if command -v hyprlock >/dev/null 2>&1; then
+        if "$procps_bin"/pgrep -x hyprlock >/dev/null 2>&1; then
+          exit 0
+        fi
+
+        if [ "$background" = "1" ]; then
+          hyprlock >/dev/null 2>&1 &
+          sleep 0.5
+          "$procps_bin"/pgrep -x hyprlock >/dev/null 2>&1 && exit 0
+        else
+          hyprlock >/dev/null 2>&1 && exit 0
+        fi
+      fi
+
+      "$loginctl_bin" lock-session >/dev/null 2>&1 || true
+    '')
+    (writeShellScriptBin "wm-lock-screen-reset" ''
+      set -eu
+
+      ${pkgs.procps}/bin/pkill -x hyprlock >/dev/null 2>&1 || true
+      exec wm-lock-screen "$@"
+    '')
     (writeShellScriptBin "system-suspend-safe" ''
       timeout_bin="${pkgs.coreutils}/bin/timeout"
       loginctl_bin="${pkgs.systemd}/bin/loginctl"
@@ -262,13 +315,7 @@ in
       if command -v dms >/dev/null 2>&1; then
         "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
       fi
-      if command -v hyprlock >/dev/null 2>&1; then
-        pgrep -x hyprlock >/dev/null 2>&1 || hyprlock >/dev/null 2>&1 &
-        sleep 0.5
-      else
-        "$loginctl_bin" lock-session >/dev/null 2>&1 || true
-        sleep 0.3
-      fi
+      wm-lock-screen --background || true
 
       "$loginctl_bin" suspend \
         || "$systemctl_bin" suspend
@@ -281,13 +328,7 @@ in
       if command -v dms >/dev/null 2>&1; then
         "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
       fi
-      if command -v hyprlock >/dev/null 2>&1; then
-        pgrep -x hyprlock >/dev/null 2>&1 || hyprlock >/dev/null 2>&1 &
-        sleep 0.5
-      else
-        "$loginctl_bin" lock-session >/dev/null 2>&1 || true
-        sleep 0.3
-      fi
+      wm-lock-screen --background || true
 
       "$loginctl_bin" hibernate \
         || "$systemctl_bin" hibernate
@@ -300,13 +341,7 @@ in
       if command -v dms >/dev/null 2>&1; then
         "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
       fi
-      if command -v hyprlock >/dev/null 2>&1; then
-        pgrep -x hyprlock >/dev/null 2>&1 || hyprlock >/dev/null 2>&1 &
-        sleep 0.5
-      else
-        "$loginctl_bin" lock-session >/dev/null 2>&1 || true
-        sleep 0.3
-      fi
+      wm-lock-screen --background || true
 
       "$loginctl_bin" suspend-then-hibernate \
         || "$systemctl_bin" suspend-then-hibernate
