@@ -170,6 +170,8 @@ Behavior:
 
 `settings.hyprland.headlessOutputs` declares virtual Hyprland outputs. j0nix materializes them through the user service `hyprland-headless-outputs.service`, and Home Manager restarts that service on rebuilds in an active session. `wm-headless-output-ensure` remains available as the manual fallback command.
 
+On this host, the default monitor topology now comes from `profiles/desktop/details.nix`. `settings.hyprland.*` can still override it explicitly, but the physical layout data is no longer kept in `settings.nix`.
+
 ## Toggleable Outputs
 
 `settings.hyprland.toggleableOutputs` declares physical outputs that should be manageable at runtime even if Hyprland still sees the connector when the screen itself is powered off.
