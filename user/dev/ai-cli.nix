@@ -8,6 +8,7 @@ let
   codex = import ../../system/dev/codex.nix { inherit inputs lib pkgs settings; };
   codexEnabled = codex.enabled;
   ncpEnabled = ai.ncp or true;
+  kiloCodeEnabled = ai.kiloCode or true;
   opencodeEnabled = ai.opencode or true;
   claudeCodeEnabled = ai.claudeCode or true;
   geminiEnabled = ai.gemini or true;
@@ -16,6 +17,13 @@ let
     runtimeInputs = [ pkgs.nodejs ];
     text = ''
       exec ${pkgs.nodejs}/bin/npx --yes @portel/ncp "$@"
+    '';
+  };
+  kiloCodePackage = pkgs.writeShellApplication {
+    name = "kilocode";
+    runtimeInputs = [ pkgs.nodejs ];
+    text = ''
+      exec ${pkgs.nodejs}/bin/npx --yes @kilocode/cli@alpha "$@"
     '';
   };
   opencodePackage = if builtins.hasAttr "opencode" pkgs then pkgs.opencode else null;
@@ -84,6 +92,7 @@ lib.mkIf enabled {
     ++ lib.optionals (installScope == "user" && codexEnabled) (map (server: server.package) (builtins.attrValues codex.mcpServers))
     ++ lib.optionals (installScope == "user" && codexEnabled && codex.mcpLspEnable) codex.mcpLspRuntimePackages
     ++ lib.optionals (installScope == "user" && ncpEnabled) [ ncpPackage ]
+    ++ lib.optionals (installScope == "user" && kiloCodeEnabled) [ kiloCodePackage ]
     ++ lib.optionals (installScope == "user" && opencodeEnabled && opencodePackage != null) [ opencodePackage ]
     ++ lib.optionals (installScope == "user" && claudeCodeEnabled && claudeCodePackage != null) [ claudeCodePackage ]
     ++ lib.optionals (installScope == "user" && geminiEnabled && hasGeminiPackage) [ pkgs.gemini-cli ]
