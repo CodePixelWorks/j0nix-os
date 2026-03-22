@@ -117,7 +117,7 @@ let
     "$mainMod, r, exec, wm-shell-recover"
     "$mainMod CTRL, v, layoutmsg, preselect r"
     "$mainMod CTRL SHIFT, v, layoutmsg, preselect d"
-    "$mainMod SHIFT, l, exec, sh -lc 'if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi'"
+    "$mainMod SHIFT, l, exec, wm-lock-screen"
     "$mainMod SHIFT, q, exit,"
     "CTRL SHIFT, Print, exec, wm-screenshot-area"
   ] ++ mainSplitBinds ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind
