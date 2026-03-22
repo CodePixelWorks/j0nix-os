@@ -25,8 +25,9 @@ let
       lib.optionals sunshineAddRenderGroup [ "render" ]
       ++ lib.optionals sunshineAddInputGroup [ "input" ]
     );
-  sunshineVirtualDisplay = sunshine.virtualDisplay or { };
   sunshineDisplayTargetSettings = ((settings.sunshine or { }).displayTarget or { });
+  sunshineVirtualDisplay = sunshine.virtualDisplay or { };
+  sunshineDisableLockScreenDuringStream = ((settings.sunshine or { }).disableLockScreenDuringStream or true);
   sunshineDisplayTargetEnabled = sunshineDisplayTargetSettings.enable or (sunshineVirtualDisplay.enable or false);
   sunshineDisplayTargetBackend = sunshineDisplayTargetSettings.backend or "hyprland-headless";
   sunshineDisplayTargetOutputName = sunshineDisplayTargetSettings.outputName or (sunshineVirtualDisplay.outputName or null);
@@ -236,6 +237,7 @@ let
     workspace_state="$state_dir/headless-workspaces.tsv"
     active_state="$state_dir/headless-active-workspace"
     focused_monitor_state="$state_dir/headless-focused-monitor"
+    lockscreen_disable_marker="$state_dir/disable-lock-screen"
 
     if [ -z "$target_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ] || [ ! -x "$jq_bin" ]; then
       exit 0
@@ -265,6 +267,10 @@ let
 
     "$hyprctl_bin" keyword monitor "$target_name,$mode,$staging_position,$target_scale" >/dev/null 2>&1 || true
     "$coreutils_bin"/mkdir -p "$state_dir"
+    ${lib.optionalString sunshineDisableLockScreenDuringStream ''
+    : > "$lockscreen_disable_marker"
+    ${pkgs.procps}/bin/pkill -x hyprlock >/dev/null 2>&1 || true
+    ''}
     "$hyprctl_bin" -j workspaces | "$jq_bin" -r '.[] | select((.name // "") != "" and (.monitor // "") != "") | [.name, .monitor] | @tsv' > "$workspace_state.tmp"
     "$coreutils_bin"/mv "$workspace_state.tmp" "$workspace_state"
     "$hyprctl_bin" -j activeworkspace | "$jq_bin" -r '.name // empty' > "$active_state"
@@ -313,6 +319,7 @@ let
     workspace_state="$state_dir/headless-workspaces.tsv"
     active_state="$state_dir/headless-active-workspace"
     focused_monitor_state="$state_dir/headless-focused-monitor"
+    lockscreen_disable_marker="$state_dir/disable-lock-screen"
 
     if [ -z "$target_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ]; then
       exit 0
@@ -364,7 +371,7 @@ let
     if command -v wm-shell-restart-detached >/dev/null 2>&1; then
       wm-shell-restart-detached >/dev/null 2>&1 || true
     fi
-    "$coreutils_bin"/rm -f "$workspace_state" "$active_state" "$focused_monitor_state"
+    "$coreutils_bin"/rm -f "$workspace_state" "$active_state" "$focused_monitor_state" "$lockscreen_disable_marker"
   '';
   sunshineDisplayPrepCommand = lib.getExe sunshineDisplayPrepScript;
   sunshineDisplayUndoCommand = lib.getExe sunshineDisplayUndoScript;
