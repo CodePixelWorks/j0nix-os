@@ -44,6 +44,7 @@
       ".." = "cd ..";
       "..." = "cd ../..";
       claude = "claude-code";
+      lockfix = "wm-lock-screen-reset";
       mkdir = "mkdir -p";
       ncg = "nix-collect-garbage --delete-old && sudo nix-collect-garbage -d";
       rebuild = "sudo nixos-rebuild switch --flake ${settings.dotfilesDir}#${profileMeta.hostname}";
