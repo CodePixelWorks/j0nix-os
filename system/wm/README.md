@@ -43,11 +43,6 @@ By default, the greeter uses a generated dark KDE color scheme under:
 
 That avoids qmlgreet's upstream light default palette, which otherwise makes the login surface look white even when a wallpaper is configured.
 
-All Hyprland-based greetd greeters now include:
-- `monitor = ,preferred,auto,1`
-
-That keeps the login surface on every connected display instead of inheriting any user-session monitor policy.
-
 Wallpaper assets should come from the shared system wallpaper package under:
 - `/run/current-system/sw/share/j0nix/wallpapers/...`
 
