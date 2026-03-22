@@ -219,9 +219,11 @@ Runtime monitor state now has a single writer contract:
 
 - `10-monitors.conf` contains the declarative startup defaults
 - `11-runtime-monitors.conf` contains runtime overrides only
-- `wm-monitor-reset-runtime` resets the runtime file to the declarative defaults once per Hyprland session startup
 - `wm-monitor` is the only runtime tool that rewrites `11-runtime-monitors.conf`
-- both the reset path and the runtime toggle path share the same lock file, so they cannot clobber each other during reloads or rapid keybind toggles
+- `wm-monitor sync-defaults` reseeds the runtime file from the declarative defaults
+- `wm-monitor watch` runs under the `hyprland-runtime-monitor-defaults.service` user service and keeps the runtime file recreated and refreshed continuously during the session
+- the compatibility helper `wm-monitor-reset-runtime` now delegates to `wm-monitor sync-defaults`
+- the activation path, session service, and runtime toggle path all use the same lock file, so they cannot clobber each other during reloads, file recreation, or rapid keybind toggles
 
 Initial output states are now expressed in two layers:
 
