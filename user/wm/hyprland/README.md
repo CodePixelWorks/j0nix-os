@@ -138,7 +138,7 @@ Behavior:
 - `SUPER+F`: fullscreen (mode `0`, hides shell/waybar)
 - `SUPER+SHIFT+F`: maximize-like fullscreen (mode `1`, keeps shell/waybar)
 - `SUPER+Return`: open preferred terminal
-- `SUPER+SHIFT+L`: lock screen (`hyprlock` fallback to `loginctl lock-session`)
+- `SUPER+SHIFT+L`: lock screen via `wm-lock-screen`
 - `SUPER+B`: open preferred browser
 - `SUPER+SHIFT+Q`: exit Hyprland session
 - `SUPER+H/J/K/L`: Vim-style focus movement (`left/down/up/right`)
@@ -153,6 +153,12 @@ Behavior:
 - `SUPER+P`: fullscreen screenshot
 - `SUPER+-`: decrease the split ratio
 - `SUPER++`: increase the split ratio
+
+Lock helpers:
+
+- `wm-lock-screen`: shared lock entrypoint used by Hyprland, wlogout, and the suspend helpers
+- `wm-lock-screen-reset`: kill a stuck `hyprlock` process and relaunch the shared lock entrypoint
+- `lockfix`: shell alias for `wm-lock-screen-reset`
 - `SUPER+Left/Right`: switch relative workspace (`-1/+1`)
 - `SUPER+SHIFT+Left/Right`: move window to relative workspace (`-1/+1`, currently follows)
 - `SUPER+1..0`: switch workspace
