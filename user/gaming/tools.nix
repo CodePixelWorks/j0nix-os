@@ -38,6 +38,8 @@ let
     grab_cursor=1
     launcher_skip=0
     gamescope_host_mode="borderless"
+    target_monitor=""
+    display_index=""
 
     usage() {
       cat <<'EOF' >&2
@@ -52,6 +54,8 @@ Options:
   --mangoapp        Enable gamescope's --mangoapp flag when available
   --grab-cursor     Force relative cursor grab in gamescope (default)
   --no-grab-cursor  Disable forced cursor grab in gamescope
+  --target-monitor  Target a specific Hyprland monitor/output for the gamescope host window
+  --display-index   Override gamescope's nested display index directly
   --host-fullscreen Run the host gamescope window in fullscreen mode
   --launcher-skip   Append --launcher-skip to the game command
 EOF
@@ -100,6 +104,16 @@ EOF
           grab_cursor=0
           shift
           ;;
+        --target-monitor|--monitor)
+          [ $# -ge 2 ] || usage
+          target_monitor="$2"
+          shift 2
+          ;;
+        --display-index)
+          [ $# -ge 2 ] || usage
+          display_index="$2"
+          shift 2
+          ;;
         --host-fullscreen)
           gamescope_host_mode="fullscreen"
           shift
@@ -130,7 +144,7 @@ EOF
       cmd+=( --launcher-skip )
     fi
 
-    log "mode=$proton_mode gamescope=$use_gamescope hdr=$use_hdr gamemode=$use_gamemode mangoapp=$use_mangoapp grab_cursor=$grab_cursor launcher_skip=$launcher_skip host_mode=$gamescope_host_mode"
+    log "mode=$proton_mode gamescope=$use_gamescope hdr=$use_hdr gamemode=$use_gamemode mangoapp=$use_mangoapp grab_cursor=$grab_cursor launcher_skip=$launcher_skip host_mode=$gamescope_host_mode target_monitor=$target_monitor display_index=$display_index"
     log "host-env DISPLAY=''${DISPLAY:-} WAYLAND_DISPLAY=''${WAYLAND_DISPLAY:-} XDG_SESSION_TYPE=''${XDG_SESSION_TYPE:-} PROTON_ENABLE_WAYLAND=''${PROTON_ENABLE_WAYLAND:-}"
     printf '[%s] argv:' "$(${pkgs.coreutils}/bin/date -Iseconds)" >> "$log_file"
     for arg in "''${cmd[@]}"; do
@@ -143,12 +157,47 @@ EOF
       child_prefix+=(${pkgs.gamemode}/bin/gamemoderun)
     fi
 
-    focused_monitor_gamescope_args() {
+    selected_monitor_gamescope_args() {
+      local selector selected_args
+
       if ! command -v hyprctl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+        if [ -n "$display_index" ]; then
+          printf '%s\n' "--display-index $display_index"
+        fi
         return 0
       fi
 
-      hyprctl -j monitors 2>/dev/null         | jq -r '.[] | select(.focused == true and (.disabled // false) == false and (.width // 0) > 0 and (.height // 0) > 0) | "-W\(.width) -H\(.height)"'         | head -n 1
+      if [ -n "$target_monitor" ]; then
+        selector='to_entries[] | select((.value.name // "") == $target and (.value.disabled // false) == false and (.value.width // 0) > 0 and (.value.height // 0) > 0)'
+        selected_args="$(hyprctl -j monitors 2>/dev/null | jq -r --arg target "$target_monitor" --arg display_index "$display_index" '
+          '"$selector"' |
+          "-W\(.value.width) -H\(.value.height)\(
+            if $display_index != \"\" then
+              \" --display-index \($display_index)\"
+            else
+              \" --display-index \(.key)\"
+            end
+          )"
+        ' | head -n 1)"
+      else
+        selected_args="$(hyprctl -j monitors 2>/dev/null | jq -r --arg display_index "$display_index" '
+          to_entries[]
+          | select((.value.focused // false) == true and (.value.disabled // false) == false and (.value.width // 0) > 0 and (.value.height // 0) > 0)
+          | "-W\(.value.width) -H\(.value.height)\(
+              if $display_index != \"\" then
+                \" --display-index \($display_index)\"
+              else
+                \" --display-index \(.key)\"
+              end
+            )"
+        ' | head -n 1)"
+      fi
+
+      if [ -n "$selected_args" ]; then
+        printf '%s\n' "$selected_args"
+      elif [ -n "$display_index" ]; then
+        printf '%s\n' "--display-index $display_index"
+      fi
     }
 
     if [ "$use_gamescope" = "1" ]; then
@@ -162,7 +211,7 @@ EOF
           ;;
       esac
 
-      monitor_args="$(focused_monitor_gamescope_args || true)"
+      monitor_args="$(selected_monitor_gamescope_args || true)"
       if [ -n "$monitor_args" ]; then
         # Match the focused monitor size in nested mode so the host window behaves like a proper full-screen surface without trapping Alt-Tab behind a real fullscreen host window.
         # shellcheck disable=SC2206
