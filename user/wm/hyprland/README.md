@@ -222,6 +222,7 @@ Runtime monitor state now has a single writer contract:
 - `wm-monitor` is the only runtime tool that rewrites `11-runtime-monitors.conf`
 - `wm-monitor sync-defaults` reseeds the runtime file from the declarative defaults
 - `wm-monitor watch` runs under the `hyprland-runtime-monitor-defaults.service` user service and keeps the runtime file recreated and refreshed continuously during the session
+- the same watch loop also checks for newly attached unmanaged monitors and triggers the existing monitor dialog once per unknown monitor set
 - the compatibility helper `wm-monitor-reset-runtime` now delegates to `wm-monitor sync-defaults`
 - the activation path, session service, and runtime toggle path all use the same lock file, so they cannot clobber each other during reloads, file recreation, or rapid keybind toggles
 
@@ -237,6 +238,7 @@ Unknown physical monitors are intentionally not auto-written into `settings.nix`
 
 - `wm-monitor-discover` lists connected outputs that are not yet part of the declarative monitor map
 - `wm-monitor-new-dialog` offers a YAD picker to either enable a newly seen monitor temporarily, open `nwg-displays`, or show a suggested Nix snippet
+- the auto mode keeps a small session signature, so the same unknown monitor set does not keep reopening the dialog every polling cycle
 - `wm-monitor-suggest <monitor-name>` prints a candidate `settings.nix` fragment for declarative adoption
 
 All extra monitor profile tooling is intentionally disabled for now. The only supported runtime path is the built-in `wm-monitor-*` command set and the corresponding Hyprland binds.
