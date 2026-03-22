@@ -17,7 +17,7 @@ lib.mkIf enabled {
     layout = [
       {
         label = "lock";
-        action = "sleep 1; if command -v hyprlock >/dev/null 2>&1; then hyprlock; else loginctl lock-session; fi";
+        action = "sleep 1; wm-lock-screen";
         text = "Lock";
         keybind = "l";
       }
