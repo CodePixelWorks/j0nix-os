@@ -13,6 +13,12 @@ let
 in
 lib.mkMerge [
   (lib.mkIf enabled {
+    boot.initrd.kernelModules = [
+      "nvidia"
+      "nvidia_modeset"
+      "nvidia_drm"
+    ];
+
     services.xserver.videoDrivers = lib.mkDefault [ "nvidia" ];
 
     hardware.graphics = {
