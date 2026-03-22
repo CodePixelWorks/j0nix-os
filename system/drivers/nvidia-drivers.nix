@@ -10,6 +10,7 @@ let
     else if packageChoice == "beta" && (nvidiaPackages ? beta) then nvidiaPackages.beta
     else if packageChoice == "vulkan_beta" && (nvidiaPackages ? vulkan_beta) then nvidiaPackages.vulkan_beta
     else if (nvidiaPackages ? production) then nvidiaPackages.production else nvidiaPackages.latest;
+  selectedFirmware = if selectedPackage ? firmware then selectedPackage.firmware else null;
 in
 lib.mkMerge [
   (lib.mkIf enabled {
@@ -25,6 +26,8 @@ lib.mkMerge [
       enable = true;
       enable32Bit = true;
     };
+
+    hardware.firmware = lib.optional (selectedFirmware != null) selectedFirmware;
 
     hardware.nvidia = {
       modesetting.enable = true;
