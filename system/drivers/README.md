@@ -20,3 +20,4 @@ Driver stack controlled by `settings.drivers.*`.
 - NVIDIA package selection is controlled through `settings.drivers.nvidia.package`.
 - `settings.drivers.nvidia.expectedVersion` can pin the selected branch to an exact evaluated version.
 - LACT can be enabled through `settings.drivers.nvidia.lact.enable`.
+- The NVIDIA module also seeds the display stack into the initrd so Plymouth can light up connected displays earlier during boot.
