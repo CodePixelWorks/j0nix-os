@@ -28,6 +28,14 @@ let
       exec ${pkgs.nodejs}/bin/npx --yes @portel/ncp "$@"
     '';
   };
+  kiloCodeEnabled = ai.kiloCode or true;
+  kiloCodePackage = pkgs.writeShellApplication {
+    name = "kilocode";
+    runtimeInputs = [ pkgs.nodejs ];
+    text = ''
+      exec ${pkgs.nodejs}/bin/npx --yes @kilocode/cli@alpha "$@"
+    '';
+  };
   opencodeEnabled = ai.opencode or true;
   opencodePackage = if builtins.hasAttr "opencode" pkgs then pkgs.opencode else null;
   claudeCodeEnabled = ai.claudeCode or true;
@@ -110,6 +118,7 @@ in
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled) (map (server: server.package) (builtins.attrValues codex.mcpServers))
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && codexEnabled && codex.mcpLspEnable) codex.mcpLspRuntimePackages
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && ncpEnabled) [ ncpPackage ]
+    ++ lib.optionals (aiEnabled && aiInstallScope == "system" && kiloCodeEnabled) [ kiloCodePackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && opencodeEnabled && opencodePackage != null) [ opencodePackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && claudeCodeEnabled && claudeCodePackage != null) [ claudeCodePackage ]
     ++ lib.optionals (aiEnabled && aiInstallScope == "system" && geminiEnabled && hasGeminiPackage) [
