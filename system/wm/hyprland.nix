@@ -551,6 +551,9 @@ in {
 
   environment.etc."greetd/hypr.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "dms-greeter") {
     text = ''
+      # Greeter sessions should light up every connected display instead of inheriting any user-session monitor policy.
+      monitor = ,preferred,auto,1
+
       env = DMS_RUN_GREETER,1
 
       misc {
