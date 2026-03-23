@@ -238,12 +238,7 @@ let
       };
       idle = {
         lockBeforeSleep = true;
-        timeouts = [
-          {
-            timeout = 600;
-            idleAction = [ "system-power-action" "suspend-then-hibernate" ];
-          }
-        ];
+        timeouts = [ ];
       };
     };
     launcher = {
@@ -477,6 +472,7 @@ let
                       .
                     end
                   )
+                | map(select(.idleAction? != ["system-power-action", "suspend-then-hibernate"]))
               )
             else
               .
@@ -935,6 +931,7 @@ EOF
                         .
                       end
                     )
+                  | map(select(.idleAction? != ["system-power-action", "suspend-then-hibernate"]))
                 )
               else
                 .
