@@ -433,6 +433,7 @@ in
 lib.mkIf (gamingEnabled && sunshineEnabled) {
   services.sunshine = {
     enable = true;
+    package = lib.mkIf sunshineUseNvidia (pkgs.sunshine.override { cudaSupport = true; });
     openFirewall = sunshineOpenFirewall;
     capSysAdmin = sunshineNeedsPrivilegedWrapper;
     autoStart = sunshineAutoStart;
