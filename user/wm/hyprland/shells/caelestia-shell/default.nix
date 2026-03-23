@@ -261,10 +261,6 @@ let
           command = [ "system-power-action" "suspend" ];
         }
         {
-          name = "Hibernate";
-          command = [ "system-power-action" "hibernate" ];
-        }
-        {
           name = "Auto Theme";
           command = [ "caelestia-smart-theme" "enable" ];
         }
@@ -907,8 +903,6 @@ EOF
                   | map(
                       if (.name? == "Sleep") then
                         .command = ["system-power-action", "suspend"]
-                      elif (.name? == "Hibernate") then
-                        .command = ["system-power-action", "hibernate"]
                       elif (.name? == "Shutdown") then
                         .command = ["system-power-action", "poweroff"]
                       elif (.name? == "Reboot") then
@@ -923,7 +917,6 @@ EOF
                         .
                       end
                     )
-                  | if any(.[]; .name? == "Hibernate") then . else . + [{ "name": "Hibernate", "command": ["system-power-action", "hibernate"] }] end
                   | if any(.[]; .name? == "Auto Theme") then . else . + [{ "name": "Auto Theme", "command": ["caelestia-smart-theme", "enable"] }] end
                   | if any(.[]; .name? == "Manual Theme") then . else . + [{ "name": "Manual Theme", "command": ["caelestia-smart-theme", "disable"] }] end
                   | if ($keepassEnabled and (any(.[]; .name? == "Passwords") | not)) then . + [{ "name": "Passwords", "command": ["keepassxc-toggle"] }] else . end
