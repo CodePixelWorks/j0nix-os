@@ -900,6 +900,7 @@ EOF
             | if ((.launcher.actions? | type) == "array") then
                 .launcher.actions = (
                   .launcher.actions
+                  | map(select(.name? != "Hibernate"))
                   | map(
                       if (.name? == "Sleep") then
                         .command = ["system-power-action", "suspend"]
