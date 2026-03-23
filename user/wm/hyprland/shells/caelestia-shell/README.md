@@ -426,14 +426,6 @@ User-provided reference config (documented here as a source-of-truth example for
         "dangerous": false
       },
       {
-        "name": "Hibernate",
-        "icon": "downloading",
-        "description": "Hibernate the system",
-        "command": ["system-power-action", "hibernate"],
-        "enabled": true,
-        "dangerous": false
-      },
-      {
         "name": "Settings",
         "icon": "settings",
         "description": "Configure the shell",
