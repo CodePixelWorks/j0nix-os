@@ -20,8 +20,10 @@ in
       efi.canTouchEfiVariables = true;
     };
 
-    # Hibernate via swapfile on / (ext4); resume_offset is configured separately.
+    # Hibernate via swapfile on / (ext4). resumeOffset is derived from
+    # `filefrag -v /swapfile` and must be updated if the swapfile is recreated.
     resumeDevice = "/dev/disk/by-uuid/28c5e755-f2df-4f57-af8a-36998a4a2f25";
+    resumeOffset = 63145984;
 
     swapfile = {
       enable = true;

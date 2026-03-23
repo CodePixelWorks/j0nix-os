@@ -39,6 +39,11 @@ in
       default = null;
     };
 
+    resumeOffset = lib.mkOption {
+      type = lib.types.nullOr lib.types.int;
+      default = null;
+    };
+
     swapfile = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -98,6 +103,20 @@ in
       lib.mkIf (cfg.splash.enable && cfg.splash.highResolution) "max";
 
     boot.resumeDevice = lib.mkIf (cfg.resumeDevice != null) cfg.resumeDevice;
+    boot.kernelParams = lib.mkAfter (
+      lib.optionals (cfg.resumeOffset != null) [
+        "resume_offset=${toString cfg.resumeOffset}"
+      ]
+      ++ lib.optionals (cfg.splash.enable && cfg.splash.quietBoot) [
+        "quiet"
+        "splash"
+        "loglevel=3"
+        "rd.udev.log_level=3"
+        "udev.log_priority=3"
+        "systemd.show_status=false"
+        "vt.global_cursor_default=0"
+      ]
+    );
 
     swapDevices = lib.mkIf cfg.swapfile.enable [
       {
@@ -111,20 +130,8 @@ in
       theme = cfg.splash.theme;
       themePackages = cfg.splash.themePackages;
     };
-
     boot.consoleLogLevel = lib.mkIf (cfg.splash.enable && cfg.splash.quietBoot) 3;
     boot.initrd.verbose = lib.mkIf (cfg.splash.enable && cfg.splash.quietBoot) false;
-    boot.kernelParams = lib.mkAfter (
-      lib.optionals (cfg.splash.enable && cfg.splash.quietBoot) [
-        "quiet"
-        "splash"
-        "loglevel=3"
-        "rd.udev.log_level=3"
-        "udev.log_priority=3"
-        "systemd.show_status=false"
-        "vt.global_cursor_default=0"
-      ]
-    );
 
     assertions = [
       {
@@ -134,6 +141,10 @@ in
       {
         assertion = (!cfg.swapfile.enable) || lib.hasPrefix "/" cfg.swapfile.path;
         message = "j0nix.desktop.boot.swapfile.path must be absolute";
+      }
+      {
+        assertion = (cfg.resumeOffset == null) || (cfg.resumeOffset >= 0);
+        message = "j0nix.desktop.boot.resumeOffset must be null or a non-negative integer";
       }
     ];
   };
