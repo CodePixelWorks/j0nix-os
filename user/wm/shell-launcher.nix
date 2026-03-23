@@ -306,57 +306,81 @@ in
       ${pkgs.procps}/bin/pkill -x hyprlock >/dev/null 2>&1 || true
       exec wm-lock-screen "$@"
     '')
-    (writeShellScriptBin "system-suspend-safe" ''
+    (writeShellScriptBin "system-power-action" ''
+      set -eu
+
       timeout_bin="${pkgs.coreutils}/bin/timeout"
-      loginctl_bin="${pkgs.systemd}/bin/loginctl"
       systemctl_bin="${pkgs.systemd}/bin/systemctl"
+      loginctl_bin="${pkgs.systemd}/bin/loginctl"
+      busctl_bin="${pkgs.systemd}/bin/busctl"
+      action="''${1:-}"
 
-      # Best-effort lock before suspend to avoid resuming on an unlocked session.
-      if command -v dms >/dev/null 2>&1; then
-        "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
-      fi
-      wm-lock-screen --background || true
+      usage() {
+        echo "Usage: system-power-action <suspend|hibernate|suspend-then-hibernate|reboot|poweroff>" >&2
+        exit 2
+      }
 
-      "$loginctl_bin" suspend \
-        || "$systemctl_bin" suspend
+      notify_failure() {
+        if command -v notify-send >/dev/null 2>&1; then
+          notify-send "Power action failed" "Could not execute $action" >/dev/null 2>&1 || true
+        fi
+        echo "Failed to execute power action: $action" >&2
+      }
+
+      prepare_sleep() {
+        if command -v dms >/dev/null 2>&1; then
+          "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
+        fi
+        wm-lock-screen --background || true
+      }
+
+      [ -n "$action" ] || usage
+
+      case "$action" in
+        suspend)
+          prepare_sleep
+          method="Suspend"
+          ;;
+        hibernate)
+          prepare_sleep
+          method="Hibernate"
+          ;;
+        suspend-then-hibernate)
+          prepare_sleep
+          method="SuspendThenHibernate"
+          ;;
+        reboot)
+          method="Reboot"
+          ;;
+        poweroff)
+          method="PowerOff"
+          ;;
+        *)
+          usage
+          ;;
+      esac
+
+      "$systemctl_bin" "$action" >/dev/null 2>&1 && exit 0
+      "$loginctl_bin" "$action" >/dev/null 2>&1 && exit 0
+      "$busctl_bin" call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager "$method" b true >/dev/null 2>&1 && exit 0
+
+      notify_failure
+      exit 1
+    '')
+    (writeShellScriptBin "system-suspend-safe" ''
+      exec system-power-action suspend
     '')
     (writeShellScriptBin "system-hibernate-safe" ''
-      timeout_bin="${pkgs.coreutils}/bin/timeout"
-      loginctl_bin="${pkgs.systemd}/bin/loginctl"
-      systemctl_bin="${pkgs.systemd}/bin/systemctl"
-
-      if command -v dms >/dev/null 2>&1; then
-        "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
-      fi
-      wm-lock-screen --background || true
-
-      "$loginctl_bin" hibernate \
-        || "$systemctl_bin" hibernate
+      exec system-power-action hibernate
     '')
     (writeShellScriptBin "system-suspend-then-hibernate-safe" ''
-      timeout_bin="${pkgs.coreutils}/bin/timeout"
-      loginctl_bin="${pkgs.systemd}/bin/loginctl"
-      systemctl_bin="${pkgs.systemd}/bin/systemctl"
-
-      if command -v dms >/dev/null 2>&1; then
-        "$timeout_bin" 1s dms ipc call lock lock >/dev/null 2>&1 || true
-      fi
-      wm-lock-screen --background || true
-
-      "$loginctl_bin" suspend-then-hibernate \
-        || "$systemctl_bin" suspend-then-hibernate
+      exec system-power-action suspend-then-hibernate
     '')
     (writeShellScriptBin "system-reboot-safe" ''
-      loginctl_bin="${pkgs.systemd}/bin/loginctl"
-      systemctl_bin="${pkgs.systemd}/bin/systemctl"
-
-      "$loginctl_bin" reboot || "$systemctl_bin" reboot
+      exec system-power-action reboot
     '')
     (writeShellScriptBin "system-poweroff-safe" ''
-      loginctl_bin="${pkgs.systemd}/bin/loginctl"
-      systemctl_bin="${pkgs.systemd}/bin/systemctl"
-
-      "$loginctl_bin" poweroff || "$systemctl_bin" poweroff
+      exec system-power-action poweroff
     '')
     (writeShellScriptBin "wm-shell-stop" ''
       export PATH="${shellPath}:$PATH"
