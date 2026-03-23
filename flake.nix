@@ -1,7 +1,13 @@
 {
   description = "j0nix-os (independent gaming/dev NixOS)";
 
-  outputs = { self, nixpkgs, home-manager, ... }@inputs:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      home-manager,
+      ...
+    }@inputs:
     let
       baseDir = ./.;
 
@@ -88,7 +94,10 @@
 
       pkgs = import nixpkgs {
         system = profileMeta.system;
-        overlays = [ vscodeOverlay localFixesOverlay ];
+        overlays = [
+          vscodeOverlay
+          localFixesOverlay
+        ];
         config.allowUnfree = true;
       };
 
@@ -112,22 +121,32 @@
       hmSharedModulesCommon = [
         inputs.plasma-manager.homeModules.plasma-manager
         inputs.nixvim.homeModules.nixvim
-      ] ++ lib.optional settings.enableSops inputs.sops-nix.homeManagerModules.sops;
+      ]
+      ++ lib.optional settings.enableSops inputs.sops-nix.homeManagerModules.sops;
 
       hmSharedModulesNixos = hmSharedModulesCommon;
       hmSharedModulesStandalone = hmSharedModulesCommon ++ [ inputs.stylix.homeModules.stylix ];
 
-      mkUserSettings = username:
+      mkUserSettings =
+        username:
         let
           userOverride = userOverrides.${username} or { };
           userSecretOverride = userOverride.secrets or { };
           userDevOverride = userOverride.dev or { };
           userProgramOverride = userOverride.programs or { };
           userHyprlandOverride = userOverride.hyprland or { };
-          merged = baseSettings // (builtins.removeAttrs userOverride [ "secrets" "dev" "programs" "hyprland" ]) // {
-            inherit username;
-            dotfilesDir = "/home/${username}/DEV/j0nix-os";
-          };
+          merged =
+            baseSettings
+            // (builtins.removeAttrs userOverride [
+              "secrets"
+              "dev"
+              "programs"
+              "hyprland"
+            ])
+            // {
+              inherit username;
+              dotfilesDir = "/home/${username}/DEV/j0nix-os";
+            };
           themeDetails = import (baseDir + "/themes/${merged.theme}.nix") { inherit pkgs; };
           defaultWMFromLegacy =
             if userOverride ? wms && (builtins.length userOverride.wms) > 0 then
@@ -147,7 +166,8 @@
             else
               resolvedDefaultWMS;
         in
-        merged // {
+        merged
+        // {
           inherit profileDetails;
           secrets = (baseSettings.secrets or { }) // {
             user = userSecretOverride;
@@ -156,53 +176,68 @@
           programs = lib.recursiveUpdate (baseSettings.programs or { }) userProgramOverride;
           hyprland = lib.recursiveUpdate (baseSettings.hyprland or { }) userHyprlandOverride;
           inherit themeDetails;
-          wmShell =
-            merged.wmShell
-            or (merged.hyprlandShell or (themeDetails.shell or "dank-material-shell"));
+          wmShell = merged.wmShell or (merged.hyprlandShell or (themeDetails.shell or "dank-material-shell"));
           hyprlandShell =
-            merged.wmShell
-            or (merged.hyprlandShell or (themeDetails.shell or "dank-material-shell"));
+            merged.wmShell or (merged.hyprlandShell or (themeDetails.shell or "dank-material-shell"));
           defaultWMS = resolvedDefaultWMS;
           defaultSession = resolvedDefaultSession;
           _userOverride = userOverride;
         };
 
-      mkEditorModule = editor:
+      mkEditorModule =
+        editor:
         let
           localDefault = baseDir + "/user/editors/${editor}/default.nix";
           localFile = baseDir + "/user/editors/${editor}.nix";
         in
-          if builtins.pathExists localDefault then localDefault
-          else if builtins.pathExists localFile then localFile
-          else null;
+        if builtins.pathExists localDefault then
+          localDefault
+        else if builtins.pathExists localFile then
+          localFile
+        else
+          null;
 
-      mkBrowserModule = browser:
+      mkBrowserModule =
+        browser:
         let
           browserFile = baseDir + "/user/browsers/${browser}.nix";
         in
-          if builtins.pathExists browserFile then browserFile else null;
+        if builtins.pathExists browserFile then browserFile else null;
 
-      mkWmModule = wm:
+      mkWmModule =
+        wm:
         let
           wmDefault = baseDir + "/user/wm/${wm}/default.nix";
           wmFile = baseDir + "/user/wm/${wm}.nix";
         in
-          if builtins.pathExists wmDefault then wmDefault
-          else if builtins.pathExists wmFile then wmFile
-          else null;
+        if builtins.pathExists wmDefault then
+          wmDefault
+        else if builtins.pathExists wmFile then
+          wmFile
+        else
+          null;
 
-      mkUserRoleHomeModule = role:
-        let roleModule = baseDir + "/user-roles/home/${role}.nix";
-        in if builtins.pathExists roleModule then roleModule else null;
+      mkUserRoleHomeModule =
+        role:
+        let
+          roleModule = baseDir + "/user-roles/home/${role}.nix";
+        in
+        if builtins.pathExists roleModule then roleModule else null;
 
-      mkHomeModules = userSettings:
+      mkHomeModules =
+        userSettings:
         let
           shellModule = baseDir + "/user/shells/${userSettings.shell}.nix";
-          resolvedShellModule = if builtins.pathExists shellModule then shellModule else baseDir + "/user/shells/zsh.nix";
+          resolvedShellModule =
+            if builtins.pathExists shellModule then shellModule else baseDir + "/user/shells/zsh.nix";
 
           wmShellModule = baseDir + "/user/wm/hyprland/shells/${userSettings.wmShell}";
           wmShellExists = builtins.pathExists wmShellModule;
-          wmNeedsShell = builtins.elem userSettings.defaultWMS [ "hyprland" "mangowc" "niri" ];
+          wmNeedsShell = builtins.elem userSettings.defaultWMS [
+            "hyprland"
+            "mangowc"
+            "niri"
+          ];
           wmShellLauncherModule = baseDir + "/user/wm/shell-launcher.nix";
           wmShellCommonModule = baseDir + "/user/wm/hyprland/shells/common/default.nix";
 
@@ -223,29 +258,38 @@
           resolvedShellModule
           (baseDir + "/user/session-default.nix")
           (baseDir + "/user/programs/default.nix")
-          ({ lib, ... }: {
-            assertions = [
-              {
-                assertion = builtins.elem userSettings.defaultWMS [ "hyprland" "gnome" "mangowc" "niri" ];
-                message = "userSettings.<name>.defaultWMS must be one of: hyprland, gnome, mangowc, niri";
-              }
-              {
-                assertion = !(userSettings._userOverride ? wms);
-                message = "Per-user wm list is deprecated. Use userSettings.<name>.defaultWMS only.";
-              }
-              {
-                assertion = !(userSettings._userOverride ? defaultSession);
-                message = "Per-user defaultSession is deprecated. Use userSettings.<name>.defaultWMS and global settings.hyprland.useUWSM.";
-              }
-              {
-                assertion = missingRoleNames == [ ];
-                message = "Unknown user role(s) for ${userSettings.username}: ${lib.concatStringsSep ", " missingRoleNames}. Expected modules under user-roles/home/<role>.nix";
-              }
-            ] ++ lib.optional wmNeedsShell {
-              assertion = wmShellExists;
-              message = "Unknown wmShell '${userSettings.wmShell}'. Valid examples: ags, dank-material-shell, noctalia-shell, caelestia-shell, none.";
-            };
-          })
+          (
+            { lib, ... }:
+            {
+              assertions = [
+                {
+                  assertion = builtins.elem userSettings.defaultWMS [
+                    "hyprland"
+                    "gnome"
+                    "mangowc"
+                    "niri"
+                  ];
+                  message = "userSettings.<name>.defaultWMS must be one of: hyprland, gnome, mangowc, niri";
+                }
+                {
+                  assertion = !(userSettings._userOverride ? wms);
+                  message = "Per-user wm list is deprecated. Use userSettings.<name>.defaultWMS only.";
+                }
+                {
+                  assertion = !(userSettings._userOverride ? defaultSession);
+                  message = "Per-user defaultSession is deprecated. Use userSettings.<name>.defaultWMS and global settings.hyprland.useUWSM.";
+                }
+                {
+                  assertion = missingRoleNames == [ ];
+                  message = "Unknown user role(s) for ${userSettings.username}: ${lib.concatStringsSep ", " missingRoleNames}. Expected modules under user-roles/home/<role>.nix";
+                }
+              ]
+              ++ lib.optional wmNeedsShell {
+                assertion = wmShellExists;
+                message = "Unknown wmShell '${userSettings.wmShell}'. Valid examples: ags, dank-material-shell, noctalia-shell, caelestia-shell, none.";
+              };
+            }
+          )
         ]
         ++ lib.optional wmNeedsShell wmShellCommonModule
         ++ lib.optional wmNeedsShell wmShellLauncherModule
@@ -257,37 +301,56 @@
         ++ lib.optional (wmNeedsShell && wmShellExists) wmShellModule;
       systemSettings = settings;
 
-      mkHmUserModule = username:
-        let userSettings = mkUserSettings username;
-        in { ... }: {
+      mkHmUserModule =
+        username:
+        let
+          userSettings = mkUserSettings username;
+        in
+        { ... }:
+        {
           _module.args = {
             inherit inputs profileMeta;
             settings = userSettings;
           };
           imports = mkHomeModules userSettings;
         };
-    in {
+    in
+    {
       nixosConfigurations = {
         ${profileMeta.hostname} = nixpkgs.lib.nixosSystem {
           modules = [
             inputs.stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
-            ({ ... }: { nixpkgs.overlays = [ vscodeOverlay localFixesOverlay ]; })
-            ({ ... }: {
-              home-manager = {
-                useGlobalPkgs = true;
-                useUserPackages = true;
-                backupFileExtension = "backup";
-                extraSpecialArgs = { inherit inputs profileMeta; };
-                sharedModules = hmSharedModulesNixos;
-                users = builtins.listToAttrs (map (username: {
-                  name = username;
-                  value = mkHmUserModule username;
-                }) hmUsers);
-              };
-            })
+            (
+              { ... }:
+              {
+                nixpkgs.overlays = [
+                  vscodeOverlay
+                  localFixesOverlay
+                ];
+              }
+            )
+            (
+              { ... }:
+              {
+                home-manager = {
+                  useGlobalPkgs = true;
+                  useUserPackages = true;
+                  backupFileExtension = "backup";
+                  extraSpecialArgs = { inherit inputs profileMeta; };
+                  sharedModules = hmSharedModulesNixos;
+                  users = builtins.listToAttrs (
+                    map (username: {
+                      name = username;
+                      value = mkHmUserModule username;
+                    }) hmUsers
+                  );
+                };
+              }
+            )
             (profileDir + "/configuration.nix")
-          ] ++ lib.optional settings.enableSops inputs.sops-nix.nixosModules.sops;
+          ]
+          ++ lib.optional settings.enableSops inputs.sops-nix.nixosModules.sops;
 
           specialArgs = {
             inherit inputs profileMeta;
@@ -296,27 +359,38 @@
         };
       };
 
-      homeConfigurations = builtins.listToAttrs (map (username: {
-        name = username;
-        value = let userSettings = mkUserSettings username; in
-          home-manager.lib.homeManagerConfiguration {
-            pkgs = import nixpkgs {
-              system = profileMeta.system;
-              overlays = [ vscodeOverlay localFixesOverlay ];
-              config.allowUnfree = true;
+      homeConfigurations = builtins.listToAttrs (
+        map (username: {
+          name = username;
+          value =
+            let
+              userSettings = mkUserSettings username;
+            in
+            home-manager.lib.homeManagerConfiguration {
+              pkgs = import nixpkgs {
+                system = profileMeta.system;
+                overlays = [
+                  vscodeOverlay
+                  localFixesOverlay
+                ];
+                config.allowUnfree = true;
+              };
+              modules = (mkHomeModules userSettings) ++ hmSharedModulesStandalone;
+              extraSpecialArgs = {
+                inherit inputs profileMeta;
+                settings = userSettings;
+              };
             };
-            modules = (mkHomeModules userSettings) ++ hmSharedModulesStandalone;
-            extraSpecialArgs = {
-              inherit inputs profileMeta;
-              settings = userSettings;
-            };
-          };
-      }) hmUsers);
+        }) hmUsers
+      );
     };
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel";
+    nix-cachyos-kernel = {
+      url = "github:xddxdd/nix-cachyos-kernel";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     home-manager = {
       url = "github:nix-community/home-manager/master";
@@ -328,7 +402,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    codex-cli-nix.url = "github:sadjow/codex-cli-nix";
+    codex-cli-nix = {
+      url = "github:sadjow/codex-cli-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     mcp-language-server-src = {
       url = "github:isaacphi/mcp-language-server";
@@ -345,7 +422,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    ags.url = "git+https://github.com/Aylur/ags?rev=60180a184cfb32b61a1d871c058b31a3b9b0743d";
+    ags = {
+      url = "git+https://github.com/Aylur/ags?rev=60180a184cfb32b61a1d871c058b31a3b9b0743d";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     dank-material-shell = {
       url = "github:AvengeMedia/DankMaterialShell";
