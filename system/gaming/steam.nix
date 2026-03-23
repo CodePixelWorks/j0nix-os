@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   gaming = config.j0nix.desktop.gaming or { };
   enabled = gaming.enable or true;
@@ -20,31 +25,33 @@ lib.mkIf (enabled && steamEnabled) {
     enable = true;
     remotePlay.openFirewall = steamCfg.remotePlayFirewall or false;
     dedicatedServer.openFirewall = steamCfg.dedicatedServerFirewall or false;
-    extraCompatPackages =
-      lib.optionals (protonProvider == "ge" || protonGeEnabled) [ pkgs.proton-ge-bin ];
+    extraCompatPackages = lib.optionals (protonProvider == "ge" || protonGeEnabled) [
+      pkgs.proton-ge-bin
+    ];
     gamescopeSession.enable = gamescopeEnabled;
 
     # Extra runtime libs improve compatibility for some Proton/Steam games.
     package = pkgs.steam.override {
-      extraPkgs = pkgs': with pkgs'; [
-        libusb1
-        udev
-        SDL2
-        libXcursor
-        libXi
-        libXinerama
-        libXScrnSaver
-        libXcomposite
-        libXdamage
-        libXrender
-        libXext
-        libpng
-        libpulseaudio
-        libvorbis
-        stdenv.cc.cc.lib
-        libkrb5
-        keyutils
-      ];
+      extraPkgs =
+        pkgs': with pkgs'; [
+          libusb1
+          udev
+          SDL2
+          libXcursor
+          libXi
+          libXinerama
+          libXScrnSaver
+          libXcomposite
+          libXdamage
+          libXrender
+          libXext
+          libpng
+          libpulseaudio
+          libvorbis
+          stdenv.cc.cc.lib
+          libkrb5
+          keyutils
+        ];
     };
   };
 
@@ -56,15 +63,25 @@ lib.mkIf (enabled && steamEnabled) {
     "ntsync"
   ];
 
-  environment.sessionVariables = lib.mkIf protonNtSyncEnabled {
-    PROTON_USE_NTSYNC = "1";
-    PROTON_NO_FSYNC = "1";
-    WINEFSYNC = "0";
-  };
+  environment.sessionVariables =
+    if protonNtSyncEnabled then
+      {
+        PROTON_USE_NTSYNC = "1";
+        PROTON_NO_FSYNC = "1";
+        WINEFSYNC = "0";
+      }
+    else
+      {
+        # Explicitly ensure FSYNC is active when NTSync is not used.
+        WINEFSYNC = "1";
+      };
 
   assertions = [
     {
-      assertion = builtins.elem protonProvider [ "cachyos" "ge" ];
+      assertion = builtins.elem protonProvider [
+        "cachyos"
+        "ge"
+      ];
       message = "j0nix.desktop.gaming.proton.provider must be one of: cachyos, ge";
     }
   ];
