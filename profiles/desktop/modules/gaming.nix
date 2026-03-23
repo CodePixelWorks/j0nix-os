@@ -14,6 +14,7 @@
       # Preferred provider for Steam compatibility tools.
       provider = "cachyos"; # "cachyos" | "ge"
       ge = true; # keep GE installed as fallback
+      ntsync.enable = true;
       updater = true; # protonup-qt
       cachyos = {
         autoInstall = true;
