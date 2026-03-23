@@ -125,19 +125,31 @@ let
     ''
       set -eu
       export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
-      mkdir -p ${lib.escapeShellArg mountRoot}
+      mount_root=${lib.escapeShellArg mountRoot}
       mount_path=${lib.escapeShellArg mountPath}
       cache_dir=${lib.escapeShellArg cacheDir}
+      parent_dir="$(${pkgs.coreutils}/bin/dirname "$mount_path")"
 
-      # Recover from stale/broken FUSE mountpoints ("Transport endpoint is not connected").
-      if [ -e "$mount_path" ] && ! ${pkgs.coreutils}/bin/stat "$mount_path" >/dev/null 2>&1; then
+      recover_mount_path() {
         ${fuseUnmountBin} -uz "$mount_path" >/dev/null 2>&1 || true
         ${pkgs.util-linux}/bin/umount -l "$mount_path" >/dev/null 2>&1 || true
-        rm -rf "$mount_path" || true
+        ${pkgs.coreutils}/bin/rm -rf "$mount_path" >/dev/null 2>&1 || true
+      }
+
+      ${pkgs.coreutils}/bin/mkdir -p "$mount_root"
+
+      # Recover from stale/broken FUSE mountpoints ("Transport endpoint is not connected").
+      if ! ${pkgs.coreutils}/bin/stat "$mount_path" >/dev/null 2>&1; then
+        recover_mount_path
       fi
 
-      mkdir -p "$mount_path"
-      mkdir -p "$cache_dir"
+      ${pkgs.coreutils}/bin/mkdir -p "$parent_dir"
+      if ! ${pkgs.coreutils}/bin/mkdir -p "$mount_path" >/dev/null 2>&1; then
+        recover_mount_path
+        ${pkgs.coreutils}/bin/mkdir -p "$parent_dir"
+        ${pkgs.coreutils}/bin/mkdir -p "$mount_path"
+      fi
+      ${pkgs.coreutils}/bin/mkdir -p "$cache_dir"
       ${rcloneConfigScript share}
       if ${pkgs.util-linux}/bin/mountpoint -q "$mount_path"; then
         exit 0
