@@ -22,6 +22,10 @@ in {
       open = lib.mkOption { type = lib.types.bool; default = false; };
       gsp = lib.mkOption { type = lib.types.bool; default = false; };
       persistenced = lib.mkOption { type = lib.types.bool; default = true; };
+      powerManagement = {
+        enable = lib.mkOption { type = lib.types.bool; default = false; };
+        finegrained = lib.mkOption { type = lib.types.bool; default = false; };
+      };
       package = lib.mkOption {
         type = lib.types.enum [ "production" "latest" "beta" "vulkan_beta" ];
         default = "production";

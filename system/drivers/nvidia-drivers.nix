@@ -31,8 +31,8 @@ lib.mkMerge [
 
     hardware.nvidia = {
       modesetting.enable = true;
-      powerManagement.enable = false;
-      powerManagement.finegrained = false;
+      powerManagement.enable = cfg.powerManagement.enable;
+      powerManagement.finegrained = cfg.powerManagement.finegrained;
       open = cfg.open or false;
       gsp.enable = cfg.gsp or false;
       nvidiaPersistenced = cfg.persistenced;
