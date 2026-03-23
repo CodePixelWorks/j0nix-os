@@ -18,7 +18,22 @@ in
     };
   };
 
-  config = {
-    virtualisation.libvirtd.enable = cfg.libvirtd.enable;
-  };
+  config = lib.mkMerge [
+    (lib.mkIf cfg.libvirtd.enable {
+      virtualisation.libvirtd = {
+        enable = true;
+        qemu = {
+          ovmf.enable = true;
+          swtpm.enable = true;
+        };
+      };
+      j0nix.desktop.accounts.additionalExtraGroups = [
+        "libvirtd"
+        "kvm"
+      ];
+    })
+    {
+      virtualisation.libvirtd.enable = cfg.libvirtd.enable;
+    }
+  ];
 }
