@@ -7,6 +7,7 @@ System-level NixOS modules, imported from the selected profile.
 - `wm/`: display manager + window manager system modules
 - `gaming/`: Steam/Proton/performance/controller system config
 - `dev/`: Docker/build tooling
+- `logging/`: journald persistence and retention policy
 - `tuning/`: sysctl and kernel/userland tuning
 - `drivers/`: GPU/guest/clock driver stack
 
