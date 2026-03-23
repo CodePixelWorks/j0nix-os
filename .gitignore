@@ -28,3 +28,7 @@ tmp/
 
 # SOPS migration/rekey backups
 secrets/.backups/
+
+# AI session resume scripts
+/r.sh
+/RESUME.sh
