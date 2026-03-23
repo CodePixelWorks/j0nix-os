@@ -448,7 +448,7 @@ let
       hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
       jq_bin="${pkgs.jq}/bin/jq"
 
-      repair_caelestia_layout_config() {
+      repair_caelestia_shell_config() {
         local cfg_dir cfg_file tmp_file
 
         cfg_dir="$HOME/.config/caelestia"
@@ -465,7 +465,50 @@ let
             if type == "number" then . else $default end;
           def clamp($min; $max):
             if . < $min then $min elif . > $max then $max else . end;
-          .appearance = (.appearance // {})
+          .general = (.general // {})
+          | .general.idle = (.general.idle // {})
+          | if ((.general.idle.timeouts? | type) == "array") then
+              .general.idle.timeouts = (
+                .general.idle.timeouts
+                | map(
+                    if (.timeout? == 600 and ((.idleAction? == ["systemctl", "suspend-then-hibernate"]) or (.idleAction? == ["system-suspend-then-hibernate-safe"]))) then
+                      .idleAction = ["system-power-action", "suspend-then-hibernate"]
+                    else
+                      .
+                    end
+                  )
+              )
+            else
+              .
+            end
+          | .launcher = (.launcher // {})
+          | if ((.launcher.actions? | type) == "array") then
+              .launcher.actions = (
+                .launcher.actions
+                | map(select(.name? != "Hibernate"))
+                | map(
+                    if (.name? == "Sleep") then
+                      .command = ["system-power-action", "suspend"]
+                    elif (.name? == "Shutdown") then
+                      .command = ["system-power-action", "poweroff"]
+                    elif (.name? == "Reboot") then
+                      .command = ["system-power-action", "reboot"]
+                    else
+                      .
+                    end
+                  )
+              )
+            else
+              .
+            end
+          | .session = (.session // {})
+          | .session.commands = (
+              (.session.commands // {})
+              | .hibernate = ["system-power-action", "hibernate"]
+              | .shutdown = ["system-power-action", "poweroff"]
+              | .reboot = ["system-power-action", "reboot"]
+            )
+          | .appearance = (.appearance // {})
           | .appearance.font = (.appearance.font // {})
           | .appearance.font.family = (.appearance.font.family // {})
           | .appearance.font.family.material = (
@@ -542,7 +585,7 @@ let
         caelestia-gamemode-fan-sync start >/dev/null 2>&1 || true
       fi
 
-      repair_caelestia_layout_config
+      repair_caelestia_shell_config
 
       ${lib.optionalString (smartSchemeEnabled || manualThemeApply) ''
       if command -v caelestia-apply-theme >/dev/null 2>&1; then
