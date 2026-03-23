@@ -184,7 +184,7 @@ User-provided reference config (documented here as a source-of-truth example for
         },
         {
           "timeout": 600,
-          "idleAction": ["systemctl", "suspend-then-hibernate"]
+          "idleAction": ["system-power-action", "suspend-then-hibernate"]
         }
       ]
     }
@@ -389,7 +389,7 @@ User-provided reference config (documented here as a source-of-truth example for
         "name": "Shutdown",
         "icon": "power_settings_new",
         "description": "Shutdown the system",
-        "command": ["systemctl", "poweroff"],
+        "command": ["system-power-action", "poweroff"],
         "enabled": true,
         "dangerous": true
       },
@@ -397,7 +397,7 @@ User-provided reference config (documented here as a source-of-truth example for
         "name": "Reboot",
         "icon": "cached",
         "description": "Reboot the system",
-        "command": ["systemctl", "reboot"],
+        "command": ["system-power-action", "reboot"],
         "enabled": true,
         "dangerous": true
       },
@@ -420,8 +420,16 @@ User-provided reference config (documented here as a source-of-truth example for
       {
         "name": "Sleep",
         "icon": "bedtime",
-        "description": "Suspend then hibernate",
-        "command": ["systemctl", "suspend-then-hibernate"],
+        "description": "Suspend the system",
+        "command": ["system-power-action", "suspend"],
+        "enabled": true,
+        "dangerous": false
+      },
+      {
+        "name": "Hibernate",
+        "icon": "downloading",
+        "description": "Hibernate the system",
+        "command": ["system-power-action", "hibernate"],
         "enabled": true,
         "dangerous": false
       },
@@ -504,9 +512,9 @@ User-provided reference config (documented here as a source-of-truth example for
     },
     "commands": {
       "logout": ["loginctl", "terminate-user", ""],
-      "shutdown": ["systemctl", "poweroff"],
-      "hibernate": ["systemctl", "hibernate"],
-      "reboot": ["systemctl", "reboot"]
+      "shutdown": ["system-power-action", "poweroff"],
+      "hibernate": ["system-power-action", "hibernate"],
+      "reboot": ["system-power-action", "reboot"]
     }
   },
   "sidebar": {
