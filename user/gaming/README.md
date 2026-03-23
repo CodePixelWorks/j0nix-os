@@ -56,6 +56,7 @@ Managed by `j0nix.desktop.gaming.*` (typically set in `profiles/desktop/modules/
 ## Proton-CachyOS
 
 - Provider toggle: `j0nix.desktop.gaming.proton.provider = "cachyos"`
+- NTSync toggle: `j0nix.desktop.gaming.proton.ntsync.enable = true`
 - Install/update tool: `proton-cachyos-install`
 - Ensure tool exists: `proton-cachyos-ensure`
 - Non-Steam with UMU + Proton-CachyOS: `game-session-umu-cachyos <game-exe-or-command>`
