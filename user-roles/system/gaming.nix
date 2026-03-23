@@ -14,6 +14,11 @@
       "net.core.netdev_max_backlog" = 32768;
       # Required by Star Citizen, Jedi: Survivor, and many Unreal Engine titles.
       "vm.max_map_count" = 2147483642;
+      # Network buffer sizing for online gaming and voice chat.
+      "net.core.rmem_max" = 16777216;
+      "net.core.wmem_max" = 16777216;
+      # Dev workloads: Docker, IDE, LSP servers, game modding tools.
+      "fs.file-max" = 2097152;
     }
   ];
 }
