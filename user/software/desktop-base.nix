@@ -1,4 +1,9 @@
-{ lib, pkgs, settings, ... }:
+{
+  lib,
+  pkgs,
+  settings,
+  ...
+}:
 let
   syncthingCfg = (settings.programs or { }).syncthing or { };
   syncthingEnabled = syncthingCfg.enable or false;
@@ -6,10 +11,12 @@ let
 
   configuredFileManagersRaw =
     settings.fileManagers
-    or (lib.optional ((settings.preferredFileManager or null) != null) settings.preferredFileManager);
-  configuredFileManagers =
-    lib.unique (if configuredFileManagersRaw != [ ] then configuredFileManagersRaw else [ "nautilus" ]);
-  fileManagerPackage = name:
+      or (lib.optional ((settings.preferredFileManager or null) != null) settings.preferredFileManager);
+  configuredFileManagers = lib.unique (
+    if configuredFileManagersRaw != [ ] then configuredFileManagersRaw else [ "nautilus" ]
+  );
+  fileManagerPackage =
+    name:
     if name == "nautilus" then
       pkgs.nautilus
     else if name == "nemo" then
@@ -23,12 +30,19 @@ let
   fileManagerPackages = lib.filter (pkg: pkg != null) (map fileManagerPackage configuredFileManagers);
 
   preferredTerminalRaw = settings.preferredTerminal or null;
-  terminalPackage = name:
+  terminalPackage =
+    name:
     if name == "kitty" then
       pkgs.kitty
     else if name == "foot" then
       pkgs.foot
-    else if builtins.elem name [ "kgx" "gnome-console" "gnome console" ] then
+    else if
+      builtins.elem name [
+        "kgx"
+        "gnome-console"
+        "gnome console"
+      ]
+    then
       if pkgs ? gnome-console then pkgs.gnome-console else null
     else
       null;
@@ -42,10 +56,7 @@ let
     if iconThemePackageKey == "papirus" then
       pkgs.papirus-icon-theme
     else if iconThemePackageKey == "colloid" then
-      if pkgs ? "colloid-icon-theme" then
-        pkgs."colloid-icon-theme"
-      else
-        null
+      if pkgs ? "colloid-icon-theme" then pkgs."colloid-icon-theme" else null
     else if iconThemePackageKey == "adwaita" then
       pkgs.adwaita-icon-theme
     else if iconThemePackageKey == "breeze" then
@@ -76,16 +87,8 @@ in
   j0nix.user.software.packages =
     (with pkgs; [
       kitty
-      git
       gh
       starship
-      eza
-      bat
-      fd
-      file
-      ripgrep
-      tree
-      jq
       obs-studio
       qbittorrent
       telegram-desktop
@@ -107,7 +110,6 @@ in
       cargo
       rustc
       openvpn
-      unzip
       p7zip
       android-tools
       xdg-utils
@@ -117,5 +119,7 @@ in
     ++ lib.optionals (preferredTerminalPackage != null) [ preferredTerminalPackage ]
     ++ lib.optionals enableUdiskieAutomount [ pkgs.udiskie ]
     ++ lib.optionals syncthingEnabled [ pkgs.syncthing ]
-    ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) ([ iconThemePackage ] ++ iconThemeFallbackPackages);
+    ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) (
+      [ iconThemePackage ] ++ iconThemeFallbackPackages
+    );
 }
