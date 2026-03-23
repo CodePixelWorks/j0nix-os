@@ -241,7 +241,7 @@ let
         timeouts = [
           {
             timeout = 600;
-            idleAction = [ "system-suspend-then-hibernate-safe" ];
+            idleAction = [ "system-power-action" "suspend-then-hibernate" ];
           }
         ];
       };
@@ -250,15 +250,19 @@ let
       actions = [
         {
           name = "Shutdown";
-          command = [ "system-poweroff-safe" ];
+          command = [ "system-power-action" "poweroff" ];
         }
         {
           name = "Reboot";
-          command = [ "system-reboot-safe" ];
+          command = [ "system-power-action" "reboot" ];
         }
         {
           name = "Sleep";
-          command = [ "system-suspend-then-hibernate-safe" ];
+          command = [ "system-power-action" "suspend" ];
+        }
+        {
+          name = "Hibernate";
+          command = [ "system-power-action" "hibernate" ];
         }
         {
           name = "Auto Theme";
@@ -277,9 +281,9 @@ let
     };
     session = {
       commands = {
-        shutdown = [ "system-poweroff-safe" ];
-        hibernate = [ "system-hibernate-safe" ];
-        reboot = [ "system-reboot-safe" ];
+        shutdown = [ "system-power-action" "poweroff" ];
+        hibernate = [ "system-power-action" "hibernate" ];
+        reboot = [ "system-power-action" "reboot" ];
       };
     };
     services = {
@@ -886,8 +890,8 @@ EOF
                 .general.idle.timeouts = (
                   .general.idle.timeouts
                   | map(
-                      if (.timeout? == 600 and (.idleAction? == ["systemctl", "suspend-then-hibernate"])) then
-                        .idleAction = ["system-suspend-then-hibernate-safe"]
+                      if (.timeout? == 600 and ((.idleAction? == ["systemctl", "suspend-then-hibernate"]) or (.idleAction? == ["system-suspend-then-hibernate-safe"]))) then
+                        .idleAction = ["system-power-action", "suspend-then-hibernate"]
                       else
                         .
                       end
@@ -902,11 +906,13 @@ EOF
                   .launcher.actions
                   | map(
                       if (.name? == "Sleep") then
-                        .command = ["system-suspend-then-hibernate-safe"]
+                        .command = ["system-power-action", "suspend"]
+                      elif (.name? == "Hibernate") then
+                        .command = ["system-power-action", "hibernate"]
                       elif (.name? == "Shutdown") then
-                        .command = ["system-poweroff-safe"]
+                        .command = ["system-power-action", "poweroff"]
                       elif (.name? == "Reboot") then
-                        .command = ["system-reboot-safe"]
+                        .command = ["system-power-action", "reboot"]
                       elif (.name? == "Auto Theme") then
                         .command = ["caelestia-smart-theme", "enable"]
                       elif (.name? == "Manual Theme") then
@@ -917,6 +923,7 @@ EOF
                         .
                       end
                     )
+                  | if any(.[]; .name? == "Hibernate") then . else . + [{ "name": "Hibernate", "command": ["system-power-action", "hibernate"] }] end
                   | if any(.[]; .name? == "Auto Theme") then . else . + [{ "name": "Auto Theme", "command": ["caelestia-smart-theme", "enable"] }] end
                   | if any(.[]; .name? == "Manual Theme") then . else . + [{ "name": "Manual Theme", "command": ["caelestia-smart-theme", "disable"] }] end
                   | if ($keepassEnabled and (any(.[]; .name? == "Passwords") | not)) then . + [{ "name": "Passwords", "command": ["keepassxc-toggle"] }] else . end
@@ -937,9 +944,9 @@ EOF
             | .session = (.session // {})
             | .session.commands = (
                 (.session.commands // {})
-                | .hibernate = ["system-hibernate-safe"]
-                | .shutdown = ["system-poweroff-safe"]
-                | .reboot = ["system-reboot-safe"]
+                | .hibernate = ["system-power-action", "hibernate"]
+                | .shutdown = ["system-power-action", "poweroff"]
+                | .reboot = ["system-power-action", "reboot"]
               )
             | .services = ((.services // {}) | .smartScheme = ${if smartSchemeEnabled then "true" else "false"})
             | .theme = (.theme // {})
