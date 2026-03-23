@@ -21,12 +21,19 @@ in
       default = [ ];
       description = "Scanner management software to add via the central system package aggregator.";
     };
+
+    enableNetBackend = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable SANE net backend (listens on 0.0.0.0:6566, exposes scanner to network).";
+    };
   };
 
   config = lib.mkIf cfg.enable {
     hardware.sane = {
       enable = true;
       extraBackends = cfg.extraBackends;
+      disabledDefaultBackends = lib.optionals (!cfg.enableNetBackend) [ "net" ];
     };
 
     j0nix.software.systemPackages = cfg.software;
