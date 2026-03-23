@@ -22,6 +22,8 @@ let
   protonCachyosAutoInstall = protonCachyos.autoInstall or true;
   protonCachyosVariant = protonCachyos.variant or "x86_64";
   protonCachyosKeepVersions = protonCachyos.keepVersions or 2;
+  protonNtSync = proton.ntsync or { };
+  protonNtSyncEnabled = protonNtSync.enable or false;
   launchers = gaming.launchers or { };
   controllers = gaming.controllers or { };
   rockstarEnabled = launchers.rockstar or false;
@@ -157,6 +159,11 @@ EOF
       child_prefix+=(${pkgs.gamemode}/bin/gamemoderun)
     fi
 
+    proton_sync_env=()
+    if [ "${if protonNtSyncEnabled then "1" else "0"}" = "1" ]; then
+      proton_sync_env+=(PROTON_USE_NTSYNC=1 PROTON_NO_FSYNC=1 WINEFSYNC=0)
+    fi
+
     selected_monitor_gamescope_args() {
       local selector selected_args
 
@@ -241,19 +248,25 @@ EOF
       log "gamescope-args=''${gamescope_args[*]}"
       if [ "$proton_mode" = "wayland" ]; then
         printf '[%s] final-cmd: gamescope %s -- env PROTON_ENABLE_WAYLAND=1 ...\n' "$(${pkgs.coreutils}/bin/date -Iseconds)" "''${gamescope_args[*]}" >> "$log_file"
-        exec gamescope "''${gamescope_args[@]}" -- env PROTON_ENABLE_WAYLAND=1 "''${child_prefix[@]}" "''${cmd[@]}"
+        exec gamescope "''${gamescope_args[@]}" -- env PROTON_ENABLE_WAYLAND=1 "''${proton_sync_env[@]}" "''${child_prefix[@]}" "''${cmd[@]}"
       else
         printf '[%s] final-cmd: gamescope %s -- ...\n' "$(${pkgs.coreutils}/bin/date -Iseconds)" "''${gamescope_args[*]}" >> "$log_file"
+        if [ "''${#proton_sync_env[@]}" -gt 0 ]; then
+          exec gamescope "''${gamescope_args[@]}" -- env "''${proton_sync_env[@]}" "''${child_prefix[@]}" "''${cmd[@]}"
+        fi
         exec gamescope "''${gamescope_args[@]}" -- "''${child_prefix[@]}" "''${cmd[@]}"
       fi
     fi
 
     if [ "$proton_mode" = "wayland" ]; then
       printf '[%s] final-cmd: env PROTON_ENABLE_WAYLAND=1 ...\n' "$(${pkgs.coreutils}/bin/date -Iseconds)" >> "$log_file"
-      exec env PROTON_ENABLE_WAYLAND=1 "''${child_prefix[@]}" "''${cmd[@]}"
+      exec env PROTON_ENABLE_WAYLAND=1 "''${proton_sync_env[@]}" "''${child_prefix[@]}" "''${cmd[@]}"
     fi
 
     printf '[%s] final-cmd: direct ...\n' "$(${pkgs.coreutils}/bin/date -Iseconds)" >> "$log_file"
+    if [ "''${#proton_sync_env[@]}" -gt 0 ]; then
+      exec env "''${proton_sync_env[@]}" "''${child_prefix[@]}" "''${cmd[@]}"
+    fi
     exec "''${child_prefix[@]}" "''${cmd[@]}"
   '';
 in
@@ -396,6 +409,14 @@ lib.mkIf enabled {
 
       check_cmd steam "Steam installed"
       check_cmd steam-run "steam-run installed"
+
+      if [ "${if protonNtSyncEnabled then "1" else "0"}" = "1" ]; then
+        if [ -e /dev/ntsync ]; then
+          check_ok "NTSync device is available"
+        else
+          check_warn "NTSync is enabled in config but /dev/ntsync is missing"
+        fi
+      fi
 
       # Proton provider checks
       compat_dir="$HOME/.steam/root/compatibilitytools.d"
@@ -658,7 +679,17 @@ lib.mkIf enabled {
       echo "   Wine prefix: $prefix_dir"
       echo "4) Runner options:"
       echo "   Wine version: GE-Proton (latest) or Soda"
-      echo "   DXVK: ON, VKD3D: ON, Esync/Fsync: ON"
+      echo "   DXVK: ON, VKD3D: ON"
+      ${
+        if protonNtSyncEnabled then
+          ''
+            echo "   Sync: NTSync preferred (fsync disabled)"
+          ''
+        else
+          ''
+            echo "   Sync: Esync/Fsync default"
+          ''
+      }
       echo
       echo "After first install run, switch executable to Launcher.exe inside:"
       echo "  $prefix_dir/drive_c/Program Files*/Rockstar Games/Launcher/"
