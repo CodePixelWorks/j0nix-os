@@ -46,7 +46,7 @@ lib.mkMerge [
       modesetting.enable = true;
       powerManagement.enable = cfg.powerManagement.enable;
       powerManagement.finegrained = cfg.powerManagement.finegrained;
-      openSourceDrivers = cfg.open or false;
+      open = cfg.open or false;
       gsp.enable = cfg.gsp or false;
       nvidiaPersistenced = cfg.persistenced;
       nvidiaSettings = true;
