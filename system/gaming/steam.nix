@@ -12,6 +12,8 @@ let
   protonCfg = gaming.proton or { };
   protonProvider = protonCfg.provider or "ge";
   protonGeEnabled = protonCfg.ge or true;
+  protonNtSync = protonCfg.ntsync or { };
+  protonNtSyncEnabled = protonNtSync.enable or false;
 in
 lib.mkIf (enabled && steamEnabled) {
   programs.steam = {
@@ -49,6 +51,16 @@ lib.mkIf (enabled && steamEnabled) {
   j0nix.software.systemPackages = lib.optionals steamRunEnabled [
     pkgs.steam-run
   ];
+
+  j0nix.desktop.kernel.modules = lib.optionals protonNtSyncEnabled [
+    "ntsync"
+  ];
+
+  environment.sessionVariables = lib.mkIf protonNtSyncEnabled {
+    PROTON_USE_NTSYNC = "1";
+    PROTON_NO_FSYNC = "1";
+    WINEFSYNC = "0";
+  };
 
   assertions = [
     {
