@@ -23,6 +23,7 @@ in
     ./modules/nix.nix
     ./modules/network.nix
     ./modules/kernel.nix
+    ./modules/logging.nix
     ./modules/gaming.nix
     ./modules/security.nix
     ./modules/storage.nix
@@ -47,6 +48,7 @@ in
     ../../system/boot
     ../../system/locale
     ../../system/fonts
+    ../../system/logging
 
     ../../system/printing
     ../../system/scanning
