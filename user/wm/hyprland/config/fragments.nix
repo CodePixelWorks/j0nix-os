@@ -209,6 +209,10 @@ in
         render {
           direct_scanout = 0
         }
+
+        xwayland {
+          force_zero_scaling = true
+        }
       ''}
     '';
 
