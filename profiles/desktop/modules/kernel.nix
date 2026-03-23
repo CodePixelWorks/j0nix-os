@@ -5,12 +5,7 @@
     preset = "cachyos-x86_64-v4";
 
     modules = [
-      # Load the NVIDIA stack explicitly instead of relying on generated
-      # hardware-configuration state so the desktop profile owns GPU behavior.
-      "nvidia"
-      "nvidia_modeset"
-      "nvidia_uvm"
-      "nvidia_drm"
+      # NVIDIA stack is loaded in initrd via nvidia-drivers.nix (includes nvidia_uvm for CUDA/Ollama).
       # Help NVIDIA HDMI/DP audio endpoints appear reliably on some setups/TVs.
       "snd_hda_intel"
       "snd_hda_codec_hdmi"
