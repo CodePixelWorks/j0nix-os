@@ -8,6 +8,58 @@ Repo-managed seeding currently only ensures these keys exist (without overwritin
 - `services.smartScheme`
 - `paths.wallpaperDir` (when a wallpaper path is configured)
 
+## Config Change Workflow
+
+Caelestia uses a user-editable live config at:
+
+- `~/.config/caelestia/shell.json`
+
+This repo does not fully replace that file on every activation. It seeds it once and then patches it in place.
+
+That means changing only the initial Nix seed is not enough for existing users.
+
+When changing a Caelestia option that must reach live user configs, update all relevant layers together:
+
+1. `seededCaelestiaConfig` in `user/wm/hyprland/shells/caelestia-shell/default.nix`
+   - this defines the initial file content for new users or broken/missing configs
+2. `home.activation.caelestiaConfigInit`
+   - this is the migration/patch step for existing `shell.json` files
+3. any helper scripts that mutate `shell.json`
+   - for example `caelestia-smart-theme`
+
+Operational rules:
+
+- Additive defaults:
+  - seed them in `seededCaelestiaConfig`
+  - patch them into existing configs in `caelestiaConfigInit`
+- Behavior changes for existing entries:
+  - patch the existing JSON fields explicitly
+  - do not rely on the seed to replace them
+- Removing stale or incorrect entries:
+  - remove them explicitly in the jq patcher
+  - otherwise old user configs keep the stale value forever
+- Runtime-mutated settings:
+  - keep helper scripts aligned with the same JSON contract
+
+Examples:
+
+- If a launcher action command changes, update:
+  - the seeded launcher action
+  - the jq migration that rewrites `.launcher.actions[]`
+- If a session command changes, update:
+  - the seeded `.session.commands`
+  - the jq migration for `.session.commands`
+- If an old entry must disappear:
+  - add a jq filter such as `map(select(...))` in the patcher
+
+Practical rule:
+
+- New default only: seed + patch
+- Existing field rewrite: patch
+- Stale entry removal: explicit patch removal
+
+If only the seed is updated, existing user configs will usually not converge.
+
 ## Theme Ownership
 
 Caelestia can manage more than its own shell colours. The upstream CLI also has theme writers for GTK and Qt.
