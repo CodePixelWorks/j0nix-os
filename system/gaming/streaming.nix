@@ -1,4 +1,10 @@
-{ config, lib, pkgs, settings, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  settings,
+  ...
+}:
 let
   gaming = config.j0nix.desktop.gaming or { };
   gamingEnabled = gaming.enable or true;
@@ -20,22 +26,31 @@ let
   sunshineNetworkPerf = sunshinePerf.network or { };
   sunshineNetworkPerfEnable = sunshineNetworkPerf.enable or true;
   sunshineNetworkPerfMode = sunshineNetworkPerf.mode or sunshinePerfMode;
-  sunshineExtraGroups =
-    lib.unique (
-      lib.optionals sunshineAddRenderGroup [ "render" ]
-      ++ lib.optionals sunshineAddInputGroup [ "input" ]
-    );
+  sunshineExtraGroups = lib.unique (
+    lib.optionals sunshineAddRenderGroup [ "render" ] ++ lib.optionals sunshineAddInputGroup [ "input" ]
+  );
   sunshineDisplayTargetSettings = ((settings.sunshine or { }).displayTarget or { });
   sunshineVirtualDisplay = sunshine.virtualDisplay or { };
-  sunshineDisableLockScreenDuringStream = ((settings.sunshine or { }).disableLockScreenDuringStream or true);
-  sunshineDisplayTargetEnabled = sunshineDisplayTargetSettings.enable or (sunshineVirtualDisplay.enable or false);
+  sunshineDisableLockScreenDuringStream = (
+    (settings.sunshine or { }).disableLockScreenDuringStream or true
+  );
+  sunshineDisplayTargetEnabled =
+    sunshineDisplayTargetSettings.enable or (sunshineVirtualDisplay.enable or false);
   sunshineDisplayTargetBackend = sunshineDisplayTargetSettings.backend or "hyprland-headless";
-  sunshineDisplayTargetOutputName = sunshineDisplayTargetSettings.outputName or (sunshineVirtualDisplay.outputName or null);
-  sunshineDisplayTargetAppName = sunshineDisplayTargetSettings.appName or (sunshineVirtualDisplay.appName or "Adaptive Display");
+  sunshineDisplayTargetOutputName =
+    sunshineDisplayTargetSettings.outputName or (sunshineVirtualDisplay.outputName or null);
+  sunshineDisplayTargetAppName =
+    sunshineDisplayTargetSettings.appName or (sunshineVirtualDisplay.appName or "Adaptive Display");
   sunshineDisplayTargetAppIcon = "${../../icons/sunshine/adaptive-display.svg}";
-  sunshineDisplayTargetCaptureRaw = sunshineDisplayTargetSettings.capture or (sunshineVirtualDisplay.capture or "auto");
-  sunshineDisplayTargetCaptureAuto = builtins.elem sunshineDisplayTargetCaptureRaw [ null "" "auto" ];
-  sunshineDisplayTargetCapture = if sunshineDisplayTargetCaptureAuto then null else sunshineDisplayTargetCaptureRaw;
+  sunshineDisplayTargetCaptureRaw =
+    sunshineDisplayTargetSettings.capture or (sunshineVirtualDisplay.capture or "auto");
+  sunshineDisplayTargetCaptureAuto = builtins.elem sunshineDisplayTargetCaptureRaw [
+    null
+    ""
+    "auto"
+  ];
+  sunshineDisplayTargetCapture =
+    if sunshineDisplayTargetCaptureAuto then null else sunshineDisplayTargetCaptureRaw;
   sunshineDisplayTargetIsHeadless = sunshineDisplayTargetBackend == "hyprland-headless";
   sunshineDisplayTargetIsPhysical = sunshineDisplayTargetBackend == "physical-output";
   profileDetails = settings.profileDetails or { };
@@ -47,30 +62,41 @@ let
       if sunshineDisplayTargetIsHeadless then
         (
           sunshineDisplayTargetCapture == null
-          || builtins.elem sunshineDisplayTargetCapture [ "wlr" "wl" "wayland" ]
+          || builtins.elem sunshineDisplayTargetCapture [
+            "wlr"
+            "wl"
+            "wayland"
+          ]
         )
       else
-        builtins.elem sunshineDisplayTargetCapture [ "wlr" "wl" "wayland" ]
+        builtins.elem sunshineDisplayTargetCapture [
+          "wlr"
+          "wl"
+          "wayland"
+        ]
     );
   sunshineNeedsPrivilegedWrapper = sunshineCapSysAdmin && !sunshineUsesWaylandCapture;
-  sunshineDisplayTargetResolutions = sunshineDisplayTargetSettings.resolutions or (sunshineVirtualDisplay.resolutions or [
-    "2880x1800"
-    "2560x1600"
-    "1920x1200"
-    "1920x1080"
-    "1600x900"
-    "1280x720"
-  ]);
-  sunshineDisplayTargetFps = sunshineDisplayTargetSettings.fps or (sunshineVirtualDisplay.fps or [
-    60
-    90
-    120
-  ]);
-  sunshineNvidiaPackageLibDirs =
-    lib.optionals sunshineUseNvidia [
-      "${config.hardware.nvidia.package}/lib"
-      "${config.hardware.nvidia.package}/lib64"
-    ];
+  sunshineDisplayTargetResolutions =
+    sunshineDisplayTargetSettings.resolutions or (sunshineVirtualDisplay.resolutions or [
+      "2880x1800"
+      "2560x1600"
+      "1920x1200"
+      "1920x1080"
+      "1600x900"
+      "1280x720"
+    ]
+    );
+  sunshineDisplayTargetFps =
+    sunshineDisplayTargetSettings.fps or (sunshineVirtualDisplay.fps or [
+      60
+      90
+      120
+    ]
+    );
+  sunshineNvidiaPackageLibDirs = lib.optionals sunshineUseNvidia [
+    "${config.hardware.nvidia.package}/lib"
+    "${config.hardware.nvidia.package}/lib64"
+  ];
   configuredHeadlessOutputs =
     if ((settings.hyprland or { }) ? headlessOutputs) then
       (settings.hyprland or { }).headlessOutputs
@@ -78,7 +104,9 @@ let
       [ profileHeadlessOutput ]
     else
       [ ];
-  configuredHeadlessOutputMap = lib.listToAttrs (map (output: lib.nameValuePair output.name output) configuredHeadlessOutputs);
+  configuredHeadlessOutputMap = lib.listToAttrs (
+    map (output: lib.nameValuePair output.name output) configuredHeadlessOutputs
+  );
   configuredInitialOutputStates =
     if ((settings.hyprland or { }) ? initialOutputStates) then
       (settings.hyprland or { }).initialOutputStates
@@ -93,34 +121,44 @@ let
           scale = profileHeadlessOutput.scale or 1;
         }
       ];
-  configuredInitialOutputStateMap = lib.listToAttrs (map (output: lib.nameValuePair output.name output) configuredInitialOutputStates);
+  configuredInitialOutputStateMap = lib.listToAttrs (
+    map (output: lib.nameValuePair output.name output) configuredInitialOutputStates
+  );
   configuredHeadlessOutputNames = map (output: output.name or "") configuredHeadlessOutputs;
-  configuredPhysicalOutputStates =
-    builtins.filter (output: !(builtins.elem (output.name or "") configuredHeadlessOutputNames)) configuredInitialOutputStates;
+  configuredPhysicalOutputStates = builtins.filter (
+    output: !(builtins.elem (output.name or "") configuredHeadlessOutputNames)
+  ) configuredInitialOutputStates;
   initialOutputStateToMonitorSpec =
     output:
-      let
-        name = output.name or "";
-        enabledByDefault = output.enabledByDefault or true;
-        mode = output.mode or "preferred";
-        position = output.position or "auto";
-        scale = toString (output.scale or 1);
-      in
-        if enabledByDefault then
-          "${name},${mode},${position},${scale}"
-        else
-          "${name},disable";
+    let
+      name = output.name or "";
+      enabledByDefault = output.enabledByDefault or true;
+      mode = output.mode or "preferred";
+      position = output.position or "auto";
+      scale = toString (output.scale or 1);
+    in
+    if enabledByDefault then "${name},${mode},${position},${scale}" else "${name},disable";
   sunshineDisplayTargetConfig =
     if !sunshineDisplayTargetEnabled || sunshineDisplayTargetOutputName == null then
       null
-    else if sunshineDisplayTargetIsHeadless && builtins.hasAttr sunshineDisplayTargetOutputName configuredHeadlessOutputMap then
+    else if
+      sunshineDisplayTargetIsHeadless
+      && builtins.hasAttr sunshineDisplayTargetOutputName configuredHeadlessOutputMap
+    then
       configuredHeadlessOutputMap.${sunshineDisplayTargetOutputName}
-    else if sunshineDisplayTargetIsPhysical && builtins.hasAttr sunshineDisplayTargetOutputName configuredInitialOutputStateMap then
+    else if
+      sunshineDisplayTargetIsPhysical
+      && builtins.hasAttr sunshineDisplayTargetOutputName configuredInitialOutputStateMap
+    then
       configuredInitialOutputStateMap.${sunshineDisplayTargetOutputName}
     else
       null;
   sunshineDisplayTargetInitialState =
-    if sunshineDisplayTargetEnabled && sunshineDisplayTargetOutputName != null && builtins.hasAttr sunshineDisplayTargetOutputName configuredInitialOutputStateMap then
+    if
+      sunshineDisplayTargetEnabled
+      && sunshineDisplayTargetOutputName != null
+      && builtins.hasAttr sunshineDisplayTargetOutputName configuredInitialOutputStateMap
+    then
       configuredInitialOutputStateMap.${sunshineDisplayTargetOutputName}
     else
       null;
@@ -129,14 +167,15 @@ let
       initialOutputStateToMonitorSpec sunshineDisplayTargetInitialState
     else
       "";
-  sunshineDisplayTargetDisableOtherMonitorNames =
-    map
-      (output: output.name or "")
-      (builtins.filter
-        (output:
-          let name = output.name or "";
-          in name != "" && name != sunshineDisplayTargetOutputName)
-        configuredPhysicalOutputStates);
+  sunshineDisplayTargetDisableOtherMonitorNames = map (output: output.name or "") (
+    builtins.filter (
+      output:
+      let
+        name = output.name or "";
+      in
+      name != "" && name != sunshineDisplayTargetOutputName
+    ) configuredPhysicalOutputStates
+  );
   defaultTargetMode =
     if sunshineDisplayTargetConfig != null then
       sunshineDisplayTargetConfig.mode or "2880x1800@60"
@@ -147,13 +186,9 @@ let
       sunshineDisplayTargetConfig.position or "10000x10000"
     else
       "10000x10000";
-  defaultTargetScale =
-    toString (
-      if sunshineDisplayTargetConfig != null then
-        sunshineDisplayTargetConfig.scale or 1
-      else
-        1
-    );
+  defaultTargetScale = toString (
+    if sunshineDisplayTargetConfig != null then sunshineDisplayTargetConfig.scale or 1 else 1
+  );
   settingsFormat = pkgs.formats.keyValue { };
   sunshineServicePriorityConfig =
     if sunshinePerfMode == "aggressive" then
@@ -190,18 +225,18 @@ let
         "net.core.netdev_budget" = 400;
         "net.core.netdev_budget_usecs" = 4000;
       };
-  sunshineDynamicConfigFile =
-    settingsFormat.generate "sunshine-j0nix-base.conf" (builtins.removeAttrs config.services.sunshine.settings [
+  sunshineDynamicConfigFile = settingsFormat.generate "sunshine-j0nix-base.conf" (
+    builtins.removeAttrs config.services.sunshine.settings [
       "output_name"
       "resolutions"
       "fps"
-    ]);
-  sunshineGraphicsLibraryDirs =
-    lib.unique (
-      sunshineNvidiaPackageLibDirs
-      ++ [ "/run/opengl-driver/lib" ]
-      ++ lib.optionals pkgs.stdenv.hostPlatform.isx86_64 [ "/run/opengl-driver-32/lib" ]
-    );
+    ]
+  );
+  sunshineGraphicsLibraryDirs = lib.unique (
+    sunshineNvidiaPackageLibDirs
+    ++ [ "/run/opengl-driver/lib" ]
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isx86_64 [ "/run/opengl-driver-32/lib" ]
+  );
   sunshineDriDriverDirs = map (dir: "${dir}/dri") sunshineGraphicsLibraryDirs;
   sunshineNvidiaEnvironment = {
     # Sunshine's FFmpeg/NVENC path resolves vendor codecs at runtime. On NixOS,
@@ -227,10 +262,16 @@ let
     jq_bin="${pkgs.jq}/bin/jq"
     coreutils_bin="${pkgs.coreutils}/bin"
     target_backend=${lib.escapeShellArg sunshineDisplayTargetBackend}
-    target_name=${lib.escapeShellArg (if sunshineDisplayTargetOutputName != null then sunshineDisplayTargetOutputName else "")}
+    target_name=${
+      lib.escapeShellArg (
+        if sunshineDisplayTargetOutputName != null then sunshineDisplayTargetOutputName else ""
+      )
+    }
     default_mode=${lib.escapeShellArg defaultTargetMode}
     staging_position=${lib.escapeShellArg defaultTargetPosition}
-    stream_position=${lib.escapeShellArg (if sunshineDisplayTargetIsHeadless then "0x0" else defaultTargetPosition)}
+    stream_position=${
+      lib.escapeShellArg (if sunshineDisplayTargetIsHeadless then "0x0" else defaultTargetPosition)
+    }
     target_scale=${lib.escapeShellArg defaultTargetScale}
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$("$coreutils_bin"/id -u)}"
     state_dir="$runtime_dir/sunshine-j0nix"
@@ -268,8 +309,8 @@ let
     "$hyprctl_bin" keyword monitor "$target_name,$mode,$staging_position,$target_scale" >/dev/null 2>&1 || true
     "$coreutils_bin"/mkdir -p "$state_dir"
     ${lib.optionalString sunshineDisableLockScreenDuringStream ''
-    : > "$lockscreen_disable_marker"
-    ${pkgs.procps}/bin/pkill -x hyprlock >/dev/null 2>&1 || true
+      : > "$lockscreen_disable_marker"
+      ${pkgs.procps}/bin/pkill -x hyprlock >/dev/null 2>&1 || true
     ''}
     "$hyprctl_bin" -j workspaces | "$jq_bin" -r '.[] | select((.name // "") != "" and (.monitor // "") != "") | [.name, .monitor] | @tsv' > "$workspace_state.tmp"
     "$coreutils_bin"/mv "$workspace_state.tmp" "$workspace_state"
@@ -300,7 +341,12 @@ let
       move_workspace_to_target "$active_workspace"
     fi
 
-    ${lib.concatStringsSep "\n    " (map (name: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg "${name},disable"} >/dev/null 2>&1 || true") sunshineDisplayTargetDisableOtherMonitorNames)}
+    ${lib.concatStringsSep "\n    " (
+      map (
+        name:
+        "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg "${name},disable"} >/dev/null 2>&1 || true"
+      ) sunshineDisplayTargetDisableOtherMonitorNames
+    )}
     "$hyprctl_bin" keyword monitor "$target_name,$mode,$stream_position,$target_scale" >/dev/null 2>&1 || true
     "$hyprctl_bin" dispatch focusmonitor "$target_name" >/dev/null 2>&1 || true
     if command -v wm-shell-restart-detached >/dev/null 2>&1; then
@@ -312,7 +358,11 @@ let
 
     hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
     coreutils_bin="${pkgs.coreutils}/bin"
-    target_name=${lib.escapeShellArg (if sunshineDisplayTargetOutputName != null then sunshineDisplayTargetOutputName else "")}
+    target_name=${
+      lib.escapeShellArg (
+        if sunshineDisplayTargetOutputName != null then sunshineDisplayTargetOutputName else ""
+      )
+    }
     target_default_spec=${lib.escapeShellArg sunshineDisplayTargetDefaultSpec}
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$("$coreutils_bin"/id -u)}"
     state_dir="$runtime_dir/sunshine-j0nix"
@@ -325,7 +375,11 @@ let
       exit 0
     fi
 
-    ${lib.concatStringsSep "\n    " (map (spec: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg spec} >/dev/null 2>&1 || true") (map initialOutputStateToMonitorSpec configuredPhysicalOutputStates))}
+    ${lib.concatStringsSep "\n    " (
+      map (spec: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg spec} >/dev/null 2>&1 || true") (
+        map initialOutputStateToMonitorSpec configuredPhysicalOutputStates
+      )
+    )}
 
     active_workspace=""
     if [ -f "$active_state" ]; then
@@ -378,16 +432,32 @@ let
   sunshineLaunchWrapper = pkgs.writeShellScript "sunshine-j0nix-launch" ''
     set -eu
 
+    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+
+    # Sunshine needs WAYLAND_DISPLAY to connect to the compositor for wlr-screencopy.
+    # Systemd user services don't inherit login session variables, so detect the socket.
+    if [ -z "''${WAYLAND_DISPLAY:-}" ]; then
+      for sock in "$runtime_dir"/wayland-*; do
+        [ -S "$sock" ] || continue
+        export WAYLAND_DISPLAY="$(basename "$sock")"
+        break
+      done
+    fi
+    export XDG_RUNTIME_DIR="$runtime_dir"
+
     hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
     jq_bin="${pkgs.jq}/bin/jq"
-    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     tmp_config="$runtime_dir/sunshine-j0nix.conf"
     base_config=${lib.escapeShellArg sunshineDynamicConfigFile}
     rm -f "$tmp_config"
     ${pkgs.coreutils}/bin/install -m 600 "$base_config" "$tmp_config"
 
     ${lib.optionalString (sunshineDisplayTargetEnabled && sunshineDisplayTargetIsHeadless) ''
-      target_name=${lib.escapeShellArg (if sunshineDisplayTargetOutputName != null then sunshineDisplayTargetOutputName else "")}
+      target_name=${
+        lib.escapeShellArg (
+          if sunshineDisplayTargetOutputName != null then sunshineDisplayTargetOutputName else ""
+        )
+      }
       target_mode=${lib.escapeShellArg defaultTargetMode}
       target_position=${lib.escapeShellArg defaultTargetPosition}
       target_scale=${lib.escapeShellArg defaultTargetScale}
@@ -409,26 +479,25 @@ let
 
     exec ${sunshineExecutable} "$tmp_config"
   '';
-  sunshineBaseApps =
-    [
-      {
-        name = "Desktop";
-        "image-path" = "desktop.png";
-      }
-    ]
-    ++ lib.optionals steamEnabled [
-      {
-        name = "Steam Big Picture";
-        detached = [ "setsid steam steam://open/bigpicture" ];
-        "prep-cmd" = [
-          {
-            do = "";
-            undo = "setsid steam steam://close/bigpicture";
-          }
-        ];
-        "image-path" = "steam.png";
-      }
-    ];
+  sunshineBaseApps = [
+    {
+      name = "Desktop";
+      "image-path" = "desktop.png";
+    }
+  ]
+  ++ lib.optionals steamEnabled [
+    {
+      name = "Steam Big Picture";
+      detached = [ "setsid steam steam://open/bigpicture" ];
+      "prep-cmd" = [
+        {
+          do = "";
+          undo = "setsid steam steam://close/bigpicture";
+        }
+      ];
+      "image-path" = "steam.png";
+    }
+  ];
 in
 lib.mkIf (gamingEnabled && sunshineEnabled) {
   services.sunshine = {
@@ -446,24 +515,23 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
 
   services.sunshine.applications.env.PATH = lib.mkDefault "$(PATH):$(HOME)/.local/bin";
 
-  services.sunshine.applications.apps =
-    lib.mkAfter (
-      sunshineBaseApps
-      ++ lib.optionals sunshineDisplayTargetEnabled [
-        {
-          name = sunshineDisplayTargetAppName;
-          "auto-detach" = true;
-          "image-path" = sunshineDisplayTargetAppIcon;
-          "working-dir" = "/tmp";
-          "prep-cmd" = [
-            {
-              do = sunshineDisplayPrepCommand;
-              undo = sunshineDisplayUndoCommand;
-            }
-          ];
-        }
-      ]
-    );
+  services.sunshine.applications.apps = lib.mkAfter (
+    sunshineBaseApps
+    ++ lib.optionals sunshineDisplayTargetEnabled [
+      {
+        name = sunshineDisplayTargetAppName;
+        "auto-detach" = true;
+        "image-path" = sunshineDisplayTargetAppIcon;
+        "working-dir" = "/tmp";
+        "prep-cmd" = [
+          {
+            do = sunshineDisplayPrepCommand;
+            undo = sunshineDisplayUndoCommand;
+          }
+        ];
+      }
+    ]
+  );
 
   # Sunshine benefits from direct render-node access and reliable virtual input
   # permissions for low-latency capture and controller/keyboard injection.
@@ -471,8 +539,9 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
 
   # Route Sunshine-specific network tuning through the shared sysctl collector so
   # it composes cleanly with the generic network-performance and gaming roles.
-  j0nix.desktop.sysctl.extraFragments =
-    lib.mkAfter (lib.optional sunshineNetworkPerfEnable sunshineNetworkSysctlFragment);
+  j0nix.desktop.sysctl.extraFragments = lib.mkAfter (
+    lib.optional sunshineNetworkPerfEnable sunshineNetworkSysctlFragment
+  );
 
   # Apply a dedicated service-priority profile on top of the upstream user unit.
   # This mirrors the useful part of common Sunshine tuning gists without forcing
@@ -503,7 +572,10 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
       message = "j0nix.desktop.gaming.streaming.sunshine.autoStart must be a boolean";
     }
     {
-      assertion = builtins.elem sunshinePerfMode [ "balanced" "aggressive" ];
+      assertion = builtins.elem sunshinePerfMode [
+        "balanced"
+        "aggressive"
+      ];
       message = "j0nix.desktop.gaming.streaming.sunshine.performance.mode must be one of: balanced, aggressive";
     }
     {
@@ -519,15 +591,32 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
       message = "j0nix.desktop.gaming.streaming.sunshine.performance.network.enable must be a boolean";
     }
     {
-      assertion = builtins.elem sunshineNetworkPerfMode [ "balanced" "aggressive" ];
+      assertion = builtins.elem sunshineNetworkPerfMode [
+        "balanced"
+        "aggressive"
+      ];
       message = "j0nix.desktop.gaming.streaming.sunshine.performance.network.mode must be one of: balanced, aggressive";
     }
     {
-      assertion = !sunshineDisplayTargetEnabled || sunshineDisplayTargetCaptureAuto || builtins.elem sunshineDisplayTargetCapture [ "wlr" "wl" "wayland" "kms" "x11" "nvfbc" ];
+      assertion =
+        !sunshineDisplayTargetEnabled
+        || sunshineDisplayTargetCaptureAuto
+        || builtins.elem sunshineDisplayTargetCapture [
+          "wlr"
+          "wl"
+          "wayland"
+          "kms"
+          "x11"
+          "nvfbc"
+        ];
       message = "settings.sunshine.displayTarget.capture must be auto, empty, or one of: wlr, wl, wayland, kms, x11, nvfbc";
     }
     {
-      assertion = !sunshineDisplayTargetEnabled || builtins.all (mode: builtins.match "^[0-9]+x[0-9]+$" mode != null) sunshineDisplayTargetResolutions;
+      assertion =
+        !sunshineDisplayTargetEnabled
+        || builtins.all (
+          mode: builtins.match "^[0-9]+x[0-9]+$" mode != null
+        ) sunshineDisplayTargetResolutions;
       message = "settings.sunshine.displayTarget.resolutions must contain WIDTHxHEIGHT strings such as 2880x1800";
     }
     {
@@ -535,7 +624,12 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
       message = "settings.sunshine.displayTarget.fps must contain positive integers";
     }
     {
-      assertion = !sunshineDisplayTargetEnabled || builtins.elem sunshineDisplayTargetBackend [ "hyprland-headless" "physical-output" ];
+      assertion =
+        !sunshineDisplayTargetEnabled
+        || builtins.elem sunshineDisplayTargetBackend [
+          "hyprland-headless"
+          "physical-output"
+        ];
       message = "settings.sunshine.displayTarget.backend must be one of: hyprland-headless, physical-output";
     }
     {
@@ -551,19 +645,37 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
       message = "settings.sunshine.displayTarget.outputName must reference either a configured settings.hyprland.headlessOutputs entry or a settings.hyprland.initialOutputStates entry, depending on the selected backend.";
     }
     {
-      assertion = !sunshineDisplayTargetEnabled || !sunshineDisplayTargetIsHeadless || builtins.elem sunshineDisplayTargetOutputName configuredHeadlessOutputNames;
+      assertion =
+        !sunshineDisplayTargetEnabled
+        || !sunshineDisplayTargetIsHeadless
+        || builtins.elem sunshineDisplayTargetOutputName configuredHeadlessOutputNames;
       message = "settings.sunshine.displayTarget.outputName must reference a configured settings.hyprland.headlessOutputs entry when backend = hyprland-headless.";
     }
     {
-      assertion = !sunshineDisplayTargetEnabled || !sunshineDisplayTargetIsHeadless || (sunshineDisplayTargetInitialState != null && ((sunshineDisplayTargetInitialState.enabledByDefault or true) == false));
+      assertion =
+        !sunshineDisplayTargetEnabled
+        || !sunshineDisplayTargetIsHeadless
+        || (
+          sunshineDisplayTargetInitialState != null
+          && ((sunshineDisplayTargetInitialState.enabledByDefault or true) == false)
+        );
       message = "settings.sunshine.displayTarget.outputName must be disabled by default in settings.hyprland.initialOutputStates when backend = hyprland-headless.";
     }
     {
-      assertion = !sunshineDisplayTargetEnabled || !sunshineDisplayTargetIsPhysical || !builtins.elem sunshineDisplayTargetOutputName configuredHeadlessOutputNames;
+      assertion =
+        !sunshineDisplayTargetEnabled
+        || !sunshineDisplayTargetIsPhysical
+        || !builtins.elem sunshineDisplayTargetOutputName configuredHeadlessOutputNames;
       message = "settings.sunshine.displayTarget.outputName must not reference a headless output when backend = physical-output.";
     }
     {
-      assertion = !sunshineDisplayTargetEnabled || !sunshineDisplayTargetIsPhysical || (sunshineDisplayTargetInitialState != null && ((sunshineDisplayTargetInitialState.enabledByDefault or true) == false));
+      assertion =
+        !sunshineDisplayTargetEnabled
+        || !sunshineDisplayTargetIsPhysical
+        || (
+          sunshineDisplayTargetInitialState != null
+          && ((sunshineDisplayTargetInitialState.enabledByDefault or true) == false)
+        );
       message = "settings.sunshine.displayTarget.outputName must be disabled by default in settings.hyprland.initialOutputStates when backend = physical-output.";
     }
   ];
