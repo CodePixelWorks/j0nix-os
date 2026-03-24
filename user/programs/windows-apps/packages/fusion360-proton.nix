@@ -148,6 +148,9 @@ let
             export FUSION360_BIN_DIR="$FUSION360_INSTALL_ROOT/bin"
             export FUSION360_USER_IN_PREFIX="steamuser"
 
+            export SSL_CERT_FILE="''${SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}"
+            export SSL_CERT_DIR="''${SSL_CERT_DIR:-/etc/ssl/certs}"
+
             fusion360::proton_env() {
               export STEAM_COMPAT_CLIENT_INSTALL_PATH="$FUSION360_STEAM_DIR"
               export STEAM_COMPAT_DATA_PATH="$FUSION360_COMPAT_DIR"
@@ -770,6 +773,9 @@ let
         exit 1
       fi
 
+      export SSL_CERT_FILE="''${SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}"
+      export SSL_CERT_DIR="''${SSL_CERT_DIR:-/etc/ssl/certs}"
+
       exec "$launcher" "$@"
     '';
   };
@@ -782,6 +788,9 @@ let
       # shellcheck disable=SC1091
       source "${fusion360ProtonLib}/bin/fusion360-proton-lib"
       fusion360::ensure_proton
+
+      export SSL_CERT_FILE="''${SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}"
+      export SSL_CERT_DIR="''${SSL_CERT_DIR:-/etc/ssl/certs}"
 
       url="''${1:-}"
       exe="$(fusion360::find_identity_manager || true)"
