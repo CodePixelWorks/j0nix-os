@@ -114,6 +114,7 @@ in
       android-tools
       xdg-utils
       ytdownloader
+      bettersoundcloud
     ])
     ++ [ obsidianWayland ]
     ++ fileManagerPackages
