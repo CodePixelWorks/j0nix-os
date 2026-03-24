@@ -113,6 +113,7 @@ in
       p7zip
       android-tools
       xdg-utils
+      ytdownloader
     ])
     ++ [ obsidianWayland ]
     ++ fileManagerPackages
