@@ -142,7 +142,7 @@ let
             export FUSION360_STEAM_DIR="''${FUSION360_STEAM_DIR:-$HOME/.local/share/Steam}"
             export FUSION360_PROTON_DIR="$FUSION360_STEAM_DIR/compatibilitytools.d/$FUSION360_PROTON_VERSION"
             export FUSION360_COMPAT_DIR="$FUSION360_INSTALL_ROOT/protonprefix"
-            export FUSION360_WINEPREFIX="$FUSION360_INSTALL_ROOT/wineprefixes/default"
+            export FUSION360_WINEPREFIX="''${FUSION360_WINEPREFIX:-$(if [ -n "$FUSION360_PROTON_VERSION" ]; then echo "$FUSION360_INSTALL_ROOT/protonprefix/pfx"; else echo "$FUSION360_INSTALL_ROOT/wineprefixes/default"; fi)}"
             export FUSION360_DOWNLOADS="$FUSION360_INSTALL_ROOT/downloads"
             export FUSION360_LOGS="$FUSION360_INSTALL_ROOT/logs"
             export FUSION360_BIN_DIR="$FUSION360_INSTALL_ROOT/bin"
