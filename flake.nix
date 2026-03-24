@@ -33,6 +33,7 @@
           '';
         });
         qmlgreet = final.callPackage ./system/software/pkgs/greetd/qmlgreet.nix { };
+        bettersoundcloud = final.callPackage ./system/software/pkgs/audio/better-soundcloud.nix { };
         mcp-language-server-j0nix = final.callPackage ./system/software/pkgs/dev/mcp-language-server.nix {
           src = inputs.mcp-language-server-src;
         };
