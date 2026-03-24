@@ -761,22 +761,37 @@ let
 
   fusion360ProtonRun = pkgs.writeShellApplication {
     name = "fusion360-proton-run";
-    runtimeInputs = [ fusion360ProtonLib ];
+    runtimeInputs = [
+      fusion360ProtonLib
+      pkgs.procps
+    ];
     text = ''
       set -euo pipefail
       # shellcheck disable=SC1091
       source "${fusion360ProtonLib}/bin/fusion360-proton-lib"
-      launcher="$FUSION360_BIN_DIR/autodesk_fusion_launcher.sh"
-      if [ ! -x "$launcher" ]; then
-        echo "Fusion 360 Launcher nicht gefunden: $launcher" >&2
-        echo "Führe zuerst 'fusion360-setup /pfad/zum/Fusion Admin Install.exe' aus." >&2
+      fusion360::ensure_proton
+
+      exe="$(fusion360::find_fusion_entrypoint || true)"
+      if [ -z "$exe" ]; then
+        echo "Fusion 360 nicht gefunden." >&2
+        echo "Führe zuerst 'fusion360-setup' aus." >&2
         exit 1
       fi
 
       export SSL_CERT_FILE="''${SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}"
       export SSL_CERT_DIR="''${SSL_CERT_DIR:-/etc/ssl/certs}"
 
-      exec "$launcher" "$@"
+      if ! pgrep -x steam >/dev/null 2>&1; then
+        echo "Starte Steam (Hintergrund)..."
+        if command -v systemd-run >/dev/null 2>&1; then
+          setsid -f systemd-run --user --scope --quiet steam -silent </dev/null >/dev/null 2>&1
+        else
+          setsid -f steam -silent </dev/null >/dev/null 2>&1
+        fi
+        sleep 5
+      fi
+
+      fusion360::proton_run "$exe" "$@"
     '';
   };
 
