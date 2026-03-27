@@ -1,22 +1,23 @@
-{ lib
-, stdenv
-, fetchurl
-, autoPatchelfHook
-, makeWrapper
-, makeDesktopItem
-, copyDesktopItems
-, wrapGAppsHook3
-, gtk3
-, gdk-pixbuf
-, pango
-, cairo
-, glib
-, libX11
-, libpng
-, libxkbcommon
-, util-linux
-, systemd
-, zlib
+{
+  lib,
+  stdenv,
+  fetchurl,
+  autoPatchelfHook,
+  makeWrapper,
+  makeDesktopItem,
+  copyDesktopItems,
+  wrapGAppsHook3,
+  gtk3,
+  gdk-pixbuf,
+  pango,
+  cairo,
+  glib,
+  libX11,
+  libpng,
+  libxkbcommon,
+  util-linux,
+  systemd,
+  zlib,
 }:
 
 stdenv.mkDerivation rec {
@@ -25,7 +26,7 @@ stdenv.mkDerivation rec {
 
   src = fetchurl {
     url = "https://www.vuescan.com/files/vuex6498.tgz";
-    hash = "sha256-9RHh0AAkbOPNcasoX3K/FNg6PFH6wIG6fqlQ+rdh1r4=";
+    hash = "sha256-up7Xx1GRS2+YT6q+rnaOMbKzVOUb9W1FV3BWoPW8jww=";
   };
 
   nativeBuildInputs = [
@@ -61,7 +62,11 @@ stdenv.mkDerivation rec {
       exec = "vuescan";
       icon = "vuescan";
       terminal = false;
-      categories = [ "Graphics" "Office" "Scanning" ];
+      categories = [
+        "Graphics"
+        "Office"
+        "Scanning"
+      ];
       startupNotify = true;
     })
   ];
