@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.j0nix.desktop.audio;
   audioBackend = cfg.backend;
@@ -13,7 +18,10 @@ in
 {
   options.j0nix.desktop.audio = {
     backend = lib.mkOption {
-      type = lib.types.enum [ "pipewire" "pulseaudio" ];
+      type = lib.types.enum [
+        "pipewire"
+        "pulseaudio"
+      ];
       default = "pipewire";
     };
 
@@ -95,6 +103,37 @@ in
           };
         };
       })
+      (lib.mkIf usePipeWire {
+        "52-bt-buffer-tuning" = {
+          "monitor.bluez.properties" = {
+            "bluez5.a2dp.ldac-quality" = "hq";
+          };
+          "alsa.properties" = {
+            "api.alsa.period-size" = 1024;
+            "api.alsa.headroom" = 8192;
+          };
+        };
+      })
+      (lib.mkIf usePipeWire {
+        "53-bt-sbc-bitpool" = {
+          "monitor.bluez.rules" = [
+            {
+              matches = [
+                {
+                  "node.name" = "~bluez_output.*";
+                }
+              ];
+              actions = {
+                update-props = {
+                  "api.alsa.period-size" = 1024;
+                  "api.alsa.headroom" = 8192;
+                  "resample.quality" = 10;
+                };
+              };
+            }
+          ];
+        };
+      })
     ];
 
     services.pulseaudio = {
@@ -116,9 +155,11 @@ in
 
     services.blueman.enable = true;
 
-    j0nix.software.systemPackages = lib.optionals (usePulseAudio && hasPulseAudioBtModules && enableHiFiCodecs) [
-      pkgs."pulseaudio-modules-bt"
-    ];
+    j0nix.software.systemPackages =
+      lib.optionals (usePulseAudio && hasPulseAudioBtModules && enableHiFiCodecs)
+        [
+          pkgs."pulseaudio-modules-bt"
+        ];
 
     assertions = [
       {
