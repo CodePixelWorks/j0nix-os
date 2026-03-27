@@ -7,7 +7,7 @@
 
     # Common utility windows that are almost always better as floating dialogs.
     "match:class ^(pavucontrol)$, float 1, center 1"
-    "match:class ^(nm-connection-editor)$, float 1, center 1"
+    "match:class ^(nm-applet|nm-connection-editor)$, float 1, center 1"
     "match:class ^(blueman-manager)$, float 1, center 1"
     "match:class ^(org\\.gnome\\.Calculator)$, float 1, center 1"
     "match:class ^(zenity)$, float 1, center 1"
