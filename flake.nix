@@ -408,6 +408,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    hermes-agent = {
+      url = "github:NousResearch/hermes-agent";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     mcp-language-server-src = {
       url = "github:isaacphi/mcp-language-server";
       flake = false;
