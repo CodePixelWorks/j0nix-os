@@ -73,6 +73,8 @@
 
     # Hide blur artefacts in Fusion overlays.
     "match:class ^(fusion360\\.exe)$, match:title ^(Fusion360|(Marking Menu))$, no_blur 1"
+    # Fusion 360 sign-in window runs under steam_proton (XWayland).
+    "match:class ^(steam_proton)$, match:title ^(Anmelden|Sign [Ii]n) - Autodesk Fusion.*$, float 1, center 1"
 
     # Ueberzugpp helper surfaces should not steal focus.
     "match:class ^(ueberzugpp_.*)$, float 1, no_initial_focus 1"
