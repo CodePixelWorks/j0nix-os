@@ -329,6 +329,33 @@ let
               echo "  SHA256: $sha256"
             }
 
+            fusion360::patch_proton_launcher() {
+              local launcher="$FUSION360_BIN_DIR/autodesk_fusion_launcher.sh"
+              if [ ! -f "$launcher" ]; then
+                echo "Upstream launcher not found, skipping proton patch" >&2
+                return 0
+              fi
+
+              if grep -q 'steam-run' "$launcher"; then
+                return 0
+              fi
+
+              echo "Patching launcher for NixOS: wrapping proton with steam-run"
+              sed -i "s#\"\$PROTON_DIRECTORY/proton\" run \"\$LAUNCHER\"#$(printf '%q' "${pkgs.steam-run}/bin/steam-run") \"\$PROTON_DIRECTORY/proton\" run \"\$LAUNCHER\"#" "$launcher"
+
+              if ! grep -q 'steam-run' "$launcher"; then
+                echo "Launcher patch may have failed, steam-run not found in patched file" >&2
+                return 1
+              fi
+            }
+
+            fusion360::cleanup_upstream_desktop_entries() {
+              rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"Autodesk Fusion.desktop" 2>/dev/null || true
+              rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"Autodesk Fusion.desktop.bak" 2>/dev/null || true
+              rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"adskidmgr-opener.desktop" 2>/dev/null || true
+              rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"adskidmgr-opener.desktop.bak" 2>/dev/null || true
+            }
+
             fusion360::find_identity_manager() {
               find "$FUSION360_WINEPREFIX" -name AdskIdentityManager.exe 2>/dev/null | head -n 1
             }
@@ -438,6 +465,8 @@ let
 
       ${lib.optionalString cleanupLegacyDesktop ''
         rm -f "$HOME/.local/share/applications/adskidmgr-opener.desktop"
+        rm -f "$HOME/.local/share/applications/Autodesk Fusion.desktop"
+        rm -f "$HOME/.local/share/applications/autodesk-fusion.desktop"
       ''}
 
       cd "$HOME"
@@ -706,6 +735,9 @@ let
       fusion360::run_step "autodesk_fusion_safe_logfile" autodesk_fusion_safe_logfile
       fusion360::run_step "reset_window_not_responding_dialog" reset_window_not_responding_dialog
 
+      fusion360::run_step "patch_proton_launcher" fusion360::patch_proton_launcher
+      fusion360::cleanup_upstream_desktop_entries
+
       installed_fusion_exe="$(fusion360::find_fusion_exe || true)"
       installed_fusion_launcher="$(fusion360::find_fusion_launcher || true)"
       if [ -z "$installed_fusion_exe" ] && [ -n "$installed_fusion_launcher" ]; then
@@ -770,6 +802,8 @@ let
       # shellcheck disable=SC1091
       source "${fusion360ProtonLib}/bin/fusion360-proton-lib"
       fusion360::ensure_proton
+
+      fusion360::cleanup_upstream_desktop_entries
 
       exe="$(fusion360::find_fusion_entrypoint || true)"
       if [ -z "$exe" ]; then
