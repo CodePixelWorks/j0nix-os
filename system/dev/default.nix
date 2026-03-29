@@ -115,6 +115,7 @@ in
 {
   imports = [
     ./nix-ld.nix
+    ./supabase.nix
   ];
 
   config = lib.mkIf enabled {
