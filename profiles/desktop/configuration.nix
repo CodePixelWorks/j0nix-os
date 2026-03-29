@@ -32,14 +32,7 @@ in
     ./modules/thermal.nix
     ./modules/drivers.nix
     ./modules/support-drivers.nix
-    ../../system/apps/bambulab.nix
-    ../../system/apps/aagl.nix
-    ../../system/apps/flatpak-sync.nix
-    ../../system/apps/fusion360.nix
-    ../../system/apps/ollama.nix
-    ../../system/apps/syncthing.nix
-    ../../system/apps/twintail-launcher.nix
-    ../../system/apps/vuescan.nix
+    ../../system/apps
     ../../system/software
     ../../user-roles/system
     ../../system/accounts
