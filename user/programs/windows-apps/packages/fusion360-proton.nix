@@ -52,44 +52,30 @@ let
     webView2InstallerPackage
   ];
 
-  fusionInstallerRuntimeSpec =
-    if fusionInstallerPackage != null then
+  mkRuntimeSpec =
+    payload: pkg:
+    if pkg != null then
       {
         mode = "store";
-        path = fusionInstallerPackage;
-        url = fusionInstaller.url;
-        fileName = fusionInstaller.fileName;
+        path = pkg;
+        url = payload.url;
+        fileName = payload.fileName;
       }
     else
       {
-        mode = fusionInstaller.mode;
+        mode = payload.mode;
         path = "";
-        url = fusionInstaller.url;
-        fileName = fusionInstaller.fileName;
-      };
-
-  webView2InstallerRuntimeSpec =
-    if webView2InstallerPackage != null then
-      {
-        mode = "store";
-        path = webView2InstallerPackage;
-        url = webView2Installer.url;
-        fileName = webView2Installer.fileName;
-      }
-    else
-      {
-        mode = webView2Installer.mode;
-        path = "";
-        url = webView2Installer.url;
-        fileName = webView2Installer.fileName;
+        url = payload.url;
+        fileName = payload.fileName;
       };
 
   fusionInstallerRuntimeFile = pkgs.writeText "fusion360-installer-runtime.json" (
-    builtins.toJSON fusionInstallerRuntimeSpec
+    builtins.toJSON (mkRuntimeSpec fusionInstaller fusionInstallerPackage)
   );
   webView2InstallerRuntimeFile = pkgs.writeText "fusion360-webview2-runtime.json" (
-    builtins.toJSON webView2InstallerRuntimeSpec
+    builtins.toJSON (mkRuntimeSpec webView2Installer webView2InstallerPackage)
   );
+
   upstreamInstallerRaw = pkgs.fetchurl {
     url = "https://codeberg.org/cryinkfly/Autodesk-Fusion-360-on-Linux/raw/branch/main/files/setup/autodesk_fusion_installer_x86-64.sh";
     hash = "sha256-7BMn2JREc/RURjA3iKR08gvMsHbJoTf3xJy/X3oAH/o=";
@@ -102,93 +88,88 @@ let
     chmod 0555 "$out"
   '';
 
+  steamRunBin = "${pkgs.steam-run}/bin/steam-run";
+
+  # ---------------------------------------------------------------------------
+  # Shared runtime library
+  # Minimal runtimeInputs — heavy setup tools (curl, jq, p7zip, wine, …) are
+  # added only to the setup script that needs them.
+  # ---------------------------------------------------------------------------
   fusion360ProtonLib = pkgs.writeShellApplication {
     name = "fusion360-proton-lib";
     runtimeInputs = with pkgs; [
-      bc
-      cabextract
-      coreutils
-      curl
-      file
-      findutils
-      gawk
-      gettext
-      glib
-      gnugrep
-      gnused
-      jq
-      lsb-release
-      mesa-demos
-      mokutil
-      p7zip
       procps
-      samba
-      util-linux
-      wget
-      which
-      winetricks
-      xdg-utils
-      xrandr
-      wineWow64Packages.waylandFull
     ];
     text = ''
-            set -euo pipefail
+      set -euo pipefail
 
-            export FUSION360_PROTON_VERSION="''${FUSION360_PROTON_VERSION:-${protonVersion}}"
-            export FUSION360_INSTALL_ROOT="''${FUSION360_INSTALL_ROOT:-${installRoot}}"
-            export FUSION360_INSTALLER_SPEC=${lib.escapeShellArg (toString fusionInstallerRuntimeFile)}
-            export FUSION360_WEBVIEW2_SPEC=${lib.escapeShellArg (toString webView2InstallerRuntimeFile)}
+      export FUSION360_PROTON_VERSION="''${FUSION360_PROTON_VERSION:-${protonVersion}}"
+      export FUSION360_INSTALL_ROOT="''${FUSION360_INSTALL_ROOT:-${installRoot}}"
+      export FUSION360_INSTALLER_SPEC=${lib.escapeShellArg (toString fusionInstallerRuntimeFile)}
+      export FUSION360_WEBVIEW2_SPEC=${lib.escapeShellArg (toString webView2InstallerRuntimeFile)}
 
-            export FUSION360_STEAM_DIR="''${FUSION360_STEAM_DIR:-$HOME/.local/share/Steam}"
-            export FUSION360_PROTON_DIR="$FUSION360_STEAM_DIR/compatibilitytools.d/$FUSION360_PROTON_VERSION"
-            export FUSION360_COMPAT_DIR="$FUSION360_INSTALL_ROOT/protonprefix"
-            export FUSION360_WINEPREFIX="''${FUSION360_WINEPREFIX:-$(if [ -n "$FUSION360_PROTON_VERSION" ]; then echo "$FUSION360_INSTALL_ROOT/protonprefix/pfx"; else echo "$FUSION360_INSTALL_ROOT/wineprefixes/default"; fi)}"
-            export FUSION360_DOWNLOADS="$FUSION360_INSTALL_ROOT/downloads"
-            export FUSION360_LOGS="$FUSION360_INSTALL_ROOT/logs"
-            export FUSION360_BIN_DIR="$FUSION360_INSTALL_ROOT/bin"
-            export FUSION360_USER_IN_PREFIX="steamuser"
+      export FUSION360_STEAM_DIR="''${FUSION360_STEAM_DIR:-$HOME/.local/share/Steam}"
+      export FUSION360_PROTON_DIR="$FUSION360_STEAM_DIR/compatibilitytools.d/$FUSION360_PROTON_VERSION"
+      export FUSION360_COMPAT_DIR="$FUSION360_INSTALL_ROOT/protonprefix"
+      export FUSION360_WINEPREFIX="''${FUSION360_WINEPREFIX:-$(if [ -n "$FUSION360_PROTON_VERSION" ]; then echo "$FUSION360_INSTALL_ROOT/protonprefix/pfx"; else echo "$FUSION360_INSTALL_ROOT/wineprefixes/default"; fi)}"
+      export FUSION360_DOWNLOADS="$FUSION360_INSTALL_ROOT/downloads"
+      export FUSION360_LOGS="$FUSION360_INSTALL_ROOT/logs"
+      export FUSION360_BIN_DIR="$FUSION360_INSTALL_ROOT/bin"
+      export FUSION360_USER_IN_PREFIX="steamuser"
 
-            export SSL_CERT_FILE="''${SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}"
-            export SSL_CERT_DIR="''${SSL_CERT_DIR:-/etc/ssl/certs}"
+      export SSL_CERT_FILE="''${SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}"
+      export SSL_CERT_DIR="''${SSL_CERT_DIR:-/etc/ssl/certs}"
 
-            fusion360::proton_env() {
-              export STEAM_COMPAT_CLIENT_INSTALL_PATH="$FUSION360_STEAM_DIR"
-              export STEAM_COMPAT_DATA_PATH="$FUSION360_COMPAT_DIR"
-            }
+      fusion360::proton_env() {
+        export STEAM_COMPAT_CLIENT_INSTALL_PATH="$FUSION360_STEAM_DIR"
+        export STEAM_COMPAT_DATA_PATH="$FUSION360_COMPAT_DIR"
+      }
 
-            fusion360::proton_run() {
-              fusion360::proton_env
-              ${pkgs.steam-run}/bin/steam-run "$FUSION360_PROTON_DIR/proton" run "$@"
-            }
+      fusion360::proton_run() {
+        fusion360::proton_env
+        ${steamRunBin} "$FUSION360_PROTON_DIR/proton" run "$@"
+      }
 
-            fusion360::ensure_proton() {
-              if [ ! -d "$FUSION360_STEAM_DIR" ]; then
-                echo "Steam nicht gefunden: $FUSION360_STEAM_DIR" >&2
-                exit 1
-              fi
-              if [ ! -x "$FUSION360_PROTON_DIR/proton" ]; then
-                echo "Proton nicht gefunden: $FUSION360_PROTON_DIR/proton" >&2
-                echo "Installiere zuerst $FUSION360_PROTON_VERSION in Steam." >&2
-                exit 1
-              fi
-            }
+      fusion360::ensure_proton() {
+        if [ ! -d "$FUSION360_STEAM_DIR" ]; then
+          echo "Steam not found: $FUSION360_STEAM_DIR" >&2
+          exit 1
+        fi
+        if [ ! -x "$FUSION360_PROTON_DIR/proton" ]; then
+          echo "Proton not found: $FUSION360_PROTON_DIR/proton" >&2
+          echo "Install $FUSION360_PROTON_VERSION in Steam first." >&2
+          exit 1
+        fi
+      }
 
-            fusion360::ensure_dirs() {
-              mkdir -p \
-                "$FUSION360_BIN_DIR" \
-                "$FUSION360_COMPAT_DIR" \
-                "$FUSION360_DOWNLOADS" \
-                "$FUSION360_LOGS" \
-                "$FUSION360_INSTALL_ROOT/resources" \
-                "$(dirname "$FUSION360_WINEPREFIX")"
-            }
+      fusion360::ensure_dirs() {
+        mkdir -p \
+          "$FUSION360_BIN_DIR" \
+          "$FUSION360_COMPAT_DIR" \
+          "$FUSION360_DOWNLOADS" \
+          "$FUSION360_LOGS" \
+          "$FUSION360_INSTALL_ROOT/resources" \
+          "$(dirname "$FUSION360_WINEPREFIX")"
+      }
 
-            fusion360::write_proton_wrappers() {
-              if [ -z "$FUSION360_PROTON_VERSION" ]; then
-                return 0
-              fi
+      fusion360::start_steam() {
+        if ! pgrep -x steam >/dev/null 2>&1; then
+          echo "Starting Steam (background)..."
+          if command -v systemd-run >/dev/null 2>&1; then
+            setsid -f systemd-run --user --scope --quiet steam -silent </dev/null >/dev/null 2>&1
+          else
+            setsid -f steam -silent </dev/null >/dev/null 2>&1
+          fi
+          sleep 5
+        fi
+      }
 
-              cat > "$FUSION360_BIN_DIR/proton-wine" <<EOF
+      fusion360::write_proton_wrappers() {
+        if [ -z "$FUSION360_PROTON_VERSION" ]; then
+          return 0
+        fi
+
+        cat > "$FUSION360_BIN_DIR/proton-wine" <<EOF
       #!/usr/bin/env bash
       set -euo pipefail
       export STEAM_COMPAT_CLIENT_INSTALL_PATH="$FUSION360_STEAM_DIR"
@@ -198,11 +179,11 @@ let
         echo "wine-''${proton_major:-10}.0"
         exit 0
       fi
-      exec ${pkgs.steam-run}/bin/steam-run "$FUSION360_PROTON_DIR/proton" run "\$@"
+      exec ${steamRunBin} "$FUSION360_PROTON_DIR/proton" run "\$@"
       EOF
-              chmod 0755 "$FUSION360_BIN_DIR/proton-wine"
+        chmod 0755 "$FUSION360_BIN_DIR/proton-wine"
 
-              cat > "$FUSION360_BIN_DIR/proton-wineserver" <<EOF
+        cat > "$FUSION360_BIN_DIR/proton-wineserver" <<EOF
       #!/usr/bin/env bash
       set -euo pipefail
       export STEAM_COMPAT_CLIENT_INSTALL_PATH="$FUSION360_STEAM_DIR"
@@ -212,203 +193,100 @@ let
         echo "wineserver-''${proton_major:-10}.0"
         exit 0
       fi
-      exec ${pkgs.steam-run}/bin/steam-run "$FUSION360_PROTON_DIR/proton" run wineserver "\$@"
+      exec ${steamRunBin} "$FUSION360_PROTON_DIR/proton" run wineserver "\$@"
       EOF
-              chmod 0755 "$FUSION360_BIN_DIR/proton-wineserver"
-            }
-
-            fusion360::require_prefix_layout() {
-              if [ ! -d "$FUSION360_WINEPREFIX/drive_c/windows/system32" ]; then
-                echo "Wine-Prefix wurde nicht korrekt initialisiert: $FUSION360_WINEPREFIX" >&2
-                echo "Prüfe $FUSION360_LOGS/wineboot.log" >&2
-                exit 1
-              fi
-            }
-
-            fusion360::ensure_payload() {
-              local spec="$1"
-              local out="$2"
-              local manual_source="''${3:-}"
-              if [ -s "$out" ]; then
-                return 0
-              fi
-              local mode url store_path
-              mode="$(${pkgs.jq}/bin/jq -r '.mode' "$spec")"
-              url="$(${pkgs.jq}/bin/jq -r '.url' "$spec")"
-              store_path="$(${pkgs.jq}/bin/jq -r '.path' "$spec")"
-
-              if [ "$mode" = "store" ]; then
-                cp "$store_path" "$out"
-              elif [ "$mode" = "manual" ]; then
-                if [ -z "$manual_source" ]; then
-                  echo "Fusion installer erforderlich. Nutze: fusion360-setup /pfad/zum/Fusion\\ Admin\\ Install.exe" >&2
-                  return 1
-                fi
-                if [ ! -f "$manual_source" ]; then
-                  echo "Fusion installer nicht gefunden: $manual_source" >&2
-                  return 1
-                fi
-                cp "$manual_source" "$out"
-              else
-                curl -L "$url" -o "$out"
-              fi
-            }
-
-            fusion360::resolve_manual_installer() {
-              local candidate="$1"
-              if [ -z "$candidate" ]; then
-                echo "Fusion installer erforderlich." >&2
-                echo "Nutze: fusion360-setup /pfad/zum/Fusion\\ Admin\\ Install.exe" >&2
-                echo "Relative Pfade aus dem aktuellen Arbeitsverzeichnis werden unterstützt." >&2
-                return 1
-              fi
-
-              if [ ! -f "$candidate" ]; then
-                echo "Installer-Datei nicht gefunden: $candidate" >&2
-                return 1
-              fi
-
-              local resolved
-              resolved="$(realpath -e "$candidate")"
-
-              case "''${resolved##*/}" in
-                *.exe|*.EXE)
-                  ;;
-                *)
-                  echo "Installer muss eine .exe-Datei sein: $resolved" >&2
-                  return 1
-                  ;;
-              esac
-
-              local file_info
-              file_info="$(file -b "$resolved")"
-              case "$file_info" in
-                PE32*|MS-DOS*)
-                  ;;
-                *)
-                  echo "Installer sieht nicht wie eine Windows-Executable aus: $resolved" >&2
-                  echo "file(1): $file_info" >&2
-                  return 1
-                  ;;
-              esac
-
-              case "''${resolved##*/}" in
-                *Downloader*.exe|*Downloader*.EXE)
-                  echo "Der uebergebene Installer ist nur der Fusion-Downloader: $resolved" >&2
-                  echo "Nutze stattdessen die Autodesk Admin-Installer-EXE, z. B. 'Fusion Admin Install.exe'." >&2
-                  return 1
-                  ;;
-              esac
-
-              printf '%s\n' "$resolved"
-            }
-
-            fusion360::stage_manual_installer() {
-              local source_path="$1"
-              local destination_path="$2"
-              local metadata_path="$FUSION360_INSTALL_ROOT/resources/fusion-installer.json"
-              local sha256
-
-              sha256="$(sha256sum "$source_path" | awk '{print $1}')"
-              mkdir -p "$(dirname "$destination_path")"
-              cp "$source_path" "$destination_path"
-              chmod 0644 "$destination_path"
-
-              cat > "$metadata_path" <<EOF
-      {
-        "sourcePath": $(printf '%s' "$source_path" | jq -Rs .),
-        "stagedPath": $(printf '%s' "$destination_path" | jq -Rs .),
-        "sha256": $(printf '%s' "$sha256" | jq -Rs .),
-        "stagedAt": $(date -Iseconds | jq -Rs .)
+        chmod 0755 "$FUSION360_BIN_DIR/proton-wineserver"
       }
-      EOF
 
-              echo "Fusion-Installer übernommen:"
-              echo "  Quelle: $source_path"
-              echo "  Ziel:   $destination_path"
-              echo "  SHA256: $sha256"
-            }
+      fusion360::patch_proton_launcher() {
+        local launcher="$FUSION360_BIN_DIR/autodesk_fusion_launcher.sh"
+        if [ ! -f "$launcher" ]; then
+          echo "Upstream launcher not found, skipping proton patch" >&2
+          return 0
+        fi
 
-            fusion360::patch_proton_launcher() {
-              local launcher="$FUSION360_BIN_DIR/autodesk_fusion_launcher.sh"
-              if [ ! -f "$launcher" ]; then
-                echo "Upstream launcher not found, skipping proton patch" >&2
-                return 0
-              fi
+        if grep -q 'steam-run' "$launcher"; then
+          return 0
+        fi
 
-              if grep -q 'steam-run' "$launcher"; then
-                return 0
-              fi
+        echo "Patching launcher for NixOS: wrapping proton with steam-run"
+        sed -i "s#\"\$PROTON_DIRECTORY/proton\" run \"\$LAUNCHER\"#$(printf '%q' "${steamRunBin}") \"\$PROTON_DIRECTORY/proton\" run \"\$LAUNCHER\"#" "$launcher"
 
-              echo "Patching launcher for NixOS: wrapping proton with steam-run"
-              sed -i "s#\"\$PROTON_DIRECTORY/proton\" run \"\$LAUNCHER\"#$(printf '%q' "${pkgs.steam-run}/bin/steam-run") \"\$PROTON_DIRECTORY/proton\" run \"\$LAUNCHER\"#" "$launcher"
+        if ! grep -q 'steam-run' "$launcher"; then
+          echo "Launcher patch may have failed, steam-run not found in patched file" >&2
+          return 1
+        fi
+      }
 
-              if ! grep -q 'steam-run' "$launcher"; then
-                echo "Launcher patch may have failed, steam-run not found in patched file" >&2
-                return 1
-              fi
-            }
+      fusion360::cleanup_upstream_desktop_entries() {
+        # Remove upstream-generated desktop entries that conflict with j0nix entries.
+        rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"Autodesk Fusion.desktop" 2>/dev/null || true
+        rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"Autodesk Fusion.desktop.bak" 2>/dev/null || true
+        rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"adskidmgr-opener.desktop" 2>/dev/null || true
+        rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"adskidmgr-opener.desktop.bak" 2>/dev/null || true
+        # Legacy entries that may have been copied to the top-level applications dir.
+        rm -f "$HOME/.local/share/applications/adskidmgr-opener.desktop" 2>/dev/null || true
+        rm -f "$HOME/.local/share/applications/Autodesk Fusion.desktop" 2>/dev/null || true
+        rm -f "$HOME/.local/share/applications/autodesk-fusion.desktop" 2>/dev/null || true
+      }
 
-            fusion360::cleanup_upstream_desktop_entries() {
-              rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"Autodesk Fusion.desktop" 2>/dev/null || true
-              rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"Autodesk Fusion.desktop.bak" 2>/dev/null || true
-              rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"adskidmgr-opener.desktop" 2>/dev/null || true
-              rm -f "$HOME/.local/share/applications/wine/Programs/Autodesk/"*/"adskidmgr-opener.desktop.bak" 2>/dev/null || true
-            }
+      fusion360::find_identity_manager() {
+        find "$FUSION360_WINEPREFIX" -name AdskIdentityManager.exe 2>/dev/null | head -n 1
+      }
 
-            fusion360::find_identity_manager() {
-              find "$FUSION360_WINEPREFIX" -name AdskIdentityManager.exe 2>/dev/null | head -n 1
-            }
+      fusion360::find_fusion_exe() {
+        find "$FUSION360_WINEPREFIX" -iname Fusion360.exe 2>/dev/null | grep -E '/Autodesk/|/Fusion/' | head -n 1
+      }
 
-            fusion360::find_fusion_exe() {
-              find "$FUSION360_WINEPREFIX" -iname Fusion360.exe 2>/dev/null | grep -E '/Autodesk/|/Fusion/' | head -n 1
-            }
+      fusion360::find_fusion_launcher() {
+        find "$FUSION360_WINEPREFIX" -iname FusionLauncher.exe 2>/dev/null | grep -E '/Autodesk/|/Fusion/' | head -n 1
+      }
 
-            fusion360::find_fusion_launcher() {
-              find "$FUSION360_WINEPREFIX" -iname FusionLauncher.exe 2>/dev/null | grep -E '/Autodesk/|/Fusion/' | head -n 1
-            }
+      fusion360::find_fusion_entrypoint() {
+        local exe
+        exe="$(fusion360::find_fusion_exe || true)"
+        if [ -n "$exe" ]; then
+          printf '%s\n' "$exe"
+          return 0
+        fi
 
-            fusion360::find_fusion_entrypoint() {
-              local exe
-              exe="$(fusion360::find_fusion_exe || true)"
-              if [ -n "$exe" ]; then
-                printf '%s\n' "$exe"
-                return 0
-              fi
-
-              fusion360::find_fusion_launcher
-            }
-
-            fusion360::run_installer_until_fusion_present() {
-              local log_file="$1"
-              local timeout_seconds="$2"
-
-              WINEPREFIX="$FUSION360_WINEPREFIX" wine "$FUSION360_DOWNLOADS/FusionClientInstaller.exe" --quiet >> "$log_file" 2>&1 &
-              local installer_pid=$!
-
-              for _ in $(seq 1 "$timeout_seconds"); do
-                if [ -n "$(fusion360::find_fusion_entrypoint || true)" ]; then
-                  WINEPREFIX="$FUSION360_WINEPREFIX" wineserver -k >/dev/null 2>&1 || true
-                  wait "$installer_pid" >/dev/null 2>&1 || true
-                  return 0
-                fi
-                if ! kill -0 "$installer_pid" >/dev/null 2>&1; then
-                  wait "$installer_pid" >/dev/null 2>&1 || true
-                  break
-                fi
-                sleep 1
-              done
-
-              WINEPREFIX="$FUSION360_WINEPREFIX" wineserver -k >/dev/null 2>&1 || true
-              wait "$installer_pid" >/dev/null 2>&1 || true
-              [ -n "$(fusion360::find_fusion_entrypoint || true)" ]
-            }
+        fusion360::find_fusion_launcher
+      }
     '';
   };
 
+  # ---------------------------------------------------------------------------
+  # Setup: one-time installer.  Heavy deps live here only.
+  # ---------------------------------------------------------------------------
   fusion360ProtonSetup = pkgs.writeShellApplication {
     name = "fusion360-setup";
-    runtimeInputs = [ fusion360ProtonLib ];
+    runtimeInputs = [
+      fusion360ProtonLib
+      pkgs.bc
+      pkgs.cabextract
+      pkgs.coreutils
+      pkgs.curl
+      pkgs.file
+      pkgs.findutils
+      pkgs.gawk
+      pkgs.gettext
+      pkgs.glib
+      pkgs.gnugrep
+      pkgs.gnused
+      pkgs.jq
+      pkgs.lsb-release
+      pkgs.mesa-demos
+      pkgs.mokutil
+      pkgs.p7zip
+      pkgs.samba
+      pkgs.util-linux
+      pkgs.wget
+      pkgs.which
+      pkgs.winetricks
+      pkgs.xdg-utils
+      pkgs.xrandr
+      pkgs.wineWow64Packages.waylandFull
+    ];
     text = ''
       set -euo pipefail
       # shellcheck disable=SC1091
@@ -456,18 +334,14 @@ let
 
       existing_fusion_exe="$(fusion360::find_fusion_entrypoint || true)"
       if [ -n "$existing_fusion_exe" ]; then
-        echo "Fusion 360 ist bereits installiert:"
+        echo "Fusion 360 is already installed:"
         echo "  $existing_fusion_exe"
-        echo "Wenn du neu installieren willst, lösche zuerst den bestehenden Prefix unter:"
+        echo "To reinstall, delete the existing prefix first:"
         echo "  $FUSION360_INSTALL_ROOT"
         exit 0
       fi
 
-      ${lib.optionalString cleanupLegacyDesktop ''
-        rm -f "$HOME/.local/share/applications/adskidmgr-opener.desktop"
-        rm -f "$HOME/.local/share/applications/Autodesk Fusion.desktop"
-        rm -f "$HOME/.local/share/applications/autodesk-fusion.desktop"
-      ''}
+      fusion360::cleanup_upstream_desktop_entries
 
       cd "$HOME"
 
@@ -489,26 +363,105 @@ let
         export WINE_PFX="$SELECTED_DIRECTORY/wineprefixes/default"
       fi
 
+      # -----------------------------------------------------------------------
+      # Setup-only helper functions (upstream overrides + Nix-specific logic)
+      # -----------------------------------------------------------------------
+
+      fusion360::resolve_manual_installer() {
+        local candidate="$1"
+        if [ -z "$candidate" ]; then
+          echo "Fusion installer required." >&2
+          echo "Usage: fusion360-setup /path/to/Fusion\\ Admin\\ Install.exe" >&2
+          echo "Relative paths from the current directory are supported." >&2
+          return 1
+        fi
+
+        if [ ! -f "$candidate" ]; then
+          echo "Installer file not found: $candidate" >&2
+          return 1
+        fi
+
+        local resolved
+        resolved="$(realpath -e "$candidate")"
+
+        case "''${resolved##*/}" in
+          *.exe|*.EXE)
+            ;;
+          *)
+            echo "Installer must be a .exe file: $resolved" >&2
+            return 1
+            ;;
+        esac
+
+        local file_info
+        file_info="$(file -b "$resolved")"
+        case "$file_info" in
+          PE32*|MS-DOS*)
+            ;;
+          *)
+            echo "Installer does not look like a Windows executable: $resolved" >&2
+            echo "file(1): $file_info" >&2
+            return 1
+            ;;
+        esac
+
+        case "''${resolved##*/}" in
+          *Downloader*.exe|*Downloader*.EXE)
+            echo "The supplied installer is only the Fusion Downloader: $resolved" >&2
+            echo "Use the Autodesk Admin Installer EXE instead, e.g. 'Fusion Admin Install.exe'." >&2
+            return 1
+            ;;
+        esac
+
+        printf '%s\n' "$resolved"
+      }
+
+      fusion360::stage_manual_installer() {
+        local source_path="$1"
+        local destination_path="$2"
+        local metadata_path="$FUSION360_INSTALL_ROOT/resources/fusion-installer.json"
+        local sha256
+
+        sha256="$(sha256sum "$source_path" | awk '{print $1}')"
+        mkdir -p "$(dirname "$destination_path")"
+        cp "$source_path" "$destination_path"
+        chmod 0644 "$destination_path"
+
+        cat > "$metadata_path" <<EOF
+      {
+        "sourcePath": $(printf '%s' "$source_path" | jq -Rs .),
+        "stagedPath": $(printf '%s' "$destination_path" | jq -Rs .),
+        "sha256": $(printf '%s' "$sha256" | jq -Rs .),
+        "stagedAt": $(date -Iseconds | jq -Rs .)
+      }
+      EOF
+
+        echo "Fusion installer staged:"
+        echo "  Source: $source_path"
+        echo "  Target: $destination_path"
+        echo "  SHA256: $sha256"
+      }
+
       check_required_packages() {
-        echo "Überspringe Paketprüfung: j0nix stellt die benötigten Runtime-Tools bereit."
+        echo "Skipping package check: j0nix provides all required runtime tools."
       }
 
       install_required_packages() {
-        echo "Automatische Paketinstallation ist in j0nix deaktiviert." >&2
-        echo "Fehlende Tools müssen deklarativ über Nix bereitgestellt werden." >&2
+        echo "Automatic package installation is disabled in j0nix." >&2
+        echo "Missing tools must be provided declaratively via Nix." >&2
         return 1
       }
 
       check_and_install_wine() {
         if ! command -v wine >/dev/null 2>&1; then
-          echo "Wine fehlt in PATH." >&2
+          echo "Wine not found in PATH." >&2
           exit 1
         fi
         if ! command -v winetricks >/dev/null 2>&1; then
-          echo "winetricks fehlt in PATH." >&2
+          echo "winetricks not found in PATH." >&2
           exit 1
         fi
-        echo "Überspringe Wine-Installation: j0nix stellt Wine/winetricks bereit."
+        echo "Skipping Wine installation: j0nix provides Wine/winetricks."
       }
 
       check_gpu_driver() {
@@ -606,7 +559,7 @@ let
       autodesk_fusion_patch_qt6webenginecore() {
         QT6_WEBENGINECORE="$(find "$WINE_PFX" -name 'Qt6WebEngineCore.dll' -printf "%T+ %p\n" | sort -r | head -n 1 | sed -r 's/^[^ ]+ //')"
         if [ -z "$QT6_WEBENGINECORE" ]; then
-          echo "Qt6WebEngineCore.dll wurde im Prefix nicht gefunden." >&2
+          echo "Qt6WebEngineCore.dll not found in prefix." >&2
           return 1
         fi
 
@@ -622,7 +575,7 @@ let
         fi
 
         if [ ! -f "$SELECTED_DIRECTORY/downloads/Qt6WebEngineCore.dll" ]; then
-          echo "Die gepatchte Qt6WebEngineCore.dll wurde nicht nach $SELECTED_DIRECTORY/downloads entpackt." >&2
+          echo "Patched Qt6WebEngineCore.dll not found in $SELECTED_DIRECTORY/downloads." >&2
           return 1
         fi
 
@@ -640,20 +593,12 @@ let
 
         if [ -n "$PROTON_VERSION" ]; then
           echo "Init Proton..."
-          if ! pgrep -x steam >/dev/null 2>&1; then
-            echo "Starting Steam (background, no window)..."
-            if command -v systemd-run >/dev/null 2>&1; then
-              setsid -f systemd-run --user --scope --quiet steam -silent </dev/null >/dev/null 2>&1
-            else
-              setsid -f steam -silent </dev/null >/dev/null 2>&1
-            fi
-            sleep 5
-          fi
+          fusion360::start_steam
           USER="steamuser"
           WINE="$SELECTED_DIRECTORY/bin/proton-wine"
           WINESERVER="$SELECTED_DIRECTORY/bin/proton-wineserver"
           export WINE WINESERVER
-          STEAM_COMPAT_CLIENT_INSTALL_PATH="$STEAM_DIRECTORY" STEAM_COMPAT_DATA_PATH="$PROTONPREFIX_DIRECTORY" ${pkgs.steam-run}/bin/steam-run "$PROTON_DIRECTORY/proton" run wineboot --init
+          STEAM_COMPAT_CLIENT_INSTALL_PATH="$STEAM_DIRECTORY" STEAM_COMPAT_DATA_PATH="$PROTONPREFIX_DIRECTORY" ${steamRunBin} "$PROTON_DIRECTORY/proton" run wineboot --init
         else
           wineboot --init
         fi
@@ -714,6 +659,9 @@ let
         cp "$SELECTED_DIRECTORY/downloads/$GPU_DRIVER/NMachineSpecificOptions.xml" "$APPLICATION_DATA_DIRECTORY/Autodesk/Neutron Platform/Options/NMachineSpecificOptions.xml" || return
       }
 
+      # -----------------------------------------------------------------------
+      # Setup steps
+      # -----------------------------------------------------------------------
       fusion360::run_step "check_required_packages" check_required_packages
       fusion360::run_step "deactivate_window_not_responding_dialog" deactivate_window_not_responding_dialog
       fusion360::run_step "create_data_structure" create_data_structure
@@ -734,18 +682,17 @@ let
       fusion360::run_step "autodesk_fusion_shortcuts_load" autodesk_fusion_shortcuts_load
       fusion360::run_step "autodesk_fusion_safe_logfile" autodesk_fusion_safe_logfile
       fusion360::run_step "reset_window_not_responding_dialog" reset_window_not_responding_dialog
-
       fusion360::run_step "patch_proton_launcher" fusion360::patch_proton_launcher
       fusion360::cleanup_upstream_desktop_entries
 
       installed_fusion_exe="$(fusion360::find_fusion_exe || true)"
       installed_fusion_launcher="$(fusion360::find_fusion_launcher || true)"
       if [ -z "$installed_fusion_exe" ] && [ -n "$installed_fusion_launcher" ]; then
-        echo "Nur FusionLauncher.exe wurde installiert:" >&2
+        echo "Only FusionLauncher.exe was installed:" >&2
         echo "  $installed_fusion_launcher" >&2
-        echo "Das ist ein unvollstaendiger Bootstrap und deutet meist auf den falschen Autodesk-Installer hin." >&2
-        echo "Nutze die Admin-Installer-EXE und fuehre fusion360-setup erneut aus." >&2
-        echo "Relevante Logs:" >&2
+        echo "This is an incomplete bootstrap and usually means the wrong Autodesk installer was used." >&2
+        echo "Use the Admin Installer EXE and run fusion360-setup again." >&2
+        echo "Relevant logs:" >&2
         echo "  $FUSION360_LOGS/fusion360-setup.log" >&2
         echo "  $FUSION360_LOGS/FusionClientInstaller_1.log" >&2
         echo "  $FUSION360_LOGS/FusionClientInstaller_2.log" >&2
@@ -753,8 +700,8 @@ let
       fi
 
       if [ -z "$installed_fusion_exe" ]; then
-        echo "Fusion 360 wurde nicht installiert." >&2
-        echo "Prüfe diese Logs:" >&2
+        echo "Fusion 360 was not installed." >&2
+        echo "Check these logs:" >&2
         echo "  $FUSION360_LOGS/fusion360-setup.log" >&2
         echo "  $FUSION360_LOGS/FusionClientInstaller_1.log" >&2
         echo "  $FUSION360_LOGS/FusionClientInstaller_2.log" >&2
@@ -762,10 +709,10 @@ let
       fi
 
       echo
-      echo "Fertig."
+      echo "Done."
       echo "Launcher: Autodesk Fusion 360 (Proton)"
       echo "Logs: $FUSION360_LOGS"
-      echo "Starten mit: fusion360-proton-run"
+      echo "Start with: fusion360-proton-run"
     '';
   };
 
@@ -791,11 +738,13 @@ let
     '';
   };
 
+  # ---------------------------------------------------------------------------
+  # Run: launch installed Fusion 360 via Proton
+  # ---------------------------------------------------------------------------
   fusion360ProtonRun = pkgs.writeShellApplication {
     name = "fusion360-proton-run";
     runtimeInputs = [
       fusion360ProtonLib
-      pkgs.procps
     ];
     text = ''
       set -euo pipefail
@@ -807,28 +756,19 @@ let
 
       exe="$(fusion360::find_fusion_entrypoint || true)"
       if [ -z "$exe" ]; then
-        echo "Fusion 360 nicht gefunden." >&2
-        echo "Führe zuerst 'fusion360-setup' aus." >&2
+        echo "Fusion 360 not found." >&2
+        echo "Run 'fusion360-setup' first." >&2
         exit 1
       fi
 
-      export SSL_CERT_FILE="''${SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}"
-      export SSL_CERT_DIR="''${SSL_CERT_DIR:-/etc/ssl/certs}"
-
-      if ! pgrep -x steam >/dev/null 2>&1; then
-        echo "Starte Steam (Hintergrund)..."
-        if command -v systemd-run >/dev/null 2>&1; then
-          setsid -f systemd-run --user --scope --quiet steam -silent </dev/null >/dev/null 2>&1
-        else
-          setsid -f steam -silent </dev/null >/dev/null 2>&1
-        fi
-        sleep 5
-      fi
-
+      fusion360::start_steam
       fusion360::proton_run "$exe" "$@"
     '';
   };
 
+  # ---------------------------------------------------------------------------
+  # ID Manager: handle adskidmgr:// protocol callbacks for sign-in flow
+  # ---------------------------------------------------------------------------
   fusion360ProtonOpenIdMgr = pkgs.writeShellApplication {
     name = "fusion360-proton-open-idmgr";
     runtimeInputs = [ fusion360ProtonLib ];
@@ -838,13 +778,10 @@ let
       source "${fusion360ProtonLib}/bin/fusion360-proton-lib"
       fusion360::ensure_proton
 
-      export SSL_CERT_FILE="''${SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}"
-      export SSL_CERT_DIR="''${SSL_CERT_DIR:-/etc/ssl/certs}"
-
       url="''${1:-}"
       exe="$(fusion360::find_identity_manager || true)"
       if [ -z "$exe" ]; then
-        echo "Führe zuerst 'fusion360-setup /pfad/zum/Fusion\\ Admin\\ Install.exe' aus." >&2
+        echo "Identity Manager not found. Run 'fusion360-setup' first." >&2
         exit 1
       fi
 
