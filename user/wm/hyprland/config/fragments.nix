@@ -24,12 +24,12 @@
   shellConfigDir,
 }:
 let
-  renderLines = key: values:
-    lib.concatStringsSep "\n" (map (value: "${key} = ${value}") values);
+  renderLines = key: values: lib.concatStringsSep "\n" (map (value: "${key} = ${value}") values);
   staticMonitorLines = profileDetails.hyprlandMonitors or [ ];
   hyprlandCfg = settings.hyprland or { };
   unknownMonitorFallbackRule = hyprlandCfg.unknownMonitorFallbackRule or ",preferred,auto,1";
-  hasUnknownMonitorFallbackRule = unknownMonitorFallbackRule != null && unknownMonitorFallbackRule != "";
+  hasUnknownMonitorFallbackRule =
+    unknownMonitorFallbackRule != null && unknownMonitorFallbackRule != "";
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
 
   includePaths = [
@@ -48,24 +48,26 @@ let
     "${shellConfigDir}/95-shell.conf"
   ];
 
+  # Fallback rule must come BEFORE specific per-monitor rules.
+  # Hyprland processes monitor rules top-to-bottom; later rules override earlier ones.
+  # Putting the wildcard first means specific rules (disable, explicit mode/position) win.
   monitorLines =
-    staticMonitorLines
-    ++ managedMonitorLines
-    ++ lib.optionals hasUnknownMonitorFallbackRule [ unknownMonitorFallbackRule ];
+    lib.optionals hasUnknownMonitorFallbackRule [ unknownMonitorFallbackRule ]
+    ++ staticMonitorLines
+    ++ managedMonitorLines;
 
-  startupLines =
-    [
-      sessionEnvImportCommand
-    ]
-    ++ [
-      startGraphicalSessionTargetCommand
-      runtimeMonitorResetCommand
-      swwwDaemonCommand
-      startupAppsCommand
-    ]
-    ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
-    ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "${homeBinDir}/wm-overview-start" ]
-    ++ lib.optionals keybindDiagnosticsEnable [ keybindDiagnosticsStartupCommand ];
+  startupLines = [
+    sessionEnvImportCommand
+  ]
+  ++ [
+    startGraphicalSessionTargetCommand
+    runtimeMonitorResetCommand
+    swwwDaemonCommand
+    startupAppsCommand
+  ]
+  ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
+  ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "${homeBinDir}/wm-overview-start" ]
+  ++ lib.optionals keybindDiagnosticsEnable [ keybindDiagnosticsStartupCommand ];
 
   bindLines =
     if isCaelestiaShell then
@@ -73,30 +75,34 @@ let
         # Caelestia binds are declared in shell submap config (95-shell.conf).
       ''
     else
-      lib.concatStringsSep "\n" (lib.filter (line: line != "") [
-        (renderLines "bind" hyprlandKeybinds.effectiveBindLists.bind)
-        (renderLines "bindi" hyprlandKeybinds.effectiveBindLists.bindi)
-        (renderLines "bindin" hyprlandKeybinds.effectiveBindLists.bindin)
-        (renderLines "binde" hyprlandKeybinds.effectiveBindLists.binde)
-        (renderLines "bindl" hyprlandKeybinds.effectiveBindLists.bindl)
-        (renderLines "bindle" hyprlandKeybinds.effectiveBindLists.bindle)
-        (renderLines "bindr" hyprlandKeybinds.effectiveBindLists.bindr)
-        (renderLines "bindm" hyprlandKeybinds.effectiveBindLists.bindm)
-      ]);
+      lib.concatStringsSep "\n" (
+        lib.filter (line: line != "") [
+          (renderLines "bind" hyprlandKeybinds.effectiveBindLists.bind)
+          (renderLines "bindi" hyprlandKeybinds.effectiveBindLists.bindi)
+          (renderLines "bindin" hyprlandKeybinds.effectiveBindLists.bindin)
+          (renderLines "binde" hyprlandKeybinds.effectiveBindLists.binde)
+          (renderLines "bindl" hyprlandKeybinds.effectiveBindLists.bindl)
+          (renderLines "bindle" hyprlandKeybinds.effectiveBindLists.bindle)
+          (renderLines "bindr" hyprlandKeybinds.effectiveBindLists.bindr)
+          (renderLines "bindm" hyprlandKeybinds.effectiveBindLists.bindm)
+        ]
+      );
 
-  shellLines = lib.concatStringsSep "\n\n" (lib.filter (line: line != "") [
-    (lib.optionalString isDmsShell ''
-      # DMS runtime-generated Hyprland overlays.
-      source = ${hyprDmsDir}/colors.conf
-      source = ${hyprDmsDir}/cursor.conf
-      source = ${hyprDmsDir}/outputs.conf
-      source = ${hyprDmsDir}/windowrules.conf
-      source = ${hyprDmsDir}/binds.conf
-      source = ${hyprDmsDir}/layout.conf
-    '')
-    (hyprlandKeybinds.shellHyprKeybinds.extraConfig or "")
-    hyprlandKeybinds.caelestiaSubmapConfig
-  ]);
+  shellLines = lib.concatStringsSep "\n\n" (
+    lib.filter (line: line != "") [
+      (lib.optionalString isDmsShell ''
+        # DMS runtime-generated Hyprland overlays.
+        source = ${hyprDmsDir}/colors.conf
+        source = ${hyprDmsDir}/cursor.conf
+        source = ${hyprDmsDir}/outputs.conf
+        source = ${hyprDmsDir}/windowrules.conf
+        source = ${hyprDmsDir}/binds.conf
+        source = ${hyprDmsDir}/layout.conf
+      '')
+      (hyprlandKeybinds.shellHyprKeybinds.extraConfig or "")
+      hyprlandKeybinds.caelestiaSubmapConfig
+    ]
+  );
 in
 {
   inherit includePaths;
@@ -121,6 +127,8 @@ in
       # ------------------------------------------------------------------
       # Startup Monitor Defaults
       # ------------------------------------------------------------------
+      # Order: wildcard fallback first, specific per-monitor rules after.
+      # Hyprland applies rules top-to-bottom; later rules override earlier ones.
       ${renderLines "monitor" monitorLines}
     '';
 
@@ -256,12 +264,15 @@ in
       ${bindLines}
     '';
 
-    "hypr/shells/${settings.wmShell or (settings.hyprlandShell or "dank-material-shell")}/generated/95-shell.conf" = ''
-      # ------------------------------------------------------------------
-      # Shell-Specific Hyprland Integration
-      # ------------------------------------------------------------------
-      # Generated per selected shell to avoid cross-shell config collisions.
-      ${shellLines}
-    '';
+    "hypr/shells/${
+      settings.wmShell or (settings.hyprlandShell or "dank-material-shell")
+    }/generated/95-shell.conf" =
+      ''
+        # ------------------------------------------------------------------
+        # Shell-Specific Hyprland Integration
+        # ------------------------------------------------------------------
+        # Generated per selected shell to avoid cross-shell config collisions.
+        ${shellLines}
+      '';
   };
 }
