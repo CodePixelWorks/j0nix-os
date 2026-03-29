@@ -381,7 +381,7 @@ in
   j0nix.software.systemPackages =
     with pkgs;
     [
-      ../../wm/common/start-mangowc.nix
+      (import ./common/start-mangowc.nix { inherit lib pkgs; })
       brightnessctl
       bibata-cursors
       btop
