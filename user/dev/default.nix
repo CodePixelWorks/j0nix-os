@@ -1,4 +1,10 @@
-{ config, lib, pkgs, settings, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  settings,
+  ...
+}:
 let
   dev = settings.dev or { };
   enabled = dev.enable or true;
@@ -19,8 +25,9 @@ let
   keyringEnabled = keyringCfg.enable or false;
   userSecretsCfg = ((settings.secrets or { }).user or { });
   deployedSshKeys = userSecretsCfg.sshKeys or { };
-  sshKeysWithPassphrases =
-    lib.filterAttrs (_: spec: (spec.passphraseKey or null) != null) deployedSshKeys;
+  sshKeysWithPassphrases = lib.filterAttrs (
+    _: spec: (spec.passphraseKey or null) != null
+  ) deployedSshKeys;
   supportedSshProfileKeys = [
     "match"
     "port"
@@ -49,7 +56,8 @@ let
     "remoteForwards"
     "dynamicForwards"
   ];
-  deployedIdentityPathFor = keyName:
+  deployedIdentityPathFor =
+    keyName:
     if !(builtins.hasAttr keyName deployedSshKeys) then
       null
     else
@@ -59,7 +67,8 @@ let
       in
       "~/.ssh/${targetName}";
 
-  mkGitHostInclude = name: profile:
+  mkGitHostInclude =
+    name: profile:
     let
       profileUserName = profile.userName or gitUserName;
       profileUserEmail = profile.userEmail or gitUserEmail;
@@ -73,7 +82,8 @@ let
       '';
     };
 
-  mkGitIncludes = name: profile:
+  mkGitIncludes =
+    name: profile:
     let
       sshHost = sshHosts.${name} or { };
       host = profile.host or (sshHost.host or name);
@@ -90,7 +100,8 @@ let
       }
     ];
 
-  mkSshMatchBlocks = name: sshProfile:
+  mkSshMatchBlocks =
+    name: sshProfile:
     let
       host = sshProfile.host or name;
       aliases = sshProfile.aliases or [ ];
@@ -117,20 +128,19 @@ let
             (sshProfile.identityFile or null)
         else
           (sshProfile.identityFile or null);
-      commonValue =
-        {
-          hostname = host;
-          user = sshProfile.user or "git";
-          identitiesOnly = sshProfile.identitiesOnly or false;
-          extraOptions = sshProfile.options or { };
-        }
-        // lib.optionalAttrs (resolvedIdentityFile != null) {
-          identityFile = resolvedIdentityFile;
-        }
-        // lib.optionalAttrs (sshProfile ? match) {
-          match = sshProfile.match;
-        }
-        // lib.filterAttrs (key: _: builtins.elem key supportedSshProfileKeys) sshProfile;
+      commonValue = {
+        hostname = host;
+        user = sshProfile.user or "git";
+        identitiesOnly = sshProfile.identitiesOnly or false;
+        extraOptions = sshProfile.options or { };
+      }
+      // lib.optionalAttrs (resolvedIdentityFile != null) {
+        identityFile = resolvedIdentityFile;
+      }
+      // lib.optionalAttrs (sshProfile ? match) {
+        match = sshProfile.match;
+      }
+      // lib.filterAttrs (key: _: builtins.elem key supportedSshProfileKeys) sshProfile;
       mkBlock = attrName: {
         name = attrName;
         value = commonValue;
@@ -138,10 +148,12 @@ let
     in
     [
       (mkBlock name)
-    ] ++ map mkBlock aliases;
+    ]
+    ++ map mkBlock aliases;
   loadSecretBackedSshKeysScript =
     let
-      loadKey = name: spec:
+      loadKey =
+        name: spec:
         let
           targetName = spec.targetName or name;
           privatePath = "${config.home.homeDirectory}/.ssh/${targetName}";
@@ -244,31 +256,41 @@ in
       includes = lib.flatten (lib.mapAttrsToList mkGitIncludes gitHostProfiles);
     };
 
-    xdg.configFile = lib.mkIf gitEnabled (builtins.listToAttrs (lib.mapAttrsToList mkGitHostInclude gitHostProfiles));
+    xdg.configFile = lib.mkIf gitEnabled (
+      builtins.listToAttrs (lib.mapAttrsToList mkGitHostInclude gitHostProfiles)
+    );
 
-    home.activation = lib.mkIf (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { }) {
-      sshSecretKeysLoad = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        $DRY_RUN_CMD ${lib.getExe loadSecretBackedSshKeysScript}
-      '';
-    };
+    home.activation =
+      lib.mkIf (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { })
+        {
+          sshSecretKeysLoad = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            $DRY_RUN_CMD ${lib.getExe loadSecretBackedSshKeysScript}
+          '';
+        };
 
     home.sessionVariables =
       (lib.optionalAttrs (sshEnabled && sshAgentProvider == "gnome-keyring") {
         SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/gcr/ssh";
+      })
+      // lib.optionalAttrs sshEnabled {
         SSH_ASKPASS = guiSshAskpass;
         SUDO_ASKPASS = guiSshAskpass;
-      })
+      }
       // (lib.optionalAttrs pythonVersionManagerEnabled {
         MISE_USE_TOML = "1";
       });
 
-    programs.zsh.initContent = lib.mkIf pythonVersionManagerEnabled (lib.mkAfter ''
-      eval "$(${pkgs.mise}/bin/mise activate zsh)"
-    '');
+    programs.zsh.initContent = lib.mkIf pythonVersionManagerEnabled (
+      lib.mkAfter ''
+        eval "$(${pkgs.mise}/bin/mise activate zsh)"
+      ''
+    );
 
-    programs.fish.interactiveShellInit = lib.mkIf pythonVersionManagerEnabled (lib.mkAfter ''
-      ${pkgs.mise}/bin/mise activate fish | source
-    '');
+    programs.fish.interactiveShellInit = lib.mkIf pythonVersionManagerEnabled (
+      lib.mkAfter ''
+        ${pkgs.mise}/bin/mise activate fish | source
+      ''
+    );
 
     programs.ssh = lib.mkIf sshEnabled {
       enable = true;
@@ -326,26 +348,33 @@ in
         pkgs.uv
       ]
       ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring") [ sshAddGuiScript ]
-      ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { }) [
-        loadSecretBackedSshKeysScript
-      ];
+      ++
+        lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { })
+          [
+            loadSecretBackedSshKeysScript
+          ];
 
-    systemd.user.services.ssh-secret-keys-load = lib.mkIf (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { }) {
-      Unit = {
-        Description = "Load declarative secret-backed SSH keys into the SSH agent";
-        After = [ "graphical-session.target" "gcr-ssh-agent.service" ];
-        PartOf = [ "graphical-session.target" ];
-        Wants = [ "gcr-ssh-agent.service" ];
-      };
-      Service = {
-        Type = "oneshot";
-        Environment = [ "SSH_AUTH_SOCK=%t/gcr/ssh" ];
-        ExecStart = "${lib.getExe loadSecretBackedSshKeysScript}";
-      };
-      Install = {
-        WantedBy = [ "graphical-session.target" ];
-      };
-    };
+    systemd.user.services.ssh-secret-keys-load =
+      lib.mkIf (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { })
+        {
+          Unit = {
+            Description = "Load declarative secret-backed SSH keys into the SSH agent";
+            After = [
+              "graphical-session.target"
+              "gcr-ssh-agent.service"
+            ];
+            PartOf = [ "graphical-session.target" ];
+            Wants = [ "gcr-ssh-agent.service" ];
+          };
+          Service = {
+            Type = "oneshot";
+            Environment = [ "SSH_AUTH_SOCK=%t/gcr/ssh" ];
+            ExecStart = "${lib.getExe loadSecretBackedSshKeysScript}";
+          };
+          Install = {
+            WantedBy = [ "graphical-session.target" ];
+          };
+        };
 
     assertions = [
       {
@@ -353,7 +382,10 @@ in
         message = "settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey requires settings.userSettings.<name>.dev.ssh.agent.provider = gnome-keyring for automatic keyring loading.";
       }
       {
-        assertion = builtins.elem pythonVersionManager [ "mise" "none" ];
+        assertion = builtins.elem pythonVersionManager [
+          "mise"
+          "none"
+        ];
         message = "settings.dev.python.versionManager must be one of: mise, none";
       }
     ];
