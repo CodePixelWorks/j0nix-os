@@ -21,7 +21,7 @@ let
 
   mangoPkg = pkgs.mangowc;
   mangoExe = lib.getExe mangoPkg;
-  mangoStart = lib.getExe ../../wm/common/start-mangowc.nix;
+  mangoStart = lib.getExe ./common/start-mangowc.nix;
 
   mangowcSessionPackage =
     (pkgs.writeTextDir "share/wayland-sessions/mangowc.desktop" ''
