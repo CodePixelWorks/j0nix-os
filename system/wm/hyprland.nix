@@ -1,4 +1,10 @@
-{ inputs, pkgs, lib, settings, ... }:
+{
+  inputs,
+  pkgs,
+  lib,
+  settings,
+  ...
+}:
 let
   dm = import ./display-manager/contract.nix { inherit lib; };
   resolveEnabledWms = import ../lib/enabled-wms.nix { inherit lib; };
@@ -17,7 +23,10 @@ let
 
   selectedGreetdGreeter = dm.resolveGreetdGreeter settings;
   regreetCompositor = dm.resolveRegreetCompositor settings;
-  greetdUsesConfigurableCompositor = builtins.elem selectedGreetdGreeter [ "regreet" "qmlgreet" ];
+  greetdUsesConfigurableCompositor = builtins.elem selectedGreetdGreeter [
+    "regreet"
+    "qmlgreet"
+  ];
 
   useDankMaterialShell = useGreetd && selectedGreetdGreeter == "dms-greeter";
   hasDmsPackage =
@@ -138,21 +147,27 @@ let
   qmlgreetFont = qmlgreetSettings.font or "";
   qmlgreetFontSize = toString (qmlgreetSettings.fontSize or 10);
   qmlgreetShowAvatars = if qmlgreetSettings ? showAvatars then qmlgreetSettings.showAvatars else true;
-  dmsGreeterCommand =
-    "${if hasDmsPackage then lib.getExe' dmsPackage "dms-greeter" else "/run/current-system/sw/bin/dms-greeter"} --command hyprland -C ${dmsGreeterHyprConfigPath}";
-  hyprlandUwsmSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/hyprland-uwsm.desktop" ''
-    [Desktop Entry]
-    Name=Hyprland (UWSM)
-    Comment=Hyprland via UWSM
-    TryExec=${lib.getExe pkgs.uwsm}
-    Exec=${lib.getExe pkgs.uwsm} start hyprland.desktop
-    Type=Application
-    DesktopNames=Hyprland
-  '').overrideAttrs (old: {
-    passthru = (old.passthru or { }) // {
-      providedSessions = [ "hyprland-uwsm" ];
-    };
-  });
+  dmsGreeterCommand = "${
+    if hasDmsPackage then
+      lib.getExe' dmsPackage "dms-greeter"
+    else
+      "/run/current-system/sw/bin/dms-greeter"
+  } --command hyprland -C ${dmsGreeterHyprConfigPath}";
+  hyprlandUwsmSessionPackage =
+    (pkgs.writeTextDir "share/wayland-sessions/hyprland-uwsm.desktop" ''
+      [Desktop Entry]
+      Name=Hyprland (UWSM)
+      Comment=Hyprland via UWSM
+      TryExec=${lib.getExe pkgs.uwsm}
+      Exec=${lib.getExe pkgs.uwsm} start hyprland.desktop
+      Type=Application
+      DesktopNames=Hyprland
+    '').overrideAttrs
+      (old: {
+        passthru = (old.passthru or { }) // {
+          providedSessions = [ "hyprland-uwsm" ];
+        };
+      });
   cursorTheme = "Bibata-Modern-Classic";
   cursorSize = 24;
   hyprlandPostResumeRecover = pkgs.writeShellScript "hyprland-post-resume-recover" ''
@@ -187,22 +202,26 @@ let
     done
   '';
 
-  greetdEnvironments =
-    [ "auto-wm-session.desktop" "${hyprlandSessionName}.desktop" ]
-    ++ lib.optional useUWSM "hyprland.desktop"
-    ++ lib.optional (!useUWSM) "hyprland-uwsm.desktop"
-    ++ lib.optional (builtins.elem "mangowc" enabledWms) "mangowc.desktop"
-    ++ lib.optional (builtins.elem "niri" enabledWms) "niri.desktop"
-    ++ lib.optional (builtins.elem "gnome" enabledWms) "gnome.desktop";
+  greetdEnvironments = [
+    "auto-wm-session.desktop"
+    "${hyprlandSessionName}.desktop"
+  ]
+  ++ lib.optional useUWSM "hyprland.desktop"
+  ++ lib.optional (!useUWSM) "hyprland-uwsm.desktop"
+  ++ lib.optional (builtins.elem "mangowc" enabledWms) "mangowc.desktop"
+  ++ lib.optional (builtins.elem "niri" enabledWms) "niri.desktop"
+  ++ lib.optional (builtins.elem "gnome" enabledWms) "gnome.desktop";
 
   regreetCommand =
-    if regreetCompositor == "hyprland"
-    then "start-hyprland -- -c ${regreetHyprlandConfigPath}"
-    else null;
+    if regreetCompositor == "hyprland" then
+      "start-hyprland -- -c ${regreetHyprlandConfigPath}"
+    else
+      null;
   qmlgreetCommand =
-    if regreetCompositor == "hyprland"
-    then "start-hyprland -- -c ${qmlgreetHyprlandConfigPath}"
-    else null;
+    if regreetCompositor == "hyprland" then
+      "start-hyprland -- -c ${qmlgreetHyprlandConfigPath}"
+    else
+      null;
   startHyprlandSessionScript = pkgs.writeShellScriptBin "start-hyprland-session" ''
     # Graphical-session user target is started by Hyprland exec-once after the compositor is ready.
     if [ "${if useUWSM then "1" else "0"}" = "1" ]; then
@@ -211,7 +230,8 @@ let
 
     exec start-hyprland "$@"
   '';
-  sessionCommandForWMS = wms:
+  sessionCommandForWMS =
+    wms:
     if wms == "hyprland" then
       lib.getExe startHyprlandSessionScript
     else if wms == "mangowc" then
@@ -222,40 +242,45 @@ let
       "gnome-session"
     else
       lib.getExe startHyprlandSessionScript;
-  userCaseBranches = lib.concatStringsSep "\n" (map (username:
-    let
-      userCfg = userOverrides.${username} or { };
-      defaultWMS = userCfg.defaultWMS or "hyprland";
-    in
-    "  ${username}) exec ${sessionCommandForWMS defaultWMS} ;;"
-  ) users);
+  userCaseBranches = lib.concatStringsSep "\n" (
+    map (
+      username:
+      let
+        userCfg = userOverrides.${username} or { };
+        defaultWMS = userCfg.defaultWMS or "hyprland";
+      in
+      "  ${username}) exec ${sessionCommandForWMS defaultWMS} ;;"
+    ) users
+  );
   autoWmScript = pkgs.writeShellScriptBin "auto-wm-session" ''
-    target_user="''${1:-''${USER:-${primaryUser}}}"
+        target_user="''${1:-''${USER:-${primaryUser}}}"
 
-    case "$target_user" in
-${userCaseBranches}
-      *) exec ${sessionCommandForWMS "hyprland"} ;;
-    esac
+        case "$target_user" in
+    ${userCaseBranches}
+          *) exec ${sessionCommandForWMS "hyprland"} ;;
+        esac
   '';
-  autoWmSessionPackage = (pkgs.writeTextDir "share/wayland-sessions/auto-wm-session.desktop" ''
-    [Desktop Entry]
-    Name=Auto (User Default)
-    Comment=Start the configured desktop for the authenticated user
-    TryExec=${lib.getExe autoWmScript}
-    Exec=${lib.getExe autoWmScript}
-    Type=Application
-    DesktopNames=auto-wm-session
-  '').overrideAttrs (old: {
-    passthru = (old.passthru or { }) // {
-      providedSessions = [ "auto-wm-session" ];
-    };
-  });
-in {
-  imports =
-    [
-      ./common/wayland.nix
-    ]
-    ++ lib.optional useDankMaterialShell inputs.dank-material-shell.nixosModules.greeter;
+  autoWmSessionPackage =
+    (pkgs.writeTextDir "share/wayland-sessions/auto-wm-session.desktop" ''
+      [Desktop Entry]
+      Name=Auto (User Default)
+      Comment=Start the configured desktop for the authenticated user
+      TryExec=${lib.getExe autoWmScript}
+      Exec=${lib.getExe autoWmScript}
+      Type=Application
+      DesktopNames=auto-wm-session
+    '').overrideAttrs
+      (old: {
+        passthru = (old.passthru or { }) // {
+          providedSessions = [ "auto-wm-session" ];
+        };
+      });
+in
+{
+  imports = [
+    ./common/wayland.nix
+  ]
+  ++ lib.optional useDankMaterialShell inputs.dank-material-shell.nixosModules.greeter;
 
   services.displayManager.sddm = lib.mkIf useSddm {
     enable = true;
@@ -269,35 +294,53 @@ in {
   services.displayManager.defaultSession = lib.mkIf useSddm hyprlandSessionName;
   services.displayManager.sessionPackages =
     lib.optionals useGreetd [ autoWmSessionPackage ]
-    ++ lib.optional (useGreetd && selectedGreetdGreeter == "dms-greeter" && useUWSM) hyprlandUwsmSessionPackage;
+    ++ lib.optional (
+      useGreetd && selectedGreetdGreeter == "dms-greeter" && useUWSM
+    ) hyprlandUwsmSessionPackage;
 
   services.greetd = lib.mkIf useGreetd {
     enable = true;
     settings.default_session = lib.mkMerge [
       (lib.mkIf (selectedGreetdGreeter == "tuigreet") {
-        inherit (greetdVariants.tuigreet {
-          user = primaryUser;
-          sessionCommand = lib.getExe autoWmScript;
-        }) user command;
+        inherit
+          (greetdVariants.tuigreet {
+            user = primaryUser;
+            sessionCommand = lib.getExe autoWmScript;
+          })
+          user
+          command
+          ;
       })
       (lib.mkIf (selectedGreetdGreeter == "regreet") {
-        inherit (greetdVariants.regreet {
-          compositor = regreetCompositor;
-          hyprlandCommand = regreetCommand;
-        }) user command;
+        inherit
+          (greetdVariants.regreet {
+            compositor = regreetCompositor;
+            hyprlandCommand = regreetCommand;
+          })
+          user
+          command
+          ;
       })
       (lib.mkIf (selectedGreetdGreeter == "qmlgreet") {
-        inherit (greetdVariants.qmlgreet {
-          package = qmlgreetPackage;
-          compositor = regreetCompositor;
-          configPath = qmlgreetConfigPath;
-          hyprlandCommand = qmlgreetCommand;
-        }) user command;
+        inherit
+          (greetdVariants.qmlgreet {
+            package = qmlgreetPackage;
+            compositor = regreetCompositor;
+            configPath = qmlgreetConfigPath;
+            hyprlandCommand = qmlgreetCommand;
+          })
+          user
+          command
+          ;
       })
       (lib.mkIf (selectedGreetdGreeter == "dms-greeter") {
-        inherit (greetdVariants.dmsGreeter {
-          command = dmsGreeterCommand;
-        }) user command;
+        inherit
+          (greetdVariants.dmsGreeter {
+            command = dmsGreeterCommand;
+          })
+          user
+          command
+          ;
       })
     ];
   };
@@ -318,11 +361,15 @@ in {
       message = "settings.greetd.greeter must be one of: tuigreet, regreet, qmlgreet, dms-greeter (legacy alias: darkmaterialshell)";
     }
     {
-      assertion = (!useGreetd) || (!greetdUsesConfigurableCompositor) || builtins.elem regreetCompositor dm.validRegreetCompositors;
+      assertion =
+        (!useGreetd)
+        || (!greetdUsesConfigurableCompositor)
+        || builtins.elem regreetCompositor dm.validRegreetCompositors;
       message = "settings.greetd.regreetCompositor must be one of: cage, hyprland";
     }
     {
-      assertion = (!useGreetd) || (selectedGreetdGreeter != "qmlgreet") || ((qmlgreetSettings.fontSize or 10) > 0);
+      assertion =
+        (!useGreetd) || (selectedGreetdGreeter != "qmlgreet") || ((qmlgreetSettings.fontSize or 10) > 0);
       message = "settings.greetd.qmlgreet.fontSize must be > 0.";
     }
     {
@@ -331,28 +378,21 @@ in {
     }
   ];
 
-  j0nix.software.systemPackages = with pkgs; [
-    (writeShellScriptBin "start-mangowc" ''
-      export XDG_SESSION_TYPE=wayland
-      export XDG_CURRENT_DESKTOP=MangoWC
-      export XDG_SESSION_DESKTOP=mangowc
-      export DESKTOP_SESSION=mangowc
-
-      if command -v systemctl >/dev/null 2>&1; then
-        systemctl --user start graphical-session.target >/dev/null 2>&1 || true
-      fi
-
-      exec ${lib.getExe pkgs.mangowc}
-    '')
-    brightnessctl
-    bibata-cursors
-    btop
-  ] ++ lib.optional (useDankMaterialShell && hasDmsPackage) dmsPackage;
+  j0nix.software.systemPackages =
+    with pkgs;
+    [
+      ../../wm/common/start-mangowc.nix
+      brightnessctl
+      bibata-cursors
+      btop
+    ]
+    ++ lib.optional (useDankMaterialShell && hasDmsPackage) dmsPackage;
 
   environment.sessionVariables = {
     XCURSOR_THEME = cursorTheme;
     XCURSOR_SIZE = toString cursorSize;
-  } // lib.optionalAttrs useNvidia {
+  }
+  // lib.optionalAttrs useNvidia {
     NIXOS_OZONE_WL = "1";
     GBM_BACKEND = "nvidia-drm";
     __GLX_VENDOR_LIBRARY_NAME = "nvidia";
@@ -364,232 +404,242 @@ in {
     mode = "0444";
   };
 
-  environment.etc."regreet/hyprland.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "regreet" && regreetCompositor == "hyprland") {
-    text = ''
-      # Greeter sessions should light up every connected display instead of inheriting any user-session monitor policy.
-      monitor = ,preferred,auto,1
+  environment.etc."regreet/hyprland.conf" =
+    lib.mkIf (useGreetd && selectedGreetdGreeter == "regreet" && regreetCompositor == "hyprland")
+      {
+        text = ''
+          # Greeter sessions should light up every connected display instead of inheriting any user-session monitor policy.
+          monitor = ,preferred,auto,1
 
-      misc {
-        disable_hyprland_logo = true
-        disable_splash_rendering = true
-        disable_hyprland_guiutils_check = true
-      }
+          misc {
+            disable_hyprland_logo = true
+            disable_splash_rendering = true
+            disable_hyprland_guiutils_check = true
+          }
 
-      env = XCURSOR_THEME,${cursorTheme}
-      env = XCURSOR_SIZE,${toString cursorSize}
-    '';
-    mode = "0444";
-  };
+          env = XCURSOR_THEME,${cursorTheme}
+          env = XCURSOR_SIZE,${toString cursorSize}
+        '';
+        mode = "0444";
+      };
 
-  environment.etc."qmlgreet/j0nix.colors" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet") {
-    text = ''
-      [ColorEffects:Disabled]
-      Color=56,56,56
-      ColorAmount=0
-      ColorEffect=0
-      ContrastAmount=0.65
-      ContrastEffect=0
-      IntensityAmount=0.1
-      IntensityEffect=0
+  environment.etc."qmlgreet/j0nix.colors" =
+    lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet")
+      {
+        text = ''
+          [ColorEffects:Disabled]
+          Color=56,56,56
+          ColorAmount=0
+          ColorEffect=0
+          ContrastAmount=0.65
+          ContrastEffect=0
+          IntensityAmount=0.1
+          IntensityEffect=0
 
-      [ColorEffects:Inactive]
-      ChangeSelectionColor=true
-      Color=${qmlgreetPalette.inactive}
-      ColorAmount=-0.95
-      ColorEffect=1
-      ContrastAmount=0.4
-      ContrastEffect=2
-      Enable=true
-      IntensityAmount=0
-      IntensityEffect=0
+          [ColorEffects:Inactive]
+          ChangeSelectionColor=true
+          Color=${qmlgreetPalette.inactive}
+          ColorAmount=-0.95
+          ColorEffect=1
+          ContrastAmount=0.4
+          ContrastEffect=2
+          Enable=true
+          IntensityAmount=0
+          IntensityEffect=0
 
-      [Colors:Button]
-      BackgroundAlternate=${qmlgreetPalette.buttonAlt}
-      BackgroundNormal=${qmlgreetPalette.buttonBg}
-      DecorationFocus=${qmlgreetPalette.focus}
-      DecorationHover=${qmlgreetPalette.hover}
-      ForegroundActive=${qmlgreetPalette.active}
-      ForegroundInactive=${qmlgreetPalette.inactive}
-      ForegroundLink=${qmlgreetPalette.link}
-      ForegroundNegative=${qmlgreetPalette.negative}
-      ForegroundNeutral=${qmlgreetPalette.neutral}
-      ForegroundNormal=${qmlgreetPalette.buttonFg}
-      ForegroundPositive=${qmlgreetPalette.positive}
-      ForegroundVisited=${qmlgreetPalette.visited}
+          [Colors:Button]
+          BackgroundAlternate=${qmlgreetPalette.buttonAlt}
+          BackgroundNormal=${qmlgreetPalette.buttonBg}
+          DecorationFocus=${qmlgreetPalette.focus}
+          DecorationHover=${qmlgreetPalette.hover}
+          ForegroundActive=${qmlgreetPalette.active}
+          ForegroundInactive=${qmlgreetPalette.inactive}
+          ForegroundLink=${qmlgreetPalette.link}
+          ForegroundNegative=${qmlgreetPalette.negative}
+          ForegroundNeutral=${qmlgreetPalette.neutral}
+          ForegroundNormal=${qmlgreetPalette.buttonFg}
+          ForegroundPositive=${qmlgreetPalette.positive}
+          ForegroundVisited=${qmlgreetPalette.visited}
 
-      [Colors:Complementary]
-      BackgroundAlternate=${qmlgreetPalette.complementaryAlt}
-      BackgroundNormal=${qmlgreetPalette.complementaryBg}
-      DecorationFocus=${qmlgreetPalette.focus}
-      DecorationHover=${qmlgreetPalette.hover}
-      ForegroundActive=${qmlgreetPalette.active}
-      ForegroundInactive=${qmlgreetPalette.inactive}
-      ForegroundLink=${qmlgreetPalette.link}
-      ForegroundNegative=${qmlgreetPalette.negative}
-      ForegroundNeutral=${qmlgreetPalette.neutral}
-      ForegroundNormal=${qmlgreetPalette.complementaryFg}
-      ForegroundPositive=${qmlgreetPalette.positive}
-      ForegroundVisited=${qmlgreetPalette.visited}
+          [Colors:Complementary]
+          BackgroundAlternate=${qmlgreetPalette.complementaryAlt}
+          BackgroundNormal=${qmlgreetPalette.complementaryBg}
+          DecorationFocus=${qmlgreetPalette.focus}
+          DecorationHover=${qmlgreetPalette.hover}
+          ForegroundActive=${qmlgreetPalette.active}
+          ForegroundInactive=${qmlgreetPalette.inactive}
+          ForegroundLink=${qmlgreetPalette.link}
+          ForegroundNegative=${qmlgreetPalette.negative}
+          ForegroundNeutral=${qmlgreetPalette.neutral}
+          ForegroundNormal=${qmlgreetPalette.complementaryFg}
+          ForegroundPositive=${qmlgreetPalette.positive}
+          ForegroundVisited=${qmlgreetPalette.visited}
 
-      [Colors:Header]
-      BackgroundNormal=${qmlgreetPalette.headerBg}
+          [Colors:Header]
+          BackgroundNormal=${qmlgreetPalette.headerBg}
 
-      [Colors:Selection]
-      BackgroundAlternate=${qmlgreetPalette.selectionAlt}
-      BackgroundNormal=${qmlgreetPalette.selectionBg}
-      DecorationFocus=${qmlgreetPalette.focus}
-      DecorationHover=${qmlgreetPalette.hover}
-      ForegroundActive=${qmlgreetPalette.selectionFg}
-      ForegroundInactive=${qmlgreetPalette.selectionFg}
-      ForegroundLink=${qmlgreetPalette.selectionFg}
-      ForegroundNegative=${qmlgreetPalette.selectionFg}
-      ForegroundNeutral=${qmlgreetPalette.selectionFg}
-      ForegroundNormal=${qmlgreetPalette.selectionFg}
-      ForegroundPositive=${qmlgreetPalette.selectionFg}
-      ForegroundVisited=${qmlgreetPalette.selectionFg}
+          [Colors:Selection]
+          BackgroundAlternate=${qmlgreetPalette.selectionAlt}
+          BackgroundNormal=${qmlgreetPalette.selectionBg}
+          DecorationFocus=${qmlgreetPalette.focus}
+          DecorationHover=${qmlgreetPalette.hover}
+          ForegroundActive=${qmlgreetPalette.selectionFg}
+          ForegroundInactive=${qmlgreetPalette.selectionFg}
+          ForegroundLink=${qmlgreetPalette.selectionFg}
+          ForegroundNegative=${qmlgreetPalette.selectionFg}
+          ForegroundNeutral=${qmlgreetPalette.selectionFg}
+          ForegroundNormal=${qmlgreetPalette.selectionFg}
+          ForegroundPositive=${qmlgreetPalette.selectionFg}
+          ForegroundVisited=${qmlgreetPalette.selectionFg}
 
-      [Colors:Tooltip]
-      BackgroundAlternate=${qmlgreetPalette.tooltipAlt}
-      BackgroundNormal=${qmlgreetPalette.tooltipBg}
-      DecorationFocus=${qmlgreetPalette.focus}
-      DecorationHover=${qmlgreetPalette.hover}
-      ForegroundActive=${qmlgreetPalette.active}
-      ForegroundInactive=${qmlgreetPalette.inactive}
-      ForegroundLink=${qmlgreetPalette.link}
-      ForegroundNegative=${qmlgreetPalette.negative}
-      ForegroundNeutral=${qmlgreetPalette.neutral}
-      ForegroundNormal=${qmlgreetPalette.tooltipFg}
-      ForegroundPositive=${qmlgreetPalette.positive}
-      ForegroundVisited=${qmlgreetPalette.visited}
+          [Colors:Tooltip]
+          BackgroundAlternate=${qmlgreetPalette.tooltipAlt}
+          BackgroundNormal=${qmlgreetPalette.tooltipBg}
+          DecorationFocus=${qmlgreetPalette.focus}
+          DecorationHover=${qmlgreetPalette.hover}
+          ForegroundActive=${qmlgreetPalette.active}
+          ForegroundInactive=${qmlgreetPalette.inactive}
+          ForegroundLink=${qmlgreetPalette.link}
+          ForegroundNegative=${qmlgreetPalette.negative}
+          ForegroundNeutral=${qmlgreetPalette.neutral}
+          ForegroundNormal=${qmlgreetPalette.tooltipFg}
+          ForegroundPositive=${qmlgreetPalette.positive}
+          ForegroundVisited=${qmlgreetPalette.visited}
 
-      [Colors:View]
-      BackgroundAlternate=${qmlgreetPalette.viewAlt}
-      BackgroundNormal=${qmlgreetPalette.viewBg}
-      DecorationFocus=${qmlgreetPalette.focus}
-      DecorationHover=${qmlgreetPalette.hover}
-      ForegroundActive=${qmlgreetPalette.active}
-      ForegroundInactive=${qmlgreetPalette.inactive}
-      ForegroundLink=${qmlgreetPalette.link}
-      ForegroundNegative=${qmlgreetPalette.negative}
-      ForegroundNeutral=${qmlgreetPalette.neutral}
-      ForegroundNormal=${qmlgreetPalette.viewFg}
-      ForegroundPositive=${qmlgreetPalette.positive}
-      ForegroundVisited=${qmlgreetPalette.visited}
+          [Colors:View]
+          BackgroundAlternate=${qmlgreetPalette.viewAlt}
+          BackgroundNormal=${qmlgreetPalette.viewBg}
+          DecorationFocus=${qmlgreetPalette.focus}
+          DecorationHover=${qmlgreetPalette.hover}
+          ForegroundActive=${qmlgreetPalette.active}
+          ForegroundInactive=${qmlgreetPalette.inactive}
+          ForegroundLink=${qmlgreetPalette.link}
+          ForegroundNegative=${qmlgreetPalette.negative}
+          ForegroundNeutral=${qmlgreetPalette.neutral}
+          ForegroundNormal=${qmlgreetPalette.viewFg}
+          ForegroundPositive=${qmlgreetPalette.positive}
+          ForegroundVisited=${qmlgreetPalette.visited}
 
-      [Colors:Window]
-      BackgroundAlternate=${qmlgreetPalette.windowAlt}
-      BackgroundNormal=${qmlgreetPalette.windowBg}
-      DecorationFocus=${qmlgreetPalette.focus}
-      DecorationHover=${qmlgreetPalette.hover}
-      ForegroundActive=${qmlgreetPalette.active}
-      ForegroundInactive=${qmlgreetPalette.inactive}
-      ForegroundLink=${qmlgreetPalette.link}
-      ForegroundNegative=${qmlgreetPalette.negative}
-      ForegroundNeutral=${qmlgreetPalette.neutral}
-      ForegroundNormal=${qmlgreetPalette.windowFg}
-      ForegroundPositive=${qmlgreetPalette.positive}
-      ForegroundVisited=${qmlgreetPalette.visited}
+          [Colors:Window]
+          BackgroundAlternate=${qmlgreetPalette.windowAlt}
+          BackgroundNormal=${qmlgreetPalette.windowBg}
+          DecorationFocus=${qmlgreetPalette.focus}
+          DecorationHover=${qmlgreetPalette.hover}
+          ForegroundActive=${qmlgreetPalette.active}
+          ForegroundInactive=${qmlgreetPalette.inactive}
+          ForegroundLink=${qmlgreetPalette.link}
+          ForegroundNegative=${qmlgreetPalette.negative}
+          ForegroundNeutral=${qmlgreetPalette.neutral}
+          ForegroundNormal=${qmlgreetPalette.windowFg}
+          ForegroundPositive=${qmlgreetPalette.positive}
+          ForegroundVisited=${qmlgreetPalette.visited}
 
-      [General]
-      ColorScheme=j0nix-greeter
-      Name=j0nix Greeter
-      shadeSortColumn=true
+          [General]
+          ColorScheme=j0nix-greeter
+          Name=j0nix Greeter
+          shadeSortColumn=true
 
-      [KDE]
-      contrast=0
+          [KDE]
+          contrast=0
 
-      [WM]
-      activeBackground=${qmlgreetPalette.wmActiveBg}
-      activeBlend=${qmlgreetPalette.wmActiveBlend}
-      activeForeground=${qmlgreetPalette.wmActiveFg}
-      inactiveBackground=${qmlgreetPalette.wmInactiveBg}
-      inactiveBlend=${qmlgreetPalette.wmInactiveBlend}
-      inactiveForeground=${qmlgreetPalette.wmInactiveFg}
-    '';
-    mode = "0444";
-  };
+          [WM]
+          activeBackground=${qmlgreetPalette.wmActiveBg}
+          activeBlend=${qmlgreetPalette.wmActiveBlend}
+          activeForeground=${qmlgreetPalette.wmActiveFg}
+          inactiveBackground=${qmlgreetPalette.wmInactiveBg}
+          inactiveBlend=${qmlgreetPalette.wmInactiveBlend}
+          inactiveForeground=${qmlgreetPalette.wmInactiveFg}
+        '';
+        mode = "0444";
+      };
 
-  environment.etc."qmlgreet/qmlgreet.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet") {
-    text = ''
-      # Default values for QMLGreet
-      # qmlgreet.conf 2026 (c) Nitrux Latinoamericana S.C.
+  environment.etc."qmlgreet/qmlgreet.conf" =
+    lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet")
+      {
+        text = ''
+          # Default values for QMLGreet
+          # qmlgreet.conf 2026 (c) Nitrux Latinoamericana S.C.
 
-      [General]
-      # Default session (leave empty to use first available)
-      # Put the exact name of the session as it appears in the list (e.g., Hyprland, or Hyprland (uwsm-managed)).
-      DefaultSession=${qmlgreetDefaultSession}
+          [General]
+          # Default session (leave empty to use first available)
+          # Put the exact name of the session as it appears in the list (e.g., Hyprland, or Hyprland (uwsm-managed)).
+          DefaultSession=${qmlgreetDefaultSession}
 
-      [Appearance]
-      # Path to KDE color scheme file (leave empty to use a default color scheme)
-      ColorScheme=${qmlgreetColorSchemeFile}
+          [Appearance]
+          # Path to KDE color scheme file (leave empty to use a default color scheme)
+          ColorScheme=${qmlgreetColorSchemeFile}
 
-      # Path to background image (leave empty for solid color)
-      BackgroundImage=${qmlgreetWallpaperPath}
+          # Path to background image (leave empty for solid color)
+          BackgroundImage=${qmlgreetWallpaperPath}
 
-      # Icon theme to use (leave empty to use hicolor)
-      IconTheme=${qmlgreetIconTheme}
+          # Icon theme to use (leave empty to use hicolor)
+          IconTheme=${qmlgreetIconTheme}
 
-      # Font to use (leave empty to use Noto Sans)
-      Font=${qmlgreetFont}
+          # Font to use (leave empty to use Noto Sans)
+          Font=${qmlgreetFont}
 
-      # Font size to use (leave empty to use a size of 10)
-      FontSize=${qmlgreetFontSize}
+          # Font size to use (leave empty to use a size of 10)
+          FontSize=${qmlgreetFontSize}
 
-      [Behavior]
-      # Show user avatars (true/false)
-      ShowAvatars=${if qmlgreetShowAvatars then "true" else "false"}
-    '';
-    mode = "0444";
-  };
+          [Behavior]
+          # Show user avatars (true/false)
+          ShowAvatars=${if qmlgreetShowAvatars then "true" else "false"}
+        '';
+        mode = "0444";
+      };
 
-  environment.etc."qmlgreet/hyprland.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet" && regreetCompositor == "hyprland") {
-    text = ''
-      # Greeter sessions should light up every connected display instead of inheriting any user-session monitor policy.
-      monitor = ,preferred,auto,1
+  environment.etc."qmlgreet/hyprland.conf" =
+    lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet" && regreetCompositor == "hyprland")
+      {
+        text = ''
+          # Greeter sessions should light up every connected display instead of inheriting any user-session monitor policy.
+          monitor = ,preferred,auto,1
 
-      general {
-        gaps_in = 0
-        gaps_out = 0
-        border_size = 0
-      }
+          general {
+            gaps_in = 0
+            gaps_out = 0
+            border_size = 0
+          }
 
-      decoration {
-        rounding = 0
-        active_opacity = 0.97
-        inactive_opacity = 0.97
-        fullscreen_opacity = 0.97
+          decoration {
+            rounding = 0
+            active_opacity = 0.97
+            inactive_opacity = 0.97
+            fullscreen_opacity = 0.97
 
-        blur {
-          enabled = true
-          size = 2
-          passes = 1
-        }
-      }
+            blur {
+              enabled = true
+              size = 2
+              passes = 1
+            }
+          }
 
-      misc {
-        disable_hyprland_logo = true
-        disable_splash_rendering = true
-        disable_hyprland_guiutils_check = true
-      }
+          misc {
+            disable_hyprland_logo = true
+            disable_splash_rendering = true
+            disable_hyprland_guiutils_check = true
+          }
 
-      env = XCURSOR_THEME,${cursorTheme}
-      env = XCURSOR_SIZE,${toString cursorSize}
+          env = XCURSOR_THEME,${cursorTheme}
+          env = XCURSOR_SIZE,${toString cursorSize}
 
-      exec-once = ${lib.getExe qmlgreetPackage} -c ${qmlgreetConfigPath}
-    '';
-    mode = "0444";
-  };
+          exec-once = ${lib.getExe qmlgreetPackage} -c ${qmlgreetConfigPath}
+        '';
+        mode = "0444";
+      };
 
-  environment.etc."greetd/hypr.conf" = lib.mkIf (useGreetd && selectedGreetdGreeter == "dms-greeter") {
-    text = ''
-      env = DMS_RUN_GREETER,1
+  environment.etc."greetd/hypr.conf" =
+    lib.mkIf (useGreetd && selectedGreetdGreeter == "dms-greeter")
+      {
+        text = ''
+          env = DMS_RUN_GREETER,1
 
-      misc {
-          disable_hyprland_logo = true
-      }
-    '';
-    mode = "0444";
-  };
+          misc {
+              disable_hyprland_logo = true
+          }
+        '';
+        mode = "0444";
+      };
 
   programs.hyprland = {
     enable = true;
@@ -630,7 +680,8 @@ in {
   powerManagement.resumeCommands = ''
     ${hyprlandPostResumeRecover}
   '';
-} // lib.optionalAttrs useDankMaterialShell {
+}
+// lib.optionalAttrs useDankMaterialShell {
   programs.dank-material-shell.greeter = {
     enable = true;
     compositor.name = "hyprland";
