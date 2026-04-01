@@ -314,13 +314,30 @@ let
   '';
   monitorScripts = import ./config/monitor-scripts.nix {
     inherit lib pkgs hyprctlExec;
-    inherit toggleableOutputsJson initialOutputStatesJson outputBindingsJson headlessOutputsJson;
+    inherit
+      toggleableOutputsJson
+      initialOutputStatesJson
+      outputBindingsJson
+      headlessOutputsJson
+      ;
     hyprlandRuntimeMonitorConfigPath = hyprlandRuntimeMonitorConfigPath;
     homeDirectory = config.home.homeDirectory;
   };
-  inherit (monitorScripts) monitorStateScript monitorOnScript monitorOffScript monitorToggleScript
-    monitorRestoreScript monitorStatusScript monitorWorkspaceToScript monitorFocusedWorkspacesToScript
-    monitorListScript monitorDiscoverScript monitorSuggestScript monitorNewDialogScript monitorDebugScript;
+  inherit (monitorScripts)
+    monitorStateScript
+    monitorOnScript
+    monitorOffScript
+    monitorToggleScript
+    monitorRestoreScript
+    monitorStatusScript
+    monitorWorkspaceToScript
+    monitorFocusedWorkspacesToScript
+    monitorListScript
+    monitorDiscoverScript
+    monitorSuggestScript
+    monitorNewDialogScript
+    monitorDebugScript
+    ;
   startGraphicalSessionTargetScript = pkgs.writeShellScriptBin "wm-start-graphical-session-target" ''
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     if [ -S "$runtime_dir/bus" ]; then
@@ -436,6 +453,7 @@ in
   j0nix.user.software.packages =
     with pkgs;
     [
+      hyprlock
       swww
       wayvnc
       wl-clipboard
