@@ -1,4 +1,11 @@
-{ config, inputs, lib, pkgs, settings, ... }:
+{
+  config,
+  inputs,
+  lib,
+  pkgs,
+  settings,
+  ...
+}:
 let
   selectedShell = settings.wmShell or (settings.hyprlandShell or "dank-material-shell");
   dmsSettings = settings.dms or { };
@@ -10,10 +17,18 @@ let
   shellPath = "${homeBinDir}:/run/current-system/sw/bin:${pkgs.coreutils}/bin:${pkgs.procps}/bin:${pkgs.systemd}/bin";
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   appExecBackend = (settings.hyprland or { }).appExecBackend or "auto";
-  launcherPolicy = import ../../system/lib/app-exec-policy.nix { inherit lib pkgs useUWSM appExecBackend; };
+  launcherPolicy = import ../../system/lib/app-exec-policy.nix {
+    inherit
+      lib
+      pkgs
+      useUWSM
+      appExecBackend
+      ;
+  };
   app2unitExec = launcherPolicy.app2unitExe;
   uwsmExec = launcherPolicy.uwsmExe;
   hyprctlExec = lib.getExe' pkgs.hyprland "hyprctl";
+  hyprlockExec = lib.getExe pkgs.hyprlock;
   systemctlExec = "${pkgs.systemd}/bin/systemctl";
   wmShellStartCmd = "${homeBinDir}/wm-shell-start";
   wmShellStopCmd = "${homeBinDir}/wm-shell-stop";
@@ -30,7 +45,11 @@ let
   effectiveAppExecBackend = launcherPolicy.effectiveBackend;
   dmsStartup = dmsSettings.startup or { };
   dmsStartupMode = dmsStartup.mode or "systemd";
-  supportsOverview = builtins.elem selectedShell [ "dank-material-shell" "caelestia-shell" "noctalia-shell" ];
+  supportsOverview = builtins.elem selectedShell [
+    "dank-material-shell"
+    "caelestia-shell"
+    "noctalia-shell"
+  ];
   quickshellBin = if pkgs ? quickshell then lib.getExe pkgs.quickshell else null;
 in
 {
@@ -140,7 +159,9 @@ in
         exec qs -c ${overviewName}
       fi
 
-      if [ -n "${if quickshellBin != null then quickshellBin else ""}" ] && [ -x "${if quickshellBin != null then quickshellBin else "/nonexistent"}" ]; then
+      if [ -n "${if quickshellBin != null then quickshellBin else ""}" ] && [ -x "${
+        if quickshellBin != null then quickshellBin else "/nonexistent"
+      }" ]; then
         exec ${if quickshellBin != null then quickshellBin else "true"} -c ${overviewName}
       fi
 
@@ -181,11 +202,17 @@ in
         exit 1
       fi
 
-      if [ -n "${if quickshellBin != null then quickshellBin else ""}" ] && [ -x "${if quickshellBin != null then quickshellBin else "/nonexistent"}" ]; then
-        ${if quickshellBin != null then quickshellBin else "true"} ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
+      if [ -n "${if quickshellBin != null then quickshellBin else ""}" ] && [ -x "${
+        if quickshellBin != null then quickshellBin else "/nonexistent"
+      }" ]; then
+        ${
+          if quickshellBin != null then quickshellBin else "true"
+        } ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
         ${wmOverviewStartCmd} >/dev/null 2>&1 || exit 1
         sleep 0.3
-        ${if quickshellBin != null then quickshellBin else "true"} ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
+        ${
+          if quickshellBin != null then quickshellBin else "true"
+        } ipc -c ${overviewName} call overview toggle >/dev/null 2>&1 && exit 0
         echo "Failed to toggle quickshell-overview via quickshell ipc"
         exit 1
       fi
@@ -201,8 +228,12 @@ in
       if command -v qs >/dev/null 2>&1; then
         qs kill ${overviewName} >/dev/null 2>&1 && exit 0
       fi
-      if [ -n "${if quickshellBin != null then quickshellBin else ""}" ] && [ -x "${if quickshellBin != null then quickshellBin else "/nonexistent"}" ]; then
-        ${if quickshellBin != null then quickshellBin else "true"} kill ${overviewName} >/dev/null 2>&1 && exit 0
+      if [ -n "${if quickshellBin != null then quickshellBin else ""}" ] && [ -x "${
+        if quickshellBin != null then quickshellBin else "/nonexistent"
+      }" ]; then
+        ${
+          if quickshellBin != null then quickshellBin else "true"
+        } kill ${overviewName} >/dev/null 2>&1 && exit 0
       fi
       if command -v quickshell >/dev/null 2>&1; then
         quickshell kill ${overviewName} >/dev/null 2>&1 && exit 0
@@ -284,18 +315,16 @@ in
         exit 0
       fi
 
-      if command -v hyprlock >/dev/null 2>&1; then
-        if "$procps_bin"/pgrep -x hyprlock >/dev/null 2>&1; then
-          exit 0
-        fi
+      if "$procps_bin"/pgrep -x hyprlock >/dev/null 2>&1; then
+        exit 0
+      fi
 
-        if [ "$background" = "1" ]; then
-          hyprlock >/dev/null 2>&1 &
-          sleep 0.5
-          "$procps_bin"/pgrep -x hyprlock >/dev/null 2>&1 && exit 0
-        else
-          hyprlock >/dev/null 2>&1 && exit 0
-        fi
+      if [ "$background" = "1" ]; then
+        ${hyprlockExec} >/dev/null 2>&1 &
+        sleep 0.5
+        "$procps_bin"/pgrep -x hyprlock >/dev/null 2>&1 && exit 0
+      else
+        ${hyprlockExec} >/dev/null 2>&1 && exit 0
       fi
 
       "$loginctl_bin" lock-session >/dev/null 2>&1 || true
@@ -511,7 +540,13 @@ in
 
   assertions = [
     {
-      assertion = builtins.elem selectedShell [ "ags" "dank-material-shell" "noctalia-shell" "caelestia-shell" "none" ];
+      assertion = builtins.elem selectedShell [
+        "ags"
+        "dank-material-shell"
+        "noctalia-shell"
+        "caelestia-shell"
+        "none"
+      ];
       message = "settings.userSettings.<name>.wmShell must be one of: ags, dank-material-shell, noctalia-shell, caelestia-shell, none";
     }
   ];
