@@ -213,6 +213,8 @@ let
   pythonVersionManager = pythonCfg.versionManager or "mise";
   pythonInstallUv = pythonCfg.installUv or true;
   pythonVersionManagerEnabled = pythonEnabled && pythonVersionManager == "mise";
+  virtualisationCfg = dev.virtualisation or { };
+  virtualisationEnabled = virtualisationCfg.enable or false;
   pythonUseScript = pkgs.writeShellScriptBin "pyuse" ''
     set -eu
     if [ $# -ne 1 ]; then
@@ -347,6 +349,12 @@ in
       ++ lib.optionals (pythonEnabled && pythonInstallUv) [
         pkgs.uv
       ]
+      ++ lib.optionals (virtualisationEnabled && (virtualisationCfg.vagrant or true)) [
+        pkgs.vagrant
+      ]
+      ++ lib.optionals (virtualisationEnabled && (virtualisationCfg.qemu or true)) [
+        pkgs.qemu
+      ]
       ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring") [ sshAddGuiScript ]
       ++
         lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { })
@@ -387,6 +395,18 @@ in
           "none"
         ];
         message = "settings.dev.python.versionManager must be one of: mise, none";
+      }
+      {
+        assertion = builtins.isBool (virtualisationCfg.enable or false);
+        message = "settings.dev.virtualisation.enable must be a boolean";
+      }
+      {
+        assertion = builtins.isBool (virtualisationCfg.vagrant or true);
+        message = "settings.dev.virtualisation.vagrant must be a boolean";
+      }
+      {
+        assertion = builtins.isBool (virtualisationCfg.qemu or true);
+        message = "settings.dev.virtualisation.qemu must be a boolean";
       }
     ];
   };
