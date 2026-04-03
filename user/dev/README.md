@@ -27,7 +27,7 @@ Notable controls:
 - `settings.dev.python.versionManager = "mise"`: activate `mise` in the shell for fast Python version switching
 - `settings.dev.python.installUv = true`: install `uv` alongside the version manager
 - `settings.dev.virtualisation.enable`: install the shared VM development toolset and request the libvirt/QEMU host stack when any dev user enables it
-- `settings.dev.virtualisation.vagrant = true`: install the `vagrant` CLI in the dev tool bundle
+- `settings.dev.virtualisation.vagrant = true`: install the `vagrant` CLI in the dev tool bundle; the repo currently uses the non-libvirt nixpkgs variant so builds stay reproducible without live Rubygems downloads
 - `settings.dev.virtualisation.qemu = true`: install the `qemu` CLI in the dev tool bundle
 - `pyuse 3.12`: switch the global Python version through `mise`
 - `pylocal 3.12`: pin a project-local Python version through `mise`
