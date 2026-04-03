@@ -14,3 +14,4 @@ Also manages:
 - OpenSSH agent startup (`provider = "openssh"`)
 - GNOME keyring service (`settings.userSettings.<name>.dev.ssh.keyring.enable` or `provider = "gnome-keyring"`)
 - Nix dynamic loader compatibility (`settings.dev.nixLd.enable`)
+- Dev virtualisation defaults (`settings.dev.virtualisation.*`) which can install `vagrant`/`qemu` in user dev bundles and enable the shared libvirt/QEMU host stack when requested
