@@ -1,7 +1,12 @@
-{ pkgs, ... }:
+{ lib, pkgs, settings, ... }:
+let
+  gamingCfg = settings.gaming or { };
+in
 {
-  # When gaming role is selected, add open-source games and nethack to user packages
+  # Keep the gaming role lean by making the optional FOSS game bundle explicit.
   j0nix.user.software.packages = with pkgs; [
+    nethack
+  ] ++ lib.optionals (gamingCfg.openSourceGames or false) [
     supertuxkart
     supertux
     zeroad
@@ -10,7 +15,6 @@
     luanti
     airshipper
     pioneer
-    nethack
   ];
 
   # Add nethack configuration file
