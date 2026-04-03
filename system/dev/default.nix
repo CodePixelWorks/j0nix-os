@@ -16,6 +16,16 @@ let
     name: ((((userOverrides.${name} or { }).dev or { }).docker or { }).enable or false)
   ) allUsers;
   dockerEnabled = dockerUsers != [ ];
+  virtualisationCfg = dev.virtualisation or { };
+  virtualisationDefaultEnable = virtualisationCfg.enable or false;
+  virtualisationUsers = lib.filter (
+    name:
+    let
+      userVirtualisation = ((((userOverrides.${name} or { }).dev or { }).virtualisation or { }));
+    in
+    userVirtualisation.enable or virtualisationDefaultEnable
+  ) allUsers;
+  virtualisationEnabled = virtualisationUsers != [ ];
   ai = dev.ai or { };
   aiUsers = lib.filter (
     name: ((((userOverrides.${name} or { }).dev or { }).ai or { }).enable or false)
@@ -130,6 +140,8 @@ in
         default-address-pools = dockerAddressPools;
       };
     };
+
+    j0nix.desktop.virtualisation.libvirtd.enable = lib.mkIf virtualisationEnabled (lib.mkForce true);
 
     j0nix.software.systemPackages =
       lib.optionals dockerEnabled (
@@ -255,6 +267,18 @@ in
           && builtins.isInt pool.size
         ) dockerAddressPools;
         message = "Each settings.dev.docker.addressPools entry must be an attrset with string `base` and int `size`.";
+      }
+      {
+        assertion = builtins.isBool (virtualisationCfg.enable or false);
+        message = "settings.dev.virtualisation.enable must be a boolean";
+      }
+      {
+        assertion = builtins.isBool (virtualisationCfg.vagrant or true);
+        message = "settings.dev.virtualisation.vagrant must be a boolean";
+      }
+      {
+        assertion = builtins.isBool (virtualisationCfg.qemu or true);
+        message = "settings.dev.virtualisation.qemu must be a boolean";
       }
     ];
   };
