@@ -129,10 +129,12 @@ in
     networking.networkmanager.dns = lib.mkIf resolverEnabled "systemd-resolved";
     services.tailscale.enable = cfg.tailscale.enable;
     services.resolved.enable = resolverEnabled;
-    services.resolved.extraConfig = lib.mkIf resolverEnabled ''
-      DNS=${cfg.resolver.listenAddress}
-      Domains=~.
-    '';
+    services.resolved.settings = lib.mkIf resolverEnabled {
+      Resolve = {
+        DNS = [ cfg.resolver.listenAddress ];
+        Domains = [ "~." ];
+      };
+    };
 
     services.dnsmasq = lib.mkIf resolverEnabled {
       enable = true;
