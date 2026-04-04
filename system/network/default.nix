@@ -72,12 +72,80 @@ in
         default = true;
       };
     };
+
+    resolver = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable the local development DNS resolver.";
+      };
+
+      listenAddress = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1";
+        description = "Loopback address where the local resolver listens.";
+      };
+
+      wildcardAddress = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1";
+        description = "Target IP returned for wildcard development domains.";
+      };
+
+      upstreamServers = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [
+          "1.1.1.1"
+          "1.0.0.1"
+        ];
+        description = "Upstream DNS servers used for non-local lookups.";
+      };
+
+      wildcardDomains = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Domain suffixes resolved via wildcard records, for example `test` or `dev.local`.";
+      };
+
+      records = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        description = "Exact host-to-IP mappings served by the local resolver.";
+      };
+    };
   };
 
-  config = {
+  config =
+    let
+      resolverHasEntries = cfg.resolver.wildcardDomains != [ ] || cfg.resolver.records != { };
+      resolverEnabled = cfg.resolver.enable || resolverHasEntries;
+      resolverAddressRecords =
+        (map (domain: "/.${domain}/${cfg.resolver.wildcardAddress}") cfg.resolver.wildcardDomains)
+        ++ (lib.mapAttrsToList (host: ip: "/${host}/${ip}") cfg.resolver.records);
+    in
+    {
     networking.hostName = cfg.hostName;
     networking.networkmanager.enable = cfg.networkmanager.enable;
+    networking.networkmanager.dns = lib.mkIf resolverEnabled "systemd-resolved";
     services.tailscale.enable = cfg.tailscale.enable;
+    services.resolved.enable = resolverEnabled;
+    services.resolved.extraConfig = lib.mkIf resolverEnabled ''
+      DNS=${cfg.resolver.listenAddress}
+      Domains=~.
+    '';
+
+    services.dnsmasq = lib.mkIf resolverEnabled {
+      enable = true;
+      settings = {
+        domain-needed = true;
+        bogus-priv = true;
+        no-resolv = true;
+        bind-interfaces = true;
+        "listen-address" = cfg.resolver.listenAddress;
+        server = cfg.resolver.upstreamServers;
+        address = resolverAddressRecords;
+      };
+    };
 
     networking.networkmanager.wifi = {
       powersave = cfg.wifi.powersave;
@@ -101,5 +169,12 @@ in
       ++ lib.optionals (cfg.tailscale.enable && cfg.tailscale.installCli) [
         pkgs.tailscale
       ];
+
+    assertions = [
+      {
+        assertion = !resolverEnabled || cfg.resolver.upstreamServers != [ ];
+        message = "j0nix.desktop.network.resolver.upstreamServers must not be empty when the local resolver is enabled.";
+      }
+    ];
   };
 }
