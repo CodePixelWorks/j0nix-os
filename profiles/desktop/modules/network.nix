@@ -2,6 +2,7 @@
 let
   network = settings.network or { };
   tailscaleCfg = network.tailscale or { };
+  resolverCfg = network.resolver or { };
 in
 {
   j0nix.desktop.network = {
@@ -20,6 +21,17 @@ in
     tailscale = {
       enable = tailscaleCfg.enable or false;
       installCli = true;
+    };
+    resolver = {
+      enable = resolverCfg.enable or false;
+      listenAddress = resolverCfg.listenAddress or "127.0.0.1";
+      wildcardAddress = resolverCfg.wildcardAddress or "127.0.0.1";
+      upstreamServers = resolverCfg.upstreamServers or [
+        "1.1.1.1"
+        "1.0.0.1"
+      ];
+      wildcardDomains = resolverCfg.wildcardDomains or [ ];
+      records = resolverCfg.records or { };
     };
   };
 }
