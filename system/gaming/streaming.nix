@@ -211,19 +211,23 @@ let
         # Sunshine/Moonlight use bursty UDP traffic. Slightly larger default socket
         # buffers and a wider softirq receive budget reduce drops/jitter during
         # high-bitrate 120 Hz LAN sessions without pushing to pathological values.
-        "net.core.rmem_default" = 524288;
-        "net.core.wmem_default" = 524288;
-        "net.ipv4.udp_rmem_min" = 262144;
-        "net.ipv4.udp_wmem_min" = 262144;
-        "net.core.netdev_budget" = 600;
-        "net.core.netdev_budget_usecs" = 8000;
+        "net.core.optmem_max" = 1048576;
+        "net.core.rmem_default" = 1048576;
+        "net.core.wmem_default" = 1048576;
+        "net.ipv4.udp_rmem_min" = 524288;
+        "net.ipv4.udp_wmem_min" = 524288;
+        "net.ipv4.udp_mem" = "65536 131072 262144";
+        "net.core.netdev_budget" = 800;
+        "net.core.netdev_budget_usecs" = 12000;
       }
     else
       {
+        "net.core.optmem_max" = 524288;
         "net.core.rmem_default" = 262144;
         "net.core.wmem_default" = 262144;
         "net.ipv4.udp_rmem_min" = 131072;
         "net.ipv4.udp_wmem_min" = 131072;
+        "net.ipv4.udp_mem" = "32768 65536 131072";
         "net.core.netdev_budget" = 400;
         "net.core.netdev_budget_usecs" = 4000;
       };
