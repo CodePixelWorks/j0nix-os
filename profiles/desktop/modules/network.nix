@@ -3,6 +3,8 @@ let
   network = settings.network or { };
   tailscaleCfg = network.tailscale or { };
   resolverCfg = network.resolver or { };
+  routingCfg = network.routing or { };
+  preferWiredCfg = routingCfg.preferWired or { };
 in
 {
   j0nix.desktop.network = {
@@ -32,6 +34,13 @@ in
       ];
       wildcardDomains = resolverCfg.wildcardDomains or [ ];
       records = resolverCfg.records or { };
+    };
+    routing.preferWired = {
+      enable = preferWiredCfg.enable or true;
+      ethernetRouteMetric = preferWiredCfg.ethernetRouteMetric or 100;
+      wifiRouteMetric = preferWiredCfg.wifiRouteMetric or 600;
+      ethernetAutoconnectPriority = preferWiredCfg.ethernetAutoconnectPriority or 100;
+      wifiAutoconnectPriority = preferWiredCfg.wifiAutoconnectPriority or 10;
     };
   };
 }
