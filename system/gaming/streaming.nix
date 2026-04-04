@@ -75,7 +75,9 @@ let
           "wayland"
         ]
     );
-  sunshineNeedsPrivilegedWrapper = sunshineCapSysAdmin && !sunshineUsesWaylandCapture;
+  # KMS capture requires privileged wrapper for DRM device access
+  sunshineNeedsPrivilegedWrapper =
+    sunshineCapSysAdmin && (!sunshineUsesWaylandCapture || sunshineDisplayTargetCapture == "kms");
   sunshineDisplayTargetResolutions =
     sunshineDisplayTargetSettings.resolutions or (sunshineVirtualDisplay.resolutions or [
       "2880x1800"
