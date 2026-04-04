@@ -37,6 +37,9 @@
         mcp-language-server-j0nix = final.callPackage ./system/software/pkgs/dev/mcp-language-server.nix {
           src = inputs.mcp-language-server-src;
         };
+        vagrant-with-libvirt = final.callPackage ./system/software/pkgs/dev/vagrant-with-libvirt.nix {
+          nixpkgsSrc = nixpkgs.outPath;
+        };
         hyprland-minimizer-orteip = prev.rustPlatform.buildRustPackage {
           pname = "hyprland_minimizer";
           version = "unstable";
