@@ -215,9 +215,8 @@ let
   pythonVersionManagerEnabled = pythonEnabled && pythonVersionManager == "mise";
   virtualisationCfg = dev.virtualisation or { };
   virtualisationEnabled = virtualisationCfg.enable or false;
-  # The nixpkgs libvirt-enabled Vagrant variant currently pulls plugin gems
-  # from rubygems.org during the build, which breaks in restricted/offline setups.
-  vagrantPackage = pkgs.vagrant.override { withLibvirt = false; };
+  vagrantPackage =
+    if virtualisationCfg.vagrantLibvirt or true then pkgs.vagrant-with-libvirt else pkgs.vagrant.override { withLibvirt = false; };
   pythonUseScript = pkgs.writeShellScriptBin "pyuse" ''
     set -eu
     if [ $# -ne 1 ]; then
@@ -406,6 +405,10 @@ in
       {
         assertion = builtins.isBool (virtualisationCfg.vagrant or true);
         message = "settings.dev.virtualisation.vagrant must be a boolean";
+      }
+      {
+        assertion = builtins.isBool (virtualisationCfg.vagrantLibvirt or true);
+        message = "settings.dev.virtualisation.vagrantLibvirt must be a boolean";
       }
       {
         assertion = builtins.isBool (virtualisationCfg.qemu or true);
