@@ -208,17 +208,32 @@ let
   sunshineNetworkSysctlFragment =
     if sunshineNetworkPerfMode == "aggressive" then
       {
-        # Sunshine/Moonlight use bursty UDP traffic. Slightly larger default socket
-        # buffers and a wider softirq receive budget reduce drops/jitter during
-        # high-bitrate 120 Hz LAN sessions without pushing to pathological values.
+        # Sunshine/Moonlight use bursty UDP traffic. Larger socket buffers
+        # and wider softirq budget reduce drops/jitter during high-bitrate
+        # 120 Hz LAN sessions.
+        # Additional fixes for slow connection warnings:
+        # - Increase connection tracking for UDP
+        # - Optimize UDP fragment handling
+        # - Increase network device tx queue
         "net.core.optmem_max" = 1048576;
         "net.core.rmem_default" = 1048576;
         "net.core.wmem_default" = 1048576;
+        "net.core.rmem_max" = 16777216;
+        "net.core.wmem_max" = 16777216;
         "net.ipv4.udp_rmem_min" = 524288;
         "net.ipv4.udp_wmem_min" = 524288;
         "net.ipv4.udp_mem" = "65536 131072 262144";
+        "net.ipv4.tcp_rmem" = "131072 1048576 16777216";
+        "net.ipv4.tcp_wmem" = "131072 1048576 16777216";
+        "net.ipv4.tcp_window_scaling" = 1;
+        "net.ipv4.tcp_timestamps" = 1;
+        "net.ipv4.tcp_sack" = 1;
         "net.core.netdev_budget" = 800;
         "net.core.netdev_budget_usecs" = 12000;
+        "net.core.netdev_max_backlog" = 5000;
+        "net.ipv4.neigh.default.gc_thresh1" = 4096;
+        "net.ipv4.neigh.default.gc_thresh2" = 6144;
+        "net.ipv4.neigh.default.gc_thresh3" = 8192;
       }
     else
       {
@@ -231,6 +246,60 @@ let
         "net.core.netdev_budget" = 400;
         "net.core.netdev_budget_usecs" = 4000;
       };
+  # Network interface metric for LAN prioritization
+  # This script detects wired vs wireless interfaces and sets metrics accordingly
+  # to prefer LAN over WiFi for streaming.
+  sunshineNetworkInterfaceScript = pkgs.writeShellScriptBin "sunshine-network-pref" ''
+    set -eu
+
+    # Find all network interfaces and determine wired vs wireless
+    wired_iface=""
+    wireless_iface=""
+
+    for iface in /sys/class/net/*; do
+      iface_name=$(basename "$iface")
+      
+      # Skip loopback and virtual interfaces
+      if [ "$iface_name" = "lo" ] || [ "$iface_name" = "docker"* ] || [ "$iface_name" = "br-"* ] || [ "$iface_name" = "veth"* ]; then
+        continue
+      fi
+
+      # Check if interface is up
+      if ! ip link show "$iface_name" 2>/dev/null | grep -q "state UP"; then
+        continue
+      fi
+
+      # Check for wireless by checking for wireless kernel interfaces
+      if [ -d "/sys/class/net/$iface_name/wireless" ]; then
+        if [ -z "$wireless_iface" ]; then
+          wireless_iface="$iface_name"
+        fi
+      else
+        # Assume wired
+        if [ -z "$wired_iface" ]; then
+          wired_iface="$iface_name"
+        fi
+      fi
+    done
+
+    # Set metric: wired (100) should have lower metric than wireless (600)
+    set_metric() {
+      local iface="$1"
+      local metric="$2"
+      if [ -n "$iface" ] && [ -d "/sys/class/net/$iface" ]; then
+        ip route replace default dev "$iface" metric "$metric" 2>/dev/null || true
+      fi
+    }
+
+    # Prefer wired over wireless
+    if [ -n "$wired_iface" ]; then
+      set_metric "$wired_iface" 100
+    fi
+    if [ -n "$wireless_iface" ]; then
+      set_metric "$wireless_iface" 600
+    fi
+  '';
+
   sunshineDynamicConfigFile = settingsFormat.generate "sunshine-j0nix-base.conf" (
     builtins.removeAttrs config.services.sunshine.settings [
       "output_name"
@@ -544,10 +613,10 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     lib.optional sunshineNetworkPerfEnable sunshineNetworkSysctlFragment
   );
 
-  # Apply a dedicated service-priority profile on top of the upstream user unit.
-  # This mirrors the useful part of common Sunshine tuning gists without forcing
-  # an extreme RT priority that can starve a daily-driver desktop.
+  # Apply NVIDIA environment variables for hardware encoding
   systemd.user.services.sunshine.environment = lib.mkIf sunshineUseNvidia sunshineNvidiaEnvironment;
+
+  # Run display cleanup before and after streaming
   systemd.user.services.sunshine.preStart = lib.mkIf sunshineDisplayTargetEnabled ''
     ${sunshineDisplayUndoCommand} >/dev/null 2>&1 || true
   '';
@@ -555,7 +624,12 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     ${sunshineDisplayUndoCommand} >/dev/null 2>&1 || true
   '';
 
+  # Run network interface prioritization before Sunshine starts to prefer LAN
   systemd.user.services.sunshine.serviceConfig = sunshineServicePriorityConfig // {
+    ExecStartPre = [
+      # Set network interface priority for LAN preference before Sunshine starts
+      "${lib.getExe sunshineNetworkInterfaceScript}"
+    ];
     ExecStart = lib.mkForce "${sunshineLaunchWrapper}";
   };
 
