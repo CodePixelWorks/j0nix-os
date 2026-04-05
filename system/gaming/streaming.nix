@@ -204,12 +204,16 @@ let
         Nice = -20;
         IOSchedulingClass = "best-effort";
         IOSchedulingPriority = 0;
+        CPUWeight = 10000;
+        IOWeight = 1000;
       }
     else
       {
         Nice = -10;
         IOSchedulingClass = "best-effort";
         IOSchedulingPriority = 0;
+        CPUWeight = 500;
+        IOWeight = 500;
       };
   sunshineNetworkSysctlFragment =
     if sunshineNetworkPerfMode == "aggressive" then
