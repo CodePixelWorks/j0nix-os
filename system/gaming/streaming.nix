@@ -353,9 +353,7 @@ let
     }
     default_mode=${lib.escapeShellArg defaultTargetMode}
     staging_position=${lib.escapeShellArg defaultTargetPosition}
-    stream_position=${
-      lib.escapeShellArg (if sunshineDisplayTargetIsHeadless then "0x0" else defaultTargetPosition)
-    }
+    stream_position=${lib.escapeShellArg "0x0"}
     target_scale=${lib.escapeShellArg defaultTargetScale}
     allowed_resolutions=${lib.escapeShellArg allowedTargetResolutions}
     allowed_fps=${lib.escapeShellArg allowedTargetFps}
