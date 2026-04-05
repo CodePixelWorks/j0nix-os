@@ -43,7 +43,7 @@ Per-user launchers and helpers belong in `user/gaming/`.
 - `settings.sunshine.disableLockScreenDuringStream = true` makes the Sunshine prep hook drop a small runtime marker and stop any running `hyprlock` instance; the shared `wm-lock-screen` helper then becomes a no-op for the duration of the stream and is restored automatically in the undo path.
 - The Sunshine user service also runs the same display-target undo helper in `preStart` and `postStop`, so a `nixos-rebuild switch`, service restart, or crash does not leave the Hyprland workspaces and monitor layout stuck in the stream-target state.
 - Declaring a custom Sunshine app list replaces the upstream defaults, so the module now restores the standard `Desktop` entry and, when Steam is enabled, `Steam Big Picture`, then appends `Adaptive Display`.
-- The current Sunshine build in nixpkgs ignores top-level `fps` and `resolutions` keys, so the wrapper intentionally does not emit them into `sunshine.conf`.
+- The current Sunshine build in nixpkgs ignores top-level `fps` and `resolutions` keys, so the wrapper intentionally does not emit them into `sunshine.conf`. The adaptive-display prep hook still uses those lists as an allowlist for stream modes, and falls back to the configured default monitor mode when a client requests an unsupported resolution or refresh rate.
 - In wlroots/Wayland capture mode the module still skips the privileged `cap_sys_admin` wrapper because that capture path does not need it.
 
 ## Steam Optional Launch Wrappers
