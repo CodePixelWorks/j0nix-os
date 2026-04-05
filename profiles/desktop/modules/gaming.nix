@@ -68,7 +68,7 @@
           enable = true;
           appName = "Adaptive Display";
           outputName = "SUNSHINE-HEADLESS";
-          capture = "auto"; # Let Sunshine choose the least-broken capture path for the current driver stack.
+          capture = "auto"; # On Hyprland this resolves to wlroots/wlr so the legacy fallback stays on the Wayland capture path.
           resolutions = [
             "2880x1800"
             "2560x1600"
