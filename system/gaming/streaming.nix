@@ -191,6 +191,8 @@ let
   defaultTargetScale = toString (
     if sunshineDisplayTargetConfig != null then sunshineDisplayTargetConfig.scale or 1 else 1
   );
+  allowedTargetResolutions = lib.concatStringsSep " " sunshineDisplayTargetResolutions;
+  allowedTargetFps = lib.concatStringsSep " " (map toString sunshineDisplayTargetFps);
   settingsFormat = pkgs.formats.keyValue { };
   sunshineServicePriorityConfig =
     if sunshinePerfMode == "aggressive" then
@@ -351,6 +353,8 @@ let
       lib.escapeShellArg (if sunshineDisplayTargetIsHeadless then "0x0" else defaultTargetPosition)
     }
     target_scale=${lib.escapeShellArg defaultTargetScale}
+    allowed_resolutions=${lib.escapeShellArg allowedTargetResolutions}
+    allowed_fps=${lib.escapeShellArg allowedTargetFps}
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$("$coreutils_bin"/id -u)}"
     state_dir="$runtime_dir/sunshine-j0nix"
     workspace_state="$state_dir/headless-workspaces.tsv"
@@ -366,10 +370,30 @@ let
     height="''${SUNSHINE_CLIENT_HEIGHT:-}"
     fps="''${SUNSHINE_CLIENT_FPS:-}"
 
-    if [ -n "$width" ] && [ -n "$height" ]; then
-      mode="''${width}x''${height}@''${fps:-60}"
-    else
-      mode="$default_mode"
+    mode="$default_mode"
+    if [ -n "$width" ] && [ -n "$height" ] && [ -n "$fps" ]; then
+      requested_resolution="''${width}x''${height}"
+      requested_fps="$fps"
+      resolution_allowed=0
+      fps_allowed=0
+
+      for allowed_resolution in $allowed_resolutions; do
+        if [ "$allowed_resolution" = "$requested_resolution" ]; then
+          resolution_allowed=1
+          break
+        fi
+      done
+
+      for allowed_fps_value in $allowed_fps; do
+        if [ "$allowed_fps_value" = "$requested_fps" ]; then
+          fps_allowed=1
+          break
+        fi
+      done
+
+      if [ "$resolution_allowed" -eq 1 ] && [ "$fps_allowed" -eq 1 ]; then
+        mode="''${requested_resolution}@''${requested_fps}"
+      fi
     fi
 
     if [ "$target_backend" = "hyprland-headless" ]; then
