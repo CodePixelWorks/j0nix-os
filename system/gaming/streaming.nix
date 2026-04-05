@@ -381,13 +381,22 @@ let
     width="''${SUNSHINE_CLIENT_WIDTH:-}"
     height="''${SUNSHINE_CLIENT_HEIGHT:-}"
     fps="''${SUNSHINE_CLIENT_FPS:-}"
+    default_refresh="$default_mode"
+    if [ "''${default_refresh#*@}" != "$default_refresh" ]; then
+      default_refresh="''${default_refresh##*@}"
+    else
+      default_refresh=""
+    fi
 
     mode="$default_mode"
-    if [ -n "$width" ] && [ -n "$height" ] && [ -n "$fps" ]; then
+    if [ -n "$width" ] && [ -n "$height" ]; then
       requested_resolution="''${width}x''${height}"
-      requested_fps="$fps"
       resolution_allowed=0
-      fps_allowed=0
+      selected_fps=""
+
+      if [ "$target_backend" = "physical-output" ]; then
+        resolution_allowed=1
+      fi
 
       for allowed_resolution in $allowed_resolutions; do
         if [ "$allowed_resolution" = "$requested_resolution" ]; then
@@ -396,15 +405,26 @@ let
         fi
       done
 
-      for allowed_fps_value in $allowed_fps; do
-        if [ "$allowed_fps_value" = "$requested_fps" ]; then
-          fps_allowed=1
-          break
-        fi
-      done
+      if [ -n "$fps" ]; then
+        for allowed_fps_value in $allowed_fps; do
+          if [ "$allowed_fps_value" = "$fps" ]; then
+            selected_fps="$fps"
+            break
+          fi
+        done
+      fi
 
-      if [ "$resolution_allowed" -eq 1 ] && [ "$fps_allowed" -eq 1 ]; then
-        mode="''${requested_resolution}@''${requested_fps}"
+      if [ "$resolution_allowed" -eq 1 ]; then
+        effective_fps="$selected_fps"
+        if [ -z "$effective_fps" ]; then
+          effective_fps="$default_refresh"
+        fi
+
+        if [ -n "$effective_fps" ]; then
+          mode="''${requested_resolution}@''${effective_fps}"
+        else
+          mode="$requested_resolution"
+        fi
       fi
     fi
 
