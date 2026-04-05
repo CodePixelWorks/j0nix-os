@@ -197,6 +197,18 @@ in
     let
       resolverHasEntries = cfg.resolver.wildcardDomains != [ ] || cfg.resolver.records != { };
       resolverEnabled = cfg.resolver.enable || resolverHasEntries;
+      recordRouteDomains = builtins.filter (domain: domain != "") (
+        lib.mapAttrsToList (
+          host: _ip:
+          let
+            match = builtins.match "[^.]+\\.(.+)" host;
+          in
+          if match == null then "" else builtins.elemAt match 0
+        ) cfg.resolver.records
+      );
+      resolverRouteDomains = map (domain: "~${domain}") (
+        lib.unique (cfg.resolver.wildcardDomains ++ recordRouteDomains)
+      );
       resolverAddressRecords =
         (map (domain: "/.${domain}/${cfg.resolver.wildcardAddress}") cfg.resolver.wildcardDomains)
         ++ (lib.mapAttrsToList (host: ip: "/${host}/${ip}") cfg.resolver.records);
@@ -216,7 +228,9 @@ in
     services.resolved.settings = lib.mkIf resolverEnabled {
       Resolve = {
         DNS = [ cfg.resolver.listenAddress ];
-        Domains = [ "~." ];
+      }
+      // lib.optionalAttrs (resolverRouteDomains != [ ]) {
+        Domains = resolverRouteDomains;
       };
     };
 
