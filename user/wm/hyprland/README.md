@@ -194,7 +194,7 @@ Current default TV setup:
 - with `settings.sunshine.displayTarget.backend = "hyprland-headless"`, monitor `3` is `SUNSHINE-HEADLESS` (Adaptive Display)
 - `DP-3` is declared as a toggleable output
 - `DP-3` uses `bindIndex = 2`
-- it starts disabled by default
+- it starts enabled by default when `DP-3` is connected
 - `SUPER+CTRL+2`: toggle monitor `2`
 - `SUPER+CTRL+SHIFT+2`: restore monitor `2` and move its saved workspaces back
 - `SUPER+ALT+1`: move the active workspace to monitor `1`
