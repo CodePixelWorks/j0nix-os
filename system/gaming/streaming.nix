@@ -334,6 +334,16 @@ let
     # Explicitly enable NVENC hardware encoding
     CUDA_VISIBLE_DEVICES = "0";
   };
+  sunshineStreamingAppEnvironment = {
+    PATH = "$(PATH):$(HOME)/.local/bin";
+    # For Sunshine-launched apps, prefer immediate presentation over host-side
+    # vblank/VRR synchronization so the encoder is not stalled behind another
+    # sync layer before frames even reach the stream.
+    __GL_SYNC_TO_VBLANK = "0";
+    __GL_GSYNC_ALLOWED = "0";
+    __GL_VRR_ALLOWED = "0";
+    vblank_mode = "0";
+  };
   sunshineExecutable =
     if sunshineNeedsPrivilegedWrapper then
       "${config.security.wrapperDir}/sunshine"
@@ -610,7 +620,9 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
       );
   };
 
-  services.sunshine.applications.env.PATH = lib.mkDefault "$(PATH):$(HOME)/.local/bin";
+  services.sunshine.applications.env = lib.mkMerge [
+    sunshineStreamingAppEnvironment
+  ];
 
   services.sunshine.applications.apps = lib.mkAfter (
     sunshineBaseApps
