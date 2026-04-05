@@ -571,6 +571,7 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     openFirewall = sunshineOpenFirewall;
     capSysAdmin = sunshineNeedsPrivilegedWrapper;
     autoStart = sunshineAutoStart;
+    package = lib.mkIf sunshineUseNvidia (lib.mkDefault (pkgs.sunshine.override { cudaSupport = true; }));
     settings =
       lib.optionalAttrs sunshineUseNvidia {
         # Enable hardware NVENC encoding
