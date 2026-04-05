@@ -62,45 +62,32 @@
             "-Dlager_BUILD_TESTS=OFF"
           ];
         });
-        sunshine =
-          let
-            sunshineDriverRpath = prev.lib.concatStringsSep ":" (
-              [ "/run/opengl-driver/lib" ]
-              ++ prev.lib.optionals prev.stdenv.hostPlatform.isx86_64 [ "/run/opengl-driver-32/lib" ]
-            );
-          in
-          prev.sunshine.overrideAttrs (old: {
-            buildInputs = (old.buildInputs or [ ]) ++ [ prev.boost.out ];
-            nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ prev.patchelf ];
-            postPatch = (old.postPatch or "") + ''
-              substituteInPlace cmake/dependencies/Boost_Sunshine.cmake \
-                --replace-fail $'        system\n' ""
-              substituteInPlace cmake/dependencies/Boost_Sunshine.cmake \
-                --replace-fail 'find_package(Boost CONFIG ''${BOOST_VERSION} EXACT COMPONENTS ''${BOOST_COMPONENTS})' \
-                               $'set(Boost_NO_BOOST_CMAKE ON)\nfind_package(Boost 1.56 REQUIRED COMPONENTS ''${BOOST_COMPONENTS})'
-              substituteInPlace third-party/Simple-Web-Server/CMakeLists.txt \
-                --replace-fail 'find_package(Boost 1.53.0 COMPONENTS system REQUIRED)' \
-                               'find_package(Boost 1.53.0 REQUIRED)' \
-                --replace-fail 'target_link_libraries(simple-web-server INTERFACE Boost::boost Boost::system)' \
-                               'target_link_libraries(simple-web-server INTERFACE Boost::boost)'
-              substituteInPlace cmake/compile_definitions/linux.cmake \
-                --replace-fail 'add_compile_definitions(SUNSHINE_PLATFORM="linux")' \
-                               $'add_compile_definitions(SUNSHINE_PLATFORM="linux")\nadd_compile_definitions(BOOST_LOG_DYN_LINK BOOST_LOG_SETUP_DYN_LINK)'
-              substituteInPlace cmake/compile_definitions/common.cmake \
-                --replace-fail '        ''${Boost_LIBRARIES}' $'        ''${Boost_LIBRARIES}\n        ${prev.boost.out}/lib/libboost_log_setup.so\n        ${prev.boost.out}/lib/libboost_thread.so\n        ${prev.boost.out}/lib/libboost_chrono.so\n        ${prev.boost.out}/lib/libboost_atomic.so\n        ${prev.boost.out}/lib/libboost_regex.so\n        ${prev.boost.out}/lib/libboost_date_time.so'
-              substituteInPlace cmake/compile_definitions/common.cmake \
-                --replace-fail '        ${prev.boost.out}/lib/libboost_log_setup.so' \
-                               $'        ${prev.boost.out}/lib/libboost_log.so\n        ${prev.boost.out}/lib/libboost_log_setup.so'
-              substituteInPlace cmake/targets/common.cmake \
-                --replace-fail 'target_link_libraries(sunshine ''${SUNSHINE_EXTERNAL_LIBRARIES} ''${EXTRA_LIBS})' \
-                               $'target_link_libraries(sunshine ''${SUNSHINE_EXTERNAL_LIBRARIES} ''${EXTRA_LIBS})\ntarget_link_libraries(sunshine ${prev.boost.out}/lib/libboost_log.so ${prev.boost.out}/lib/libboost_log_setup.so ${prev.boost.out}/lib/libboost_thread.so ${prev.boost.out}/lib/libboost_chrono.so ${prev.boost.out}/lib/libboost_atomic.so ${prev.boost.out}/lib/libboost_regex.so ${prev.boost.out}/lib/libboost_date_time.so)'
-            '';
-            postFixup = (old.postFixup or "") + ''
-              if [ -x "$out/bin/sunshine" ]; then
-                patchelf --add-rpath ${prev.lib.escapeShellArg sunshineDriverRpath} "$out/bin/sunshine"
-              fi
-            '';
-          });
+        sunshine = prev.sunshine.overrideAttrs (old: {
+          buildInputs = (old.buildInputs or [ ]) ++ [ prev.boost.out ];
+          postPatch = (old.postPatch or "") + ''
+            substituteInPlace cmake/dependencies/Boost_Sunshine.cmake \
+              --replace-fail $'        system\n' ""
+            substituteInPlace cmake/dependencies/Boost_Sunshine.cmake \
+              --replace-fail 'find_package(Boost CONFIG ''${BOOST_VERSION} EXACT COMPONENTS ''${BOOST_COMPONENTS})' \
+                             $'set(Boost_NO_BOOST_CMAKE ON)\nfind_package(Boost 1.56 REQUIRED COMPONENTS ''${BOOST_COMPONENTS})'
+            substituteInPlace third-party/Simple-Web-Server/CMakeLists.txt \
+              --replace-fail 'find_package(Boost 1.53.0 COMPONENTS system REQUIRED)' \
+                             'find_package(Boost 1.53.0 REQUIRED)' \
+              --replace-fail 'target_link_libraries(simple-web-server INTERFACE Boost::boost Boost::system)' \
+                             'target_link_libraries(simple-web-server INTERFACE Boost::boost)'
+            substituteInPlace cmake/compile_definitions/linux.cmake \
+              --replace-fail 'add_compile_definitions(SUNSHINE_PLATFORM="linux")' \
+                             $'add_compile_definitions(SUNSHINE_PLATFORM="linux")\nadd_compile_definitions(BOOST_LOG_DYN_LINK BOOST_LOG_SETUP_DYN_LINK)'
+            substituteInPlace cmake/compile_definitions/common.cmake \
+              --replace-fail '        ''${Boost_LIBRARIES}' $'        ''${Boost_LIBRARIES}\n        ${prev.boost.out}/lib/libboost_log_setup.so\n        ${prev.boost.out}/lib/libboost_thread.so\n        ${prev.boost.out}/lib/libboost_chrono.so\n        ${prev.boost.out}/lib/libboost_atomic.so\n        ${prev.boost.out}/lib/libboost_regex.so\n        ${prev.boost.out}/lib/libboost_date_time.so'
+            substituteInPlace cmake/compile_definitions/common.cmake \
+              --replace-fail '        ${prev.boost.out}/lib/libboost_log_setup.so' \
+                             $'        ${prev.boost.out}/lib/libboost_log.so\n        ${prev.boost.out}/lib/libboost_log_setup.so'
+            substituteInPlace cmake/targets/common.cmake \
+              --replace-fail 'target_link_libraries(sunshine ''${SUNSHINE_EXTERNAL_LIBRARIES} ''${EXTRA_LIBS})' \
+                             $'target_link_libraries(sunshine ''${SUNSHINE_EXTERNAL_LIBRARIES} ''${EXTRA_LIBS})\ntarget_link_libraries(sunshine ${prev.boost.out}/lib/libboost_log.so ${prev.boost.out}/lib/libboost_log_setup.so ${prev.boost.out}/lib/libboost_thread.so ${prev.boost.out}/lib/libboost_chrono.so ${prev.boost.out}/lib/libboost_atomic.so ${prev.boost.out}/lib/libboost_regex.so ${prev.boost.out}/lib/libboost_date_time.so)'
+          '';
+        });
       };
       profileName = "desktop";
       profileDir = baseDir + "/profiles/${profileName}";
