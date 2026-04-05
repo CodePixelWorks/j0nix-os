@@ -188,13 +188,13 @@ Current default TV setup:
 
 - `outputBindings` maps:
   - `1` -> `DP-1` (Primary PC Monitor)
-  - `2` -> `DP-3` (Living Room TV)
+  - `2` -> `HDMI-A-2` (Living Room TV)
   - `3` -> the active Sunshine display target
 - with `settings.sunshine.displayTarget.backend = "physical-output"`, monitor `3` is `DP-2` (Sunshine Dummy Plug)
 - with `settings.sunshine.displayTarget.backend = "hyprland-headless"`, monitor `3` is `SUNSHINE-HEADLESS` (Adaptive Display)
-- `DP-3` is declared as a toggleable output
-- `DP-3` uses `bindIndex = 2`
-- it starts enabled by default when `DP-3` is connected
+- `HDMI-A-2` is declared as a toggleable output
+- `HDMI-A-2` uses `bindIndex = 2`
+- it starts enabled by default when `HDMI-A-2` is connected
 - `SUPER+CTRL+2`: toggle monitor `2`
 - `SUPER+CTRL+SHIFT+2`: restore monitor `2` and move its saved workspaces back
 - `SUPER+ALT+1`: move the active workspace to monitor `1`
@@ -211,13 +211,13 @@ Runtime commands:
 - `wm-monitor-discover`
 - `wm-monitor-suggest <monitor-name>`
 - `wm-monitor-new-dialog`
-- `wm-monitor-toggle DP-3`
-- `wm-monitor-on DP-3`
-- `wm-monitor-off DP-3`
-- `wm-monitor-restore DP-3`
-- `wm-monitor-status DP-3`
-- `wm-monitor-workspace-to DP-3`
-- `wm-monitor-focused-workspaces-to DP-3`
+- `wm-monitor-toggle HDMI-A-2`
+- `wm-monitor-on HDMI-A-2`
+- `wm-monitor-off HDMI-A-2`
+- `wm-monitor-restore HDMI-A-2`
+- `wm-monitor-status HDMI-A-2`
+- `wm-monitor-workspace-to HDMI-A-2`
+- `wm-monitor-focused-workspaces-to HDMI-A-2`
 
 The toggle layer saves the output's workspace/focus state before disabling it, moves those workspaces onto the configured fallback monitor, and restores them when the output comes back. The same workspace handoff logic is also exposed through the numeric `SUPER+ALT+<number>` and `SUPER+CTRL+ALT+<number>` monitor binds. The “move all” variant only targets normal numbered workspaces (`id > 0`) and leaves special workspaces alone.
 
