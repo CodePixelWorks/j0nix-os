@@ -42,6 +42,7 @@ let
   sunshineDisplayTargetAppName =
     sunshineDisplayTargetSettings.appName or (sunshineVirtualDisplay.appName or "Adaptive Display");
   sunshineDisplayTargetAppIcon = "${../../icons/sunshine/adaptive-display.svg}";
+  hyprlandEnabled = config.programs.hyprland.enable or false;
   sunshineDisplayTargetCaptureRaw =
     sunshineDisplayTargetSettings.capture or (sunshineVirtualDisplay.capture or "auto");
   sunshineDisplayTargetCaptureAuto = builtins.elem sunshineDisplayTargetCaptureRaw [
@@ -50,7 +51,10 @@ let
     "auto"
   ];
   sunshineDisplayTargetCapture =
-    if sunshineDisplayTargetCaptureAuto then null else sunshineDisplayTargetCaptureRaw;
+    if sunshineDisplayTargetCaptureAuto then
+      if hyprlandEnabled then "wlr" else null
+    else
+      sunshineDisplayTargetCaptureRaw;
   sunshineDisplayTargetIsHeadless = sunshineDisplayTargetBackend == "hyprland-headless";
   sunshineDisplayTargetIsPhysical = sunshineDisplayTargetBackend == "physical-output";
   profileDetails = settings.profileDetails or { };
