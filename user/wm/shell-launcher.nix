@@ -241,6 +241,8 @@ in
       ${pkgs.procps}/bin/pkill -f "quickshell.*-c[[:space:]]*${overviewName}" >/dev/null 2>&1 || true
     '')
     (writeShellScriptBin "wm-screenshot-full" ''
+      set -eu
+
       out_dir="$HOME/Pictures/Screenshots"
       ts="$(date +%Y-%m-%d_%H-%M-%S)"
       out_file="$out_dir/screenshot-$ts.png"
@@ -254,11 +256,17 @@ in
 
       grim "$out_file" || exit 1
 
+      if command -v wl-copy >/dev/null 2>&1; then
+        wl-copy < "$out_file" || true
+      fi
+
       if command -v notify-send >/dev/null 2>&1; then
-        notify-send "Screenshot saved" "$out_file" >/dev/null 2>&1 || true
+        notify-send "Screenshot saved" "Saved and copied to clipboard: $out_file" >/dev/null 2>&1 || true
       fi
     '')
     (writeShellScriptBin "wm-screenshot-area" ''
+      set -eu
+
       out_dir="$HOME/Pictures/Screenshots"
       ts="$(date +%Y-%m-%d_%H-%M-%S)"
       out_file="$out_dir/screenshot-$ts.png"
@@ -280,8 +288,12 @@ in
 
       grim -g "$region" "$out_file" || exit 1
 
+      if command -v wl-copy >/dev/null 2>&1; then
+        wl-copy < "$out_file" || true
+      fi
+
       if command -v notify-send >/dev/null 2>&1; then
-        notify-send "Screenshot saved" "$out_file" >/dev/null 2>&1 || true
+        notify-send "Screenshot saved" "Saved and copied to clipboard: $out_file" >/dev/null 2>&1 || true
       fi
     '')
     (writeShellScriptBin "wm-lock-screen" ''
