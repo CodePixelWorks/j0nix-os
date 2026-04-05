@@ -134,6 +134,9 @@ let
   configuredPhysicalOutputStates = builtins.filter (
     output: !(builtins.elem (output.name or "") configuredHeadlessOutputNames)
   ) configuredInitialOutputStates;
+  configuredPhysicalOutputIndexMap = lib.listToAttrs (
+    lib.imap0 (idx: output: lib.nameValuePair (output.name or "") idx) configuredPhysicalOutputStates
+  );
   initialOutputStateToMonitorSpec =
     output:
     let
@@ -192,6 +195,17 @@ let
       sunshineDisplayTargetConfig.position or "10000x10000"
     else
       "10000x10000";
+  sunshineKmsOutputIndex =
+    if
+      sunshineDisplayTargetEnabled
+      && sunshineDisplayTargetIsPhysical
+      && sunshineDisplayTargetCapture == "kms"
+      && sunshineDisplayTargetOutputName != null
+      && builtins.hasAttr sunshineDisplayTargetOutputName configuredPhysicalOutputIndexMap
+    then
+      configuredPhysicalOutputIndexMap.${sunshineDisplayTargetOutputName}
+    else
+      null;
   defaultTargetScale = toString (
     if sunshineDisplayTargetConfig != null then sunshineDisplayTargetConfig.scale or 1 else 1
   );
@@ -367,7 +381,11 @@ let
     }
     default_mode=${lib.escapeShellArg defaultTargetMode}
     staging_position=${lib.escapeShellArg defaultTargetPosition}
-    stream_position=${lib.escapeShellArg "0x0"}
+    stream_position=${
+      lib.escapeShellArg (
+        if sunshineDisplayTargetIsHeadless then "0x0" else defaultTargetPosition
+      )
+    }
     target_scale=${lib.escapeShellArg defaultTargetScale}
     allowed_resolutions=${lib.escapeShellArg allowedTargetResolutions}
     allowed_fps=${lib.escapeShellArg allowedTargetFps}
@@ -577,6 +595,10 @@ let
     base_config=${lib.escapeShellArg sunshineDynamicConfigFile}
     rm -f "$tmp_config"
     ${pkgs.coreutils}/bin/install -m 600 "$base_config" "$tmp_config"
+
+    ${lib.optionalString (sunshineKmsOutputIndex != null) ''
+      printf 'output_name = %s\n' ${lib.escapeShellArg (toString sunshineKmsOutputIndex)} >> "$tmp_config"
+    ''}
 
     ${lib.optionalString (sunshineDisplayTargetEnabled && sunshineDisplayTargetIsHeadless) ''
       target_name=${
