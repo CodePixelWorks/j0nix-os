@@ -330,6 +330,7 @@ in
         wget
         curl
         openssl
+        pnpm
         unzip
         zip
         tree
