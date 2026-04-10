@@ -15,6 +15,8 @@ pkgs.appimageTools.wrapType2 rec {
     export QT_QPA_PLATFORM="''${QT_QPA_PLATFORM:-xcb}"
     export GDK_BACKEND="''${GDK_BACKEND:-x11}"
     export WEBKIT_DISABLE_DMABUF_RENDERER="''${WEBKIT_DISABLE_DMABUF_RENDERER:-1}"
+    export MESA_LOADER_DRIVER_OVERRIDE="''${MESA_LOADER_DRIVER_OVERRIDE:-zink}"
+    export GALLIUM_DRIVER="''${GALLIUM_DRIVER:-zink}"
     # Do not override GIO_MODULE_DIR: replacing it can hide default GLib modules.
     # Add glib-networking modules on top of defaults instead.
     export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules"
