@@ -382,9 +382,7 @@ let
     default_mode=${lib.escapeShellArg defaultTargetMode}
     staging_position=${lib.escapeShellArg defaultTargetPosition}
     stream_position=${
-      lib.escapeShellArg (
-        if sunshineDisplayTargetIsHeadless then "0x0" else defaultTargetPosition
-      )
+      lib.escapeShellArg (if sunshineDisplayTargetIsHeadless then "0x0" else defaultTargetPosition)
     }
     target_scale=${lib.escapeShellArg defaultTargetScale}
     allowed_resolutions=${lib.escapeShellArg allowedTargetResolutions}
@@ -416,7 +414,7 @@ let
       resolution_allowed=0
       selected_fps=""
 
-      if [ "$target_backend" = "physical-output" ]; then
+      if [ "$target_backend" = "physical-output" ] || [ "$target_backend" = "hyprland-headless" ]; then
         resolution_allowed=1
       fi
 
@@ -596,26 +594,29 @@ let
     rm -f "$tmp_config"
     ${pkgs.coreutils}/bin/install -m 600 "$base_config" "$tmp_config"
 
-    ${lib.optionalString (sunshineDisplayTargetEnabled && sunshineDisplayTargetIsPhysical && sunshineKmsOutputIndex != null) ''
-      target_name=${
-        lib.escapeShellArg (
-          if sunshineDisplayTargetOutputName != null then sunshineDisplayTargetOutputName else ""
-        )
-      }
-      target_mode=${lib.escapeShellArg defaultTargetMode}
-      target_position=${lib.escapeShellArg defaultTargetPosition}
-      target_scale=${lib.escapeShellArg defaultTargetScale}
+    ${lib.optionalString
+      (sunshineDisplayTargetEnabled && sunshineDisplayTargetIsPhysical && sunshineKmsOutputIndex != null)
+      ''
+        target_name=${
+          lib.escapeShellArg (
+            if sunshineDisplayTargetOutputName != null then sunshineDisplayTargetOutputName else ""
+          )
+        }
+        target_mode=${lib.escapeShellArg defaultTargetMode}
+        target_position=${lib.escapeShellArg defaultTargetPosition}
+        target_scale=${lib.escapeShellArg defaultTargetScale}
 
-      if [ -n "$target_name" ] && [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -x "$hyprctl_bin" ]; then
-        "$hyprctl_bin" keyword monitor "$target_name,$target_mode,$target_position,$target_scale" >/dev/null 2>&1 || true
-        for _ in $(seq 1 50); do
-          if "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$target_name" '.[] | select(.name == $name and (.disabled // false) == false and (.width // 0) > 0 and (.height // 0) > 0)' >/dev/null 2>&1; then
-            break
-          fi
-          sleep 0.1
-        done
-      fi
-    ''}
+        if [ -n "$target_name" ] && [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -x "$hyprctl_bin" ]; then
+          "$hyprctl_bin" keyword monitor "$target_name,$target_mode,$target_position,$target_scale" >/dev/null 2>&1 || true
+          for _ in $(seq 1 50); do
+            if "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$target_name" '.[] | select(.name == $name and (.disabled // false) == false and (.width // 0) > 0 and (.height // 0) > 0)' >/dev/null 2>&1; then
+              break
+            fi
+            sleep 0.1
+          done
+        fi
+      ''
+    }
 
     ${lib.optionalString (sunshineKmsOutputIndex != null) ''
       printf 'output_name = %s\n' ${lib.escapeShellArg (toString sunshineKmsOutputIndex)} >> "$tmp_config"
@@ -674,7 +675,9 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     openFirewall = sunshineOpenFirewall;
     capSysAdmin = sunshineNeedsPrivilegedWrapper;
     autoStart = sunshineAutoStart;
-    package = lib.mkIf sunshineUseNvidia (lib.mkDefault (pkgs.sunshine.override { cudaSupport = true; }));
+    package = lib.mkIf sunshineUseNvidia (
+      lib.mkDefault (pkgs.sunshine.override { cudaSupport = true; })
+    );
     settings =
       lib.optionalAttrs sunshineUseNvidia {
         # Enable hardware NVENC encoding
