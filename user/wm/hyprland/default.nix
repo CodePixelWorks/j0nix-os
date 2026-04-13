@@ -422,7 +422,7 @@ let
     shellConfigDir = shellGeneratedConfigDir;
     sessionEnvImportCommand = lib.getExe importSessionEnvScript;
     startGraphicalSessionTargetCommand = lib.getExe startGraphicalSessionTargetScript;
-    swwwDaemonCommand = lib.getExe' pkgs.swww "swww-daemon";
+    swwwDaemonCommand = lib.getExe' pkgs.awww "awww-daemon";
     startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
     keybindDiagnosticsStartupCommand = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
     runtimeMonitorResetCommand = lib.getExe runtimeMonitorResetScript;
@@ -454,7 +454,7 @@ in
     with pkgs;
     [
       hyprlock
-      swww
+      awww
       wayvnc
       wl-clipboard
       grim
