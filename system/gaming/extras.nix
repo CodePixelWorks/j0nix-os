@@ -1,9 +1,15 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   gaming = config.j0nix.desktop.gaming or { };
   enabled = gaming.enable or true;
   protonCfg = gaming.proton or { };
   extraCfg = gaming.extras or { };
+  asfEnabled = extraCfg.archisteamfarm or true;
 in
 lib.mkIf enabled {
   j0nix.software.systemPackages =
@@ -15,5 +21,15 @@ lib.mkIf enabled {
     ]
     ++ lib.optionals (extraCfg.nethack or false) [
       pkgs.nethack
+    ]
+    ++ lib.optionals asfEnabled [
+      pkgs.ArchiSteamFarm
     ];
+
+  services.archisteamfarm = lib.mkIf asfEnabled {
+    enable = true;
+    package = pkgs.ArchiSteamFarm;
+    web-ui.enable = true;
+    dataDir = "/var/lib/archisteamfarm";
+  };
 }
