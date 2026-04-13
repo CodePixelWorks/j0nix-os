@@ -26,6 +26,7 @@ let
   claudeCodeEnabled = ai.claudeCode or true;
   geminiEnabled = ai.gemini or true;
   hermesEnabled = ai.hermes or true;
+  mcpRemotes = ai.mcpRemotes or { };
   hermesPackage =
     let
       system = pkgs.stdenv.hostPlatform.system;
@@ -71,7 +72,9 @@ let
             config_file="$HOME/.codex/config.toml"
             mkdir -p "$(dirname "$config_file")"
 
-            MCP_MODE="$mode" MCP_CONFIG_FILE="$config_file" MCP_SERVERS_JSON='${builtins.toJSON codex.mcpServers}' MCP_MANAGED_NAMES_JSON='${builtins.toJSON codex.mcpManagedServerNames}' ${pkgs.python3}/bin/python <<'PY'
+            MCP_MODE="$mode" MCP_CONFIG_FILE="$config_file" MCP_SERVERS_JSON='${builtins.toJSON codex.mcpServers}' MCP_MANAGED_NAMES_JSON='${
+              builtins.toJSON (codex.mcpManagedServerNames ++ builtins.attrNames mcpRemotes)
+            }' MCP_REMOTES_JSON='${builtins.toJSON mcpRemotes}' ${pkgs.python3}/bin/python <<'PY'
       from pathlib import Path
       import os
       import re
@@ -88,6 +91,10 @@ let
           lines = [f"[mcp_servers.{name}]", f'command = "{server["command"]}"']
           return "\n".join(lines) + "\n"
 
+      def render_remote_block(name, url):
+          lines = [f"[mcp_servers.{name}]", f'url = "{url}"']
+          return "\n".join(lines) + "\n"
+
       updated = text
       for name in managed_names:
           pattern = re.compile(rf'(?ms)^\[mcp_servers\.{re.escape(name)}\]\n.*?(?=^\[|\Z)')
@@ -102,6 +109,17 @@ let
               if updated and not updated.endswith("\n\n"):
                   suffix += "\n"
               updated = f"{updated}{suffix}{block}"
+
+          if "MCP_REMOTES_JSON" in os.environ:
+              remotes = json.loads(os.environ["MCP_REMOTES_JSON"])
+              for name, url in remotes.items():
+                  block = render_remote_block(name, url)
+                  suffix = ""
+                  if updated and not updated.endswith("\n"):
+                      suffix += "\n"
+                  if updated and not updated.endswith("\n\n"):
+                      suffix += "\n"
+                  updated = f"{updated}{suffix}{block}"
 
       updated = re.sub(r"\n{3,}", "\n\n", updated).lstrip("\n")
 
@@ -156,6 +174,12 @@ lib.mkIf enabled {
   home.activation.codexMcpSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD ${codexMcpSync}/bin/codex-mcp-sync
   '';
+
+  xdg.configFile."codex/mcp-remotes.json".text = lib.mkIf (mcpRemotes != { }) (
+    builtins.toJSON {
+      inherit mcpRemotes;
+    }
+  );
 
   xdg.desktopEntries.gemini-cli = lib.mkIf (geminiEnabled && (ai.geminiDesktopEntry or true)) {
     name = "Gemini CLI";

@@ -1,23 +1,20 @@
-{ inputs, lib, pkgs, settings }:
+{
+  inputs,
+  lib,
+  pkgs,
+  settings,
+}:
 let
   dev = settings.dev or { };
   ai = dev.ai or { };
   rawCodex = ai.codex or true;
-  codexCfg =
-    if builtins.isAttrs rawCodex then
-      rawCodex
-    else
-      { enable = rawCodex; };
+  codexCfg = if builtins.isAttrs rawCodex then rawCodex else { enable = rawCodex; };
   enabled = (ai.enable or true) && (codexCfg.enable or true);
   provider = codexCfg.provider or "upstream";
   vscodeEnable = codexCfg.vscode or true;
   mcp = codexCfg.mcp or { };
   rawLsp = mcp.lsp or false;
-  lspCfg =
-    if builtins.isAttrs rawLsp then
-      rawLsp
-    else
-      { enable = rawLsp; };
+  lspCfg = if builtins.isAttrs rawLsp then rawLsp else { enable = rawLsp; };
   mcpNixosEnable = enabled && (mcp.nixos or false);
   mcpGithubEnable = enabled && (mcp.github or false);
   mcpHyprlandEnable = enabled && (mcp.hyprland or false);
@@ -30,9 +27,11 @@ let
         "python"
         "typescript"
         "go"
-      ])
+      ]
+      )
     else
       [ ];
+  mcpRemotes = ai.mcpRemotes or { };
   mcpNixosPackage =
     if pkgs ? mcp-nixos then
       pkgs.mcp-nixos.overridePythonAttrs (_: {
@@ -43,11 +42,7 @@ let
       })
     else
       null;
-  mcpGithubPackage =
-    if pkgs ? github-mcp-server then
-      pkgs.github-mcp-server
-    else
-      null;
+  mcpGithubPackage = if pkgs ? github-mcp-server then pkgs.github-mcp-server else null;
   mcpHyprlandPackage =
     if inputs ? hyprmcp-src then
       let
@@ -55,52 +50,67 @@ let
       in
       pkgs.writeShellApplication {
         name = "j0nix-mcp-hyprland";
-        runtimeInputs = [ pkgs.hyprland pythonWithMcp ];
+        runtimeInputs = [
+          pkgs.hyprland
+          pythonWithMcp
+        ];
         text = ''
           exec ${pythonWithMcp}/bin/python ${inputs.hyprmcp-src}/hyprmcp/server.py
         '';
       }
     else
       null;
-  mcpLspPackage =
-    if pkgs ? mcp-language-server-j0nix then
-      pkgs.mcp-language-server-j0nix
-    else
-      null;
+  mcpLspPackage = if pkgs ? mcp-language-server-j0nix then pkgs.mcp-language-server-j0nix else null;
 
   lspLanguageSpecs = {
     nix = {
       serverName = "lsp-nix";
       wrapperName = "j0nix-mcp-lsp-nix";
-      runtimeInputs = [ mcpLspPackage pkgs.nixd ];
+      runtimeInputs = [
+        mcpLspPackage
+        pkgs.nixd
+      ];
       lspCommand = "${pkgs.nixd}/bin/nixd";
       lspArgs = [ ];
     };
     rust = {
       serverName = "lsp-rust";
       wrapperName = "j0nix-mcp-lsp-rust";
-      runtimeInputs = [ mcpLspPackage pkgs.rust-analyzer ];
+      runtimeInputs = [
+        mcpLspPackage
+        pkgs.rust-analyzer
+      ];
       lspCommand = "${pkgs.rust-analyzer}/bin/rust-analyzer";
       lspArgs = [ ];
     };
     python = {
       serverName = "lsp-python";
       wrapperName = "j0nix-mcp-lsp-python";
-      runtimeInputs = [ mcpLspPackage pkgs.pyright ];
+      runtimeInputs = [
+        mcpLspPackage
+        pkgs.pyright
+      ];
       lspCommand = "${pkgs.pyright}/bin/pyright-langserver";
       lspArgs = [ "--stdio" ];
     };
     typescript = {
       serverName = "lsp-typescript";
       wrapperName = "j0nix-mcp-lsp-typescript";
-      runtimeInputs = [ mcpLspPackage pkgs.typescript-language-server pkgs.nodejs ];
+      runtimeInputs = [
+        mcpLspPackage
+        pkgs.typescript-language-server
+        pkgs.nodejs
+      ];
       lspCommand = "${pkgs.typescript-language-server}/bin/typescript-language-server";
       lspArgs = [ "--stdio" ];
     };
     go = {
       serverName = "lsp-go";
       wrapperName = "j0nix-mcp-lsp-go";
-      runtimeInputs = [ mcpLspPackage pkgs.gopls ];
+      runtimeInputs = [
+        mcpLspPackage
+        pkgs.gopls
+      ];
       lspCommand = "${pkgs.gopls}/bin/gopls";
       lspArgs = [ ];
     };
@@ -108,7 +118,8 @@ let
   supportedMcpLspLanguages = builtins.attrNames lspLanguageSpecs;
   validMcpLspLanguages = lib.all (lang: builtins.elem lang supportedMcpLspLanguages) mcpLspLanguages;
 
-  mkLspWrapper = language: spec:
+  mkLspWrapper =
+    language: spec:
     pkgs.writeShellApplication {
       name = spec.wrapperName;
       runtimeInputs = spec.runtimeInputs;
@@ -131,8 +142,9 @@ let
     if !mcpLspEnable || mcpLspPackage == null || !validMcpLspLanguages then
       { }
     else
-      builtins.listToAttrs (map
-        (language:
+      builtins.listToAttrs (
+        map (
+          language:
           let
             spec = lspLanguageSpecs.${language};
             wrapper = mkLspWrapper language spec;
@@ -144,10 +156,18 @@ let
               package = wrapper;
               command = spec.wrapperName;
             };
-          })
-        mcpLspLanguages);
+          }
+        ) mcpLspLanguages
+      );
 
-  mcpManagedServerNames = [ "nixos" "github" "hyprland" ] ++ map (language: lspLanguageSpecs.${language}.serverName) (lib.filter (language: builtins.hasAttr language lspLanguageSpecs) mcpLspLanguages);
+  mcpManagedServerNames = [
+    "nixos"
+    "github"
+    "hyprland"
+  ]
+  ++ map (language: lspLanguageSpecs.${language}.serverName) (
+    lib.filter (language: builtins.hasAttr language lspLanguageSpecs) mcpLspLanguages
+  );
 
   mcpLspRuntimePackages =
     if !mcpLspEnable || !validMcpLspLanguages then
@@ -155,8 +175,8 @@ let
     else
       lib.unique (lib.concatMap (language: lspLanguageSpecs.${language}.runtimeInputs) mcpLspLanguages);
 
-  mcpServers =
-    lib.filterAttrs (_: server: server.enable && server.package != null) ({
+  mcpServers = lib.filterAttrs (_: server: server.enable && server.package != null) (
+    {
       nixos = {
         enable = mcpNixosEnable;
         package = mcpNixosPackage;
@@ -172,7 +192,9 @@ let
         package = mcpHyprlandPackage;
         command = "j0nix-mcp-hyprland";
       };
-    } // mcpLspServers);
+    }
+    // mcpLspServers
+  );
 
   compatAvailable =
     (inputs ? codex-cli-nix)
@@ -190,7 +212,10 @@ let
 
   cliPackage =
     if provider == "compat" then
-      if compatAvailable then inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system}.default else null
+      if compatAvailable then
+        inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
+      else
+        null
     else
       upstreamPackage;
 
@@ -217,11 +242,15 @@ in
     mcpLspRuntimePackages
     mcpManagedServerNames
     mcpServers
+    mcpRemotes
     validMcpLspLanguages
     supportedMcpLspLanguages
     ;
 
-  validProvider = builtins.elem provider [ "upstream" "compat" ];
+  validProvider = builtins.elem provider [
+    "upstream"
+    "compat"
+  ];
 
   providerMessage = "settings.dev.ai.codex.provider must be one of: upstream, compat";
 
