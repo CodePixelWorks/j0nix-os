@@ -90,6 +90,7 @@
       umuLauncher = true;
       nethack = false;
       openSourceGames = false;
+      archisteamfarm = true;
     };
   };
 }
