@@ -216,7 +216,10 @@ let
   virtualisationCfg = dev.virtualisation or { };
   virtualisationEnabled = virtualisationCfg.enable or false;
   vagrantPackage =
-    if virtualisationCfg.vagrantLibvirt or true then pkgs.vagrant-with-libvirt else pkgs.vagrant.override { withLibvirt = false; };
+    if virtualisationCfg.vagrantLibvirt or true then
+      pkgs.vagrant-with-libvirt
+    else
+      pkgs.vagrant.override { withLibvirt = false; };
   pythonUseScript = pkgs.writeShellScriptBin "pyuse" ''
     set -eu
     if [ $# -ne 1 ]; then
@@ -239,6 +242,7 @@ in
 {
   imports = [
     ./ai-cli.nix
+    ./gpg.nix
   ];
 
   config = lib.mkIf enabled {
