@@ -23,12 +23,12 @@ lib.mkIf enabled {
       pkgs.nethack
     ]
     ++ lib.optionals asfEnabled [
-      pkgs.ArchiSteamFarm
+      pkgs.archisteamfarm
     ];
 
   services.archisteamfarm = lib.mkIf asfEnabled {
     enable = true;
-    package = pkgs.ArchiSteamFarm;
+    package = pkgs.archisteamfarm;
     web-ui.enable = true;
     dataDir = "/var/lib/archisteamfarm";
   };
