@@ -23,7 +23,7 @@ lib.mkIf enabled {
       pkgs.pioneer
     ]
     ++ lib.optionals (extra.nethack or false) [ pkgs.nethack ]
-    ++ lib.optionals asfEnabled [ pkgs.ArchiSteamFarm ];
+    ++ lib.optionals asfEnabled [ pkgs.archisteamfarm ];
 
   home.file.".nethackrc" = lib.mkIf (extra.nethack or false) {
     text = ''
@@ -37,7 +37,7 @@ lib.mkIf enabled {
 
   xdg.desktopEntries.archisteamfarm = lib.mkIf asfEnabled {
     name = "ArchiSteamFarm";
-    exec = "${lib.getExe pkgs.ArchiSteamFarm} --path ${config.home.homeDirectory}/.config/archisteamfarm";
+    exec = "${lib.getExe pkgs.archisteamfarm} --path ${config.home.homeDirectory}/.config/archisteamfarm";
     comment = "Steam card idling bot";
     categories = [
       "Game"
