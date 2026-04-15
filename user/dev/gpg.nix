@@ -14,16 +14,30 @@ let
   sshAgentCfg = gpgCfg.sshAgent or { };
   sshAgentEnabled = sshAgentCfg.enable or false;
 
-  mkGitSigningEmail =
+  mkGpgSigningFile =
     keyName: keySpec:
     let
       emails = keySpec.emails or [ ];
-      signByDefault = keySpec.signByDefault or false;
+      keyPath = keySpec.key;
     in
     lib.map (email: {
-      inherit email;
-      signByDefault = signByDefault;
-      key = keySpec.key;
+      name = "git/gpg/${email}.inc";
+      value = {
+        text = ''
+          [user]
+            signingkey = ${keyPath}
+        '';
+      };
+    }) emails;
+
+  mkGpgSigningInclude =
+    keyName: keySpec:
+    let
+      emails = keySpec.emails or [ ];
+    in
+    lib.map (email: {
+      condition = "hasconfig:user.email:${email}";
+      path = "~/.config/git/gpg/${email}.inc";
     }) emails;
 in
 {
@@ -37,24 +51,16 @@ in
       };
     };
 
-    programs.git.signing = lib.mkIf gitSigningCfg.enable {
-      signByDefault = gitSigningCfg.signByDefault or true;
-    };
-
-    programs.git.settings = lib.mkIf (gpgKeys != { }) (
-      let
-        signingByEmail = lib.concatLists (lib.mapAttrsToList mkGitSigningEmail gpgKeys);
-      in
-      lib.foldl' (
-        acc: entry:
-        acc
-        // {
-          user = acc.user or { } // {
-            signingkey = if entry.signByDefault then entry.key else acc.user.signingkey or null;
-          };
-        }
-      ) { } signingByEmail
+    xdg.configFile = lib.mkIf (gpgKeys != { }) (
+      builtins.listToAttrs (lib.concatLists (lib.mapAttrsToList mkGpgSigningFile gpgKeys))
     );
+
+    programs.git = lib.mkIf gitSigningCfg.enable {
+      signing = {
+        signByDefault = gitSigningCfg.signByDefault or true;
+      };
+      includes = lib.flatten (lib.mapAttrsToList mkGpgSigningInclude gpgKeys);
+    };
 
     home.sessionVariables = lib.mkIf sshAgentEnabled {
       GPG_AGENT_SSH = "${config.home.homeDirectory}/.gnupg/S.gpg-agent.ssh";
