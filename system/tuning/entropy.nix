@@ -1,15 +1,26 @@
-{ ... }:
+{ pkgs, ... }:
 {
-  # Entropy source for improved random number generation
-  # jitterentropy: Uses CPU timing jitter as entropy source (modern, secure)
-  # kernel.random.read_wakeup_threshold: Reduce wakeups for better throughput
-  # kernel.random.write_wakeup_threshold: Threshold for blocking writes
+  # CPU Jitter Entropy for improved random number generation
+  # This is particularly important for GPG key generation
 
-  services.jitterentropy = {
-    enable = true;
+  systemd.services.jitterentropy = {
+    description = "CPU Jitter Entropy Daemon";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "systemd-tmpfiles-setup.service" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${pkgs.jitterentropy-rngd}/bin/jitterentropy-rngd";
+      Restart = "on-failure";
+      RestartSec = 5;
+      PrivateTmp = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      NoNewPrivileges = true;
+      CapabilityBoundingSet = "";
+    };
   };
 
-  # Ensure kernel entropy pool is well-seeded
+  # Kernel entropy tuning
   boot.kernel.sysctl = {
     "kernel.random.read_wakeup_threshold" = 64;
     "kernel.random.write_wakeup_threshold" = 128;
