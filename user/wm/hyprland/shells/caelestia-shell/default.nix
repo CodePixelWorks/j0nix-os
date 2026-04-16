@@ -1,4 +1,10 @@
-{ inputs, lib, pkgs, settings, ... }:
+{
+  inputs,
+  lib,
+  pkgs,
+  settings,
+  ...
+}:
 let
   listMerge = import ../../../../../system/lib/list-merge.nix { inherit lib; };
   iconThemeCfg = settings.iconTheme or { };
@@ -13,9 +19,12 @@ let
     else if iconThemePackageKey == "adwaita" then
       pkgs.adwaita-icon-theme
     else if iconThemePackageKey == "breeze" then
-      if (pkgs ? kdePackages) && (pkgs.kdePackages ? breeze-icons) then pkgs.kdePackages.breeze-icons
-      else if pkgs ? breeze-icons then pkgs.breeze-icons
-      else null
+      if (pkgs ? kdePackages) && (pkgs.kdePackages ? breeze-icons) then
+        pkgs.kdePackages.breeze-icons
+      else if pkgs ? breeze-icons then
+        pkgs.breeze-icons
+      else
+        null
     else
       null;
   dmsSettings = settings.dms or { };
@@ -40,28 +49,23 @@ let
     else
       null;
   hasInput = selectedInput != null;
-  useUpstreamQuickshell = builtins.elem quickshellRuntime [ "upstream" "upstream-dev" ];
+  useUpstreamQuickshell = builtins.elem quickshellRuntime [
+    "upstream"
+    "upstream-dev"
+  ];
   quickshellInput =
     if hasInput && (selectedInput ? inputs) && (selectedInput.inputs ? quickshell) then
       selectedInput.inputs.quickshell
     else
       null;
   quickshellSource =
-    if quickshellInput != null then
-      (quickshellInput.outPath or quickshellInput)
-    else
-      null;
+    if quickshellInput != null then (quickshellInput.outPath or quickshellInput) else null;
   quickshellRev =
-    if quickshellInput != null && (quickshellInput ? rev) then
-      quickshellInput.rev
-    else
-      null;
+    if quickshellInput != null && (quickshellInput ? rev) then quickshellInput.rev else null;
   cpptraceWithLibunwind = pkgs.cpptrace.overrideAttrs (old: {
     buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.libunwind ];
     propagatedBuildInputs = (old.propagatedBuildInputs or [ ]) ++ [ pkgs.libunwind ];
-    cmakeFlags =
-      (old.cmakeFlags or [ ])
-      ++ [ (lib.cmakeBool "CPPTRACE_UNWIND_WITH_LIBUNWIND" true) ];
+    cmakeFlags = (old.cmakeFlags or [ ]) ++ [ (lib.cmakeBool "CPPTRACE_UNWIND_WITH_LIBUNWIND" true) ];
   });
   upstreamQuickshellFromSource =
     if useUpstreamQuickshell && quickshellSource != null then
@@ -108,10 +112,7 @@ let
     && (selectedInput ? packages)
     && (builtins.hasAttr pkgs.stdenv.hostPlatform.system selectedInput.packages);
   packageSet =
-    if hasSystemPackages then
-      selectedInput.packages.${pkgs.stdenv.hostPlatform.system}
-    else
-      { };
+    if hasSystemPackages then selectedInput.packages.${pkgs.stdenv.hostPlatform.system} else { };
   caelestiaShellPkg =
     if packageSet ? default then
       packageSet.default
@@ -131,10 +132,7 @@ let
     && (caelestiaCliInput ? packages)
     && (builtins.hasAttr pkgs.stdenv.hostPlatform.system caelestiaCliInput.packages);
   cliPackageSet =
-    if hasCliSystemPackages then
-      caelestiaCliInput.packages.${pkgs.stdenv.hostPlatform.system}
-    else
-      { };
+    if hasCliSystemPackages then caelestiaCliInput.packages.${pkgs.stdenv.hostPlatform.system} else { };
   upstreamCaelestiaCliPkg =
     if cliPackageSet ? default then
       cliPackageSet.default
@@ -143,24 +141,27 @@ let
     else
       null;
   caelestiaCliSchemeSourceDir =
-    if caelestiaCliInput != null then
-      "${caelestiaCliInput}/src/caelestia/data/schemes"
-    else
-      null;
+    if caelestiaCliInput != null then "${caelestiaCliInput}/src/caelestia/data/schemes" else null;
   caelestiaCliPkg =
     if upstreamCaelestiaCliPkg != null && hasValue caelestiaCliSchemeSourceDir then
       upstreamCaelestiaCliPkg.overrideAttrs (old: {
-        patchPhase = (old.patchPhase or "") + "\n" + ''
-          substituteInPlace src/caelestia/utils/material/generator.py \
-            --replace-fail 'from materialyoucolor.dynamiccolor.dynamic_scheme import DynamicScheme' \
-                           'from materialyoucolor.scheme.dynamic_scheme import DynamicScheme'
-        '';
-        postInstall = (old.postInstall or "") + "\n" + ''
-          target="$out/${pkgs.python3.sitePackages}/caelestia/data/schemes"
-          rm -rf "$target"
-          mkdir -p "$(dirname "$target")"
-          cp -r ${caelestiaCliSchemeSourceDir} "$target"
-        '';
+        patchPhase =
+          (old.patchPhase or "")
+          + "\n"
+          + ''
+            substituteInPlace src/caelestia/utils/material/generator.py \
+              --replace-fail 'from materialyoucolor.dynamiccolor.dynamic_scheme import DynamicScheme' \
+                             'from materialyoucolor.scheme.dynamic_scheme import DynamicScheme'
+          '';
+        postInstall =
+          (old.postInstall or "")
+          + "\n"
+          + ''
+            target="$out/${pkgs.python3.sitePackages}/caelestia/data/schemes"
+            rm -rf "$target"
+            mkdir -p "$(dirname "$target")"
+            cp -r ${caelestiaCliSchemeSourceDir} "$target"
+          '';
       })
     else
       null;
@@ -168,19 +169,15 @@ let
   configuredFlavour = caelestiaThemeSettings.flavour or null;
   configuredMode = caelestiaThemeSettings.mode or null;
   configuredVariant = caelestiaThemeSettings.variant or null;
-  explicitThemeRequested =
-    builtins.any hasValue [
-      configuredScheme
-      configuredFlavour
-      configuredMode
-      configuredVariant
-    ];
+  explicitThemeRequested = builtins.any hasValue [
+    configuredScheme
+    configuredFlavour
+    configuredMode
+    configuredVariant
+  ];
   smartSchemeConfigured = caelestiaThemeSettings ? smartScheme;
   smartSchemeEnabled =
-    if smartSchemeConfigured then
-      caelestiaThemeSettings.smartScheme
-    else
-      !explicitThemeRequested;
+    if smartSchemeConfigured then caelestiaThemeSettings.smartScheme else !explicitThemeRequested;
   manualThemeApply = explicitThemeRequested && !smartSchemeEnabled;
   themeApplyArgs = lib.concatStringsSep " " (
     lib.optionals (hasValue configuredScheme) [ "-n ${lib.escapeShellArg configuredScheme}" ]
@@ -194,9 +191,11 @@ let
   keepassWorkspaceCfg = keepassCfg.workspace or { };
   keepassWorkspaceEnable = keepassWorkspaceCfg.enable or true;
   minimizerEnabled = ((hyprlandCfg.minimizer or { }).enable or false);
-  keepassWorkspaceMode = keepassWorkspaceCfg.mode or (if minimizerEnabled then "minimizer" else "special-workspace");
+  keepassWorkspaceMode =
+    keepassWorkspaceCfg.mode or (if minimizerEnabled then "minimizer" else "special-workspace");
   keepassWorkspaceName = keepassWorkspaceCfg.name or "passwords";
-  keepassSpecialWorkspaceEnabled = keepassEnabled && keepassWorkspaceEnable && keepassWorkspaceMode == "special-workspace";
+  keepassSpecialWorkspaceEnabled =
+    keepassEnabled && keepassWorkspaceEnable && keepassWorkspaceMode == "special-workspace";
   specialWorkspaceIcons = [
     {
       name = "discord";
@@ -210,7 +209,8 @@ let
       name = "sysmon";
       icon = "monitoring";
     }
-  ] ++ lib.optionals keepassSpecialWorkspaceEnabled [
+  ]
+  ++ lib.optionals keepassSpecialWorkspaceEnabled [
     {
       name = keepassWorkspaceName;
       icon = "password";
@@ -245,25 +245,41 @@ let
       actions = [
         {
           name = "Shutdown";
-          command = [ "system-power-action" "poweroff" ];
+          command = [
+            "system-power-action"
+            "poweroff"
+          ];
         }
         {
           name = "Reboot";
-          command = [ "system-power-action" "reboot" ];
+          command = [
+            "system-power-action"
+            "reboot"
+          ];
         }
         {
           name = "Sleep";
-          command = [ "system-power-action" "suspend" ];
+          command = [
+            "system-power-action"
+            "suspend"
+          ];
         }
         {
           name = "Auto Theme";
-          command = [ "caelestia-smart-theme" "enable" ];
+          command = [
+            "caelestia-smart-theme"
+            "enable"
+          ];
         }
         {
           name = "Manual Theme";
-          command = [ "caelestia-smart-theme" "disable" ];
+          command = [
+            "caelestia-smart-theme"
+            "disable"
+          ];
         }
-      ] ++ lib.optionals keepassEnabled [
+      ]
+      ++ lib.optionals keepassEnabled [
         {
           name = "Passwords";
           command = [ "keepassxc-toggle" ];
@@ -272,9 +288,18 @@ let
     };
     session = {
       commands = {
-        shutdown = [ "system-power-action" "poweroff" ];
-        hibernate = [ "system-power-action" "hibernate" ];
-        reboot = [ "system-power-action" "reboot" ];
+        shutdown = [
+          "system-power-action"
+          "poweroff"
+        ];
+        hibernate = [
+          "system-power-action"
+          "hibernate"
+        ];
+        reboot = [
+          "system-power-action"
+          "reboot"
+        ];
       };
     };
     services = {
@@ -284,11 +309,13 @@ let
       enableGtk = false;
       enableQt = false;
     };
-  } // lib.optionalAttrs (configuredWallpaperDir != null && configuredWallpaperDir != "") {
+  }
+  // lib.optionalAttrs (configuredWallpaperDir != null && configuredWallpaperDir != "") {
     paths = {
       wallpaperDir = configuredWallpaperDir;
     };
-  } // {
+  }
+  // {
     bar = {
       workspaces = {
         specialWorkspaceIcons = specialWorkspaceIcons;
@@ -296,7 +323,10 @@ let
     };
   };
   seededWallpaperDirValue =
-    if configuredWallpaperDir != null && configuredWallpaperDir != "" then configuredWallpaperDir else "";
+    if configuredWallpaperDir != null && configuredWallpaperDir != "" then
+      configuredWallpaperDir
+    else
+      "";
   shellRuntimePackages = with pkgs; [
     libnotify
     procps
@@ -400,30 +430,32 @@ let
       }
 
       ${lib.optionalString iconThemeEnabled ''
-      export XDG_ICON_THEME="${iconThemeName}"
-      export GTK_ICON_THEME="${iconThemeName}"
-      export QT_ICON_THEME_NAME="${iconThemeName}"
-      export QT_QUICK_CONTROLS_ICON_THEME_NAME="${iconThemeName}"
+        export XDG_ICON_THEME="${iconThemeName}"
+        export GTK_ICON_THEME="${iconThemeName}"
+        export QT_ICON_THEME_NAME="${iconThemeName}"
+        export QT_QUICK_CONTROLS_ICON_THEME_NAME="${iconThemeName}"
       ''}
       # Quickshell app icons are resolved through freedesktop icon lookup paths.
       # UWSM/systemd user sessions can miss Home Manager profile paths here.
       # Keep the list deduplicated to avoid repeated desktop-entry replacement churn.
       xdg_data_dirs=""
-      for d in ${lib.concatStringsSep " " (
-        [
-          ''"$HOME/.nix-profile/share"''
-          ''"/etc/profiles/per-user/$USER/share"''
-          ''"/run/current-system/sw/share"''
-          ''"$HOME/.local/share/flatpak/exports/share"''
-          ''"/var/lib/flatpak/exports/share"''
-        ]
-        ++ lib.optionals (iconThemePackage != null) [ ''"${iconThemePackage}/share"'' ]
-        ++ [
-          ''"${hicolor-icon-theme}/share"''
-          ''"${adwaita-icon-theme}/share"''
-          ''"${papirus-icon-theme}/share"''
-        ]
-      )}; do
+      for d in ${
+        lib.concatStringsSep " " (
+          [
+            ''"$HOME/.nix-profile/share"''
+            ''"/etc/profiles/per-user/$USER/share"''
+            ''"/run/current-system/sw/share"''
+            ''"$HOME/.local/share/flatpak/exports/share"''
+            ''"/var/lib/flatpak/exports/share"''
+          ]
+          ++ lib.optionals (iconThemePackage != null) [ ''"${iconThemePackage}/share"'' ]
+          ++ [
+            ''"${hicolor-icon-theme}/share"''
+            ''"${adwaita-icon-theme}/share"''
+            ''"${papirus-icon-theme}/share"''
+          ]
+        )
+      }; do
         xdg_data_dirs="$(append_unique_colon_path "$xdg_data_dirs" "$d")"
       done
       IFS=':'
@@ -438,7 +470,12 @@ let
       export QSG_RENDER_LOOP="''${QSG_RENDER_LOOP:-basic}"
       # Caelestia actions (e.g. screen recording) execute from the shell process env.
       # Ensure GPU Screen Recorder binaries are resolvable even if the session PATH is incomplete.
-      export PATH="/run/wrappers/bin:${lib.makeBinPath [ gpu-screen-recorder gpu-screen-recorder-gtk ]}:$PATH"
+      export PATH="/run/wrappers/bin:${
+        lib.makeBinPath [
+          gpu-screen-recorder
+          gpu-screen-recorder-gtk
+        ]
+      }:$PATH"
       upstream_runtime="${if useUpstreamQuickshell then "1" else "0"}"
       hyprctl_bin="${lib.getExe' pkgs.hyprland "hyprctl"}"
       jq_bin="${pkgs.jq}/bin/jq"
@@ -584,9 +621,9 @@ let
       repair_caelestia_shell_config
 
       ${lib.optionalString (smartSchemeEnabled || manualThemeApply) ''
-      if command -v caelestia-apply-theme >/dev/null 2>&1; then
-        caelestia-apply-theme >/dev/null 2>&1 || true
-      fi
+        if command -v caelestia-apply-theme >/dev/null 2>&1; then
+          caelestia-apply-theme >/dev/null 2>&1 || true
+        fi
       ''}
 
       while true; do
@@ -764,259 +801,276 @@ let
         exit 0
       fi
 
-      ${if smartSchemeEnabled then ''
-      exec caelestia scheme set -n dynamic
-      '' else if manualThemeApply then ''
-      exec caelestia scheme set ${themeApplyArgs}
-      '' else ''
-      exit 0
-      ''}
+      ${
+        if smartSchemeEnabled then
+          ''
+            exec caelestia scheme set -n dynamic
+          ''
+        else if manualThemeApply then
+          ''
+            exec caelestia scheme set ${themeApplyArgs}
+          ''
+        else
+          ''
+            exit 0
+          ''
+      }
     '')
 
     (writeShellScriptBin "caelestia-smart-theme" ''
-      set -eu
+            set -eu
 
-      cfg_dir="''${XDG_CONFIG_HOME:-$HOME/.config}/caelestia"
-      cfg_file="$cfg_dir/shell.json"
-      tmp_file="$cfg_file.codex-tmp"
+            cfg_dir="''${XDG_CONFIG_HOME:-$HOME/.config}/caelestia"
+            cfg_file="$cfg_dir/shell.json"
+            tmp_file="$cfg_file.codex-tmp"
 
-      mkdir -p "$cfg_dir"
-      if [ ! -f "$cfg_file" ]; then
-        cat >"$cfg_file" <<'EOF'
-${builtins.toJSON seededCaelestiaConfig}
-EOF
-      fi
+            mkdir -p "$cfg_dir"
+            if [ ! -f "$cfg_file" ]; then
+              cat >"$cfg_file" <<'EOF'
+      ${builtins.toJSON seededCaelestiaConfig}
+      EOF
+            fi
 
-      case "''${1:-toggle}" in
-        enable)
-          ${pkgs.jq}/bin/jq '.services = ((.services // {}) | .smartScheme = true)' "$cfg_file" >"$tmp_file"
-          mv "$tmp_file" "$cfg_file"
-          if command -v caelestia >/dev/null 2>&1; then
-            caelestia scheme set -n dynamic >/dev/null 2>&1 || true
-          fi
-          ;;
-        disable)
-          ${pkgs.jq}/bin/jq '.services = ((.services // {}) | .smartScheme = false)' "$cfg_file" >"$tmp_file"
-          mv "$tmp_file" "$cfg_file"
-          if command -v caelestia >/dev/null 2>&1; then
-            ${if manualThemeApply then ''
-            caelestia scheme set ${themeApplyArgs} >/dev/null 2>&1 || true
-            '' else ''
-            true
-            ''}
-          fi
-          ;;
-        *)
-          echo "usage: caelestia-smart-theme <enable|disable>" >&2
-          exit 2
-          ;;
-      esac
+            case "''${1:-toggle}" in
+              enable)
+                ${pkgs.jq}/bin/jq '.services = ((.services // {}) | .smartScheme = true)' "$cfg_file" >"$tmp_file"
+                mv "$tmp_file" "$cfg_file"
+                if command -v caelestia >/dev/null 2>&1; then
+                  caelestia scheme set -n dynamic >/dev/null 2>&1 || true
+                fi
+                ;;
+              disable)
+                ${pkgs.jq}/bin/jq '.services = ((.services // {}) | .smartScheme = false)' "$cfg_file" >"$tmp_file"
+                mv "$tmp_file" "$cfg_file"
+                if command -v caelestia >/dev/null 2>&1; then
+                  ${
+                    if manualThemeApply then
+                      ''
+                        caelestia scheme set ${themeApplyArgs} >/dev/null 2>&1 || true
+                      ''
+                    else
+                      ''
+                        true
+                      ''
+                  }
+                fi
+                ;;
+              *)
+                echo "usage: caelestia-smart-theme <enable|disable>" >&2
+                exit 2
+                ;;
+            esac
     '')
   ];
   caelestiaUpstreamShellWrapper =
     if useUpstreamQuickshell && upstreamQuickshellPkg != null && caelestiaShellPkg != null then
-      lib.hiPrio (pkgs.writeShellScriptBin "caelestia-shell" ''
-        set -eu
-        export PATH="${lib.makeBinPath [
-          pkgs.fish
-          pkgs.ddcutil
-          pkgs.brightnessctl
-          pkgs.app2unit
-          pkgs.networkmanager
-          pkgs.lm_sensors
-          pkgs.swappy
-          pkgs.wl-clipboard
-          pkgs.libqalculate
-          pkgs.bashInteractive
-          pkgs.hyprland
-        ]}:$PATH"
-        export CAELESTIA_XKB_RULES_PATH="${pkgs.xkeyboard-config}/share/X11/xkb/rules/base.lst"
+      lib.hiPrio (
+        pkgs.writeShellScriptBin "caelestia-shell" ''
+            set -eu
+            export PATH="${
+              lib.makeBinPath [
+                pkgs.fish
+                pkgs.ddcutil
+                pkgs.brightnessctl
+                pkgs.app2unit
+                pkgs.networkmanager
+                pkgs.lm_sensors
+                pkgs.swappy
+                pkgs.wl-clipboard
+                pkgs.libqalculate
+                pkgs.bashInteractive
+                pkgs.hyprland
+              ]
+            }:$PATH"
+            export CAELESTIA_XKB_RULES_PATH="${pkgs.xkeyboard-config}/share/X11/xkb/rules/base.lst"
 
-        # Keep optional native helper lookups compatible with the upstream wrapper.
-        if [ -z "''${CAELESTIA_LIB_DIR:-}" ] && [ -x "${caelestiaShellPkg}/bin/caelestia-shell" ]; then
-          guessed_lib_dir="$(${pkgs.binutils}/bin/strings ${lib.escapeShellArg "${caelestiaShellPkg}/bin/caelestia-shell"} | ${pkgs.gnugrep}/bin/grep -m1 '/caelestia-extras/lib' || true)"
-          if [ -n "$guessed_lib_dir" ]; then
-            export CAELESTIA_LIB_DIR="$guessed_lib_dir"
+            # Keep optional native helper lookups compatible with the upstream wrapper.
+            if [ -z "''${CAELESTIA_LIB_DIR:-}" ] && [ -x "${caelestiaShellPkg}/bin/caelestia-shell" ]; then
+              guessed_lib_dir="$(${pkgs.binutils}/bin/strings ${lib.escapeShellArg "${caelestiaShellPkg}/bin/caelestia-shell"} | ${pkgs.gnugrep}/bin/grep -m1 '/caelestia-extras/lib' || true)"
+              if [ -n "$guessed_lib_dir" ]; then
+                export CAELESTIA_LIB_DIR="$guessed_lib_dir"
+              fi
+            fi
+
+          # Use correct QML paths for upstream quickshell + caelestia-qml-plugin
+          # The paths baked into the caelestia-shell binary are stale and reference non-existent quickshell-wrapped versions
+          quickshell_qml="${upstreamQuickshellPkg}/lib/qt-6/qml"
+          caelestia_qml="${caelestiaShellPkg}/lib/qt-6/qml"
+
+          if [ -d "$quickshell_qml" ]; then
+            export NIXPKGS_QT6_QML_IMPORT_PATH="''${NIXPKGS_QT6_QML_IMPORT_PATH:+''${NIXPKGS_QT6_QML_IMPORT_PATH}:}$quickshell_qml"
           fi
-        fi
+          if [ -d "$caelestia_qml" ]; then
+            export NIXPKGS_QT6_QML_IMPORT_PATH="''${NIXPKGS_QT6_QML_IMPORT_PATH:+''${NIXPKGS_QT6_QML_IMPORT_PATH}:}$caelestia_qml"
+          fi
 
-        # Preserve QML/plugin import roots baked into the packaged caelestia-shell wrapper.
-        # Upstream quickshell runtime bypasses that wrapper, so we need to forward these paths.
-        if [ -x "${caelestiaShellPkg}/bin/caelestia-shell" ]; then
-          for qml_path in $(${pkgs.binutils}/bin/strings ${lib.escapeShellArg "${caelestiaShellPkg}/bin/caelestia-shell"} | ${pkgs.gnugrep}/bin/grep -E '/lib/qt-6/qml$' || true); do
-            case ":''${NIXPKGS_QT6_QML_IMPORT_PATH:-}:" in
-              *":$qml_path:"*) ;;
-              *)
-                export NIXPKGS_QT6_QML_IMPORT_PATH="''${NIXPKGS_QT6_QML_IMPORT_PATH:+''${NIXPKGS_QT6_QML_IMPORT_PATH}:}$qml_path"
-                ;;
-            esac
-          done
+          # Set CAELESTIA_LIB_DIR if available from caelestia-shell package
+          if [ -z "''${CAELESTIA_LIB_DIR:-}" ] && [ -d "${caelestiaShellPkg}/lib" ]; then
+            export CAELESTIA_LIB_DIR="${caelestiaShellPkg}/lib"
+          fi
 
-          for plugin_path in $(${pkgs.binutils}/bin/strings ${lib.escapeShellArg "${caelestiaShellPkg}/bin/caelestia-shell"} | ${pkgs.gnugrep}/bin/grep -E '/lib/qt-6/plugins$' || true); do
-            case ":''${QT_PLUGIN_PATH:-}:" in
-              *":$plugin_path:"*) ;;
-              *)
-                export QT_PLUGIN_PATH="''${QT_PLUGIN_PATH:+''${QT_PLUGIN_PATH}:}$plugin_path"
-                ;;
-            esac
-          done
-        fi
-
-        exec ${lib.getExe upstreamQuickshellPkg} -p ${lib.escapeShellArg "${caelestiaShellPkg}/share/caelestia-shell"} "$@"
-      '')
+          exec ${lib.getExe upstreamQuickshellPkg} -p ${lib.escapeShellArg "${caelestiaShellPkg}/share/caelestia-shell"} "$@"
+        ''
+      )
     else
       null;
 in
 {
   programs.waybar.enable = lib.mkForce false;
 
-  j0nix.user.shells.quickshell.packages = lib.mkAfter (listMerge.mergeUnique [
-    (lib.optionals (caelestiaShellPkg != null) [ caelestiaShellPkg ])
-    (lib.optionals (caelestiaCliPkg != null) [ caelestiaCliPkg ])
-    (lib.optionals (useUpstreamQuickshell && upstreamQuickshellPkg != null) [ upstreamQuickshellPkg ])
-    (lib.optionals (caelestiaUpstreamShellWrapper != null) [ caelestiaUpstreamShellWrapper ])
-    shellRuntimePackages
-    shellScriptPackages
-    (lib.optionals (iconThemeEnabled && iconThemePackage != null) [ iconThemePackage ])
-  ]);
+  j0nix.user.shells.quickshell.packages = lib.mkAfter (
+    listMerge.mergeUnique [
+      (lib.optionals (caelestiaShellPkg != null) [ caelestiaShellPkg ])
+      (lib.optionals (caelestiaCliPkg != null) [ caelestiaCliPkg ])
+      (lib.optionals (useUpstreamQuickshell && upstreamQuickshellPkg != null) [ upstreamQuickshellPkg ])
+      (lib.optionals (caelestiaUpstreamShellWrapper != null) [ caelestiaUpstreamShellWrapper ])
+      shellRuntimePackages
+      shellScriptPackages
+      (lib.optionals (iconThemeEnabled && iconThemePackage != null) [ iconThemePackage ])
+    ]
+  );
 
   j0nix.user.shells.fonts.packages = lib.mkAfter shellFontPackages;
 
   home.activation.caelestiaConfigInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    cfg_dir="$HOME/.config/caelestia"
-    cfg_file="$cfg_dir/shell.json"
-    tmp_file="$cfg_file.codex-tmp"
-    bad_file="$cfg_file.invalid"
+        cfg_dir="$HOME/.config/caelestia"
+        cfg_file="$cfg_dir/shell.json"
+        tmp_file="$cfg_file.codex-tmp"
+        bad_file="$cfg_file.invalid"
 
-    $DRY_RUN_CMD mkdir -p "$cfg_dir"
-    if [ ! -e "$cfg_file" ] || [ -L "$cfg_file" ]; then
-      $DRY_RUN_CMD rm -f "$cfg_file"
-      $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
-${builtins.toJSON seededCaelestiaConfig}
-EOF
-      $DRY_RUN_CMD chmod 644 "$cfg_file"
-    elif [ -f "$cfg_file" ]; then
-      # If the user file is broken JSON, keep a backup and recreate a valid minimal config.
-      if ! ${pkgs.jq}/bin/jq -e . "$cfg_file" >/dev/null 2>&1; then
-        $DRY_RUN_CMD mv -f "$cfg_file" "$bad_file" 2>/dev/null || true
-        $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
-${builtins.toJSON seededCaelestiaConfig}
-EOF
-        $DRY_RUN_CMD chmod 644 "$cfg_file"
-      else
-        # Merge required defaults into existing config without overwriting user choices.
-        $DRY_RUN_CMD ${pkgs.jq}/bin/jq \
-          --arg term "${preferredTerminal}" \
-          --arg wallpaperDir "${seededWallpaperDirValue}" \
-          --arg keepassWorkspaceName "${keepassWorkspaceName}" \
-          --argjson keepassEnabled ${if keepassEnabled then "true" else "false"} \
-          --argjson keepassSpecialWorkspaceEnabled ${if keepassSpecialWorkspaceEnabled then "true" else "false"} \
-          --arg defaultMaterial "${materialIconFontDefault}" \
-          --argjson allowedMaterialFonts '${materialIconFontAllowedJson}' \
-          '
-            def as_num($default):
-              if type == "number" then . else $default end;
-            def clamp($min; $max):
-              if . < $min then $min elif . > $max then $max else . end;
-            .general = ((.general // {}) | .apps = ((.apps // {}) | .terminal = (.terminal // [$term])))
-            | .general.idle = (.general.idle // {})
-            | .general.idle.lockBeforeSleep = (.general.idle.lockBeforeSleep // true)
-            | if ((.general.idle.timeouts? | type) == "array") then
-                .general.idle.timeouts = (
-                  .general.idle.timeouts
-                  | map(
-                      if (.timeout? == 600 and ((.idleAction? == ["systemctl", "suspend-then-hibernate"]) or (.idleAction? == ["system-suspend-then-hibernate-safe"]))) then
-                        .idleAction = ["system-power-action", "suspend-then-hibernate"]
-                      else
-                        .
-                      end
+        $DRY_RUN_CMD mkdir -p "$cfg_dir"
+        if [ ! -e "$cfg_file" ] || [ -L "$cfg_file" ]; then
+          $DRY_RUN_CMD rm -f "$cfg_file"
+          $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
+    ${builtins.toJSON seededCaelestiaConfig}
+    EOF
+          $DRY_RUN_CMD chmod 644 "$cfg_file"
+        elif [ -f "$cfg_file" ]; then
+          # If the user file is broken JSON, keep a backup and recreate a valid minimal config.
+          if ! ${pkgs.jq}/bin/jq -e . "$cfg_file" >/dev/null 2>&1; then
+            $DRY_RUN_CMD mv -f "$cfg_file" "$bad_file" 2>/dev/null || true
+            $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
+    ${builtins.toJSON seededCaelestiaConfig}
+    EOF
+            $DRY_RUN_CMD chmod 644 "$cfg_file"
+          else
+            # Merge required defaults into existing config without overwriting user choices.
+            $DRY_RUN_CMD ${pkgs.jq}/bin/jq \
+              --arg term "${preferredTerminal}" \
+              --arg wallpaperDir "${seededWallpaperDirValue}" \
+              --arg keepassWorkspaceName "${keepassWorkspaceName}" \
+              --argjson keepassEnabled ${if keepassEnabled then "true" else "false"} \
+              --argjson keepassSpecialWorkspaceEnabled ${
+                if keepassSpecialWorkspaceEnabled then "true" else "false"
+              } \
+              --arg defaultMaterial "${materialIconFontDefault}" \
+              --argjson allowedMaterialFonts '${materialIconFontAllowedJson}' \
+              '
+                def as_num($default):
+                  if type == "number" then . else $default end;
+                def clamp($min; $max):
+                  if . < $min then $min elif . > $max then $max else . end;
+                .general = ((.general // {}) | .apps = ((.apps // {}) | .terminal = (.terminal // [$term])))
+                | .general.idle = (.general.idle // {})
+                | .general.idle.lockBeforeSleep = (.general.idle.lockBeforeSleep // true)
+                | if ((.general.idle.timeouts? | type) == "array") then
+                    .general.idle.timeouts = (
+                      .general.idle.timeouts
+                      | map(
+                          if (.timeout? == 600 and ((.idleAction? == ["systemctl", "suspend-then-hibernate"]) or (.idleAction? == ["system-suspend-then-hibernate-safe"]))) then
+                            .idleAction = ["system-power-action", "suspend-then-hibernate"]
+                          else
+                            .
+                          end
+                        )
+                      | map(select(.idleAction? != ["system-power-action", "suspend-then-hibernate"]))
                     )
-                  | map(select(.idleAction? != ["system-power-action", "suspend-then-hibernate"]))
-                )
-              else
-                .
-              end
-            | .launcher = (.launcher // {})
-            | if ((.launcher.actions? | type) == "array") then
-                .launcher.actions = (
-                  .launcher.actions
-                  | map(select(.name? != "Hibernate"))
-                  | map(
-                      if (.name? == "Sleep") then
-                        .command = ["system-power-action", "suspend"]
-                      elif (.name? == "Shutdown") then
-                        .command = ["system-power-action", "poweroff"]
-                      elif (.name? == "Reboot") then
-                        .command = ["system-power-action", "reboot"]
-                      elif (.name? == "Auto Theme") then
-                        .command = ["caelestia-smart-theme", "enable"]
-                      elif (.name? == "Manual Theme") then
-                        .command = ["caelestia-smart-theme", "disable"]
-                      elif ($keepassEnabled and .name? == "Passwords") then
-                        .command = ["keepassxc-toggle"]
-                      else
-                        .
-                      end
+                  else
+                    .
+                  end
+                | .launcher = (.launcher // {})
+                | if ((.launcher.actions? | type) == "array") then
+                    .launcher.actions = (
+                      .launcher.actions
+                      | map(select(.name? != "Hibernate"))
+                      | map(
+                          if (.name? == "Sleep") then
+                            .command = ["system-power-action", "suspend"]
+                          elif (.name? == "Shutdown") then
+                            .command = ["system-power-action", "poweroff"]
+                          elif (.name? == "Reboot") then
+                            .command = ["system-power-action", "reboot"]
+                          elif (.name? == "Auto Theme") then
+                            .command = ["caelestia-smart-theme", "enable"]
+                          elif (.name? == "Manual Theme") then
+                            .command = ["caelestia-smart-theme", "disable"]
+                          elif ($keepassEnabled and .name? == "Passwords") then
+                            .command = ["keepassxc-toggle"]
+                          else
+                            .
+                          end
+                        )
+                      | if any(.[]; .name? == "Auto Theme") then . else . + [{ "name": "Auto Theme", "command": ["caelestia-smart-theme", "enable"] }] end
+                      | if any(.[]; .name? == "Manual Theme") then . else . + [{ "name": "Manual Theme", "command": ["caelestia-smart-theme", "disable"] }] end
+                      | if ($keepassEnabled and (any(.[]; .name? == "Passwords") | not)) then . + [{ "name": "Passwords", "command": ["keepassxc-toggle"] }] else . end
                     )
-                  | if any(.[]; .name? == "Auto Theme") then . else . + [{ "name": "Auto Theme", "command": ["caelestia-smart-theme", "enable"] }] end
-                  | if any(.[]; .name? == "Manual Theme") then . else . + [{ "name": "Manual Theme", "command": ["caelestia-smart-theme", "disable"] }] end
-                  | if ($keepassEnabled and (any(.[]; .name? == "Passwords") | not)) then . + [{ "name": "Passwords", "command": ["keepassxc-toggle"] }] else . end
-                )
-              else
-                .
-              end
-            | if $keepassSpecialWorkspaceEnabled then
-                .bar = (.bar // {})
-                | .bar.workspaces = (.bar.workspaces // {})
-                | .bar.workspaces.specialWorkspaceIcons = (
-                    (if ((.bar.workspaces.specialWorkspaceIcons? | type) == "array") then .bar.workspaces.specialWorkspaceIcons else [] end)
-                    | if any(.[]; .name? == $keepassWorkspaceName) then . else . + [{ "name": $keepassWorkspaceName, "icon": "password" }] end
+                  else
+                    .
+                  end
+                | if $keepassSpecialWorkspaceEnabled then
+                    .bar = (.bar // {})
+                    | .bar.workspaces = (.bar.workspaces // {})
+                    | .bar.workspaces.specialWorkspaceIcons = (
+                        (if ((.bar.workspaces.specialWorkspaceIcons? | type) == "array") then .bar.workspaces.specialWorkspaceIcons else [] end)
+                        | if any(.[]; .name? == $keepassWorkspaceName) then . else . + [{ "name": $keepassWorkspaceName, "icon": "password" }] end
+                      )
+                  else
+                    .
+                  end
+                | .session = (.session // {})
+                | .session.commands = (
+                    (.session.commands // {})
+                    | .hibernate = ["system-power-action", "hibernate"]
+                    | .shutdown = ["system-power-action", "poweroff"]
+                    | .reboot = ["system-power-action", "reboot"]
                   )
-              else
-                .
-              end
-            | .session = (.session // {})
-            | .session.commands = (
-                (.session.commands // {})
-                | .hibernate = ["system-power-action", "hibernate"]
-                | .shutdown = ["system-power-action", "poweroff"]
-                | .reboot = ["system-power-action", "reboot"]
-              )
-            | .services = ((.services // {}) | .smartScheme = ${if smartSchemeEnabled then "true" else "false"})
-            | .theme = (.theme // {})
-            | .theme.enableGtk = false
-            | .theme.enableQt = false
-            | .appearance = (.appearance // {})
-            | .appearance.font = (.appearance.font // {})
-            | .appearance.font.family = (.appearance.font.family // {})
-            | .appearance.font.family.material =
-                (
-                  (.appearance.font.family.material? // "") as $materialFont
-                  | ($materialFont | tostring) as $materialFontString
-                  | if ($allowedMaterialFonts | index($materialFontString)) != null then
-                      $materialFontString
-                    else
-                      $defaultMaterial
-                    end
-                )
-            | .appearance.padding = (.appearance.padding // {})
-            | .appearance.padding.scale = ((.appearance.padding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
-            | .appearance.spacing = (.appearance.spacing // {})
-            | .appearance.spacing.scale = ((.appearance.spacing.scale // 1) | as_num(1) | clamp(0.5; 2.0))
-            | .appearance.rounding = (.appearance.rounding // {})
-            | .appearance.rounding.scale = ((.appearance.rounding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
-            | .appearance.font.size = (.appearance.font.size // {})
-            | .appearance.font.size.scale = ((.appearance.font.size.scale // 1) | as_num(1) | clamp(0.5; 2.0))
-            | if $wallpaperDir != "" then
-                .paths = ((.paths // {}) | .wallpaperDir = $wallpaperDir)
-              else
-                .
-              end
-          ' "$cfg_file" >"$tmp_file"
-        $DRY_RUN_CMD mv "$tmp_file" "$cfg_file"
-        $DRY_RUN_CMD chmod 644 "$cfg_file"
-      fi
-    fi
+                | .services = ((.services // {}) | .smartScheme = ${
+                  if smartSchemeEnabled then "true" else "false"
+                })
+                | .theme = (.theme // {})
+                | .theme.enableGtk = false
+                | .theme.enableQt = false
+                | .appearance = (.appearance // {})
+                | .appearance.font = (.appearance.font // {})
+                | .appearance.font.family = (.appearance.font.family // {})
+                | .appearance.font.family.material =
+                    (
+                      (.appearance.font.family.material? // "") as $materialFont
+                      | ($materialFont | tostring) as $materialFontString
+                      | if ($allowedMaterialFonts | index($materialFontString)) != null then
+                          $materialFontString
+                        else
+                          $defaultMaterial
+                        end
+                    )
+                | .appearance.padding = (.appearance.padding // {})
+                | .appearance.padding.scale = ((.appearance.padding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
+                | .appearance.spacing = (.appearance.spacing // {})
+                | .appearance.spacing.scale = ((.appearance.spacing.scale // 1) | as_num(1) | clamp(0.5; 2.0))
+                | .appearance.rounding = (.appearance.rounding // {})
+                | .appearance.rounding.scale = ((.appearance.rounding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
+                | .appearance.font.size = (.appearance.font.size // {})
+                | .appearance.font.size.scale = ((.appearance.font.size.scale // 1) | as_num(1) | clamp(0.5; 2.0))
+                | if $wallpaperDir != "" then
+                    .paths = ((.paths // {}) | .wallpaperDir = $wallpaperDir)
+                  else
+                    .
+                  end
+              ' "$cfg_file" >"$tmp_file"
+            $DRY_RUN_CMD mv "$tmp_file" "$cfg_file"
+            $DRY_RUN_CMD chmod 644 "$cfg_file"
+          fi
+        fi
   '';
 
   home.activation.caelestiaInfo = lib.hm.dag.entryAfter [ "caelestiaConfigInit" ] ''
@@ -1031,7 +1085,9 @@ EOF
       && [ -f "${if configuredWallpaper != null then configuredWallpaper else ""}" ] \
       && [ ! -e "$state_file" ]; then
       $DRY_RUN_CMD mkdir -p "$state_dir"
-      $DRY_RUN_CMD printf '%s\n' "${if configuredWallpaper != null then configuredWallpaper else ""}" >"$state_file"
+      $DRY_RUN_CMD printf '%s\n' "${
+        if configuredWallpaper != null then configuredWallpaper else ""
+      }" >"$state_file"
     fi
   '';
 
@@ -1041,11 +1097,18 @@ EOF
       message = "wmShell=caelestia-shell requires flake input '${caelestiaInputName}' in flake.nix";
     }
     {
-      assertion = builtins.elem caelestiaChannel [ "stable" "dev" ];
+      assertion = builtins.elem caelestiaChannel [
+        "stable"
+        "dev"
+      ];
       message = "settings.programs.caelestia.channel must be one of: stable, dev";
     }
     {
-      assertion = builtins.elem quickshellRuntime [ "wrapped" "upstream" "upstream-dev" ];
+      assertion = builtins.elem quickshellRuntime [
+        "wrapped"
+        "upstream"
+        "upstream-dev"
+      ];
       message = "settings.programs.caelestia.quickshellRuntime must be one of: wrapped, upstream (legacy upstream-dev is also accepted)";
     }
     {
@@ -1056,7 +1119,8 @@ EOF
       '';
     }
     {
-      assertion = (!useUpstreamQuickshell) || (upstreamQuickshellPkg != null && caelestiaShellPkg != null);
+      assertion =
+        (!useUpstreamQuickshell) || (upstreamQuickshellPkg != null && caelestiaShellPkg != null);
       message = ''
         settings.programs.caelestia.quickshellRuntime=upstream requires:
         - inputs.${caelestiaInputName}.inputs.quickshell.packages.${pkgs.stdenv.hostPlatform.system}
@@ -1064,7 +1128,12 @@ EOF
       '';
     }
     {
-      assertion = (!hasValue configuredMode) || (builtins.elem configuredMode [ "light" "dark" ]);
+      assertion =
+        (!hasValue configuredMode)
+        || (builtins.elem configuredMode [
+          "light"
+          "dark"
+        ]);
       message = "settings.programs.caelestia.theme.mode must be one of: light, dark";
     }
     {
