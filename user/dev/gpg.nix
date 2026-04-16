@@ -39,6 +39,9 @@ let
       condition = "hasconfig:user.email:${email}";
       path = "~/.config/git/gpg/${email}.inc";
     }) emails;
+
+  defaultKeyName = sshAgentCfg.keyName or (lib.head (builtins.attrNames gpgKeys));
+  defaultKey = if defaultKeyName != null then gpgKeys.${defaultKeyName}.key or null else null;
 in
 {
   imports = [ ];
@@ -48,6 +51,31 @@ in
       enable = true;
       settings = lib.mkIf (gpgKeys != { }) {
         use-agent = true;
+        default-key = defaultKey;
+        # Security settings
+        personal-cipher-preferences = [
+          "AES256"
+          "AES192"
+          "AES128"
+        ];
+        personal-digest-preferences = [
+          "SHA512"
+          "SHA384"
+          "SHA256"
+        ];
+        default-preference-list = [
+          "SHA512"
+          "AES256"
+          "AES192"
+          "AES128"
+        ];
+        # Keyserver
+        keyserver = "hkps://keys.openpgp.org";
+        # Pinentry
+        pinentry-program = "${pkgs.pinentry-gnome3}/bin/pinentry-gnome3";
+        # Ownership and permissions
+        chmod = "0600";
+        homedir = "${config.home.homeDirectory}/.gnupg";
       };
     };
 
@@ -64,8 +92,21 @@ in
 
     home.sessionVariables = lib.mkIf sshAgentEnabled {
       GPG_AGENT_SSH = "${config.home.homeDirectory}/.gnupg/S.gpg-agent.ssh";
+      # SSH_AUTH_SOCK is handled by dev/ssh module
     };
 
-    j0nix.user.software.packages = [ pkgs.gnupg ];
+    home.file.".gnupg/gpg-agent.conf" = lib.mkIf sshAgentEnabled {
+      text = ''
+        enable-ssh-support
+        default-cache-ttl 600
+        max-cache-ttl 7200
+        pinentry-program ${pkgs.pinentry-gnome3}/bin/pinentry-gnome3
+      '';
+    };
+
+    j0nix.user.software.packages = [
+      pkgs.gnupg
+      pkgs.pinentry-gnome3
+    ];
   };
 }
