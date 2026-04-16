@@ -32,7 +32,7 @@
     serviceConfig = {
       Type = "simple";
       # Use /dev/urandom as fallback source (safe for seeding)
-      ExecStart = "${pkgs.rng-tools}/bin/rngd -f -t 10 -T 1 -x jitterentropy";
+      ExecStart = "${pkgs.rng-tools}/bin/rngd -f -x jitterentropy";
       Restart = "on-failure";
       RestartSec = 5;
       PrivateTmp = true;
