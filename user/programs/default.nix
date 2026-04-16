@@ -7,6 +7,7 @@
     ./element-desktop
     ./fastfetch
     ./keepassxc
+    ./kitty
     ./twintail-launcher
     ./vuescan
     ./windows-apps
