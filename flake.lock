@@ -303,11 +303,11 @@
         "quickshell": "quickshell"
       },
       "locked": {
-        "lastModified": 1776291860,
-        "narHash": "sha256-Djcj+RpNWL2uMItocF3EYnqen766MpKObVf5dWLu/Io=",
+        "lastModified": 1776350215,
+        "narHash": "sha256-PZsbrpK/Hw44wKpp2nzQjY6Z5Afa+0bwqR5/+zNoV2A=",
         "owner": "AvengeMedia",
         "repo": "DankMaterialShell",
-        "rev": "787d213722018e929bbef4876028ff6577d42520",
+        "rev": "d7fb75f7f99abf0c8520eae037a24b3261b319f2",
         "type": "github"
       },
       "original": {
@@ -427,11 +427,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1772408722,
-        "narHash": "sha256-rHuJtdcOjK7rAHpHphUb1iCvgkU3GpfvicLMwwnfMT0=",
+        "lastModified": 1775087534,
+        "narHash": "sha256-91qqW8lhL7TLwgQWijoGBbiD4t7/q75KTi8NxjVmSmA=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "f20dc5d9b8027381c474144ecabc9034d6a839a3",
+        "rev": "3107b77cd68437b9a76194f0f7f9c55f2329ca5b",
         "type": "github"
       },
       "original": {
@@ -545,11 +545,11 @@
         "uv2nix": "uv2nix_2"
       },
       "locked": {
-        "lastModified": 1776327374,
-        "narHash": "sha256-FHvLqac4hLFjk8eBXcjqKQta440XYINV5LQkc8M0MkA=",
+        "lastModified": 1776350731,
+        "narHash": "sha256-z5xESf0avoaKxsJKb+7h5dyfQDxMHckhGBSTe8b+ohE=",
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "4093982f19578008a5aefd8f4c1dac971ec9286d",
+        "rev": "f19ca50cd9f605387f3dc5a0fc1ef601c0c37a1f",
         "type": "github"
       },
       "original": {
@@ -718,11 +718,11 @@
         "xdph": "xdph"
       },
       "locked": {
-        "lastModified": 1776291620,
-        "narHash": "sha256-q/DzJR+7dD1ytbRXQN8UPpeaWQez87ophXBpOROiN8I=",
+        "lastModified": 1776344247,
+        "narHash": "sha256-W3bz59kt2Ed98Wgzk+vU8Qae6CKHmBHG/rLUUf/l1uU=",
         "ref": "refs/heads/main",
-        "rev": "e6c5040f417001fc3cf20e21f971f926626a0f6f",
-        "revCount": 7152,
+        "rev": "ed349e84d26f35a6ef20019f7315ddfd85d1e7ee",
+        "revCount": 7153,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/hyprwm/Hyprland"
@@ -1088,11 +1088,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1744536153,
-        "narHash": "sha256-awS2zRgF4uTwrOKwwiJcByDzDOdo3Q1rPZbiHQg/N38=",
+        "lastModified": 1776169885,
+        "narHash": "sha256-l/iNYDZ4bGOAFQY2q8y5OAfBBtrDAaPuRQqWaFHVRXM=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "18dd725c29603f582cf1900e0d25f9f1063dbf11",
+        "rev": "4bd9165a9165d7b5e33ae57f3eecbcb28fb231c9",
         "type": "github"
       },
       "original": {
@@ -1158,11 +1158,11 @@
         "systems": "systems_4"
       },
       "locked": {
-        "lastModified": 1776128025,
-        "narHash": "sha256-spZM5zll0cBPHHSZPioZREArzCsllurKQsJME08nnXY=",
+        "lastModified": 1776350339,
+        "narHash": "sha256-Rl+tnpvdpf66e/3m+LPNzUoebV3jpiJz7oMxas8FB3I=",
         "owner": "nix-community",
         "repo": "nixvim",
-        "rev": "0a12693297d23f1b3af04ba6112b5936e2eba41b",
+        "rev": "4f75992439d3d554a3681880510e4b645ca2d15b",
         "type": "github"
       },
       "original": {
@@ -1481,6 +1481,7 @@
         "quickshell-overview": "quickshell-overview",
         "quickshell-stable": "quickshell-stable",
         "sops-nix": "sops-nix",
+        "staging-next": "staging-next",
         "stylix": "stylix",
         "zen-browser": "zen-browser"
       }
@@ -1520,6 +1521,22 @@
       "original": {
         "owner": "Mic92",
         "repo": "sops-nix",
+        "type": "github"
+      }
+    },
+    "staging-next": {
+      "locked": {
+        "lastModified": 1776342239,
+        "narHash": "sha256-LX1LxnghmSiHdcY747HUOk1f+jFvbvkVLQh2jMbtzLE=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "ec2209392395bcd5b7082e5ccb85664ada0258f2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "staging-next",
+        "repo": "nixpkgs",
         "type": "github"
       }
     },
