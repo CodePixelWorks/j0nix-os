@@ -30,5 +30,7 @@
     lm_sensors
     vulkan-tools
     j0nix-wallpapers
+    pinentry-gnome3
+    pinentry-tty
   ];
 }
