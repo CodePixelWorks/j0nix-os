@@ -94,14 +94,12 @@ in
           enable-ssh-support
           default-cache-ttl 600
           max-cache-ttl 7200
-          pinentry-program ${pkgs.pinentry-gnome3}/bin/pinentry-gnome3
         '';
       }
       // lib.mkIf (!sshAgentEnabled) {
         text = ''
           default-cache-ttl 600
           max-cache-ttl 7200
-          pinentry-program ${pkgs.pinentry-gnome3}/bin/pinentry-gnome3
         '';
       };
 
