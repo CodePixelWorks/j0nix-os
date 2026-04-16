@@ -8,7 +8,6 @@ let
   cfg = (settings.programs or { }).kitty or { };
   enabled = cfg.enable or false;
   themeName = cfg.theme or "github-dark";
-  themePackage = if cfg.enableThemes or false then pkgs.kitty-themes else null;
 in
 lib.mkIf enabled {
   programs.kitty = {
@@ -32,32 +31,19 @@ lib.mkIf enabled {
       tab-bar-alignment = "left";
       tab-separator = " ┊";
       tab-title-template = "{title}";
-      shell-integration = {
-        enabled = true;
-        no-rc = false;
-      };
+      shell-integration = "enabled";
     };
   };
 
-  # Link theme if themes are enabled
-  home.file.".config/kitty/kitty-themes/themes/${themeName}.conf" = lib.mkIf (themePackage != null) {
-    source = "${themePackage}/share/kitty-themes/themes/${themeName}.conf";
-  };
-
-  # Add theme include to kitty.conf if themes enabled
-  programs.kitty.finalSettings = lib.mkIf (themePackage != null) {
-    include = "./kitty-themes/themes/${themeName}.conf";
+  # Link theme if themes are enabled (themes are included via programs.kitty theme setting)
+  home.file.".config/kitty/kitty-themes/themes/${themeName}.conf" = lib.mkIf cfg.enableThemes {
+    source = "${pkgs.kitty-themes}/share/kitty-themes/themes/${themeName}.conf";
   };
 
   j0nix.user.software.packages = lib.unique (
     [ pkgs.kitty ]
-    ++ lib.optional (cfg.enableTabs or false) (
-      pkgs.python3.override {
-        enableUnstableFreeze = false;
-      }
-    )
-    ++ lib.optionals (cfg.enableTabs or false) [
-      (pkgs.python3Packages.toPython3 pkgs.python3Packages.kitty-tabs)
+    ++ lib.optionals (cfg.enableThemes or false) [
+      pkgs.kitty-themes
     ]
   );
 }
