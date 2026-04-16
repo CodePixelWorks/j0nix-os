@@ -52,7 +52,7 @@ in
       settings = lib.mkIf (gpgKeys != { }) {
         use-agent = true;
         default-key = defaultKey;
-        # Security settings
+        keyserver = "hkps://keys.openpgp.org";
         personal-cipher-preferences = [
           "AES256"
           "AES192"
@@ -69,13 +69,6 @@ in
           "AES192"
           "AES128"
         ];
-        # Keyserver
-        keyserver = "hkps://keys.openpgp.org";
-        # Pinentry
-        pinentry-program = "${pkgs.pinentry-gnome3}/bin/pinentry-gnome3";
-        # Ownership and permissions
-        chmod = "0600";
-        homedir = "${config.home.homeDirectory}/.gnupg";
       };
     };
 
@@ -95,14 +88,22 @@ in
       # SSH_AUTH_SOCK is handled by dev/ssh module
     };
 
-    home.file.".gnupg/gpg-agent.conf" = lib.mkIf sshAgentEnabled {
-      text = ''
-        enable-ssh-support
-        default-cache-ttl 600
-        max-cache-ttl 7200
-        pinentry-program ${pkgs.pinentry-gnome3}/bin/pinentry-gnome3
-      '';
-    };
+    home.file.".gnupg/gpg-agent.conf" =
+      lib.mkIf sshAgentEnabled {
+        text = ''
+          enable-ssh-support
+          default-cache-ttl 600
+          max-cache-ttl 7200
+          pinentry-program ${pkgs.pinentry-gnome3}/bin/pinentry-gnome3
+        '';
+      }
+      // lib.mkIf (!sshAgentEnabled) {
+        text = ''
+          default-cache-ttl 600
+          max-cache-ttl 7200
+          pinentry-program ${pkgs.pinentry-gnome3}/bin/pinentry-gnome3
+        '';
+      };
 
     j0nix.user.software.packages = [
       pkgs.gnupg
