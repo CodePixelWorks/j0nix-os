@@ -866,47 +866,62 @@ let
     if useUpstreamQuickshell && upstreamQuickshellPkg != null && caelestiaShellPkg != null then
       lib.hiPrio (
         pkgs.writeShellScriptBin "caelestia-shell" ''
-            set -eu
-            export PATH="${
-              lib.makeBinPath [
-                pkgs.fish
-                pkgs.ddcutil
-                pkgs.brightnessctl
-                pkgs.app2unit
-                pkgs.networkmanager
-                pkgs.lm_sensors
-                pkgs.swappy
-                pkgs.wl-clipboard
-                pkgs.libqalculate
-                pkgs.bashInteractive
-                pkgs.hyprland
-              ]
-            }:$PATH"
-            export CAELESTIA_XKB_RULES_PATH="${pkgs.xkeyboard-config}/share/X11/xkb/rules/base.lst"
+              set -eu
+              export PATH="${
+                lib.makeBinPath [
+                  pkgs.fish
+                  pkgs.ddcutil
+                  pkgs.brightnessctl
+                  pkgs.app2unit
+                  pkgs.networkmanager
+                  pkgs.lm_sensors
+                  pkgs.swappy
+                  pkgs.wl-clipboard
+                  pkgs.libqalculate
+                  pkgs.bashInteractive
+                  pkgs.hyprland
+                ]
+              }:$PATH"
+              export CAELESTIA_XKB_RULES_PATH="${pkgs.xkeyboard-config}/share/X11/xkb/rules/base.lst"
 
-            # Keep optional native helper lookups compatible with the upstream wrapper.
-            if [ -z "''${CAELESTIA_LIB_DIR:-}" ] && [ -x "${caelestiaShellPkg}/bin/caelestia-shell" ]; then
-              guessed_lib_dir="$(${pkgs.binutils}/bin/strings ${lib.escapeShellArg "${caelestiaShellPkg}/bin/caelestia-shell"} | ${pkgs.gnugrep}/bin/grep -m1 '/caelestia-extras/lib' || true)"
-              if [ -n "$guessed_lib_dir" ]; then
-                export CAELESTIA_LIB_DIR="$guessed_lib_dir"
+              # Keep optional native helper lookups compatible with the upstream wrapper.
+              if [ -z "''${CAELESTIA_LIB_DIR:-}" ] && [ -x "${caelestiaShellPkg}/bin/caelestia-shell" ]; then
+                guessed_lib_dir="$(${pkgs.binutils}/bin/strings ${lib.escapeShellArg "${caelestiaShellPkg}/bin/caelestia-shell"} | ${pkgs.gnugrep}/bin/grep -m1 '/caelestia-extras/lib' || true)"
+                if [ -n "$guessed_lib_dir" ]; then
+                  export CAELESTIA_LIB_DIR="$guessed_lib_dir"
+                fi
               fi
-            fi
 
           # Use correct QML paths for upstream quickshell + caelestia-qml-plugin
-          # The paths baked into the caelestia-shell binary are stale and reference non-existent quickshell-wrapped versions
+          # The caelestia-shell package includes caelestia-qml-plugin as a runtime dependency
           quickshell_qml="${upstreamQuickshellPkg}/lib/qt-6/qml"
           caelestia_qml="${caelestiaShellPkg}/lib/qt-6/qml"
 
+          # Add quickshell upstream QML path
           if [ -d "$quickshell_qml" ]; then
             export NIXPKGS_QT6_QML_IMPORT_PATH="''${NIXPKGS_QT6_QML_IMPORT_PATH:+''${NIXPKGS_QT6_QML_IMPORT_PATH}:}$quickshell_qml"
           fi
+
+          # Add caelestia QML path if it exists in the caelestia-shell package
           if [ -d "$caelestia_qml" ]; then
             export NIXPKGS_QT6_QML_IMPORT_PATH="''${NIXPKGS_QT6_QML_IMPORT_PATH:+''${NIXPKGS_QT6_QML_IMPORT_PATH}:}$caelestia_qml"
           fi
 
-          # Set CAELESTIA_LIB_DIR if available from caelestia-shell package
-          if [ -z "''${CAELESTIA_LIB_DIR:-}" ] && [ -d "${caelestiaShellPkg}/lib" ]; then
-            export CAELESTIA_LIB_DIR="${caelestiaShellPkg}/lib"
+          # Find caelestia-qml-plugin from caelestia-shell dependencies and add its QML path
+          for qs_path in ${caelestiaShellPkg}/lib/qt-6/qml /nix/store/*caelestia-qml-plugin*/lib/qt-6/qml; do
+            if [ -d "$qs_path" ] && [ "$qs_path" != "$caelestia_qml" ]; then
+              export NIXPKGS_QT6_QML_IMPORT_PATH="''${NIXPKGS_QT6_QML_IMPORT_PATH:+''${NIXPKGS_QT6_QML_IMPORT_PATH}:}$qs_path"
+            fi
+          done
+
+          # Set CAELESTIA_LIB_DIR to the caelestia-extras lib directory
+          if [ -z "''${CAELESTIA_LIB_DIR:-}" ]; then
+            for lib_path in ${caelestiaShellPkg}/lib /nix/store/*caelestia-extras*/lib /nix/store/*caelestia-qml-plugin*/lib; do
+              if [ -d "$lib_path" ]; then
+                export CAELESTIA_LIB_DIR="$lib_path"
+                break
+              fi
+            done
           fi
 
           exec ${lib.getExe upstreamQuickshellPkg} -p ${lib.escapeShellArg "${caelestiaShellPkg}/share/caelestia-shell"} "$@"
