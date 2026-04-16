@@ -659,18 +659,13 @@ in
     xdgOpenUsePortal = true;
     extraPortals = [
       pkgs.xdg-desktop-portal-gtk
-      pkgs.kdePackages.xdg-desktop-portal-kde
     ];
     config = {
       common.default = [ "gtk" ];
       hyprland = {
-        default = [
-          "hyprland"
-          "gtk"
-          "kde"
-        ];
+        default = [ "gtk" ];
         "org.freedesktop.impl.portal.ScreenCast" = [ "hyprland" ];
-        "org.freedesktop.impl.portal.FileChooser" = [ "kde" ];
+        "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
         "org.freedesktop.impl.portal.Settings" = [ "gtk" ];
         "org.freedesktop.impl.portal.Secret" = [ "gnome-keyring" ];
       };
