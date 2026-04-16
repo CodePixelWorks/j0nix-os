@@ -1,8 +1,11 @@
 { pkgs, ... }:
 {
-  # CPU Jitter Entropy for improved random number generation
-  # This is particularly important for GPG key generation
+  # =============================================================================
+  # Entropy/Random Number Generation for GPG key generation
+  # =============================================================================
+  # Multiple entropy sources ensure fast and secure key generation
 
+  # 1. jitterentropy - CPU timing jitter entropy (modern, low overhead)
   systemd.services.jitterentropy = {
     description = "CPU Jitter Entropy Daemon";
     wantedBy = [ "multi-user.target" ];
@@ -20,9 +23,52 @@
     };
   };
 
-  # Kernel entropy tuning
+  # 2. rng-tools - Provides /dev/hwrng support and additional entropy
+  #    Fallback for systems without jitterentropy or hardware RNG
+  systemd.services.rngd = {
+    description = "Entropy RNG Daemon";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "systemd-tmpfiles-setup.service" ];
+    serviceConfig = {
+      Type = "simple";
+      # Use /dev/urandom as fallback source (safe for seeding)
+      ExecStart = "${pkgs.rng-tools}/bin/rngd -f -t 10 -T 1 -x jitterentropy";
+      Restart = "on-failure";
+      RestartSec = 5;
+      PrivateTmp = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      NoNewPrivileges = true;
+    };
+  };
+
+  # 3. haveged - Hardware-generated entropy based on CPU cache timing
+  #    Provides fast, continuous entropy for desktop systems
+  systemd.services.haveged = {
+    description = "Hardware Volatile Entropy Gathering and Expansion Daemon";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "systemd-tmpfiles-setup.service" ];
+    serviceConfig = {
+      Type = "simple";
+      # -w: set entropy wakeup threshold (1024 is good for desktop)
+      # -v: verbose (optional, remove for production)
+      ExecStart = "${pkgs.haveged}/bin/haveged -w 1024";
+      Restart = "on-failure";
+      RestartSec = 5;
+      PrivateTmp = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      NoNewPrivileges = true;
+    };
+  };
+
+  # Kernel entropy pool tuning for better throughput
   boot.kernel.sysctl = {
+    # Lower values = less CPU wakeups, better performance
+    # Higher values = more responsive, more CPU usage
     "kernel.random.read_wakeup_threshold" = 64;
     "kernel.random.write_wakeup_threshold" = 128;
+    # Entropy quality settings
+    "kernel.random.entropy_read_sleep_ms" = 0;
   };
 }
