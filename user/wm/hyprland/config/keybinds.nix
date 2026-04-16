@@ -162,6 +162,7 @@ let
           "$mainMod ALT, r, exec, caelestia record -s"
           "CTRL ALT, r, exec, caelestia record"
           "$mainMod SHIFT ALT, r, exec, caelestia record -r"
+          "$mainMod, p, exec, caelestia screenshot"
           "$mainMod SHIFT, s, global, caelestia:screenshotFreeze"
           "$mainMod SHIFT ALT, s, global, caelestia:screenshot"
           "$mainMod, b, exec, ${launcherAppExec (settings.preferredBrowser or "chromium")}"
@@ -186,7 +187,6 @@ let
         ];
         bindl = [
           ", Print, exec, caelestia screenshot"
-          "$mod, p, exec, caelestia screenshot"
           "SHIFT, Print, exec, caelestia screenshot"
           "CTRL, Print, exec, caelestia screenshot"
           ", XF86MonBrightnessUp, global, caelestia:brightnessUp"
