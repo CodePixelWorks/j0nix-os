@@ -58,17 +58,25 @@ let
       resizeLabel = "grow width";
     }
   ];
-  mkMainBind = modifiers: key: dispatcher: argument:
-    "$mainMod${lib.optionalString (modifiers != "") " ${modifiers}"}, ${key}, ${dispatcher}, ${argument}";
-  keyboardLayoutToggleBind =
-    lib.optional (hasValue layoutToggleBind) "${layoutToggleBind}, exec, wm-kbd-layout-toggle";
-  dmsOverviewToggleBind =
-    lib.optional (dmsOverviewEnabled && hasValue overviewToggleBind)
-      "${overviewToggleBind}, exec, wm-overview-toggle";
+  mkMainBind =
+    modifiers: key: dispatcher: argument:
+    "$mainMod${
+      lib.optionalString (modifiers != "") " ${modifiers}"
+    }, ${key}, ${dispatcher}, ${argument}";
+  keyboardLayoutToggleBind = lib.optional (hasValue layoutToggleBind) "${layoutToggleBind}, exec, wm-kbd-layout-toggle";
+  dmsOverviewToggleBind = lib.optional (
+    dmsOverviewEnabled && hasValue overviewToggleBind
+  ) "${overviewToggleBind}, exec, wm-overview-toggle";
   mainFocusBinds = map (entry: mkMainBind "" entry.key "movefocus" entry.direction) directionalKeys;
-  mainMoveBinds = map (entry: mkMainBind "SHIFT" entry.key "movewindow" entry.direction) directionalKeys;
-  mainResizeBinds = map (entry: mkMainBind "ALT" entry.key "resizeactive" entry.resizeDelta) directionalKeys;
-  mainSplitBinds = map (entry: mkMainBind "CTRL" entry.key "layoutmsg" "preselect ${entry.direction}") directionalKeys;
+  mainMoveBinds = map (
+    entry: mkMainBind "SHIFT" entry.key "movewindow" entry.direction
+  ) directionalKeys;
+  mainResizeBinds = map (
+    entry: mkMainBind "ALT" entry.key "resizeactive" entry.resizeDelta
+  ) directionalKeys;
+  mainSplitBinds = map (
+    entry: mkMainBind "CTRL" entry.key "layoutmsg" "preselect ${entry.direction}"
+  ) directionalKeys;
 
   baseHyprKeybinds = {
     bind = [
@@ -81,7 +89,9 @@ let
       "$mainMod, mouse_down, workspace, -1"
       "$mainMod, mouse_up, workspace, +1"
       "$mainMod CTRL, Backslash, centerwindow, 1"
-    ] ++ mainFocusBinds ++ mainMoveBinds;
+    ]
+    ++ mainFocusBinds
+    ++ mainMoveBinds;
     binde = mainResizeBinds ++ [
       "$mainMod, minus, splitratio, 0.1"
       "$mainMod, equal, splitratio, -0.1"
@@ -110,30 +120,30 @@ let
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
     "$mainMod, comma, exec, ${keybindHelpCommand}"
-    "$mainMod, f, fullscreen, 0"            # actual fullscreen (shell/waybar hidden)
-    "$mainMod SHIFT, f, fullscreen, 1"      # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
+    "$mainMod, f, fullscreen, 0" # actual fullscreen (shell/waybar hidden)
+    "$mainMod SHIFT, f, fullscreen, 1" # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
     "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
-    "$mainMod, p, exec, wm-screenshot-full"
     "$mainMod, r, exec, wm-shell-recover"
     "$mainMod CTRL, v, layoutmsg, preselect r"
     "$mainMod CTRL SHIFT, v, layoutmsg, preselect d"
     "$mainMod SHIFT, l, exec, wm-lock-screen"
     "$mainMod SHIFT, q, exit,"
-    "SHIFT, Print, exec, wm-screenshot-full"
-    "CTRL, Print, exec, wm-screenshot-full"
-  ] ++ mainSplitBinds ++ keyboardLayoutToggleBind ++ dmsOverviewToggleBind
-    ++ toggleableOutputBindLines
-    ++ lib.optionals keybindDiagnosticsEnable [
-      "$mainMod SHIFT, F12, exec, wm-hypr-keybind-probe super-shift-f12"
-    ]
-    ++ lib.optionals (keepassEnabled && keepassWorkspaceEnable) [
-      "${keepassToggleBind}, exec, keepassxc-toggle"
-    ]
-    ++ lib.optionals minimizerEnabled [
-      "${minimizerToggleBind}, exec, ${minimizerToggleCommand}"
-      "${minimizerRestoreBind}, exec, ${minimizerRestoreCommand}"
-      "${minimizerMenuBind}, exec, ${minimizerMenuCommand}"
-    ];
+  ]
+  ++ mainSplitBinds
+  ++ keyboardLayoutToggleBind
+  ++ dmsOverviewToggleBind
+  ++ toggleableOutputBindLines
+  ++ lib.optionals keybindDiagnosticsEnable [
+    "$mainMod SHIFT, F12, exec, wm-hypr-keybind-probe super-shift-f12"
+  ]
+  ++ lib.optionals (keepassEnabled && keepassWorkspaceEnable) [
+    "${keepassToggleBind}, exec, keepassxc-toggle"
+  ]
+  ++ lib.optionals minimizerEnabled [
+    "${minimizerToggleBind}, exec, ${minimizerToggleCommand}"
+    "${minimizerRestoreBind}, exec, ${minimizerRestoreCommand}"
+    "${minimizerMenuBind}, exec, ${minimizerMenuCommand}"
+  ];
 
   shellHyprKeybinds =
     if isCaelestiaShell then
@@ -176,6 +186,9 @@ let
         ];
         bindl = [
           ", Print, exec, caelestia screenshot"
+          "$mod, p, exec, caelestia screenshot"
+          "SHIFT, Print, exec, caelestia screenshot"
+          "CTRL, Print, exec, caelestia screenshot"
           ", XF86MonBrightnessUp, global, caelestia:brightnessUp"
           ", XF86MonBrightnessDown, global, caelestia:brightnessDown"
           "CTRL SUPER, Space, global, caelestia:mediaToggle"
@@ -222,8 +235,8 @@ let
       };
 
   mergedBindList = key: (baseHyprKeybinds.${key} or [ ]) ++ (shellHyprKeybinds.${key} or [ ]);
-  renderBindLines = key: entries:
-    lib.concatStringsSep "\n" (map (entry: "${key} = ${entry}") entries);
+  renderBindLines =
+    key: entries: lib.concatStringsSep "\n" (map (entry: "${key} = ${entry}") entries);
 
   effectiveBindLists = {
     bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ mergedBindList "bind";
@@ -251,17 +264,17 @@ let
           "bindin = Super, mouse_up, global, caelestia:launcherInterrupt"
           "bindin = Super, mouse_down, global, caelestia:launcherInterrupt"
         ];
-        renderedLists =
-          lib.concatStringsSep "\n"
-            (lib.filter (s: s != "") [
-              (renderBindLines "bind" effectiveBindLists.bind)
-              (renderBindLines "bindi" effectiveBindLists.bindi)
-              (renderBindLines "binde" effectiveBindLists.binde)
-              (renderBindLines "bindl" effectiveBindLists.bindl)
-              (renderBindLines "bindle" effectiveBindLists.bindle)
-              (renderBindLines "bindr" effectiveBindLists.bindr)
-              (renderBindLines "bindm" effectiveBindLists.bindm)
-            ]);
+        renderedLists = lib.concatStringsSep "\n" (
+          lib.filter (s: s != "") [
+            (renderBindLines "bind" effectiveBindLists.bind)
+            (renderBindLines "bindi" effectiveBindLists.bindi)
+            (renderBindLines "binde" effectiveBindLists.binde)
+            (renderBindLines "bindl" effectiveBindLists.bindl)
+            (renderBindLines "bindle" effectiveBindLists.bindle)
+            (renderBindLines "bindr" effectiveBindLists.bindr)
+            (renderBindLines "bindm" effectiveBindLists.bindm)
+          ]
+        );
       in
       ''
         exec = ${hyprctlExec} dispatch submap global
