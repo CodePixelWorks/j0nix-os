@@ -27,6 +27,8 @@ let
         null
     else
       null;
+  legacyIconFallbackPackage =
+    if pkgs ? adwaita-icon-theme-legacy then pkgs.adwaita-icon-theme-legacy else null;
   dmsSettings = settings.dms or { };
   caelestiaSettings = (settings.programs or { }).caelestia or { };
   caelestiaThemeSettings = caelestiaSettings.theme or { };
@@ -369,7 +371,7 @@ let
     hicolor-icon-theme
     adwaita-icon-theme
     papirus-icon-theme
-  ];
+  ] ++ lib.optionals (legacyIconFallbackPackage != null) [ legacyIconFallbackPackage ];
   shellFontPackages = with pkgs; [
     material-symbols
     nerd-fonts.caskaydia-cove
@@ -467,6 +469,7 @@ let
             ''"/var/lib/flatpak/exports/share"''
           ]
           ++ lib.optionals (iconThemePackage != null) [ ''"${iconThemePackage}/share"'' ]
+          ++ lib.optionals (legacyIconFallbackPackage != null) [ ''"${legacyIconFallbackPackage}/share"'' ]
           ++ [
             ''"${hicolor-icon-theme}/share"''
             ''"${adwaita-icon-theme}/share"''
