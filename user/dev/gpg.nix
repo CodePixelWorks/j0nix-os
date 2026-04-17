@@ -13,6 +13,15 @@ let
   gitSigningCfg = gpgCfg.gitSigning or { };
   sshAgentCfg = gpgCfg.sshAgent or { };
   sshAgentEnabled = sshAgentCfg.enable or false;
+  pinentryWrapper = pkgs.writeShellScript "gpg-pinentry" ''
+    set -eu
+
+    if [ -n "''${WAYLAND_DISPLAY:-}" ] || [ -n "''${DISPLAY:-}" ]; then
+      exec ${pkgs.pinentry-gnome3}/bin/pinentry-gnome3 "$@"
+    fi
+
+    exec ${pkgs.pinentry-tty}/bin/pinentry-tty "$@"
+  '';
 
   mkGpgSigningFile =
     keyName: keySpec:
@@ -92,12 +101,14 @@ in
       lib.mkIf sshAgentEnabled {
         text = ''
           enable-ssh-support
+          pinentry-program ${pinentryWrapper}
           default-cache-ttl 600
           max-cache-ttl 7200
         '';
       }
       // lib.mkIf (!sshAgentEnabled) {
         text = ''
+          pinentry-program ${pinentryWrapper}
           default-cache-ttl 600
           max-cache-ttl 7200
         '';
@@ -106,6 +117,7 @@ in
     j0nix.user.software.packages = [
       pkgs.gnupg
       pkgs.pinentry-gnome3
+      pkgs.pinentry-tty
     ];
   };
 }
