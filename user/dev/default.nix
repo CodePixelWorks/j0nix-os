@@ -339,6 +339,7 @@ in
         zip
         tree
         tmux
+        pwgen
         shellcheck
         shfmt
         nil
