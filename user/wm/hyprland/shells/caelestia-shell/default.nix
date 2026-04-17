@@ -113,13 +113,27 @@ let
     && (builtins.hasAttr pkgs.stdenv.hostPlatform.system selectedInput.packages);
   packageSet =
     if hasSystemPackages then selectedInput.packages.${pkgs.stdenv.hostPlatform.system} else { };
-  caelestiaShellPkg =
+  upstreamCaelestiaShellPkg =
     if packageSet ? default then
       packageSet.default
     else if packageSet ? caelestia-shell then
       packageSet.caelestia-shell
     else if packageSet ? with-cli then
       packageSet.with-cli
+    else
+      null;
+  caelestiaShellPkg =
+    if upstreamCaelestiaShellPkg != null then
+      upstreamCaelestiaShellPkg.overrideAttrs (old: {
+        postPatch =
+          (old.postPatch or "")
+          + "\n"
+          + ''
+            # Some upstream commits reference a config install dir in CMake
+            # before the repository actually contains that directory.
+            mkdir -p config
+          '';
+      })
     else
       null;
   caelestiaCliInput =
