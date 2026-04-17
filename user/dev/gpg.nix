@@ -97,22 +97,12 @@ in
       # SSH_AUTH_SOCK is handled by dev/ssh module
     };
 
-    home.file.".gnupg/gpg-agent.conf" =
-      lib.mkIf sshAgentEnabled {
-        text = ''
-          enable-ssh-support
-          pinentry-program ${pinentryWrapper}
-          default-cache-ttl 600
-          max-cache-ttl 7200
-        '';
-      }
-      // lib.mkIf (!sshAgentEnabled) {
-        text = ''
-          pinentry-program ${pinentryWrapper}
-          default-cache-ttl 600
-          max-cache-ttl 7200
-        '';
-      };
+    home.file.".gnupg/gpg-agent.conf".text = ''
+      ${lib.optionalString sshAgentEnabled "enable-ssh-support"}
+      pinentry-program ${pinentryWrapper}
+      default-cache-ttl 600
+      max-cache-ttl 7200
+    '';
 
     j0nix.user.software.packages = [
       pkgs.gnupg
