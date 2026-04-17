@@ -132,6 +132,10 @@ let
             # Some upstream commits reference a config install dir in CMake
             # before the repository actually contains that directory.
             mkdir -p config
+
+            # Older QML runtimes used here reject `easingCurve` as a property type.
+            substituteInPlace modules/bar/popouts/Wrapper.qml \
+              --replace-fail 'property easingCurve animCurve:' 'property var animCurve:'
           '';
       })
     else
