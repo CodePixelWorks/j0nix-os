@@ -550,7 +550,7 @@
     };
 
     caelestia-shell-dev = {
-      url = "github:caelestia-dots/shell?ref=main";
+      url = "github:caelestia-dots/shell?rev=0eaca375abd76fbe08e7e0d62708ae910a7ac6d9";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.quickshell.follows = "quickshell-dev";
     };
