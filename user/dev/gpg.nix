@@ -7,9 +7,12 @@
 }:
 let
   dev = settings.dev or { };
+  enableSops = settings.enableSops or false;
   gpgCfg = dev.gpg or { };
   gpgEnabled = gpgCfg.enable or false;
   gpgKeys = gpgCfg.keys or { };
+  userSecretsCfg = ((settings.secrets or { }).user or { });
+  deployedGpgKeys = userSecretsCfg.gpgKeys or { };
   gitSigningCfg = gpgCfg.gitSigning or { };
   sshAgentCfg = gpgCfg.sshAgent or { };
   sshAgentEnabled = sshAgentCfg.enable or false;
@@ -49,6 +52,34 @@ let
       path = "~/.config/git/gpg/${email}.inc";
     }) emails;
 
+  managedGpgKeyNames = if enableSops then builtins.attrNames deployedGpgKeys else [ ];
+  importManagedGpgKey = name:
+    let
+      secretPath = config.sops.secrets.${name}.path;
+      statePath = "${config.home.homeDirectory}/.local/state/j0nix/gpg-import/${name}.sha256";
+    in
+    ''
+      current_checksum="$(${pkgs.coreutils}/bin/sha256sum ${lib.escapeShellArg secretPath} | ${pkgs.coreutils}/bin/cut -d' ' -f1)"
+      previous_checksum=""
+      if [ -f ${lib.escapeShellArg statePath} ]; then
+        previous_checksum="$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg statePath})"
+      fi
+
+      if [ "$current_checksum" != "$previous_checksum" ]; then
+        echo "Importing managed GPG key: ${name}"
+        ${pkgs.gnupg}/bin/gpg --batch --import ${lib.escapeShellArg secretPath}
+        printf '%s\n' "$current_checksum" > ${lib.escapeShellArg statePath}
+      fi
+    '';
+  managedGpgImportScript = lib.concatStringsSep "\n" (
+    [
+      "mkdir -p \"$HOME/.gnupg\""
+      "chmod 700 \"$HOME/.gnupg\""
+      "mkdir -p \"$HOME/.local/state/j0nix/gpg-import\""
+      "chmod 700 \"$HOME/.local/state/j0nix/gpg-import\""
+    ]
+    ++ map importManagedGpgKey managedGpgKeyNames
+  );
   defaultKeyName = sshAgentCfg.keyName or (lib.head (builtins.attrNames gpgKeys));
   defaultKey = if defaultKeyName != null then gpgKeys.${defaultKeyName}.key or null else null;
 in
@@ -103,6 +134,10 @@ in
       default-cache-ttl 600
       max-cache-ttl 7200
     '';
+
+    home.activation.importManagedGpgKeys =
+      lib.hm.dag.entryAfter [ "writeBoundary" ]
+        (if managedGpgKeyNames != [ ] then managedGpgImportScript else ":");
 
     j0nix.user.software.packages = [
       pkgs.gnupg

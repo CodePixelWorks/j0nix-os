@@ -6,8 +6,10 @@ let
   userAgeCfg = userCfg.age or { };
   rawFiles = userCfg.files or { };
   rawSshKeys = userCfg.sshKeys or { };
+  rawGpgKeys = userCfg.gpgKeys or { };
   files = if builtins.isAttrs rawFiles then rawFiles else { };
   sshKeys = if builtins.isAttrs rawSshKeys then rawSshKeys else { };
+  gpgKeys = if builtins.isAttrs rawGpgKeys then rawGpgKeys else { };
   plainFiles = lib.filterAttrs (_: spec: !(spec ? fields)) files;
   structuredFiles = lib.filterAttrs (_: spec: spec ? fields) files;
   defaultSopsFile = userCfg.defaultSopsFile or (cfg.defaultUserSopsFile or null);
@@ -126,8 +128,24 @@ let
           }
         ))
       (lib.filterAttrs (_: spec: (spec.passphraseKey or null) != null) sshKeys);
+  gpgKeySecrets = builtins.mapAttrs
+    (name: spec:
+      mkSecretValue name {
+        key = spec.key or name;
+      }
+      // lib.optionalAttrs (spec ? mode) {
+        mode = spec.mode;
+      }
+      // lib.optionalAttrs (spec ? path) {
+        path = spec.path;
+      })
+    gpgKeys;
+  allManagedSecretNames = (builtins.attrNames files) ++ (builtins.attrNames sshKeys) ++ (builtins.attrNames gpgKeys);
   overlappingSecretNames =
-    builtins.filter (name: builtins.hasAttr name files) (builtins.attrNames sshKeys);
+    builtins.filter
+      (name:
+        builtins.length (builtins.filter (candidate: candidate == name) allManagedSecretNames) > 1)
+      (lib.unique allManagedSecretNames);
   missingSopsFileFiles =
     builtins.filter
       (name:
@@ -144,6 +162,14 @@ let
         in
         (if spec ? sopsFile then spec.sopsFile else defaultSopsFile) == null)
       (builtins.attrNames sshKeys);
+  missingSopsFileGpgKeys =
+    builtins.filter
+      (name:
+        let
+          spec = gpgKeys.${name};
+        in
+        (if spec ? sopsFile then spec.sopsFile else defaultSopsFile) == null)
+      (builtins.attrNames gpgKeys);
   missingSopsFileSshKeyPassphrases =
     builtins.filter
       (name:
@@ -177,11 +203,19 @@ let
         in
         if spec ? passphraseSopsFile then spec.passphraseSopsFile else if spec ? sopsFile then spec.sopsFile else defaultSopsFile)
       (builtins.attrNames (lib.filterAttrs (_: spec: (spec.passphraseKey or null) != null) sshKeys));
+  referencedGpgSopsFiles =
+    map
+      (name:
+        let
+          spec = gpgKeys.${name};
+        in
+        if spec ? sopsFile then spec.sopsFile else defaultSopsFile)
+      (builtins.attrNames gpgKeys);
   referencedSopsFiles =
     lib.unique (
       builtins.filter
         (path: path != null)
-        (referencedFileSopsFiles ++ referencedSshSopsFiles ++ referencedSshPassphraseSopsFiles)
+        (referencedFileSopsFiles ++ referencedSshSopsFiles ++ referencedSshPassphraseSopsFiles ++ referencedGpgSopsFiles)
     );
   missingSopsFilesOnDisk =
     builtins.filter
@@ -250,8 +284,10 @@ lib.mkIf enableSops {
       };
     secrets =
       lib.recursiveUpdate
-        (lib.recursiveUpdate (lib.recursiveUpdate fileSecrets structuredFileFieldSecrets) sshKeySecrets)
-        sshKeyPassphraseSecrets;
+        (lib.recursiveUpdate
+          (lib.recursiveUpdate (lib.recursiveUpdate fileSecrets structuredFileFieldSecrets) sshKeySecrets)
+          sshKeyPassphraseSecrets)
+        gpgKeySecrets;
     templates = structuredFileTemplates;
   } // lib.optionalAttrs (defaultSopsFile != null) {
     defaultSopsFile = defaultSopsFile;
@@ -282,8 +318,12 @@ lib.mkIf enableSops {
       message = "settings.userSettings.<name>.secrets.sshKeys must be an attrset of deployable SSH key definitions";
     }
     {
+      assertion = builtins.isAttrs rawGpgKeys;
+      message = "settings.userSettings.<name>.secrets.gpgKeys must be an attrset of deployable GPG key definitions";
+    }
+    {
       assertion = overlappingSecretNames == [ ];
-      message = "settings.userSettings.<name>.secrets.files and settings.userSettings.<name>.secrets.sshKeys must not reuse the same attr name.";
+      message = "settings.userSettings.<name>.secrets.files, settings.userSettings.<name>.secrets.sshKeys, and settings.userSettings.<name>.secrets.gpgKeys must not reuse the same attr name.";
     }
     {
       assertion = missingSopsFileFiles == [ ];
@@ -292,6 +332,10 @@ lib.mkIf enableSops {
     {
       assertion = missingSopsFileSshKeys == [ ];
       message = "Each settings.userSettings.<name>.secrets.sshKeys entry requires either its own sopsFile or settings.userSettings.<name>.secrets.defaultSopsFile/settings.secrets.defaultUserSopsFile.";
+    }
+    {
+      assertion = missingSopsFileGpgKeys == [ ];
+      message = "Each settings.userSettings.<name>.secrets.gpgKeys entry requires either its own sopsFile or settings.userSettings.<name>.secrets.defaultSopsFile/settings.secrets.defaultUserSopsFile.";
     }
     {
       assertion = missingSopsFileSshKeyPassphrases == [ ];
@@ -309,7 +353,7 @@ lib.mkIf enableSops {
       message = "Each settings.userSettings.<name>.secrets.sshKeys entry may define at most one of: publicKey, publicKeyFile.";
     }
     {
-      assertion = (files == { } && sshKeys == { }) || resolvedAgeKeyFile != null;
+      assertion = (files == { } && sshKeys == { } && gpgKeys == { }) || resolvedAgeKeyFile != null;
       message = "User sops secrets for ${settings.username} require a key source. Under NixOS, Home Manager should inherit osConfig.sops.age.keyFile; for standalone Home Manager set settings.userSettings.<name>.secrets.age.keyFile or settings.secrets.age.keyFile.";
     }
     {
