@@ -140,6 +140,21 @@ let
         path = spec.path;
       })
     gpgKeys;
+  gpgKeyPassphraseSecrets =
+    lib.mapAttrs'
+      (name: spec:
+        let
+          passphraseKey = spec.passphraseKey or null;
+        in
+        lib.nameValuePair "${name}-passphrase" (
+          mkSecretValue "${name}-passphrase" {
+            key = passphraseKey;
+            format = spec.passphraseFormat or defaultSopsFormat;
+            sopsFile = spec.passphraseSopsFile or (spec.sopsFile or defaultSopsFile);
+            mode = spec.passphraseMode or "0400";
+          }
+        ))
+      (lib.filterAttrs (_: spec: (spec.passphraseKey or null) != null) gpgKeys);
   allManagedSecretNames = (builtins.attrNames files) ++ (builtins.attrNames sshKeys) ++ (builtins.attrNames gpgKeys);
   overlappingSecretNames =
     builtins.filter
@@ -179,6 +194,15 @@ let
         (spec.passphraseKey or null) != null
         && (if spec ? passphraseSopsFile then spec.passphraseSopsFile else if spec ? sopsFile then spec.sopsFile else defaultSopsFile) == null)
       (builtins.attrNames sshKeys);
+  missingSopsFileGpgKeyPassphrases =
+    builtins.filter
+      (name:
+        let
+          spec = gpgKeys.${name};
+        in
+        (spec.passphraseKey or null) != null
+        && (if spec ? passphraseSopsFile then spec.passphraseSopsFile else if spec ? sopsFile then spec.sopsFile else defaultSopsFile) == null)
+      (builtins.attrNames gpgKeys);
   referencedFileSopsFiles =
     map
       (name:
@@ -211,11 +235,19 @@ let
         in
         if spec ? sopsFile then spec.sopsFile else defaultSopsFile)
       (builtins.attrNames gpgKeys);
+  referencedGpgPassphraseSopsFiles =
+    map
+      (name:
+        let
+          spec = gpgKeys.${name};
+        in
+        if spec ? passphraseSopsFile then spec.passphraseSopsFile else if spec ? sopsFile then spec.sopsFile else defaultSopsFile)
+      (builtins.attrNames (lib.filterAttrs (_: spec: (spec.passphraseKey or null) != null) gpgKeys));
   referencedSopsFiles =
     lib.unique (
       builtins.filter
         (path: path != null)
-        (referencedFileSopsFiles ++ referencedSshSopsFiles ++ referencedSshPassphraseSopsFiles ++ referencedGpgSopsFiles)
+        (referencedFileSopsFiles ++ referencedSshSopsFiles ++ referencedSshPassphraseSopsFiles ++ referencedGpgSopsFiles ++ referencedGpgPassphraseSopsFiles)
     );
   missingSopsFilesOnDisk =
     builtins.filter
@@ -287,7 +319,7 @@ lib.mkIf enableSops {
         (lib.recursiveUpdate
           (lib.recursiveUpdate (lib.recursiveUpdate fileSecrets structuredFileFieldSecrets) sshKeySecrets)
           sshKeyPassphraseSecrets)
-        gpgKeySecrets;
+        (lib.recursiveUpdate gpgKeySecrets gpgKeyPassphraseSecrets);
     templates = structuredFileTemplates;
   } // lib.optionalAttrs (defaultSopsFile != null) {
     defaultSopsFile = defaultSopsFile;
@@ -340,6 +372,10 @@ lib.mkIf enableSops {
     {
       assertion = missingSopsFileSshKeyPassphrases == [ ];
       message = "Each settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey requires either passphraseSopsFile, sopsFile, or settings.userSettings.<name>.secrets.defaultSopsFile/settings.secrets.defaultUserSopsFile.";
+    }
+    {
+      assertion = missingSopsFileGpgKeyPassphrases == [ ];
+      message = "Each settings.userSettings.<name>.secrets.gpgKeys.<name>.passphraseKey requires either passphraseSopsFile, sopsFile, or settings.userSettings.<name>.secrets.defaultSopsFile/settings.secrets.defaultUserSopsFile.";
     }
     {
       assertion =
