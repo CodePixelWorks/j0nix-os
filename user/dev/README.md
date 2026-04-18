@@ -16,6 +16,7 @@ Notable controls:
 - `settings.userSettings.<name>.dev.ai.enable`: opt the user into AI CLI tooling
 - `settings.userSettings.<name>.dev.git.*`: per-user git identity and per-host git identity overrides
 - `settings.userSettings.<name>.dev.git.hostProfiles.<name>.*`: per-host `userName`/`userEmail` overrides for git includes
+- `settings.userSettings.<name>.secrets.gpgKeys.<name>`: SOPS-backed GPG private key material that is imported automatically into `~/.gnupg` during Home Manager activation
 - `settings.userSettings.<name>.dev.ssh.*`: per-user SSH client policy
 - `settings.userSettings.<name>.dev.ssh.hosts.<name>.*`: SSH host definitions, aliases, and identity mapping
 - The attr name of each `dev.ssh.hosts.<name>` entry becomes the generated `Host <name>` entry. `host = ...` is used as `HostName ...`, so `hosts.webserver.host = "132.145.254.17"` yields `Host webserver` plus `HostName 132.145.254.17`.
@@ -34,6 +35,7 @@ Notable controls:
 - `pylocal 3.12`: pin a project-local Python version through `mise`
 - `claude`: shell alias for `claude-code`
 - `settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey`: optional SOPS path for automatic key loading into the keyring-backed agent
+- Managed GPG keys are imported only when the encrypted source changes, so rebuilds stay quiet while key rotations still deploy automatically
 - The automatic loader waits for the `gcr` SSH socket and retries `ssh-add`, so key loading is resilient to slower desktop startup ordering
 - `settings.dev.ai.installScope`: install shared AI CLIs as `system` packages or per-user via Home Manager
 - `settings.dev.ai.codex.mcp.nixos`: install `mcp-nixos` and register it in `~/.codex/config.toml` as the `nixos` MCP server
