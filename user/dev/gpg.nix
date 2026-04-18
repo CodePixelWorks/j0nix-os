@@ -81,7 +81,7 @@ let
             fi
 
             if [ -n "$keygrip" ]; then
-              ${pkgs.gnupg}/libexec/gpg-preset-passphrase --preset --passphrase-fd 0 "$keygrip" < ${lib.escapeShellArg passphrasePath}
+              ${pkgs.gnupg}/libexec/gpg-preset-passphrase --preset "$keygrip" < ${lib.escapeShellArg passphrasePath}
             else
               echo "warning: could not determine GPG keygrip for managed key ${name}; passphrase was not preloaded" >&2
             fi
