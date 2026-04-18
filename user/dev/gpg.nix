@@ -53,10 +53,41 @@ let
     }) emails;
 
   managedGpgKeyNames = if enableSops then builtins.attrNames deployedGpgKeys else [ ];
+  managedGpgKeysWithPassphrases =
+    lib.filterAttrs (_: spec: (spec.passphraseKey or null) != null && (spec.presetPassphrase or true)) deployedGpgKeys;
+  hasManagedGpgPassphrases = enableSops && managedGpgKeysWithPassphrases != { };
   importManagedGpgKey = name:
     let
+      spec = deployedGpgKeys.${name};
       secretPath = config.sops.secrets.${name}.path;
+      passphrasePath =
+        if spec ? passphraseKey then
+          config.sops.secrets."${name}-passphrase".path
+        else
+          null;
+      keyFingerprint = spec.fingerprint or ((gpgKeys.${name} or { }).key or "");
+      keygrip = spec.keygrip or "";
       statePath = "${config.home.homeDirectory}/.local/state/j0nix/gpg-import/${name}.sha256";
+      presetPassphrase = (spec.passphraseKey or null) != null && (spec.presetPassphrase or true);
+      presetScript =
+        if presetPassphrase then
+          ''
+            keygrip=${lib.escapeShellArg keygrip}
+            if [ -z "$keygrip" ]; then
+              keygrip="$(
+                ${pkgs.gnupg}/bin/gpg --batch --with-colons --with-keygrip --list-secret-keys ${lib.escapeShellArg keyFingerprint} \
+                  | ${pkgs.gawk}/bin/awk -F: '$1 == "grp" { print $10; exit }'
+              )"
+            fi
+
+            if [ -n "$keygrip" ]; then
+              ${pkgs.gnupg}/libexec/gpg-preset-passphrase --preset --passphrase-fd 0 "$keygrip" < ${lib.escapeShellArg passphrasePath}
+            else
+              echo "warning: could not determine GPG keygrip for managed key ${name}; passphrase was not preloaded" >&2
+            fi
+          ''
+        else
+          "";
     in
     ''
       current_checksum="$(${pkgs.coreutils}/bin/sha256sum ${lib.escapeShellArg secretPath} | ${pkgs.coreutils}/bin/cut -d' ' -f1)"
@@ -70,6 +101,8 @@ let
         ${pkgs.gnupg}/bin/gpg --batch --import ${lib.escapeShellArg secretPath}
         printf '%s\n' "$current_checksum" > ${lib.escapeShellArg statePath}
       fi
+
+      ${presetScript}
     '';
   managedGpgImportScript = lib.concatStringsSep "\n" (
     [
@@ -77,6 +110,7 @@ let
       "chmod 700 \"$HOME/.gnupg\""
       "mkdir -p \"$HOME/.local/state/j0nix/gpg-import\""
       "chmod 700 \"$HOME/.local/state/j0nix/gpg-import\""
+      "${pkgs.gnupg}/bin/gpgconf --reload gpg-agent || true"
     ]
     ++ map importManagedGpgKey managedGpgKeyNames
   );
@@ -130,6 +164,7 @@ in
 
     home.file.".gnupg/gpg-agent.conf".text = ''
       ${lib.optionalString sshAgentEnabled "enable-ssh-support"}
+      ${lib.optionalString hasManagedGpgPassphrases "allow-preset-passphrase"}
       pinentry-program ${pinentryWrapper}
       default-cache-ttl 600
       max-cache-ttl 7200
@@ -141,6 +176,7 @@ in
 
     j0nix.user.software.packages = [
       pkgs.gnupg
+      pkgs.gawk
       pkgs.pinentry-gnome3
     ];
   };
