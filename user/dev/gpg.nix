@@ -53,18 +53,17 @@ let
     }) emails;
 
   managedGpgKeyNames = if enableSops then builtins.attrNames deployedGpgKeys else [ ];
-  managedGpgKeysWithPassphrases =
-    lib.filterAttrs (_: spec: (spec.passphraseKey or null) != null && (spec.presetPassphrase or true)) deployedGpgKeys;
+  managedGpgKeysWithPassphrases = lib.filterAttrs (
+    _: spec: (spec.passphraseKey or null) != null && (spec.presetPassphrase or true)
+  ) deployedGpgKeys;
   hasManagedGpgPassphrases = enableSops && managedGpgKeysWithPassphrases != { };
-  importManagedGpgKey = name:
+  importManagedGpgKey =
+    name:
     let
       spec = deployedGpgKeys.${name};
       secretPath = config.sops.secrets.${name}.path;
       passphrasePath =
-        if spec ? passphraseKey then
-          config.sops.secrets."${name}-passphrase".path
-        else
-          null;
+        if spec ? passphraseKey then config.sops.secrets."${name}-passphrase".path else null;
       keyFingerprint = spec.fingerprint or ((gpgKeys.${name} or { }).key or "");
       keygrip = spec.keygrip or "";
       statePath = "${config.home.homeDirectory}/.local/state/j0nix/gpg-import/${name}.sha256";
@@ -104,16 +103,17 @@ let
 
       ${presetScript}
     '';
-  managedGpgImportScript = lib.concatStringsSep "\n" (
-    [
-      "mkdir -p \"$HOME/.gnupg\""
-      "chmod 700 \"$HOME/.gnupg\""
-      "mkdir -p \"$HOME/.local/state/j0nix/gpg-import\""
-      "chmod 700 \"$HOME/.local/state/j0nix/gpg-import\""
-      "${pkgs.gnupg}/bin/gpgconf --reload gpg-agent || true"
-    ]
-    ++ map importManagedGpgKey managedGpgKeyNames
-  );
+  managedGpgImportScript = pkgs.writeShellScriptBin "gpg-load-secret-keys" ''
+    set -eu
+
+    mkdir -p "$HOME/.gnupg"
+    chmod 700 "$HOME/.gnupg"
+    mkdir -p "$HOME/.local/state/j0nix/gpg-import"
+    chmod 700 "$HOME/.local/state/j0nix/gpg-import"
+    ${pkgs.gnupg}/bin/gpgconf --reload gpg-agent || true
+
+    ${lib.concatStringsSep "\n" (map importManagedGpgKey managedGpgKeyNames)}
+  '';
   defaultKeyName = sshAgentCfg.keyName or (lib.head (builtins.attrNames gpgKeys));
   defaultKey = if defaultKeyName != null then gpgKeys.${defaultKeyName}.key or null else null;
 in
@@ -170,14 +170,30 @@ in
       max-cache-ttl 7200
     '';
 
-    home.activation.importManagedGpgKeys =
-      lib.hm.dag.entryAfter [ "writeBoundary" ]
-        (if managedGpgKeyNames != [ ] then managedGpgImportScript else ":");
+    home.activation.importManagedGpgKeys = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+      if managedGpgKeyNames != [ ] then "$DRY_RUN_CMD ${lib.getExe managedGpgImportScript}" else ":"
+    );
 
     j0nix.user.software.packages = [
       pkgs.gnupg
       pkgs.gawk
       pkgs.pinentry-gnome3
-    ];
+    ]
+    ++ lib.optionals (managedGpgKeyNames != [ ]) [ managedGpgImportScript ];
+
+    systemd.user.services.gpg-secret-keys-load = lib.mkIf hasManagedGpgPassphrases {
+      Unit = {
+        Description = "Load declarative secret-backed GPG key passphrases into gpg-agent";
+        After = [ "graphical-session.target" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${lib.getExe managedGpgImportScript}";
+      };
+      Install = {
+        WantedBy = [ "graphical-session.target" ];
+      };
+    };
   };
 }
