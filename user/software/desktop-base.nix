@@ -111,6 +111,7 @@ in
       rustc
       openvpn
       p7zip
+      poppler-utils
       android-tools
       xdg-utils
       ytdownloader
