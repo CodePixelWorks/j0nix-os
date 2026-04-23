@@ -16,6 +16,9 @@ let
   gitSigningCfg = gpgCfg.gitSigning or { };
   sshAgentCfg = gpgCfg.sshAgent or { };
   sshAgentEnabled = sshAgentCfg.enable or false;
+  agentCacheTtl = gpgCfg.agentCacheTtl or 34560000;
+  agentMaxCacheTtl = gpgCfg.agentMaxCacheTtl or agentCacheTtl;
+  presetInterval = gpgCfg.presetInterval or "5min";
   pinentryWrapper = pkgs.writeShellScript "gpg-pinentry" ''
     set -eu
 
@@ -66,42 +69,66 @@ let
         if spec ? passphraseKey then config.sops.secrets."${name}-passphrase".path else null;
       keyFingerprint = spec.fingerprint or ((gpgKeys.${name} or { }).key or "");
       keygrip = spec.keygrip or "";
+      configuredKeygrips = spec.keygrips or (lib.optional (keygrip != "") keygrip);
+      configuredKeygripLines = lib.concatMapStringsSep "\n" (
+        grip: "printf '%s\\n' ${lib.escapeShellArg grip}"
+      ) configuredKeygrips;
       statePath = "${config.home.homeDirectory}/.local/state/j0nix/gpg-import/${name}.sha256";
       presetPassphrase = (spec.passphraseKey or null) != null && (spec.presetPassphrase or true);
       presetScript =
         if presetPassphrase then
           ''
-            keygrip=${lib.escapeShellArg keygrip}
-            if [ -z "$keygrip" ]; then
-              keygrip="$(
-                ${pkgs.gnupg}/bin/gpg --batch --with-colons --with-keygrip --list-secret-keys ${lib.escapeShellArg keyFingerprint} \
-                  | ${pkgs.gawk}/bin/awk -F: '$1 == "grp" { print $10; exit }'
-              )"
-            fi
-
-            if [ -n "$keygrip" ]; then
-              ${pkgs.gnupg}/libexec/gpg-preset-passphrase --preset "$keygrip" < ${lib.escapeShellArg passphrasePath}
+            if [ ! -f ${lib.escapeShellArg passphrasePath} ]; then
+              echo "warning: GPG passphrase secret for managed key ${name} was not available; passphrase was not preloaded" >&2
             else
-              echo "warning: could not determine GPG keygrip for managed key ${name}; passphrase was not preloaded" >&2
+              keygrips="$(
+                {
+                  ${configuredKeygripLines}
+                  ${pkgs.gnupg}/bin/gpg --batch --with-colons --with-keygrip --list-secret-keys ${lib.escapeShellArg keyFingerprint} \
+                    | ${pkgs.gawk}/bin/awk -F: '$1 == "grp" { print $10 }'
+                } | ${pkgs.gnused}/bin/sed '/^$/d' | ${pkgs.coreutils}/bin/sort -u
+              )"
+
+              if [ -z "$keygrips" ]; then
+                echo "warning: could not determine GPG keygrip for managed key ${name}; passphrase was not preloaded" >&2
+              else
+                printf '%s\n' "$keygrips" | while IFS= read -r keygrip; do
+                  ${pkgs.gnupg}/libexec/gpg-preset-passphrase --preset "$keygrip" < ${lib.escapeShellArg passphrasePath}
+                done
+              fi
             fi
           ''
         else
           "";
     in
     ''
-      current_checksum="$(${pkgs.coreutils}/bin/sha256sum ${lib.escapeShellArg secretPath} | ${pkgs.coreutils}/bin/cut -d' ' -f1)"
-      previous_checksum=""
-      if [ -f ${lib.escapeShellArg statePath} ]; then
-        previous_checksum="$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg statePath})"
-      fi
+      wait_attempt=0
+      while [ "$wait_attempt" -lt 30 ] && [ ! -f ${lib.escapeShellArg secretPath} ]; do
+        wait_attempt=$((wait_attempt + 1))
+        sleep 1
+      done
 
-      if [ "$current_checksum" != "$previous_checksum" ]; then
-        echo "Importing managed GPG key: ${name}"
-        ${pkgs.gnupg}/bin/gpg --batch --import ${lib.escapeShellArg secretPath}
-        printf '%s\n' "$current_checksum" > ${lib.escapeShellArg statePath}
-      fi
+      if [ ! -f ${lib.escapeShellArg secretPath} ]; then
+        echo "warning: GPG private key secret for managed key ${name} was not available; skipping import and preset" >&2
+      else
+        current_checksum="$(${pkgs.coreutils}/bin/sha256sum ${lib.escapeShellArg secretPath} | ${pkgs.coreutils}/bin/cut -d' ' -f1)"
+        previous_checksum=""
+        if [ -f ${lib.escapeShellArg statePath} ]; then
+          previous_checksum="$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg statePath})"
+        fi
 
-      ${presetScript}
+        if [ "$current_checksum" != "$previous_checksum" ]; then
+          echo "Importing managed GPG key: ${name}"
+          ${pkgs.gnupg}/bin/gpg --batch --import ${lib.escapeShellArg secretPath}
+          printf '%s\n' "$current_checksum" > ${lib.escapeShellArg statePath}
+        fi
+
+        if [ -n ${lib.escapeShellArg keyFingerprint} ]; then
+          ${pkgs.gnupg}/bin/gpg --batch --with-colons --list-secret-keys ${lib.escapeShellArg keyFingerprint} > /dev/null
+        fi
+
+        ${presetScript}
+      fi
     '';
   managedGpgImportScript = pkgs.writeShellScriptBin "gpg-load-secret-keys" ''
     set -eu
@@ -111,6 +138,7 @@ let
     mkdir -p "$HOME/.local/state/j0nix/gpg-import"
     chmod 700 "$HOME/.local/state/j0nix/gpg-import"
     ${pkgs.gnupg}/bin/gpgconf --reload gpg-agent || true
+    ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent || true
 
     ${lib.concatStringsSep "\n" (map importManagedGpgKey managedGpgKeyNames)}
   '';
@@ -166,8 +194,8 @@ in
       ${lib.optionalString sshAgentEnabled "enable-ssh-support"}
       ${lib.optionalString hasManagedGpgPassphrases "allow-preset-passphrase"}
       pinentry-program ${pinentryWrapper}
-      default-cache-ttl 600
-      max-cache-ttl 7200
+      default-cache-ttl ${toString agentCacheTtl}
+      max-cache-ttl ${toString agentMaxCacheTtl}
     '';
 
     home.activation.importManagedGpgKeys = lib.hm.dag.entryAfter [ "writeBoundary" ] (
@@ -189,10 +217,28 @@ in
       };
       Service = {
         Type = "oneshot";
+        Restart = "on-failure";
+        RestartSec = "10s";
         ExecStart = "${lib.getExe managedGpgImportScript}";
       };
       Install = {
         WantedBy = [ "graphical-session.target" ];
+      };
+    };
+
+    systemd.user.timers.gpg-secret-keys-load = lib.mkIf hasManagedGpgPassphrases {
+      Unit = {
+        Description = "Refresh declarative secret-backed GPG passphrases in gpg-agent";
+      };
+      Timer = {
+        OnBootSec = "1min";
+        OnUnitActiveSec = presetInterval;
+        AccuracySec = "30s";
+        Unit = "gpg-secret-keys-load.service";
+        Persistent = true;
+      };
+      Install = {
+        WantedBy = [ "timers.target" ];
       };
     };
   };
