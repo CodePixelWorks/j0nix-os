@@ -224,6 +224,11 @@ let
       null;
   startHyprlandSessionScript = pkgs.writeShellScriptBin "start-hyprland-session" ''
     # Graphical-session user target is started by Hyprland exec-once after the compositor is ready.
+    # Graphical greeters run inside their own compositor. Do not let that
+    # compositor's IPC/display variables leak into the authenticated session.
+    unset HYPRLAND_INSTANCE_SIGNATURE
+    unset WAYLAND_DISPLAY
+
     if [ "${if useUWSM then "1" else "0"}" = "1" ]; then
       exec ${lib.getExe pkgs.uwsm} start hyprland.desktop "$@"
     fi
