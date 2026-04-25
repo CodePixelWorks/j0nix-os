@@ -14,8 +14,8 @@ let
   minecraftDataDir = minecraftCfg.dataDir or null;
   bottlesPkg = pkgs.bottles-j0nix or pkgs.bottles;
   rockstarEnabled = launchers.rockstar or false;
-  gdlauncherEnabled = launchers.gdlauncher or false;
-  teamspeak6Enabled = launchers.teamspeak6 or false;
+  gdlauncherEnabled = launchers.gdlauncher or true;
+  teamspeak6Enabled = launchers.teamspeak6 or true;
   gdlauncherPkg =
     if builtins.hasAttr "gdlauncher-carbon" pkgs then
       builtins.getAttr "gdlauncher-carbon" pkgs
