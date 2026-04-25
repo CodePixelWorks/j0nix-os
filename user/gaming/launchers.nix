@@ -17,13 +17,13 @@ let
   gdlauncherEnabled = launchers.gdlauncher or false;
   teamspeak6Enabled = launchers.teamspeak6 or false;
   gdlauncherPkg =
-    if pkgs ? "gdlauncher-carbon" then
-      pkgs."gdlauncher-carbon"
+    if builtins.hasAttr "gdlauncher-carbon" pkgs then
+      builtins.getAttr "gdlauncher-carbon" pkgs
     else
       null;
   teamspeak6Pkg =
-    if pkgs ? "teamspeak6-client" then
-      pkgs."teamspeak6-client"
+    if builtins.hasAttr "teamspeak6-client" pkgs then
+      builtins.getAttr "teamspeak6-client" pkgs
     else
       null;
   heroicPkg =
