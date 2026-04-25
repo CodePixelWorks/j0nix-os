@@ -47,6 +47,8 @@
       bottles = true;
       wineGui = false;
       rockstar = true;
+      gdlauncher = true;
+      teamspeak6 = true;
     };
 
     streaming = {
