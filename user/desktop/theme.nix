@@ -216,6 +216,11 @@ let
     Net/IconThemeName "${iconThemeName}"
     Gtk/ApplicationPreferDarkTheme ${if darkGtk then "1" else "0"}
   '';
+  gtkSessionDataDirs = lib.concatStringsSep ":" [
+    "%h/.nix-profile/share"
+    "/etc/profiles/per-user/%u/share"
+    "/run/current-system/sw/share"
+  ];
   applyGtkTheme = pkgs.writeShellScript "gtk-theme-apply" ''
     set -eu
 
@@ -316,6 +321,7 @@ in
     };
     Service = {
       Type = "oneshot";
+      Environment = "XDG_DATA_DIRS=${gtkSessionDataDirs}";
       ExecStart = applyGtkTheme;
     };
     Install.WantedBy = [ "graphical-session.target" ];
