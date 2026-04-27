@@ -2,14 +2,8 @@
 let
   programsCfg = settings.programs or { };
   cfg = programsCfg.windowsApps or { };
-  legacyFusionCfg = programsCfg.fusion360 or { };
-  legacyFusionEnabled = legacyFusionCfg.enable or false;
 
-  requestedPackages =
-    lib.unique (
-      (cfg.packages or [ ])
-      ++ lib.optionals legacyFusionEnabled [ "fusion360-proton" ]
-    );
+  requestedPackages = lib.unique (cfg.packages or [ ]);
   autoSetupOnLogin = cfg.autoSetupOnLogin or true;
 
   definitionPath = name: ./packages + "/${name}.nix";
