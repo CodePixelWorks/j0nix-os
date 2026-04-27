@@ -208,10 +208,6 @@ in
       max-cache-ttl ${toString agentMaxCacheTtl}
     '';
 
-    home.activation.importManagedGpgKeys = lib.hm.dag.entryAfter [ "writeBoundary" ] (
-      if managedGpgKeyNames != [ ] then "$DRY_RUN_CMD ${lib.getExe managedGpgImportScript}" else ":"
-    );
-
     j0nix.user.software.packages = [
       pkgs.gnupg
       pkgs.gawk
@@ -219,9 +215,9 @@ in
     ]
     ++ lib.optionals (managedGpgKeyNames != [ ]) [ managedGpgImportScript ];
 
-    systemd.user.services.gpg-secret-keys-load = lib.mkIf hasManagedGpgPassphrases {
+    systemd.user.services.gpg-secret-keys-load = lib.mkIf (managedGpgKeyNames != [ ]) {
       Unit = {
-        Description = "Load declarative secret-backed GPG key passphrases into gpg-agent";
+        Description = "Load declarative secret-backed GPG keys into gpg-agent";
         After = [ "graphical-session.target" ];
         PartOf = [ "graphical-session.target" ];
       };
@@ -236,9 +232,9 @@ in
       };
     };
 
-    systemd.user.timers.gpg-secret-keys-load = lib.mkIf hasManagedGpgPassphrases {
+    systemd.user.timers.gpg-secret-keys-load = lib.mkIf (managedGpgKeyNames != [ ]) {
       Unit = {
-        Description = "Refresh declarative secret-backed GPG passphrases in gpg-agent";
+        Description = "Refresh declarative secret-backed GPG keys in gpg-agent";
       };
       Timer = {
         OnBootSec = "1min";
