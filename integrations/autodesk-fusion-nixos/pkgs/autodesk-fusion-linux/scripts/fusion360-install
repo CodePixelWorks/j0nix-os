@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="@runtimePath@${PATH:+:$PATH}"
+
+repo_url="${FUSION360_HELPER_REPO_URL:-https://codeberg.org/cryinkfly/Autodesk-Fusion-360-on-Linux/raw/branch/main}"
+fusion_installer_url="${FUSION360_INSTALLER_URL:-https://dl.appstreaming.autodesk.com/production/installers/Fusion%20Admin%20Install.exe}"
+webview2_url="${FUSION360_WEBVIEW2_URL:-https://github.com/aedancullen/webview2-evergreen-standalone-installer-archive/releases/download/109.0.1518.78/MicrosoftEdgeWebView2RuntimeInstallerX64.exe}"
+qt6_url="${FUSION360_QT6_WEBENGINECORE_URL:-$repo_url/files/extras/patched-dlls/Qt6WebEngineCore-06-2025.7z}"
+siappdll_url="${FUSION360_SIAPPDLL_URL:-$repo_url/files/extras/patched-dlls/siappdll.dll}"
+gpu_mode="${FUSION360_GPU_MODE:-dxvk}"
+runner="${FUSION360_RUNNER:-Wine}"
+
+data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+root="${FUSION360_ROOT:-$data_home/autodesk-fusion}"
+prefix="${FUSION360_WINEPREFIX:-$root/wineprefixes/default}"
+downloads="$root/downloads"
+logs="$root/logs"
+mkdir -p "$downloads" "$logs" "$prefix" "$state_home/autodesk-fusion"
+
+log_file="$state_home/autodesk-fusion/install.log"
+exec > >(tee -a "$log_file") 2>&1
+
+download() {
+  name="$1"
+  url="$2"
+  dest="$downloads/$name"
+  if [ -f "$dest" ] && [ "${FUSION360_REFRESH_DOWNLOADS:-0}" != "1" ]; then
+    printf 'Using cached %s\n' "$dest"
+    return 0
+  fi
+  printf 'Downloading %s\n' "$url"
+  "@curlBin@" -L --fail --retry 3 --connect-timeout 20 -o "$dest" "$url"
+}
+
+require() {
+  command -v "$1" >/dev/null 2>&1 || {
+    printf 'Missing required command: %s\n' "$1" >&2
+    exit 1
+  }
+}
+
+require wine
+require winetricks
+require 7z
+require curl
+
+download "FusionClientInstaller.exe" "$fusion_installer_url"
+download "WebView2installer.exe" "$webview2_url"
+download "Qt6WebEngineCore.dll.7z" "$qt6_url"
+download "siappdll.dll" "$siappdll_url"
+
+if [ "$gpu_mode" = "dxvk" ]; then
+  mkdir -p "$downloads/DXVK"
+  download "DXVK/DXVK.reg" "$repo_url/files/setup/resource/video_driver/DXVK/DXVK.reg"
+  download "DXVK/NMachineSpecificOptions.xml" "$repo_url/files/setup/resource/video_driver/DXVK/NMachineSpecificOptions.xml"
+else
+  mkdir -p "$downloads/OpenGL"
+  download "OpenGL/NMachineSpecificOptions.xml" "$repo_url/files/setup/resource/video_driver/OpenGL/NMachineSpecificOptions.xml"
+fi
+
+export WINEPREFIX="$prefix"
+wineboot --init
+wineserver -w
+
+win_downloads="$prefix/drive_c/users/$USER/Downloads"
+rm -rf "$win_downloads"
+ln -s "$downloads" "$win_downloads"
+
+printf 'Configuring Wine prefix\n'
+"@winetricksBin@" -q sandbox >>"$logs/winetricks_sandbox.log" 2>&1 || true
+"@winetricksBin@" -q atmlib gdiplus corefonts cjkfonts dotnet20 dotnet48 msxml4 msxml6 vcrun2022 fontsmooth=rgb winhttp win10 2>>"$logs/winetricks_core.log"
+"@winetricksBin@" -q cjkfonts >>"$logs/winetricks_cjkfonts_2.log" 2>&1 || true
+"@winetricksBin@" -q win11 >>"$logs/winetricks_win11.log" 2>&1 || true
+
+wine REG ADD "HKCU\\Software\\Wine\\DllOverrides" /v "adpclientservice.exe" /t REG_SZ /d native /f
+wine REG ADD "HKCU\\Software\\Wine\\DllOverrides" /v "AdCefWebBrowser.exe" /t REG_SZ /d builtin /f
+wine REG ADD "HKCU\\Software\\Wine\\DllOverrides" /v "msvcp140" /t REG_SZ /d native /f
+wine REG ADD "HKCU\\Software\\Wine\\DllOverrides" /v "mfc140u" /t REG_SZ /d native /f
+wine REG ADD "HKCU\\Software\\Wine\\DllOverrides" /v "bcp47langs" /t REG_SZ /d "" /f
+wine REG ADD "HKCU\\Software\\Wine\\X11 Driver" /v "Managed" /t REG_SZ /d "Y" /f
+wine REG ADD "HKCU\\Software\\Wine\\X11 Driver" /v "Decorated" /t REG_SZ /d "Y" /f
+
+printf 'Installing WebView2\n'
+wine "$win_downloads/WebView2installer.exe" /silent /install 2>>"$logs/WebView2_install.log" || true
+
+if [ "$gpu_mode" = "dxvk" ]; then
+  "@winetricksBin@" -q dxvk >>"$logs/winetricks_dxvk.log" 2>&1 || true
+  wine regedit.exe "C:\\users\\$USER\\Downloads\\DXVK\\DXVK.reg" || true
+fi
+
+printf 'Installing Autodesk Fusion client\n'
+timeout -k 10m 9m wine "$win_downloads/FusionClientInstaller.exe" --quiet 2>>"$logs/FusionClientInstaller_1.log" || true
+sleep 5
+timeout -k 5m 1m wine "$win_downloads/FusionClientInstaller.exe" --quiet 2>>"$logs/FusionClientInstaller_2.log" || true
+wineserver -w || true
+
+qt_dir="$(find "$prefix" -type f -name Qt6WebEngineCore.dll -printf '%T@ %h\n' 2>/dev/null | sort -rn | awk 'NR == 1 { $1=""; sub(/^ /, ""); print; exit }')"
+if [ -n "$qt_dir" ] && [ -d "$qt_dir" ]; then
+  "@sevenZipBin@" x -y "$downloads/Qt6WebEngineCore.dll.7z" "-o$downloads"
+  [ -f "$qt_dir/Qt6WebEngineCore.dll" ] && cp -f "$qt_dir/Qt6WebEngineCore.dll" "$qt_dir/Qt6WebEngineCore.dll.bak"
+  [ -f "$downloads/Qt6WebEngineCore.dll" ] && cp -f "$downloads/Qt6WebEngineCore.dll" "$qt_dir/Qt6WebEngineCore.dll"
+  [ -f "$qt_dir/siappdll.dll" ] && cp -f "$qt_dir/siappdll.dll" "$qt_dir/siappdll.dll.bak"
+  cp -f "$downloads/siappdll.dll" "$qt_dir/siappdll.dll"
+else
+  printf 'Warning: Qt6WebEngineCore.dll was not found; Fusion install may not have completed yet.\n' >&2
+fi
+
+options_src="$downloads/$gpu_mode/NMachineSpecificOptions.xml"
+[ -f "$options_src" ] || options_src="$downloads/DXVK/NMachineSpecificOptions.xml"
+if [ -f "$options_src" ]; then
+  for options_dir in \
+    "$prefix/drive_c/users/$USER/AppData/Roaming/Autodesk/Neutron Platform/Options" \
+    "$prefix/drive_c/users/$USER/AppData/Local/Autodesk/Neutron Platform/Options" \
+    "$prefix/drive_c/users/$USER/Application Data/Autodesk/Neutron Platform/Options"
+  do
+    mkdir -p "$options_dir"
+    cp -f "$options_src" "$options_dir/NMachineSpecificOptions.xml"
+  done
+fi
+
+{
+  printf '%s\n' "$gpu_mode"
+  printf '%s\n' "$root"
+  printf '%s\n' "$prefix"
+  printf '%s\n' "$runner"
+} >"$logs/wineprefixes.log"
+
+printf 'Fusion setup finished. Run fusion360-doctor to verify the installation.\n'
