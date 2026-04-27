@@ -268,14 +268,6 @@ in
       builtins.listToAttrs (lib.mapAttrsToList mkGitHostInclude gitHostProfiles)
     );
 
-    home.activation =
-      lib.mkIf (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { })
-        {
-          sshSecretKeysLoad = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-            $DRY_RUN_CMD ${lib.getExe loadSecretBackedSshKeysScript}
-          '';
-        };
-
     home.sessionVariables =
       (lib.optionalAttrs (sshEnabled && sshAgentProvider == "gnome-keyring") {
         SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/gcr/ssh";
