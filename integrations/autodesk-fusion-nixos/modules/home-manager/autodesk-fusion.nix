@@ -29,6 +29,12 @@ in
       description = "Package providing Fusion helper commands.";
     };
 
+    addToHomePackages = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Install the helper package through home.packages.";
+    };
+
     installMode = lib.mkOption {
       type = lib.types.enum [ "wine" "wine-fix" "proton" ];
       default = "wine";
@@ -79,7 +85,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ package ];
+    home.packages = lib.mkIf cfg.addToHomePackages [ package ];
 
     systemd.user.services.autodesk-fusion-setup = lib.mkIf cfg.autoSetupOnLogin {
       Unit = {
