@@ -11,6 +11,7 @@ let
   usePulseAudio = audioBackend == "pulseaudio";
   preventInterfaceSuspend = cfg.preventInterfaceSuspend;
   enableHiFiCodecs = cfg.bluetooth.enableHiFiCodecs;
+  enableBluezExperimental = cfg.bluetooth.enableBluezExperimental;
   enableMsbc = cfg.bluetooth.enableMsbc;
   bluetoothCodecs = cfg.bluetooth.codecs;
   hasPulseAudioBtModules = builtins.hasAttr "pulseaudio-modules-bt" pkgs;
@@ -35,6 +36,11 @@ in
       enableHiFiCodecs = lib.mkOption {
         type = lib.types.bool;
         default = true;
+      };
+      enableBluezExperimental = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable BlueZ experimental features such as LE Audio/BAP. Keep disabled unless a device requires it.";
       };
       enableMsbc = lib.mkOption {
         type = lib.types.bool;
@@ -148,7 +154,7 @@ in
       {
         Policy.AutoEnable = true;
       }
-      (lib.mkIf enableHiFiCodecs {
+      (lib.mkIf enableBluezExperimental {
         General.Experimental = true;
       })
     ];
