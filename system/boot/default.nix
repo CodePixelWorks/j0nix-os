@@ -109,11 +109,10 @@ in
       ]
       ++ lib.optionals (cfg.splash.enable && cfg.splash.quietBoot) [
         "quiet"
-        "splash"
-        "loglevel=3"
         "rd.udev.log_level=3"
         "udev.log_priority=3"
         "systemd.show_status=false"
+        "rd.systemd.show_status=false"
         "vt.global_cursor_default=0"
       ]
     );
