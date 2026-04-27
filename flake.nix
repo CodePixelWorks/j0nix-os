@@ -23,6 +23,7 @@
           bottles-j0nix = final.callPackage ./system/software/pkgs/windows/bottles-j0nix.nix {
             bottles = prev.bottles;
           };
+          autodesk-fusion-linux = final.callPackage ./integrations/autodesk-fusion-nixos/pkgs/autodesk-fusion-linux { };
           j0nix-wallpapers = final.callPackage ./system/software/pkgs/assets/j0nix-wallpapers.nix { };
           gparted-j0nix = final.callPackage ./system/software/pkgs/storage/gparted-j0nix.nix {
             gparted = prev.gparted;

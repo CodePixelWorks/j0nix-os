@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="@runtimePath@${PATH:+:$PATH}"
+
+log() { printf '%s\n' "$*" >&2; }
+
+data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+root="${FUSION360_ROOT:-$data_home/autodesk-fusion}"
+log_dir="$state_home/autodesk-fusion"
+wine_bin="${FUSION360_WINE_BIN:-@wineBin@}"
+mkdir -p "$log_dir"
+
+prefix_log="$root/logs/wineprefixes.log"
+prefix="$root/wineprefixes/default"
+runner="Wine"
+
+if [ -f "$prefix_log" ]; then
+  logged_root="$(awk 'NR == 2 { print; exit }' "$prefix_log")"
+  logged_prefix="$(awk 'NR == 3 { print; exit }' "$prefix_log")"
+  logged_runner="$(awk 'NR == 4 { print; exit }' "$prefix_log")"
+  [ -z "$logged_root" ] || root="$logged_root"
+  [ -z "$logged_prefix" ] || prefix="$logged_prefix"
+  [ -z "$logged_runner" ] || runner="$logged_runner"
+fi
+
+find_newest() {
+  find "$prefix" -type f \( -name "$1" \) -printf '%T@ %p\n' 2>/dev/null \
+    | sort -rn \
+    | awk 'NR == 1 { $1=""; sub(/^ /, ""); print; exit }'
+}
+
+launcher="${FUSION360_EXE:-}"
+if [ -z "$launcher" ]; then
+  launcher="$(find_newest Fusion360.exe)"
+fi
+if [ -z "$launcher" ]; then
+  launcher="$(find_newest FusionLauncher.exe)"
+fi
+
+if [ -z "$launcher" ] || [ ! -f "$launcher" ]; then
+  log "Fusion executable was not found in: $prefix"
+  log "Run fusion360-install first, then fusion360-doctor."
+  exit 1
+fi
+
+case "$runner" in
+  Wine)
+    export WINEPREFIX="$prefix"
+    exec "$wine_bin" "$launcher"
+    ;;
+  Wine-fix)
+    wine_build="${FUSION360_WINE_BUILD:-$HOME/fusion-wine-build}"
+    if [ ! -x "$wine_build/bin/wine" ]; then
+      log "Configured Wine-fix runner is missing: $wine_build/bin/wine"
+      exit 1
+    fi
+    export WINEPREFIX="$prefix"
+    export WINESERVER="$wine_build/bin/wineserver"
+    exec "$wine_build/bin/wine" "$launcher"
+    ;;
+  *)
+    steam_dir="${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.local/share/Steam}"
+    proton_dir="${FUSION360_PROTON_DIR:-$steam_dir/compatibilitytools.d/$runner}"
+    compat_path="${STEAM_COMPAT_DATA_PATH:-$root/protonprefix}"
+    if [ ! -x "$proton_dir/proton" ]; then
+      log "Configured Proton runner is missing: $proton_dir/proton"
+      exit 1
+    fi
+    export STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir"
+    export STEAM_COMPAT_DATA_PATH="$compat_path"
+    exec "$proton_dir/proton" run "$launcher"
+    ;;
+esac
