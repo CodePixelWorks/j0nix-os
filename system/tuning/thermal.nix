@@ -6,6 +6,8 @@ let
   fanHwmonName = cfg.fan.hwmonName or null;
   acpiLax = cfg.fan.acpiEnforceResourcesLax;
   governor = cfg.cpuGovernor;
+  cpupower = config.boot.kernelPackages.cpupower;
+  setGovernorWithCpupower = governor == "schedutil";
   fanBoostEnabled = cfg.fan.maxOnGamingPerformanceMode;
   fanBoostScript = pkgs.writeShellScriptBin "thermal-fan-max" ''
     set -eu
@@ -138,9 +140,27 @@ in
     j0nix.desktop.kernel.modules = lib.optional (fanKernelModule != null && fanKernelModule != "") fanKernelModule;
     boot.kernelParams = lib.optionals acpiLax [ "acpi_enforce_resources=lax" ];
 
-    powerManagement.cpuFreqGovernor = governor;
+    powerManagement.cpuFreqGovernor = lib.mkIf (!setGovernorWithCpupower) governor;
+
+    systemd.services.j0nix-cpufreq-governor = lib.mkIf setGovernorWithCpupower {
+      description = "Set CPU frequency governor";
+      after = [ "systemd-modules-load.service" ];
+      wantedBy = [ "multi-user.target" ];
+      path = [
+        cpupower
+        pkgs.kmod
+      ];
+      unitConfig.ConditionVirtualization = false;
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = "${cpupower}/bin/cpupower frequency-set --governor ${governor}";
+        SuccessExitStatus = "0 237";
+      };
+    };
 
     j0nix.software.systemPackages = with pkgs; [
+      cpupower
       dmidecode
       lm_sensors
     ] ++ lib.optionals fanBoostEnabled [ fanBoostScript ];
