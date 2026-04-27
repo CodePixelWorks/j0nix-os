@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="@runtimePath@${PATH:+:$PATH}"
+
+data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+root="${FUSION360_ROOT:-$data_home/autodesk-fusion}"
+prefix_log="$root/logs/wineprefixes.log"
+prefix="$root/wineprefixes/default"
+runner="Wine"
+
+if [ -f "$prefix_log" ]; then
+  logged_prefix="$(awk 'NR == 3 { print; exit }' "$prefix_log")"
+  logged_runner="$(awk 'NR == 4 { print; exit }' "$prefix_log")"
+  [ -z "$logged_prefix" ] || prefix="$logged_prefix"
+  [ -z "$logged_runner" ] || runner="$logged_runner"
+fi
+
+wine_user="$USER"
+if [ "$runner" != "Wine" ] && [ "$runner" != "Wine-fix" ]; then
+  wine_user="steamuser"
+fi
+
+target_name="NULastDisplayedLayout.xml"
+patched=0
+found_profile=0
+for base in \
+  "$prefix/drive_c/users/$wine_user/AppData/Roaming/Autodesk/Neutron Platform/Options" \
+  "$prefix/drive_c/users/$wine_user/AppData/Local/Autodesk/Neutron Platform/Options" \
+  "$prefix/drive_c/users/$wine_user/Application Data/Autodesk/Neutron Platform/Options"
+do
+  [ -d "$base" ] || continue
+  for profile in "$base"/*; do
+    [ -d "$profile" ] || continue
+    found_profile=1
+    target="$profile/$target_name"
+    [ -f "$target" ] || continue
+    utf8="$(mktemp)"
+    if iconv -f UTF-16LE -t UTF-8 "$target" >"$utf8" 2>/dev/null; then
+      if grep -q 'Contents="NavToolbar".*Visible="True"' "$utf8"; then
+        sed 's/\(Contents="NavToolbar".*\)Visible="True"/\1Visible="False"/' "$utf8" \
+          | iconv -f UTF-8 -t UTF-16LE >"$target"
+        patched=$((patched + 1))
+      fi
+    fi
+    rm -f "$utf8"
+  done
+done
+
+if [ "$found_profile" -eq 0 ]; then
+  printf 'No Fusion profile directories found. Log into Fusion first, then run this again.\n' >&2
+  exit 1
+fi
+
+printf 'Patched %s NavToolbar file(s).\n' "$patched"
