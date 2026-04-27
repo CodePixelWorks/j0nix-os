@@ -13,6 +13,9 @@ let
   host = ollamaCfg.host or null;
   modelsPath = ollamaCfg.modelsPath or null;
   models = ollamaCfg.models or [ ];
+  autoSyncModels = ollamaCfg.autoSyncModels or true;
+  syncDelay = ollamaCfg.syncDelay or "5min";
+  syncTimeout = ollamaCfg.syncTimeout or "30min";
   extraEnv = ollamaCfg.environment or { };
   hasValue = value: value != null && value != "";
   filteredExtraEnv = lib.filterAttrs (_: value: hasValue value) extraEnv;
@@ -38,6 +41,7 @@ let
     done
 
     for model in ${lib.concatStringsSep " " (map lib.escapeShellArg models)}; do
+      echo "Pulling Ollama model: $model"
       ${lib.getExe config.services.ollama.package} pull "$model"
     done
   '';
@@ -62,7 +66,6 @@ lib.mkIf enabled {
 
   systemd.services.ollama-models-sync = lib.mkIf (models != [ ]) {
     description = "Pull declarative Ollama models";
-    wantedBy = [ "multi-user.target" ];
     wants = [ "network-online.target" "ollama.service" ];
     after = [ "network-online.target" "ollama.service" ];
     serviceConfig = {
@@ -71,6 +74,18 @@ lib.mkIf enabled {
       Group = "ollama";
       SupplementaryGroups = [ "users" ];
       ExecStart = lib.getExe syncModelsScript;
+      TimeoutStartSec = syncTimeout;
+    };
+  };
+
+  systemd.timers.ollama-models-sync = lib.mkIf (models != [ ] && autoSyncModels) {
+    description = "Delayed declarative Ollama model sync";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnBootSec = syncDelay;
+      AccuracySec = "1min";
+      Unit = "ollama-models-sync.service";
+      Persistent = false;
     };
   };
 
@@ -94,6 +109,18 @@ lib.mkIf enabled {
     {
       assertion = builtins.isList models && lib.all builtins.isString models;
       message = "settings.userSettings.<name>.programs.ollama.models must be a list of model strings";
+    }
+    {
+      assertion = builtins.isBool autoSyncModels;
+      message = "settings.userSettings.<name>.programs.ollama.autoSyncModels must be a boolean";
+    }
+    {
+      assertion = hasValue syncDelay;
+      message = "settings.userSettings.<name>.programs.ollama.syncDelay must be a non-empty systemd time span";
+    }
+    {
+      assertion = hasValue syncTimeout;
+      message = "settings.userSettings.<name>.programs.ollama.syncTimeout must be a non-empty systemd time span";
     }
   ];
 }
