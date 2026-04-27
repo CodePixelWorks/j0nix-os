@@ -142,6 +142,15 @@ let
 
     ${lib.concatStringsSep "\n" (map importManagedGpgKey managedGpgKeyNames)}
   '';
+  gitGpgProgram = pkgs.writeShellScript "git-gpg-with-managed-secrets" ''
+    set -eu
+
+    ${lib.optionalString hasManagedGpgPassphrases ''
+      ${lib.getExe managedGpgImportScript} >/dev/null
+    ''}
+
+    exec ${pkgs.gnupg}/bin/gpg "$@"
+  '';
   defaultKeyName = sshAgentCfg.keyName or (lib.head (builtins.attrNames gpgKeys));
   defaultKey = if defaultKeyName != null then gpgKeys.${defaultKeyName}.key or null else null;
 in
@@ -182,6 +191,7 @@ in
       signing = {
         signByDefault = gitSigningCfg.signByDefault or true;
       };
+      settings.gpg.program = "${gitGpgProgram}";
       includes = lib.flatten (lib.mapAttrsToList mkGpgSigningInclude gpgKeys);
     };
 
