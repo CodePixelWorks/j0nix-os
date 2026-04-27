@@ -20,6 +20,12 @@ in
       description = "Additional kernel modules to load on boot.";
     };
 
+    blacklistedModules = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Kernel modules to prevent from loading.";
+    };
+
     kernelParams = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -46,6 +52,7 @@ in
     boot.kernelPackages = preset.mkKernelPackages pkgs;
 
     boot.kernelModules = lib.mkAfter (lib.unique cfg.modules);
+    boot.blacklistedKernelModules = lib.mkAfter (lib.unique cfg.blacklistedModules);
     boot.kernelParams = lib.mkAfter (lib.unique cfg.kernelParams);
 
     boot.extraModprobeConfig =
