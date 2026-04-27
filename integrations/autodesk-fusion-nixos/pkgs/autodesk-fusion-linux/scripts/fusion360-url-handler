@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="@runtimePath@${PATH:+:$PATH}"
+
+log() {
+  mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/autodesk-fusion"
+  printf '%s %s\n' "$(date --iso-8601=seconds)" "$*" >>"${XDG_STATE_HOME:-$HOME/.local/state}/autodesk-fusion/url-handler.log"
+}
+
+if [ "$#" -lt 1 ]; then
+  printf 'usage: fusion360-url-handler adskidmgr:<callback-url>\n' >&2
+  exit 2
+fi
+
+callback_url="$1"
+case "$callback_url" in
+  adskidmgr:*|ADSKIDMGR:*) ;;
+  *)
+    printf 'refusing non-adskidmgr URL\n' >&2
+    exit 2
+    ;;
+esac
+
+data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+root="${FUSION360_ROOT:-$data_home/autodesk-fusion}"
+prefix_log="$root/logs/wineprefixes.log"
+prefix="$root/wineprefixes/default"
+runner="Wine"
+wine_bin="${FUSION360_WINE_BIN:-@wineBin@}"
+
+if [ -f "$prefix_log" ]; then
+  logged_root="$(awk 'NR == 2 { print; exit }' "$prefix_log")"
+  logged_prefix="$(awk 'NR == 3 { print; exit }' "$prefix_log")"
+  logged_runner="$(awk 'NR == 4 { print; exit }' "$prefix_log")"
+  [ -z "$logged_root" ] || root="$logged_root"
+  [ -z "$logged_prefix" ] || prefix="$logged_prefix"
+  [ -z "$logged_runner" ] || runner="$logged_runner"
+fi
+
+identity_manager="$(find "$prefix" -type f -name AdskIdentityManager.exe -printf '%T@ %p\n' 2>/dev/null \
+  | sort -rn \
+  | awk 'NR == 1 { $1=""; sub(/^ /, ""); print; exit }')"
+
+if [ -z "$identity_manager" ] || [ ! -f "$identity_manager" ]; then
+  log "missing AdskIdentityManager.exe in $prefix"
+  printf 'Autodesk Identity Manager was not found in %s\n' "$prefix" >&2
+  exit 1
+fi
+
+log "handling login callback with runner=$runner prefix=$prefix"
+
+case "$runner" in
+  Wine)
+    export WINEPREFIX="$prefix"
+    exec "$wine_bin" "$identity_manager" "$callback_url"
+    ;;
+  Wine-fix)
+    wine_build="${FUSION360_WINE_BUILD:-$HOME/fusion-wine-build}"
+    if [ ! -x "$wine_build/bin/wine" ]; then
+      log "missing Wine-fix runner at $wine_build/bin/wine"
+      exit 1
+    fi
+    export WINEPREFIX="$prefix"
+    export WINESERVER="$wine_build/bin/wineserver"
+    exec "$wine_build/bin/wine" "$identity_manager" "$callback_url"
+    ;;
+  *)
+    steam_dir="${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.local/share/Steam}"
+    proton_dir="${FUSION360_PROTON_DIR:-$steam_dir/compatibilitytools.d/$runner}"
+    compat_path="${STEAM_COMPAT_DATA_PATH:-$root/protonprefix}"
+    if [ ! -x "$proton_dir/proton" ]; then
+      log "missing Proton runner at $proton_dir/proton"
+      exit 1
+    fi
+    export STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir"
+    export STEAM_COMPAT_DATA_PATH="$compat_path"
+    exec "$proton_dir/proton" run "$identity_manager" "$callback_url"
+    ;;
+esac
