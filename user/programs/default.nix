@@ -2,6 +2,7 @@
 {
   imports = [
     ./alacritty
+    ./autodesk-fusion
     ./bambulab
     ./betterdiscord
     ./element-desktop
@@ -15,4 +16,3 @@
     ./wlogout
   ];
 }
-
