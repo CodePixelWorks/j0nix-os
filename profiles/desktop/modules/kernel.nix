@@ -24,6 +24,12 @@
       "usbcore.autosuspend=-1"
     ];
 
+    # jc42 exposes the useful DIMM temperature sensors; ee1004 only reads SPD EEPROM
+    # data and logs a boot-time page-select error on this board.
+    blacklistedModules = [
+      "ee1004"
+    ];
+
     modprobeOptions = {
       # USB Bluetooth adapters/controllers can become unreliable after autosuspend.
       btusb.enable_autosuspend = 0;
