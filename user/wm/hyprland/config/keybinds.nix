@@ -67,7 +67,9 @@ let
   dmsOverviewToggleBind = lib.optional (
     dmsOverviewEnabled && hasValue overviewToggleBind
   ) "${overviewToggleBind}, exec, wm-overview-toggle";
-  mainFocusBinds = map (entry: mkMainBind "" entry.key "movefocus" entry.direction) directionalKeys;
+  mainFocusBinds = map (entry: mkMainBind "" entry.key "movefocus" entry.direction) (
+    lib.filter (entry: entry.key != "l") directionalKeys
+  );
   mainMoveBinds = map (
     entry: mkMainBind "SHIFT" entry.key "movewindow" entry.direction
   ) directionalKeys;
@@ -126,7 +128,7 @@ let
     "$mainMod, r, exec, wm-shell-recover"
     "$mainMod CTRL, v, layoutmsg, preselect r"
     "$mainMod CTRL SHIFT, v, layoutmsg, preselect d"
-    "$mainMod SHIFT, l, exec, wm-lock-screen"
+    "$mainMod, l, exec, wm-lock-screen"
     "$mainMod SHIFT, q, exit,"
   ]
   ++ mainSplitBinds
