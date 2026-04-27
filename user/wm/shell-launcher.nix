@@ -331,6 +331,10 @@ in
         exit 0
       fi
 
+      if [ "${selectedShell}" = "caelestia-shell" ] && [ -x "${hyprctlExec}" ]; then
+        ${hyprctlExec} dispatch global caelestia:lock >/dev/null 2>&1 && exit 0
+      fi
+
       if [ "$background" = "1" ]; then
         ${hyprlockExec} >/dev/null 2>&1 &
         sleep 0.5
