@@ -31,6 +31,18 @@ find_newest() {
     | awk 'NR == 1 { $1=""; sub(/^ /, ""); print; exit }'
 }
 
+wine_user="${FUSION360_WINE_USER:-$USER}"
+wine_user_root="$prefix/drive_c/users/$wine_user"
+mkdir -p "$wine_user_root/AppData/Roaming" "$wine_user_root/AppData/Local" "$wine_user_root/Temp"
+export WINEPREFIX="$prefix"
+export USERPROFILE="$wine_user_root"
+export APPDATA="$wine_user_root/AppData/Roaming"
+export LOCALAPPDATA="$wine_user_root/AppData/Local"
+export TEMP="$wine_user_root/Temp"
+export TMP="$wine_user_root/Temp"
+export HOMEDRIVE="C:"
+export HOMEPATH="\\users\\$wine_user"
+
 launcher="${FUSION360_EXE:-}"
 if [ -z "$launcher" ]; then
   launcher="$(find_newest Fusion360.exe)"
@@ -47,7 +59,6 @@ fi
 
 case "$runner" in
   Wine)
-    export WINEPREFIX="$prefix"
     exec "$wine_bin" "$launcher"
     ;;
   Wine-fix)
@@ -56,7 +67,6 @@ case "$runner" in
       log "Configured Wine-fix runner is missing: $wine_build/bin/wine"
       exit 1
     fi
-    export WINEPREFIX="$prefix"
     export WINESERVER="$wine_build/bin/wineserver"
     exec "$wine_build/bin/wine" "$launcher"
     ;;
