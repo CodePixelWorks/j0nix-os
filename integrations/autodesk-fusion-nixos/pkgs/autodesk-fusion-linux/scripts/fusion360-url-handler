@@ -42,6 +42,18 @@ identity_manager="$(find "$prefix" -type f -name AdskIdentityManager.exe -printf
   | sort -rn \
   | awk 'NR == 1 { $1=""; sub(/^ /, ""); print; exit }')"
 
+wine_user="${FUSION360_WINE_USER:-$USER}"
+wine_user_root="$prefix/drive_c/users/$wine_user"
+mkdir -p "$wine_user_root/AppData/Roaming" "$wine_user_root/AppData/Local" "$wine_user_root/Temp"
+export WINEPREFIX="$prefix"
+export USERPROFILE="$wine_user_root"
+export APPDATA="$wine_user_root/AppData/Roaming"
+export LOCALAPPDATA="$wine_user_root/AppData/Local"
+export TEMP="$wine_user_root/Temp"
+export TMP="$wine_user_root/Temp"
+export HOMEDRIVE="C:"
+export HOMEPATH="\\users\\$wine_user"
+
 if [ -z "$identity_manager" ] || [ ! -f "$identity_manager" ]; then
   log "missing AdskIdentityManager.exe in $prefix"
   printf 'Autodesk Identity Manager was not found in %s\n' "$prefix" >&2
@@ -52,7 +64,6 @@ log "handling login callback with runner=$runner prefix=$prefix"
 
 case "$runner" in
   Wine)
-    export WINEPREFIX="$prefix"
     exec "$wine_bin" "$identity_manager" "$callback_url"
     ;;
   Wine-fix)
@@ -61,7 +72,6 @@ case "$runner" in
       log "missing Wine-fix runner at $wine_build/bin/wine"
       exit 1
     fi
-    export WINEPREFIX="$prefix"
     export WINESERVER="$wine_build/bin/wineserver"
     exec "$wine_build/bin/wine" "$identity_manager" "$callback_url"
     ;;
