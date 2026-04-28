@@ -14,6 +14,7 @@ if [ -f "$prefix_log" ]; then
 fi
 
 status=0
+initialized=0
 check() {
   label="$1"
   shift
@@ -29,9 +30,17 @@ check "wine is available" command -v wine
 check "winetricks is available" command -v winetricks
 check "install root exists: $root" test -d "$root"
 check "wine prefix exists: $prefix" test -d "$prefix"
-check "prefix log exists" test -f "$prefix_log"
-check "Fusion executable exists" sh -c "find '$prefix' -type f \( -name Fusion360.exe -o -name FusionLauncher.exe \) | grep -q ."
-check "Autodesk Identity Manager exists" sh -c "find '$prefix' -type f -name AdskIdentityManager.exe | grep -q ."
+
+if [ -f "$prefix_log" ]; then
+  initialized=1
+  check "prefix log exists" test -f "$prefix_log"
+  check "Fusion executable exists" sh -c "find '$prefix' -type f \( -name Fusion360.exe -o -name FusionLauncher.exe \) | grep -q ."
+  check "Autodesk Identity Manager exists" sh -c "find '$prefix' -type f -name AdskIdentityManager.exe | grep -q ."
+else
+  printf 'not ok - prefix log exists (run fusion360-install first)\n'
+  printf 'not ok - Fusion executable exists (run fusion360-install first)\n'
+  printf 'not ok - Autodesk Identity Manager exists (run fusion360-install first)\n'
+fi
 
 if command -v xdg-mime >/dev/null 2>&1; then
   handler="$(xdg-mime query default x-scheme-handler/adskidmgr 2>/dev/null || true)"
@@ -41,6 +50,11 @@ if command -v xdg-mime >/dev/null 2>&1; then
     printf 'not ok - adskidmgr URL handler is %s\n' "${handler:-unset}"
     status=1
   fi
+fi
+
+if [ "$initialized" -eq 0 ]; then
+  printf 'ok - installation has not been initialized yet\n'
+  exit 0
 fi
 
 exit "$status"
