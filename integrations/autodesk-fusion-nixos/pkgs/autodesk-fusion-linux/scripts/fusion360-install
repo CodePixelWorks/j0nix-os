@@ -38,6 +38,16 @@ write_step() {
   printf '[%s] %s\n' "$(date --iso-8601=seconds)" "$1"
 }
 
+run_winetricks() {
+  step_name="$1"
+  shift
+  write_step "$step_name"
+  if ! timeout -k 5m 20m "$@"; then
+    printf 'Warning: %s failed, continuing with the next step.\n' "$step_name" >&2
+    return 1
+  fi
+}
+
 wine_user="${FUSION360_WINE_USER:-$USER}"
 wine_user_root="$prefix/drive_c/users/$wine_user"
 
@@ -105,16 +115,19 @@ win_downloads="$prefix/drive_c/users/$wine_user/Downloads"
 rm -rf "$win_downloads"
 ln -s "$downloads" "$win_downloads"
 
-write_step "configure-winetricks-sandbox"
-"@winetricksBin@" -q sandbox >>"$logs/winetricks_sandbox.log" 2>&1 || true
+run_winetricks "configure-winetricks-sandbox" "@winetricksBin@" -q sandbox >>"$logs/winetricks_sandbox.log" 2>&1 || true
 
-write_step "configure-winetricks-core"
-timeout -k 5m 20m "@winetricksBin@" -q atmlib gdiplus corefonts cjkfonts dotnet20 dotnet48 msxml4 msxml6 vcrun2022 fontsmooth=rgb winhttp win10 2>>"$logs/winetricks_core.log"
+run_winetricks "configure-winetricks-core-fonts" "@winetricksBin@" -q atmlib gdiplus corefonts fontsmooth=rgb winhttp win10 2>>"$logs/winetricks_core.log" || true
+run_winetricks "configure-winetricks-core-xml" "@winetricksBin@" -q msxml4 msxml6 vcrun2022 2>>"$logs/winetricks_core.log" || true
+run_winetricks "configure-winetricks-dotnet48" "@winetricksBin@" -q dotnet48 2>>"$logs/winetricks_core.log" || true
+if [ "${FUSION360_ENABLE_DOTNET20:-0}" = "1" ]; then
+  run_winetricks "configure-winetricks-dotnet20" "@winetricksBin@" -q dotnet20 2>>"$logs/winetricks_core.log" || true
+else
+  printf 'Skipping dotnet20 by default; set FUSION360_ENABLE_DOTNET20=1 to enable it.\n'
+fi
 
-write_step "configure-winetricks-cjkfonts"
-"@winetricksBin@" -q cjkfonts >>"$logs/winetricks_cjkfonts_2.log" 2>&1 || true
-write_step "configure-winetricks-win11"
-"@winetricksBin@" -q win11 >>"$logs/winetricks_win11.log" 2>&1 || true
+run_winetricks "configure-winetricks-cjkfonts" "@winetricksBin@" -q cjkfonts >>"$logs/winetricks_cjkfonts_2.log" 2>&1 || true
+run_winetricks "configure-winetricks-win11" "@winetricksBin@" -q win11 >>"$logs/winetricks_win11.log" 2>&1 || true
 
 wine REG ADD "HKCU\\Software\\Wine\\DllOverrides" /v "adpclientservice.exe" /t REG_SZ /d native /f
 wine REG ADD "HKCU\\Software\\Wine\\DllOverrides" /v "AdCefWebBrowser.exe" /t REG_SZ /d builtin /f
