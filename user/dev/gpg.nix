@@ -29,32 +29,6 @@ let
     exec ${pkgs.pinentry-gnome3}/bin/pinentry-tty "$@"
   '';
 
-  mkGpgSigningFile =
-    keyName: keySpec:
-    let
-      emails = keySpec.emails or [ ];
-      keyPath = keySpec.key;
-    in
-    lib.map (email: {
-      name = "git/gpg/${email}.inc";
-      value = {
-        text = ''
-          [user]
-            signingkey = ${keyPath}
-        '';
-      };
-    }) emails;
-
-  mkGpgSigningInclude =
-    keyName: keySpec:
-    let
-      emails = keySpec.emails or [ ];
-    in
-    lib.map (email: {
-      condition = "hasconfig:user.email:${email}";
-      path = "~/.config/git/gpg/${email}.inc";
-    }) emails;
-
   managedGpgKeyNames = if enableSops then builtins.attrNames deployedGpgKeys else [ ];
   managedGpgKeysWithPassphrases = lib.filterAttrs (
     _: spec: (spec.passphraseKey or null) != null && (spec.presetPassphrase or true)
@@ -183,16 +157,16 @@ in
       };
     };
 
-    xdg.configFile = lib.mkIf (gpgKeys != { }) (
-      builtins.listToAttrs (lib.concatLists (lib.mapAttrsToList mkGpgSigningFile gpgKeys))
-    );
-
     programs.git = lib.mkIf gitSigningCfg.enable {
       signing = {
         signByDefault = gitSigningCfg.signByDefault or true;
       };
-      settings.gpg.program = "${gitGpgProgram}";
-      includes = lib.flatten (lib.mapAttrsToList mkGpgSigningInclude gpgKeys);
+      settings = {
+        gpg.program = "${gitGpgProgram}";
+        user = lib.mkIf (defaultKey != null) {
+          signingkey = defaultKey;
+        };
+      };
     };
 
     home.sessionVariables = lib.mkIf sshAgentEnabled {
