@@ -10,6 +10,8 @@ let
   enabled = dev.enable or true;
   gitCfg = dev.git or { };
   gitEnabled = gitCfg.enable or true;
+  gpgCfg = dev.gpg or { };
+  gpgKeys = gpgCfg.keys or { };
   gitUserName = gitCfg.userName or (settings.name or settings.username);
   gitUserEmail = gitCfg.userEmail or (settings.email or "${settings.username}@localhost");
   gitDefaultBranch = gitCfg.defaultBranch or "main";
@@ -72,6 +74,13 @@ let
     let
       profileUserName = profile.userName or gitUserName;
       profileUserEmail = profile.userEmail or gitUserEmail;
+      matchingGpgKeyNames = lib.filter (
+        keyName: builtins.elem profileUserEmail (gpgKeys.${keyName}.emails or [ ])
+      ) (builtins.attrNames gpgKeys);
+      profileSigningKey =
+        profile.signingKey or profile.gpgSigningKey or (
+          if matchingGpgKeyNames == [ ] then null else gpgKeys.${lib.head matchingGpgKeyNames}.key or null
+        );
     in
     {
       name = "git/hosts/${name}.inc";
@@ -79,6 +88,7 @@ let
         [user]
           name = ${profileUserName}
           email = ${profileUserEmail}
+          ${lib.optionalString (profileSigningKey != null) "signingkey = ${profileSigningKey}"}
       '';
     };
 
