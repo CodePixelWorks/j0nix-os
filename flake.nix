@@ -12,14 +12,7 @@
       baseDir = ./.;
 
       vscodeOverlay = inputs.nix-vscode-extensions.overlays.default;
-      localFixesOverlay =
-        final: prev:
-        let
-          snPkgs = (import inputs.staging-next { system = final.system; });
-          snKde = snPkgs.kdePackages;
-          snQt6 = snPkgs.qt6;
-        in
-        {
+      localFixesOverlay = final: prev: {
           bottles-j0nix = final.callPackage ./system/software/pkgs/windows/bottles-j0nix.nix {
             bottles = prev.bottles;
           };
@@ -29,79 +22,10 @@
             gparted = prev.gparted;
           };
           vuescan = final.callPackage ./system/software/pkgs/scanning/vuescan.nix { };
-
-          darkly-qt6 = final.callPackage ./system/software/pkgs/qt/darkly-qt6.nix {
-            inherit (snKde)
-              kcmutils
-              kcoreaddons
-              kcolorscheme
-              kconfig
-              kguiaddons
-              ki18n
-              kiconthemes
-              kwindowsystem
-              kdecoration
-              kirigami
-              extra-cmake-modules
-              ;
-            inherit (snQt6)
-              wrapQtAppsHook
-              qtbase
-              qtdeclarative
-              ;
-          };
-          hyprqt6engine = final.callPackage ./system/software/pkgs/qt/hyprqt6engine.nix {
-            kdePackages = snKde // {
-              inherit (snKde) kcolorscheme kconfig kiconthemes;
-            };
-            qt6 = snQt6 // {
-              inherit (snQt6)
-                wrapQtAppsHook
-                qttools
-                qt5compat
-                qtbase
-                qtsvg
-                qtwayland
-                ;
-            };
-            libGL = prev.libGL;
-            libxkbcommon = prev.libxkbcommon;
-            hyprlang = prev.hyprlang;
-            hyprutils = prev.hyprutils;
-          };
-          mauiman4 = final.callPackage ./system/software/pkgs/maui/mauiman4.nix {
-            kdePackages = snKde // {
-              inherit (snKde) extra-cmake-modules;
-            };
-            qt6 = snQt6 // {
-              inherit (snQt6) wrapQtAppsHook qtbase;
-            };
-          };
-          mauikit4 = final.callPackage ./system/software/pkgs/maui/mauikit4.nix {
-            kdePackages = snKde // {
-              inherit (snKde)
-                extra-cmake-modules
-                kcoreaddons
-                ki18n
-                knotifications
-                kwindowsystem
-                ;
-            };
-            qt6 = snQt6 // {
-              inherit (snQt6)
-                wrapQtAppsHook
-                qtbase
-                qtdeclarative
-                qtmultimedia
-                qtsvg
-                ;
-            };
-            libxcb = prev.libxcb;
-            xcbutilwm = prev.xcbutilwm;
-          };
-
-          qt6 = snQt6;
-          kdePackages = snKde;
+          darkly-qt6 = final.kdePackages.callPackage ./system/software/pkgs/qt/darkly-qt6.nix { };
+          hyprqt6engine = final.callPackage ./system/software/pkgs/qt/hyprqt6engine.nix { };
+          mauiman4 = final.callPackage ./system/software/pkgs/maui/mauiman4.nix { };
+          mauikit4 = final.callPackage ./system/software/pkgs/maui/mauikit4.nix { };
           naps2 = prev.naps2.overrideAttrs (old: {
             postInstall = (old.postInstall or "") + ''
               substituteInPlace $out/lib/naps2/appsettings.xml \
@@ -602,10 +526,6 @@
     aagl = {
       url = "github:ezKEa/aagl-gtk-on-nix";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    staging-next = {
-      url = "github:nixos/nixpkgs/staging-next";
     };
   };
 }
