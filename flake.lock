@@ -1481,7 +1481,6 @@
         "quickshell-overview": "quickshell-overview",
         "quickshell-stable": "quickshell-stable",
         "sops-nix": "sops-nix",
-        "staging-next": "staging-next",
         "stylix": "stylix",
         "zen-browser": "zen-browser"
       }
@@ -1521,22 +1520,6 @@
       "original": {
         "owner": "Mic92",
         "repo": "sops-nix",
-        "type": "github"
-      }
-    },
-    "staging-next": {
-      "locked": {
-        "lastModified": 1776342239,
-        "narHash": "sha256-LX1LxnghmSiHdcY747HUOk1f+jFvbvkVLQh2jMbtzLE=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "ec2209392395bcd5b7082e5ccb85664ada0258f2",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "ref": "staging-next",
-        "repo": "nixpkgs",
         "type": "github"
       }
     },
