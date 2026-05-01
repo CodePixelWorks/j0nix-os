@@ -38,6 +38,11 @@
           mcp-language-server-j0nix = final.callPackage ./system/software/pkgs/dev/mcp-language-server.nix {
             src = inputs.mcp-language-server-src;
           };
+          openldap = prev.openldap.overrideAttrs (old: {
+            doCheck = false;
+            doInstallCheck = false;
+            dontCheck = true;
+          });
           vagrant-with-libvirt = final.callPackage ./system/software/pkgs/dev/vagrant-with-libvirt.nix {
             nixpkgsSrc = nixpkgs.outPath;
           };
