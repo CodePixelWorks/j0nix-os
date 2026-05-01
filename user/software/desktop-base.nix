@@ -97,7 +97,6 @@ in
       simplescreenrecorder
       gpu-screen-recorder
       gpu-screen-recorder-gtk
-      krita
       blender
       gimp
       naps2
