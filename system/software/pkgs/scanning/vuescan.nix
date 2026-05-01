@@ -26,7 +26,7 @@ stdenv.mkDerivation rec {
 
   src = fetchurl {
     url = "https://www.vuescan.com/files/vuex6498.tgz";
-    hash = "sha256-up7Xx1GRS2+YT6q+rnaOMbKzVOUb9W1FV3BWoPW8jww=";
+    hash = "sha256-cVjihxYbikgSHzHBtFqKfl7RVVi6Bys+ijLxjI0m8bA=";
   };
 
   nativeBuildInputs = [
