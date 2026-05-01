@@ -27,8 +27,6 @@ let
         null
     else
       null;
-  legacyIconFallbackPackage =
-    if pkgs ? adwaita-icon-theme-legacy then pkgs.adwaita-icon-theme-legacy else null;
   dmsSettings = settings.dms or { };
   caelestiaSettings = (settings.programs or { }).caelestia or { };
   caelestiaThemeSettings = caelestiaSettings.theme or { };
@@ -115,31 +113,13 @@ let
     && (builtins.hasAttr pkgs.stdenv.hostPlatform.system selectedInput.packages);
   packageSet =
     if hasSystemPackages then selectedInput.packages.${pkgs.stdenv.hostPlatform.system} else { };
-  upstreamCaelestiaShellPkg =
+  caelestiaShellPkg =
     if packageSet ? default then
       packageSet.default
     else if packageSet ? caelestia-shell then
       packageSet.caelestia-shell
     else if packageSet ? with-cli then
       packageSet.with-cli
-    else
-      null;
-  caelestiaShellPkg =
-    if upstreamCaelestiaShellPkg != null then
-      upstreamCaelestiaShellPkg.overrideAttrs (old: {
-        postPatch =
-          (old.postPatch or "")
-          + "\n"
-          + ''
-            # Some upstream commits reference a config install dir in CMake
-            # before the repository actually contains that directory.
-            mkdir -p config
-
-            # Older QML runtimes used here reject `easingCurve` as a property type.
-            substituteInPlace modules/bar/popouts/Wrapper.qml \
-              --replace-fail 'property easingCurve animCurve:' 'property var animCurve:'
-          '';
-      })
     else
       null;
   caelestiaCliInput =
@@ -373,8 +353,7 @@ let
       hicolor-icon-theme
       adwaita-icon-theme
       papirus-icon-theme
-    ]
-    ++ lib.optionals (legacyIconFallbackPackage != null) [ legacyIconFallbackPackage ];
+    ];
   shellFontPackages = with pkgs; [
     material-symbols
     nerd-fonts.caskaydia-cove
@@ -472,7 +451,6 @@ let
             ''"/var/lib/flatpak/exports/share"''
           ]
           ++ lib.optionals (iconThemePackage != null) [ ''"${iconThemePackage}/share"'' ]
-          ++ lib.optionals (legacyIconFallbackPackage != null) [ ''"${legacyIconFallbackPackage}/share"'' ]
           ++ [
             ''"${hicolor-icon-theme}/share"''
             ''"${adwaita-icon-theme}/share"''
