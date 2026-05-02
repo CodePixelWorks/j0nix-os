@@ -89,7 +89,6 @@ in
       kitty
       gh
       starship
-      obs-studio
       qbittorrent
       telegram-desktop
       nextcloud-client
