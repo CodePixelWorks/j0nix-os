@@ -35,6 +35,15 @@ let
     "workbench.colorTheme" = colorTheme;
   };
   seededUserSettingsFile = pkgs.writeText "vscode-seeded-settings.json" (builtins.toJSON seededUserSettings);
+  vscodeWaylandWrapper = pkgs.vscode.overrideAttrs (old: {
+    postFixup = (old.postFixup or "") + ''
+      wrapProgram "$out/bin/code" \
+        --set ELECTRON_OZONE_PLATFORM_HINT wayland \
+        --add-flags "--ozone-platform=wayland" \
+        --add-flags "--enable-features=UseOzonePlatform" \
+        --add-flags "--use-wayland-ime"
+    '';
+  });
 
   mkExtFromId = set: extId:
     let
@@ -52,6 +61,7 @@ let
 in {
   programs.vscode = {
     enable = true;
+    package = vscodeWaylandWrapper;
     profiles.default = {
       extensions =
         resolveExts pkgs.vscode-extensions openVSXIds
