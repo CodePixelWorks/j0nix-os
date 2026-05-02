@@ -1,6 +1,6 @@
 # User Roles
 
-Role modules are workload/purpose-oriented building blocks (e.g. `gaming`, `developer`, `office`, `remote-work`, `video-editing`, `3d-creation`).
+Role modules are workload/purpose-oriented building blocks (e.g. `gaming`, `developer`, `office`, `remote-work`, `streaming`, `video-editing`, `3d-creation`).
 
 ## Naming
 
@@ -21,6 +21,7 @@ Recommended modern baseline roles:
 - `network-performance`
 - `office`
 - `remote-work`
+- `streaming`
 - `video-editing`
 - `3d-creation`
 - `3d-printing`
