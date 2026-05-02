@@ -101,7 +101,6 @@ in
       gimp
       naps2
       mpv
-      libreoffice-fresh
       gcc
       gnumake
       nodejs
