@@ -31,6 +31,7 @@ Notable controls:
 - `settings.dev.python.enable`: install baseline Python tooling for development
 - `settings.dev.python.versionManager = "mise"`: activate `mise` in the shell for fast Python version switching
 - `settings.dev.python.installUv = true`: install `uv` alongside the version manager
+- Baseline user dev packages include Go and Rust toolchains (`go`, `cargo`, `rustc`)
 - `settings.dev.virtualisation.enable`: install the shared VM development toolset and request the libvirt/QEMU host stack when any dev user enables it
 - `settings.dev.virtualisation.vagrant = true`: install the `vagrant` CLI in the dev tool bundle
 - `settings.dev.virtualisation.vagrantLibvirt = true`: use the repo-packaged `vagrant` variant with declarative `vagrant-libvirt` system plugin wiring
