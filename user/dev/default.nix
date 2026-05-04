@@ -350,6 +350,9 @@ in
         deadnix
         openssh-askpass
         python3
+        go
+        cargo
+        rustc
       ])
       ++ lib.optionals pythonVersionManagerEnabled [
         pkgs.mise
