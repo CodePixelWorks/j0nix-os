@@ -60,3 +60,9 @@ Managed by `j0nix.desktop.gaming.*` (typically set in `profiles/desktop/modules/
 - Install/update tool: `proton-cachyos-install`
 - Ensure tool exists: `proton-cachyos-ensure`
 - Non-Steam with UMU + Proton-CachyOS: `game-session-umu-cachyos <game-exe-or-command>`
+
+## dwproton
+
+- ProtonPlus is installed system-wide and can manage dwproton from the GUI
+- Manual install tool: `dwproton-install`
+- Non-Steam with UMU + dwproton: `game-session-umu-dwproton <game-exe-or-command>`
