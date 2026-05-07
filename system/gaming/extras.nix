@@ -10,9 +10,14 @@ let
   protonCfg = gaming.proton or { };
   extraCfg = gaming.extras or { };
   asfEnabled = extraCfg.archisteamfarm or true;
+  protonPlusPkg = if builtins.hasAttr "protonplus" pkgs then pkgs.protonplus else null;
 in
 lib.mkIf enabled {
   j0nix.software.systemPackages =
+    lib.optionals (protonPlusPkg != null) [
+      protonPlusPkg
+    ]
+    ++
     lib.optionals (protonCfg.updater or true) [
       pkgs.protonup-qt
     ]
