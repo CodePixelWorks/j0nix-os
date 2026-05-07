@@ -26,6 +26,7 @@ Per-user launchers and helpers belong in `user/gaming/`.
 - `j0nix.desktop.gaming.steam.steamRun` installs `steam-run`.
 - `j0nix.desktop.gaming.proton.provider` selects preferred compat provider (`cachyos` or `ge`).
 - `j0nix.desktop.gaming.proton.ntsync.enable = true` loads the `ntsync` kernel module and exports `PROTON_USE_NTSYNC=1` with fsync disabled for Steam/Proton launches.
+- `j0nix.desktop.gaming.proton.updater = true` installs ProtonUp-Qt, and ProtonPlus is installed alongside it so dwproton can be managed from a GUI.
 
 ## Sunshine Note
 
