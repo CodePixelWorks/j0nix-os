@@ -269,6 +269,63 @@ EOF
     fi
     exec "''${child_prefix[@]}" "''${cmd[@]}"
   '';
+  dwProtonInstall = pkgs.writeShellScriptBin "dwproton-install" ''
+    set -eu
+
+    releases_url="https://dawn.wine/dawn-winery/dwproton/releases"
+    compat_dir="$HOME/.steam/root/compatibilitytools.d"
+
+    mkdir -p "$compat_dir"
+    tmpdir="$(${pkgs.coreutils}/bin/mktemp -d)"
+    trap 'rm -rf "$tmpdir"' EXIT
+
+    echo "Fetching latest dwproton release metadata..."
+    ${pkgs.curl}/bin/curl -fsSL "$releases_url" -o "$tmpdir/releases.html"
+
+    asset_href="$(${pkgs.gnugrep}/bin/grep -oE 'href="[^"]*dwproton-[^"]+-x86_64\.tar\.xz"' "$tmpdir/releases.html" | ${pkgs.coreutils}/bin/head -n1 | ${pkgs.gnused}/bin/sed -e 's/^href="//' -e 's/"$//')"
+
+    case "$asset_href" in
+      http://*|https://*)
+        asset_url="$asset_href"
+        ;;
+      /*)
+        asset_url="https://dawn.wine$asset_href"
+        ;;
+      *)
+        asset_url="$releases_url/$asset_href"
+        ;;
+    esac
+
+    if [ -z "$asset_href" ]; then
+      echo "No matching dwproton asset found."
+      echo "Check: $releases_url"
+      exit 1
+    fi
+
+    asset_file="$tmpdir/asset.$(${pkgs.coreutils}/bin/basename "$asset_url")"
+    echo "Downloading: $asset_url"
+    ${pkgs.curl}/bin/curl -fL "$asset_url" -o "$asset_file"
+
+    extract_dir="$tmpdir/extract"
+    ${pkgs.coreutils}/bin/mkdir -p "$extract_dir"
+    ${pkgs.gnutar}/bin/tar -xJf "$asset_file" -C "$extract_dir"
+
+    new_dir="$(${pkgs.findutils}/bin/find "$extract_dir" -mindepth 1 -maxdepth 1 -type d | ${pkgs.coreutils}/bin/head -n1)"
+    if [ -z "$new_dir" ]; then
+      echo "Could not locate extracted dwproton directory."
+      exit 1
+    fi
+
+    target_name="$(${pkgs.coreutils}/bin/basename "$new_dir")"
+    target_path="$compat_dir/$target_name"
+
+    rm -rf "$target_path"
+    mv "$new_dir" "$target_path"
+
+    echo "Installed dwproton to: $target_path"
+    echo "Restart Steam and select it in: Settings -> Compatibility"
+    echo "ProtonPlus can also install and manage dwproton from the GUI."
+  '';
 in
 lib.mkIf enabled {
   j0nix.user.software.packages = [
@@ -625,6 +682,27 @@ lib.mkIf enabled {
         | ${pkgs.gnugrep}/bin/grep -Eqi 'proton.*cachy|cachy.*proton'; then
         exec proton-cachyos-install
       fi
+    '')
+  ]
+  ++ [
+    dwProtonInstall
+    (pkgs.writeShellScriptBin "game-session-umu-dwproton" ''
+      set -eu
+      compat_dir="$HOME/.steam/root/compatibilitytools.d"
+      proton_dir="$(${pkgs.findutils}/bin/find "$compat_dir" -mindepth 1 -maxdepth 1 -type d \
+        | ${pkgs.gnugrep}/bin/grep -Ei 'dwproton|dawn.*proton' \
+        | ${pkgs.coreutils}/bin/sort \
+        | ${pkgs.coreutils}/bin/tail -n1)"
+
+      if [ -z "''${proton_dir:-}" ]; then
+        echo "No dwproton installation found in $compat_dir"
+        echo "Run: dwproton-install"
+        echo "Or install it with ProtonPlus."
+        exit 1
+      fi
+
+      export PROTONPATH="$proton_dir"
+      exec ${pkgs.umu-launcher}/bin/umu-run "$@"
     '')
   ]
   ++ lib.optionals rockstarEnabled [
