@@ -34,12 +34,18 @@ let
     [GroupOrder]
     0="Default"
   '';
+  rimeDefaultCustomText = ''
+    patch:
+      schema_list:
+        - schema: luna_pinyin
+  '';
 in
 {
   j0nix.user.software.packages = lib.optionals useFcitx5 (
     [
       pkgs.fcitx5
       pkgs.fcitx5-rime
+      pkgs.rime-data
       pkgs.fcitx5-gtk
       pkgs.qt6Packages.fcitx5-qt
       pkgs.qt6Packages.fcitx5-configtool
@@ -55,6 +61,10 @@ in
 
   xdg.configFile."fcitx5/profile" = lib.mkIf useFcitx5 {
     text = fcitxProfileText;
+  };
+
+  xdg.dataFile."fcitx5/rime/default.custom.yaml" = lib.mkIf useFcitx5 {
+    text = rimeDefaultCustomText;
   };
 
   systemd.user.services.fcitx5 = lib.mkIf useFcitx5 {
