@@ -223,6 +223,12 @@ let
   pythonVersionManager = pythonCfg.versionManager or "mise";
   pythonInstallUv = pythonCfg.installUv or true;
   pythonVersionManagerEnabled = pythonEnabled && pythonVersionManager == "mise";
+  androidStudioEnabled = dev.androidStudio or true;
+  androidStudioPackage =
+    if builtins.hasAttr "android-studio" pkgs then
+      pkgs."android-studio"
+    else
+      null;
   virtualisationCfg = dev.virtualisation or { };
   virtualisationEnabled = virtualisationCfg.enable or false;
   vagrantPackage =
@@ -370,6 +376,7 @@ in
         pkgs.qemu
       ]
       ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring") [ sshAddGuiScript ]
+      ++ lib.optionals (androidStudioEnabled && androidStudioPackage != null) [ androidStudioPackage ]
       ++
         lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { })
           [
@@ -409,6 +416,10 @@ in
           "none"
         ];
         message = "settings.dev.python.versionManager must be one of: mise, none";
+      }
+      {
+        assertion = (!androidStudioEnabled) || androidStudioPackage != null;
+        message = "settings.dev.androidStudio=true but pkgs.\"android-studio\" is unavailable";
       }
       {
         assertion = builtins.isBool (virtualisationCfg.enable or false);
