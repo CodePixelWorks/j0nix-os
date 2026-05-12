@@ -253,6 +253,7 @@ in
   imports = [
     ./ai-cli.nix
     ./gpg.nix
+    ./skills.nix
   ];
 
   config = lib.mkIf enabled {
