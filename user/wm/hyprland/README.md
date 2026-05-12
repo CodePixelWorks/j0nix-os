@@ -137,6 +137,7 @@ Behavior:
 - `SUPER+,`: open the generated Hyprland keybind reference popup
 - `SUPER+F`: fullscreen (mode `0`, hides shell/waybar)
 - `SUPER+SHIFT+F`: maximize-like fullscreen (mode `1`, keeps shell/waybar)
+- `SUPER+CTRL+K`: toggle the `wvkbd` on-screen keyboard
 - `SUPER+Return`: open preferred terminal
 - `SUPER+SHIFT+L`: lock screen via `wm-lock-screen`
 - `SUPER+B`: open preferred browser

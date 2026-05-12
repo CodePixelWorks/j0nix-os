@@ -120,6 +120,7 @@ let
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
     "$mainMod, comma, exec, ${keybindHelpCommand}"
+    "$mainMod CTRL, k, exec, wm-screen-keyboard-toggle"
     "$mainMod, f, fullscreen, 0" # actual fullscreen (shell/waybar hidden)
     "$mainMod SHIFT, f, fullscreen, 1" # Win+Shift+F: maximize-ish fullscreen that keeps shell/waybar visible
     "$mainMod, return, exec, ${appExec preferredTerminalCmd}"
