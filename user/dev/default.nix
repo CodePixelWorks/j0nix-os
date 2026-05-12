@@ -229,6 +229,12 @@ let
       pkgs."android-studio"
     else
       null;
+  wvkbdEnabled = dev.wvkbd or true;
+  wvkbdPackage =
+    if builtins.hasAttr "wvkbd" pkgs then
+      pkgs.wvkbd
+    else
+      null;
   virtualisationCfg = dev.virtualisation or { };
   virtualisationEnabled = virtualisationCfg.enable or false;
   vagrantPackage =
@@ -375,6 +381,7 @@ in
       ++ lib.optionals (virtualisationEnabled && (virtualisationCfg.qemu or true)) [
         pkgs.qemu
       ]
+      ++ lib.optionals (wvkbdEnabled && wvkbdPackage != null) [ wvkbdPackage ]
       ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring") [ sshAddGuiScript ]
       ++ lib.optionals (androidStudioEnabled && androidStudioPackage != null) [ androidStudioPackage ]
       ++
@@ -420,6 +427,10 @@ in
       {
         assertion = (!androidStudioEnabled) || androidStudioPackage != null;
         message = "settings.dev.androidStudio=true but pkgs.\"android-studio\" is unavailable";
+      }
+      {
+        assertion = (!wvkbdEnabled) || wvkbdPackage != null;
+        message = "settings.dev.wvkbd=true but pkgs.wvkbd is unavailable";
       }
       {
         assertion = builtins.isBool (virtualisationCfg.enable or false);
