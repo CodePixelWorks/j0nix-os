@@ -8,6 +8,7 @@ Notable controls:
 - `settings.userSettings.<name>.dev.docker.enable`: enables the shared Docker daemon and adds that user to the `docker` group
 - `settings.userSettings.<name>.dev.ai.enable`: marks the user as an AI tooling user
 - `settings.dev.ai.installScope`: installs Codex/Gemini CLIs as `system` packages (`system`) or leaves them to Home Manager (`user`)
+- `settings.dev.ai.caveman`: installs the shared `caveman` Agent Skill into the user skill directories used by Codex, Kilo Code, Claude Code, and compatible Agent Skills consumers
 
 Also manages:
 - SSH agent provider selection (`settings.userSettings.<name>.dev.ssh.agent.provider`)
