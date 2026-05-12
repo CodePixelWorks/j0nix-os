@@ -32,6 +32,7 @@ Notable controls:
 - `settings.dev.python.versionManager = "mise"`: activate `mise` in the shell for fast Python version switching
 - `settings.dev.python.installUv = true`: install `uv` alongside the version manager
 - `settings.dev.androidStudio`: install Android Studio in the shared user dev package set
+- `settings.dev.wvkbd`: install `wvkbd` as a Wayland on-screen keyboard in the shared user dev package set
 - Baseline user dev packages include Go and Rust toolchains (`go`, `cargo`, `rustc`)
 - `settings.dev.virtualisation.enable`: install the shared VM development toolset and request the libvirt/QEMU host stack when any dev user enables it
 - `settings.dev.virtualisation.vagrant = true`: install the `vagrant` CLI in the dev tool bundle
