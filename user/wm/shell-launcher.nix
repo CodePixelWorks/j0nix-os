@@ -29,6 +29,7 @@ let
   uwsmExec = launcherPolicy.uwsmExe;
   hyprctlExec = lib.getExe' pkgs.hyprland "hyprctl";
   hyprlockExec = lib.getExe pkgs.hyprlock;
+  wvkbdExec = lib.getExe pkgs.wvkbd;
   systemctlExec = "${pkgs.systemd}/bin/systemctl";
   wmShellStartCmd = "${homeBinDir}/wm-shell-start";
   wmShellStopCmd = "${homeBinDir}/wm-shell-stop";
@@ -66,6 +67,16 @@ in
 
       command -v notify-send >/dev/null 2>&1 && notify-send "Keyboard Layout" "Runtime switch not implemented for current WM" >/dev/null 2>&1 || true
       exit 1
+    '')
+    (writeShellScriptBin "wm-screen-keyboard-toggle" ''
+      set -eu
+
+      if pgrep -x wvkbd-mobintl >/dev/null 2>&1; then
+        pkill -x wvkbd-mobintl >/dev/null 2>&1 || true
+        exit 0
+      fi
+
+      exec ${wvkbdExec}
     '')
     (writeShellScriptBin "wm-shell-start" ''
       export PATH="${shellPath}:$PATH"
