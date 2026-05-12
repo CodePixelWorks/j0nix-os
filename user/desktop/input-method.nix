@@ -15,13 +15,13 @@ let
     # Group Name
     Name="Default"
     # Layout
-    Default Layout=cn
+    Default Layout=us
     # Default Input Method
     DefaultIM=rime
 
     [Groups/0/Items/0]
     # Name
-    Name=keyboard-cn
+    Name=keyboard-us
     # Layout
     Layout=
 
