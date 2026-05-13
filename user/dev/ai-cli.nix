@@ -169,7 +169,8 @@ lib.mkIf enabled {
     ]
     ++ lib.optionals (installScope == "user" && hermesEnabled && hermesPackage != null) [
       hermesPackage
-    ];
+    ]
+    ++ lib.optionals (installScope == "user") [ pkgs.bubblewrap ];
 
   home.activation.codexMcpSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD ${codexMcpSync}/bin/codex-mcp-sync
