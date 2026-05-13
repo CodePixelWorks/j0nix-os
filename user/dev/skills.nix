@@ -15,6 +15,17 @@ let
     ".codex/skills/caveman"
     ".kilo/skills/caveman"
   ];
+  backupTargets = map (target: "${target}.backup") skillTargets;
+  cleanupBackupScript = lib.concatMapStringsSep "\n" (
+    backupTarget: ''
+      backup_path="$HOME/${backupTarget}"
+      target_path="''${backup_path%.backup}"
+
+      if [ -L "$target_path" ] && [ -e "$backup_path" ]; then
+        rm -rf "$backup_path"
+      fi
+    ''
+  ) backupTargets;
 in
 lib.mkIf (enabled && cavemanEnabled) {
   home.file = builtins.listToAttrs (
@@ -27,4 +38,8 @@ lib.mkIf (enabled && cavemanEnabled) {
       }
     ) skillTargets
   );
+
+  home.activation.cleanupCavemanSkillBackups = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    ${cleanupBackupScript}
+  '';
 }
