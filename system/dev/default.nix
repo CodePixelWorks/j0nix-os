@@ -178,7 +178,8 @@ in
       ]
       ++ lib.optionals (
         aiEnabled && aiInstallScope == "system" && hermesEnabled && hermesPackage != null
-      ) [ hermesPackage ];
+      ) [ hermesPackage ]
+      ++ lib.optionals (aiEnabled && aiInstallScope == "system") [ pkgs.bubblewrap ];
 
     programs.ssh.startAgent = sshEnabled && sshAgentEnable && sshAgentProvider == "openssh";
 
