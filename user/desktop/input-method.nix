@@ -67,22 +67,6 @@ in
     text = rimeDefaultCustomText;
   };
 
-  systemd.user.services.fcitx5 = lib.mkIf useFcitx5 {
-    Unit = {
-      Description = "Fcitx 5 input method daemon";
-      PartOf = [ "graphical-session.target" ];
-      After = [ "graphical-session.target" ];
-    };
-
-    Service = {
-      ExecStart = "${pkgs.fcitx5}/bin/fcitx5 -dr";
-      Restart = "on-failure";
-      RestartSec = 2;
-    };
-
-    Install.WantedBy = [ "graphical-session.target" ];
-  };
-
   assertions = [
     {
       assertion = builtins.elem engine [ "rime" ];
