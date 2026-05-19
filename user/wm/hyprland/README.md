@@ -42,39 +42,38 @@ Window rules are split into:
 
 ## Generated Config Layout
 
-`~/.config/hypr/hyprland.conf` is intentionally thin and only sources include files in a fixed order.
+`~/.config/hypr/hyprland.lua` is now the active production entrypoint.
 
-Main include directory:
+Generated Lua modules:
 
-- `~/.config/hypr/conf.d/00-vars.conf`
-- `~/.config/hypr/conf.d/05-env.conf`
-- `~/.config/hypr/conf.d/10-monitors.conf`
-- `~/.config/hypr/conf.d/20-startup.conf`
-- `~/.config/hypr/conf.d/30-input.conf`
-- `~/.config/hypr/conf.d/40-general.conf`
-- `~/.config/hypr/conf.d/50-decoration.conf`
-- `~/.config/hypr/conf.d/60-misc-debug.conf`
-- `~/.config/hypr/conf.d/70-window-rules.conf`
-- `~/.config/hypr/conf.d/80-keybinds.conf`
+- `~/.config/hypr/hyprland.lua`
+- `~/.config/hypr/j0nix/vars.lua`
+- `~/.config/hypr/j0nix/env.lua`
+- `~/.config/hypr/j0nix/monitors.lua`
+- `~/.config/hypr/j0nix/startup.lua`
+- `~/.config/hypr/j0nix/input.lua`
+- `~/.config/hypr/j0nix/general.lua`
+- `~/.config/hypr/j0nix/decoration.lua`
+- `~/.config/hypr/j0nix/misc.lua`
+- `~/.config/hypr/j0nix/window-rules.lua`
+- `~/.config/hypr/j0nix/keybinds.lua`
+- `~/.config/hypr/j0nix/shell.lua`
+- `~/.config/hypr/j0nix/user-overrides.lua`
 
-Shell-scoped generated include:
+Compatibility alias:
 
-- `~/.config/hypr/shells/<wmShell>/generated/95-shell.conf`
+- `~/.config/hypr/j0nix-scaffold.lua`
 
 The user override include is always loaded last:
 
-- `~/.config/hypr/shell-overrides/<wmShell>/user-overrides.conf`
-
-This split avoids cross-shell collisions and keeps sections readable and easier to diff.
+- `~/.config/hypr/shell-overrides/<wmShell>/user-overrides.lua`
 
 ## Lua Scaffold
 
-The repo now also generates a staged Lua migration scaffold alongside the active `.conf` tree:
+The Lua scaffold is now the active session config.
 
-- `~/.config/hypr/j0nix-scaffold.lua`
+- `~/.config/hypr/hyprland.lua`
 - `~/.config/hypr/j0nix/*.lua`
-
-This scaffold is intentionally not the active production config yet. It exists so the migration can be built and tested incrementally without breaking the current session while keybinds, window rules, and shell overlays are still being ported.
 
 Current scaffold coverage:
 
@@ -87,14 +86,11 @@ Current scaffold coverage:
 - misc
 - window rules
 - keybinds
-
-Still pending before activation:
-
-- shell-specific overlays
+- shell-specific overlays for `caelestia-shell`
 
 Current shell migration status:
 
-- `caelestia-shell`: staged Lua overlay present, including the global submap bootstrap
+- `caelestia-shell`: active Lua overlay present, including the global submap bootstrap
 - `dank-material-shell`: temporarily marked broken during the Lua migration
 - other shells: no dedicated Lua overlay yet
 
@@ -102,7 +98,7 @@ Current shell migration status:
 
 Hyprland now generates two environment entrypoints from the same declarative source:
 
-- `~/.config/hypr/conf.d/05-env.conf`
+- `~/.config/hypr/j0nix/env.lua`
 - `~/.config/uwsm/env` (when `settings.hyprland.useUWSM = true`)
 
 Source-of-truth:
@@ -124,10 +120,10 @@ For the active incident/runbook around Caelestia keybind regressions (`upstream-
 
 The generated Hyprland config sources a shell-scoped user-local file last:
 
-- `~/.config/hypr/shell-overrides/<wmShell>/user-overrides.conf`
+- `~/.config/hypr/shell-overrides/<wmShell>/user-overrides.lua`
 
 This file is auto-created once by Home Manager activation and then left mutable for manual per-user overrides.
-The old shared path `~/.config/hypr/user-overrides.conf` is migrated automatically on first switch.
+Legacy hyprlang override files are no longer sourced automatically. If `~/.config/hypr/user-overrides.conf` or the shell-scoped `user-overrides.conf` exists, Home Manager now creates a Lua override file with a migration note instead of trying to execute the old syntax.
 Typical use: local binds, monitor tweaks, one-off rules that should not be committed into Nix modules.
 
 ## Optional Minimizer
