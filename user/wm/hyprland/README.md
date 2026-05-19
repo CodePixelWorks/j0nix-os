@@ -85,10 +85,10 @@ Current scaffold coverage:
 - general
 - decoration
 - misc
+- window rules
 
 Still pending before activation:
 
-- window rules
 - keybinds
 - shell-specific overlays
 
