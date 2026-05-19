@@ -2,6 +2,7 @@
   lib,
   settings,
   profileDetails,
+  hyprlandWindowRules,
   sessionEnv,
   startupCommands,
   managedMonitorLines,
@@ -30,6 +31,13 @@ let
   renderLuaConfig = attrs: "hl.config(${luaValue attrs})";
   renderLuaEnv = name: value: "hl.env(${builtins.toJSON name}, ${builtins.toJSON (toString value)})";
   renderExec = command: "  hl.exec_cmd(${builtins.toJSON command})";
+  renderWindowRule = rule:
+    let
+      body = {
+        match = rule.match or { };
+      } // builtins.removeAttrs rule [ "match" "name" ];
+    in
+    "hl.window_rule(${luaValue body})";
 
   parseMonitorLine =
     line:
@@ -157,6 +165,7 @@ let
         "hl.monitor(${luaValue { output = monitor.output; mode = monitor.mode; position = monitor.position; scale = monitor.scale; }})"
     ) monitorEntries
   );
+  windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
 in
 {
   files = {
@@ -225,7 +234,8 @@ in
     '';
 
     "hypr/j0nix/window-rules.lua" = ''
-      -- TODO(scope-3): port generated window rules from Nix into hl.window_rule() calls.
+      -- Window rules scaffold generated from the shared rule model.
+      ${windowRuleLua}
     '';
 
     "hypr/j0nix/keybinds.lua" = ''
