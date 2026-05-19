@@ -92,6 +92,12 @@ Still pending before activation:
 
 - shell-specific overlays
 
+Current shell migration status:
+
+- `caelestia-shell`: staged Lua overlay present, including the global submap bootstrap
+- `dank-material-shell`: temporarily marked broken during the Lua migration
+- other shells: no dedicated Lua overlay yet
+
 ## Session Environment
 
 Hyprland now generates two environment entrypoints from the same declarative source:
