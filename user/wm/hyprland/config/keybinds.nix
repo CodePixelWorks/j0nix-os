@@ -285,32 +285,32 @@ let
     [
       {
         type = "bindi";
-        mods = "Super";
+        mods = "";
         key = "Super_L";
         dispatcher = "global";
         argument = "caelestia:launcher";
         flags = bindFlagsByType.bindi;
-        raw = "Super, Super_L, global, caelestia:launcher";
+        raw = ", Super_L, global, caelestia:launcher";
       }
       {
         type = "bindin";
-        mods = "Super";
+        mods = "";
         key = "catchall";
         dispatcher = "global";
         argument = "caelestia:launcherInterrupt";
         flags = bindFlagsByType.bindin;
-        raw = "Super, catchall, global, caelestia:launcherInterrupt";
+        raw = ", catchall, global, caelestia:launcherInterrupt";
       }
     ]
     ++ map
       (key: {
         type = "bindin";
-        mods = "Super";
+        mods = "";
         inherit key;
         dispatcher = "global";
         argument = "caelestia:launcherInterrupt";
         flags = bindFlagsByType.bindin;
-        raw = "Super, ${key}, global, caelestia:launcherInterrupt";
+        raw = ", ${key}, global, caelestia:launcherInterrupt";
       })
       [
         "mouse:272"
