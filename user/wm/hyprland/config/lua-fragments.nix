@@ -115,6 +115,7 @@ let
         ++ lib.optionals (flagsExpr != null) [ flagsExpr ];
     in
     "hl.bind(" + lib.concatStringsSep ", " args + ")";
+  renderIndentedBind = bind: "  " + renderBind bind;
 
   parseMonitorLine =
     line:
@@ -243,7 +244,27 @@ let
     ) monitorEntries
   );
   windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
-  keybindLua = lib.concatStringsSep "\n" (map renderBind hyprlandKeybinds.structuredBinds);
+  keybindLua = lib.concatStringsSep "\n" (map renderBind hyprlandKeybinds.structuredLuaGlobalBinds);
+  caelestiaShellLua =
+    if settings.wmShell or (settings.hyprlandShell or "caelestia-shell") == "caelestia-shell" then
+      ''
+        hl.define_submap("global", function()
+        ${lib.concatStringsSep "\n" (map renderIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
+        end)
+
+        hl.on("hyprland.start", function()
+          hl.dispatch(hl.dsp.submap("global"))
+        end)
+      ''
+    else
+      "";
+  shellLua =
+    if settings.wmShell or (settings.hyprlandShell or "caelestia-shell") == "dank-material-shell" then
+      ''
+        error("dank-material-shell is temporarily marked broken during the Hyprland Lua migration. Use caelestia-shell.")
+      ''
+    else
+      caelestiaShellLua;
 in
 {
   files = {
@@ -322,7 +343,8 @@ in
     '';
 
     "hypr/j0nix/shell.lua" = ''
-      -- TODO(scope-5): port shell-specific Hyprland overlays into Lua modules.
+      -- Shell-specific staged Lua integration.
+      ${if shellLua == "" then "-- No shell-specific Lua overlay for the selected shell." else shellLua}
     '';
   };
 }
