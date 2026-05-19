@@ -28,3 +28,8 @@ For `dank-material-shell`, behavior is controlled by `settings.dms.mode`:
 
 - `integrated`: Nix-managed runtime, no install script
 - `separate`: provides `dms-install` and `dms-uninstall`
+
+Current status:
+
+- `caelestia-shell` is the active migration target and remains supported.
+- `dank-material-shell` is temporarily marked broken during the Hyprland Lua migration and should not be selected for user sessions.
