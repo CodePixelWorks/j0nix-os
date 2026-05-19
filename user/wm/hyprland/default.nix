@@ -154,7 +154,7 @@ let
   dmsOverviewEnabled = dmsOverviewSettings.enable or false;
   dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
   userHyprShellOverridesDir = "${config.home.homeDirectory}/.config/hypr/shell-overrides/${selectedShell}";
-  userHyprConfigPath = "${userHyprShellOverridesDir}/user-overrides.conf";
+  userHyprConfigPath = "${userHyprShellOverridesDir}/user-overrides.lua";
   mainHyprConfigDir = "${config.home.homeDirectory}/.config/hypr/conf.d";
   shellGeneratedConfigDir = "${config.home.homeDirectory}/.config/hypr/shells/${selectedShell}/generated";
   hyprlandWindowRules = import ./config/window-rules.nix { inherit lib; };
@@ -323,22 +323,21 @@ let
     managedMonitorLines = managedConfigMonitorLines;
   };
   hyprlandLuaFragmentFiles = lib.mapAttrs' (
-    path: text: lib.nameValuePair path { inherit text; }
+    path: text:
+    lib.nameValuePair path {
+      inherit text;
+      onChange = ''
+        (
+          XDG_RUNTIME_DIR=''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+          if [[ -d "/tmp/hypr" || -d "$XDG_RUNTIME_DIR/hypr" ]]; then
+            for i in $(${hyprctlExec} instances -j | ${pkgs.jq}/bin/jq ".[].instance" -r); do
+              ${hyprctlExec} -i "$i" reload >/dev/null 2>&1 || true
+            done
+          fi
+        )
+      '';
+    }
   ) hyprlandLuaFragments.files;
-  hyprlandMainConfig = ''
-    # ------------------------------------------------------------------
-    # j0nix Hyprland main config
-    # ------------------------------------------------------------------
-    # This file is intentionally thin:
-    # - ordered includes from ~/.config/hypr/conf.d
-    # - shell-scoped generated include
-    # - shell-scoped user override include (loaded last)
-
-    ${lib.concatStringsSep "\n" (map (path: "source = ${path}") hyprlandFragments.includePaths)}
-
-    # User-local shell override (persistent, sourced last on purpose).
-    source = ${userHyprConfigPath}
-  '';
 in
 {
   j0nix.user.software.packages =
@@ -365,15 +364,16 @@ in
   wayland.windowManager.hyprland = {
     enable = true;
     systemd.enable = false;
-    extraConfig = hyprlandMainConfig;
+    extraConfig = "";
     settings = { };
 
   };
 
   home.activation.hyprlandUserOverridesInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         cfg_dir="$HOME/.config/hypr/shell-overrides/${selectedShell}"
-        cfg_file="$cfg_dir/user-overrides.conf"
+        cfg_file="$cfg_dir/user-overrides.lua"
         legacy_cfg_file="$HOME/.config/hypr/user-overrides.conf"
+        legacy_shell_cfg_file="$cfg_dir/user-overrides.conf"
 
         if [ -L "$cfg_file" ]; then
           $DRY_RUN_CMD rm -f "$cfg_file"
@@ -382,20 +382,30 @@ in
         $DRY_RUN_CMD mkdir -p "$cfg_dir"
 
         if [ ! -e "$cfg_file" ]; then
-          if [ -f "$legacy_cfg_file" ] && [ ! -L "$legacy_cfg_file" ]; then
-            # Migrate existing shared override file to the new shell-scoped location.
-            $DRY_RUN_CMD cp "$legacy_cfg_file" "$cfg_file"
+          if [ -f "$legacy_shell_cfg_file" ] && [ ! -L "$legacy_shell_cfg_file" ]; then
+            $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
+    -- Local Hyprland Lua overrides for this user.
+    -- A legacy hyprlang override file was detected at:
+    --   ~/.config/hypr/shell-overrides/${selectedShell}/user-overrides.conf
+    -- Migrate its contents manually to Lua in this file.
+    EOF
+          elif [ -f "$legacy_cfg_file" ] && [ ! -L "$legacy_cfg_file" ]; then
+            $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
+    -- Local Hyprland Lua overrides for this user.
+    -- A legacy shared hyprlang override file was detected at:
+    --   ~/.config/hypr/user-overrides.conf
+    -- Migrate its contents manually to Lua in this file.
+    EOF
           else
             $DRY_RUN_CMD cat >"$cfg_file" <<'EOF'
-    # Local Hyprland overrides for this user.
-    # Sourced last from the generated Hyprland config.
-    # This file is shell-scoped:
-    #   ~/.config/hypr/shell-overrides/${selectedShell}/user-overrides.conf
-    #
-    # Examples:
-    # bind = SUPER, F2, exec, kitty
-    # windowrule = float 1, match:class ^(pavucontrol)$
-    # monitor = ,preferred,auto,1
+    -- Local Hyprland Lua overrides for this user.
+    -- Loaded last from the generated Hyprland Lua config.
+    -- This file is shell-scoped:
+    --   ~/.config/hypr/shell-overrides/${selectedShell}/user-overrides.lua
+    --
+    -- Examples:
+    -- hl.bind("SUPER + F2", hl.dsp.exec_cmd("kitty"))
+    -- hl.window_rule({ match = { class = "^(pavucontrol)$" }, float = true, center = true })
     EOF
           fi
           $DRY_RUN_CMD chmod 0644 "$cfg_file"
@@ -403,13 +413,9 @@ in
   '';
 
   xdg.configFile =
-    hyprlandFragmentFiles
-    // hyprlandLuaFragmentFiles
+    hyprlandLuaFragmentFiles
     // lib.optionalAttrs useUWSM {
       "uwsm/env".text = uwsmEnvText;
-    }
-    // {
-      "hypr/hyprland.conf".force = true;
     };
 
   assertions = [
