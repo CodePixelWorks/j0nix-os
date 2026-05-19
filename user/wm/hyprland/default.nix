@@ -69,9 +69,10 @@ let
   installNwgDisplays = monitorToolsCfg.installNwgDisplays or false;
   nwgDisplaysPackage =
     if installNwgDisplays && builtins.hasAttr "nwg-displays" pkgs then pkgs."nwg-displays" else null;
-  sessionEnv = import ./config/session-env.nix { inherit lib settings hyprlandCfg; };
+  sessionEnvModule = import ./config/session-env.nix { inherit lib settings hyprlandCfg; };
   hyprlandDebug = hyprlandCfg.debug or { };
-  inherit (sessionEnv)
+  inherit (sessionEnvModule)
+    sessionEnv
     sessionEnvCfg
     sessionEnvLines
     importSessionEnvArgs
@@ -236,6 +237,16 @@ let
     sleep ${toString keybindDiagnosticsDelaySeconds}
     ${homeBinDir}/wm-hypr-keybind-dump --phase=login-delayed
   '';
+  hyprlandStartupCommands =
+    [
+      (lib.getExe importSessionEnvScript)
+      (lib.getExe startGraphicalSessionTargetScript)
+      (lib.getExe' pkgs.awww "awww-daemon")
+      (lib.getExe hyprlandStartupAppsScript)
+    ]
+    ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
+    ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "${homeBinDir}/wm-overview-start" ]
+    ++ lib.optionals keybindDiagnosticsEnable [ (lib.getExe hyprlandKeybindDiagnosticsStartupScript) ];
   initialOutputStateToMonitorLine =
     output:
     let
@@ -298,6 +309,20 @@ let
   hyprlandFragmentFiles = lib.mapAttrs' (
     path: text: lib.nameValuePair path { inherit text; }
   ) hyprlandFragments.files;
+  hyprlandLuaFragments = import ./config/lua-fragments.nix {
+    inherit
+      lib
+      settings
+      sessionEnv
+      useUWSM
+      ;
+    profileDetails = filteredProfileDetails;
+    startupCommands = hyprlandStartupCommands;
+    managedMonitorLines = managedConfigMonitorLines;
+  };
+  hyprlandLuaFragmentFiles = lib.mapAttrs' (
+    path: text: lib.nameValuePair path { inherit text; }
+  ) hyprlandLuaFragments.files;
   hyprlandMainConfig = ''
     # ------------------------------------------------------------------
     # j0nix Hyprland main config
@@ -377,6 +402,7 @@ in
 
   xdg.configFile =
     hyprlandFragmentFiles
+    // hyprlandLuaFragmentFiles
     // lib.optionalAttrs useUWSM {
       "uwsm/env".text = uwsmEnvText;
     }
