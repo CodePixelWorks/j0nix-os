@@ -256,7 +256,7 @@ in
     '';
 
     "hypr/shells/${
-      settings.wmShell or (settings.hyprlandShell or "dank-material-shell")
+      settings.wmShell or (settings.hyprlandShell or "caelestia-shell")
     }/generated/95-shell.conf" =
       ''
         # ------------------------------------------------------------------
