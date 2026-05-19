@@ -32,11 +32,6 @@ let
     mcp-language-server-j0nix = final.callPackage (baseDir + "/system/software/pkgs/dev/mcp-language-server.nix") {
       src = inputs.mcp-language-server-src;
     };
-    python3Packages = prev.python3Packages // {
-      fastmcp = prev.python3Packages.fastmcp.overridePythonAttrs (_: {
-        doCheck = false;
-      });
-    };
     openldap = prev.openldap.overrideAttrs (_: {
       doCheck = false;
       doInstallCheck = false;
