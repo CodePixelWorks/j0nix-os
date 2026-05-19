@@ -39,11 +39,11 @@ let
     else
       null;
   useNvidia = ((settings.drivers or { }).nvidia or { }).enable or false;
-  regreetHyprlandConfigPath = "/etc/regreet/hyprland.conf";
-  qmlgreetHyprlandConfigPath = "/etc/qmlgreet/hyprland.conf";
+  regreetHyprlandConfigPath = "/etc/regreet/hyprland.lua";
+  qmlgreetHyprlandConfigPath = "/etc/qmlgreet/hyprland.lua";
   qmlgreetConfigPath = "/etc/qmlgreet/qmlgreet.conf";
   qmlgreetColorSchemePath = "/etc/qmlgreet/j0nix.colors";
-  dmsGreeterHyprConfigPath = "/etc/greetd/hypr.conf";
+  dmsGreeterHyprConfigPath = "/etc/greetd/hypr.lua";
   qmlgreetPackage = pkgs.qmlgreet;
   qmlgreetSettings = (settings.greetd or { }).qmlgreet or { };
   caelestiaThemeSettings = ((settings.programs or { }).caelestia or { }).theme or { };
@@ -378,6 +378,10 @@ in
       message = "settings.greetd.qmlgreet.fontSize must be > 0.";
     }
     {
+      assertion = (!useGreetd) || (selectedGreetdGreeter != "dms-greeter");
+      message = "settings.greetd.greeter=dms-greeter is temporarily marked broken during the Hyprland Lua migration. Use qmlgreet or regreet.";
+    }
+    {
       assertion = (!useDankMaterialShell) || hasDmsPackage;
       message = "greetd.greeter=dms-greeter requires inputs.dank-material-shell.packages.<system>.default to be available";
     }
@@ -409,21 +413,27 @@ in
     mode = "0444";
   };
 
-  environment.etc."regreet/hyprland.conf" =
+  environment.etc."regreet/hyprland.lua" =
     lib.mkIf (useGreetd && selectedGreetdGreeter == "regreet" && regreetCompositor == "hyprland")
       {
         text = ''
-          # Greeter sessions should light up every connected display instead of inheriting any user-session monitor policy.
-          monitor = ,preferred,auto,1
+          hl.monitor({
+            output = "",
+            mode = "preferred",
+            position = "auto",
+            scale = "1",
+          })
 
-          misc {
-            disable_hyprland_logo = true
-            disable_splash_rendering = true
-            disable_hyprland_guiutils_check = true
-          }
+          hl.config({
+            misc = {
+              disable_hyprland_logo = true,
+              disable_splash_rendering = true,
+              disable_hyprland_guiutils_check = true,
+            },
+          })
 
-          env = XCURSOR_THEME,${cursorTheme}
-          env = XCURSOR_SIZE,${toString cursorSize}
+          hl.env("XCURSOR_THEME", ${builtins.toJSON cursorTheme})
+          hl.env("XCURSOR_SIZE", ${builtins.toJSON (toString cursorSize)})
         '';
         mode = "0444";
       };
@@ -593,55 +603,61 @@ in
         mode = "0444";
       };
 
-  environment.etc."qmlgreet/hyprland.conf" =
+  environment.etc."qmlgreet/hyprland.lua" =
     lib.mkIf (useGreetd && selectedGreetdGreeter == "qmlgreet" && regreetCompositor == "hyprland")
       {
         text = ''
-          # Greeter sessions should light up every connected display instead of inheriting any user-session monitor policy.
-          monitor = ,preferred,auto,1
+          hl.monitor({
+            output = "",
+            mode = "preferred",
+            position = "auto",
+            scale = "1",
+          })
 
-          general {
-            gaps_in = 0
-            gaps_out = 0
-            border_size = 0
-          }
+          hl.config({
+            general = {
+              gaps_in = 0,
+              gaps_out = 0,
+              border_size = 0,
+            },
+            decoration = {
+              rounding = 0,
+              active_opacity = 0.97,
+              inactive_opacity = 0.97,
+              fullscreen_opacity = 0.97,
+              blur = {
+                enabled = true,
+                size = 2,
+                passes = 1,
+              },
+            },
+            misc = {
+              disable_hyprland_logo = true,
+              disable_splash_rendering = true,
+              disable_hyprland_guiutils_check = true,
+            },
+          })
 
-          decoration {
-            rounding = 0
-            active_opacity = 0.97
-            inactive_opacity = 0.97
-            fullscreen_opacity = 0.97
+          hl.env("XCURSOR_THEME", ${builtins.toJSON cursorTheme})
+          hl.env("XCURSOR_SIZE", ${builtins.toJSON (toString cursorSize)})
 
-            blur {
-              enabled = true
-              size = 2
-              passes = 1
-            }
-          }
-
-          misc {
-            disable_hyprland_logo = true
-            disable_splash_rendering = true
-            disable_hyprland_guiutils_check = true
-          }
-
-          env = XCURSOR_THEME,${cursorTheme}
-          env = XCURSOR_SIZE,${toString cursorSize}
-
-          exec-once = ${lib.getExe qmlgreetPackage} -c ${qmlgreetConfigPath}
+          hl.on("hyprland.start", function()
+            hl.exec_cmd(${builtins.toJSON "${lib.getExe qmlgreetPackage} -c ${qmlgreetConfigPath}"})
+          end)
         '';
         mode = "0444";
       };
 
-  environment.etc."greetd/hypr.conf" =
+  environment.etc."greetd/hypr.lua" =
     lib.mkIf (useGreetd && selectedGreetdGreeter == "dms-greeter")
       {
         text = ''
-          env = DMS_RUN_GREETER,1
-
-          misc {
-              disable_hyprland_logo = true
-          }
+          hl.env("DMS_RUN_GREETER", "1")
+          hl.config({
+            misc = {
+              disable_hyprland_logo = true,
+            },
+          })
         '';
         mode = "0444";
       };
