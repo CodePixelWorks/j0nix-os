@@ -9,9 +9,6 @@
 let
   profileHeadlessOutput = profileDetails.hyprlandSunshineHeadlessOutput or null;
   profilePhysicalOutput = profileDetails.hyprlandSunshinePhysicalOutput or null;
-  profileOutputBindingsBase = profileDetails.hyprlandOutputBindingsBase or [ ];
-  profileInitialOutputStatesBase = profileDetails.hyprlandInitialOutputStatesBase or [ ];
-  profileToggleableOutputsBase = profileDetails.hyprlandToggleableOutputsBase or [ ];
 
   headlessOutputs =
     if hyprlandCfg ? headlessOutputs then
@@ -41,21 +38,7 @@ let
     if hyprlandCfg ? outputBindings then
       hyprlandCfg.outputBindings
     else
-      profileOutputBindingsBase
-      ++ lib.optionals (sunshineUsesPhysicalOutput && profilePhysicalOutput != null) [
-        {
-          name = profilePhysicalOutput.name;
-          description = profilePhysicalOutput.description or "";
-          bindIndex = profilePhysicalOutput.bindIndex;
-        }
-      ]
-      ++ lib.optionals (sunshineUsesHeadlessOutput && profileHeadlessOutput != null) [
-        {
-          name = profileHeadlessOutput.name;
-          description = profileHeadlessOutput.description or "";
-          bindIndex = profileHeadlessOutput.bindIndex;
-        }
-      ];
+      [ ];
   outputBindingsWithKeys = map (
     binding:
     binding // { bindKey = if binding.bindIndex == 10 then "0" else toString binding.bindIndex; }
@@ -67,10 +50,7 @@ let
     if hyprlandCfg ? toggleableOutputs then
       hyprlandCfg.toggleableOutputs
     else
-      profileToggleableOutputsBase
-      ++ lib.optionals (sunshineUsesPhysicalOutput && profilePhysicalOutput != null) [
-        profilePhysicalOutput
-      ];
+      [ ];
   toggleableOutputsWithBindings = builtins.genList (
     idx:
     let
@@ -91,32 +71,27 @@ let
   managedOutputBindIndices = map (output: output.bindIndex) managedOutputsWithBindings;
 
   initialOutputStates =
-    let
-      configured =
-        if hyprlandCfg ? initialOutputStates then
-          hyprlandCfg.initialOutputStates
-        else
-          profileInitialOutputStatesBase
-          ++ lib.optionals (sunshineUsesHeadlessOutput && profileHeadlessOutput != null) [
-            {
-              name = profileHeadlessOutput.name;
-              enabledByDefault = false;
-              mode = profileHeadlessOutput.mode or "2880x1800@60";
-              position = profileHeadlessOutput.position or "10000x10000";
-              scale = profileHeadlessOutput.scale or 1;
-            }
-          ];
-    in
-    if configured != [ ] then
-      configured
+    if hyprlandCfg ? initialOutputStates then
+      hyprlandCfg.initialOutputStates
     else
-      map (output: {
-        name = output.name or "";
-        enabledByDefault = output.enabledByDefault or true;
-        mode = output.mode or "preferred";
-        position = output.position or "auto";
-        scale = output.scale or 1;
-      }) toggleableOutputs;
+      lib.optionals (sunshineUsesHeadlessOutput && profileHeadlessOutput != null) [
+        {
+          name = profileHeadlessOutput.name;
+          enabledByDefault = false;
+          mode = profileHeadlessOutput.mode or "2880x1800@60";
+          position = profileHeadlessOutput.position or "10000x10000";
+          scale = profileHeadlessOutput.scale or 1;
+        }
+      ]
+      ++ lib.optionals (sunshineUsesPhysicalOutput && profilePhysicalOutput != null) [
+        {
+          name = profilePhysicalOutput.name;
+          enabledByDefault = false;
+          mode = profilePhysicalOutput.mode or "1920x1080@60";
+          position = profilePhysicalOutput.position or "0x4000";
+          scale = profilePhysicalOutput.scale or 1;
+        }
+      ];
   initialOutputStateNames = map (output: output.name or "") initialOutputStates;
 in
 {
