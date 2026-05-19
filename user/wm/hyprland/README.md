@@ -67,6 +67,31 @@ The user override include is always loaded last:
 
 This split avoids cross-shell collisions and keeps sections readable and easier to diff.
 
+## Lua Scaffold
+
+The repo now also generates a staged Lua migration scaffold alongside the active `.conf` tree:
+
+- `~/.config/hypr/j0nix-scaffold.lua`
+- `~/.config/hypr/j0nix/*.lua`
+
+This scaffold is intentionally not the active production config yet. It exists so the migration can be built and tested incrementally without breaking the current session while keybinds, window rules, and shell overlays are still being ported.
+
+Current scaffold coverage:
+
+- env
+- monitors
+- startup
+- input
+- general
+- decoration
+- misc
+
+Still pending before activation:
+
+- window rules
+- keybinds
+- shell-specific overlays
+
 ## Session Environment
 
 Hyprland now generates two environment entrypoints from the same declarative source:
