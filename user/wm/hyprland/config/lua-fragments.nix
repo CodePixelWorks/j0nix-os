@@ -58,7 +58,23 @@ let
     bind:
     let
       mods = builtins.filter (part: part != "") (lib.splitString " " (bind.mods or ""));
-      normalizedMods = map (part: if part == "$mainMod" then "SUPER" else part) mods;
+      normalizeMod =
+        part:
+        let
+          upper = lib.toUpper part;
+        in
+        if part == "$mainMod" then
+          "SUPER"
+        else if builtins.elem upper [
+          "SUPER"
+          "SHIFT"
+          "CTRL"
+          "ALT"
+        ] then
+          upper
+        else
+          part;
+      normalizedMods = map normalizeMod mods;
       segments = normalizedMods ++ [ bind.key ];
     in
     builtins.toJSON (lib.concatStringsSep " + " segments);
