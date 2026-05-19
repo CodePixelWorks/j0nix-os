@@ -157,7 +157,7 @@ let
   userHyprConfigPath = "${userHyprShellOverridesDir}/user-overrides.conf";
   mainHyprConfigDir = "${config.home.homeDirectory}/.config/hypr/conf.d";
   shellGeneratedConfigDir = "${config.home.homeDirectory}/.config/hypr/shells/${selectedShell}/generated";
-  hyprlandWindowRules = import ./config/window-rules.nix;
+  hyprlandWindowRules = import ./config/window-rules.nix { inherit lib; };
   hyprlandKeybinds = import ./config/keybinds.nix {
     inherit
       lib
@@ -317,6 +317,7 @@ let
       useUWSM
       ;
     profileDetails = filteredProfileDetails;
+    inherit hyprlandWindowRules;
     startupCommands = hyprlandStartupCommands;
     managedMonitorLines = managedConfigMonitorLines;
   };
