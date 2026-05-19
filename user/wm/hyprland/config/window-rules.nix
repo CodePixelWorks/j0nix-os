@@ -1,78 +1,323 @@
+{ lib ? null }:
+let
+  asOnOff = value: if value then "1" else "0";
+  renderMatch =
+    name: value:
+    "match:${name} "
+    + (
+      if builtins.isBool value then
+        asOnOff value
+      else if builtins.isList value then
+        lib.concatStringsSep " " (map toString value)
+      else
+        toString value
+    );
+  renderEffect =
+    name: value:
+    "${name} "
+    + (
+      if builtins.isBool value then
+        asOnOff value
+      else if builtins.isList value then
+        lib.concatStringsSep " " (map toString value)
+      else
+        toString value
+    );
+  renderRule = rule:
+    lib.concatStringsSep ", " (
+      (lib.mapAttrsToList renderMatch (rule.match or { }))
+      ++ (lib.mapAttrsToList renderEffect (builtins.removeAttrs rule [ "match" "name" ]))
+    );
+
+  baseRules = [
+    {
+      name = "float-modal-dialogs";
+      match.modal = true;
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-grouped-dialogs";
+      match.group = true;
+      float = true;
+      center = true;
+    }
+
+    {
+      name = "float-pavucontrol";
+      match.class = "^(pavucontrol)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-network-manager";
+      match.class = "^(nm-applet|nm-connection-editor)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-blueman";
+      match.class = "^(blueman-manager)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-gnome-calculator";
+      match.class = "^(org\\.gnome\\.Calculator)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-zenity";
+      match.class = "^(zenity)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-yad";
+      match.class = "^(yad)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-pinentry";
+      match.class = "^(pinentry.*)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-polkit";
+      match.class = "^(polkit-gnome-authentication-agent-1)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-secret-service";
+      match.class = "^(org\\.freedesktop\\.secrets)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-file-roller";
+      match.class = "^(org\\.gnome\\.FileRoller)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-pdf-load-dialog";
+      match.class = "^(file-pdf-load)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-pdf-export-dialog";
+      match.class = "^(file-pdf-export)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-qt-config-tools";
+      match.class = "^(qt5ct|qt6ct)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-xdg-desktop-portal-gtk";
+      match.class = "^(xdg-desktop-portal-gtk)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-filechooser-portal";
+      match.class = "^(org\\.freedesktop\\.impl\\.portal\\.FileChooser)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-gimp-child-dialogs";
+      match = {
+        class = "^(org\\.gimp\\.GIMP|gimp-2\\.10|Gimp-2\\.10|gimp)$";
+        group = true;
+      };
+      float = true;
+      center = true;
+    }
+
+    {
+      name = "bambu-studio-class-no-center";
+      match.class = "^(BambuStudio)$";
+      float = true;
+      center = false;
+    }
+    {
+      name = "bambu-studio-title-no-center";
+      match.title = "^(bambu-studio)$";
+      float = true;
+      center = false;
+    }
+
+    {
+      name = "generic-open-save-dialogs";
+      match.title = "^(Open( File)?|Save( File)?|Select (File|Folder)|Choose (File|Folder)|Properties|Preferences|Settings|About)( .*)?$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "generic-open-save-dialogs-de";
+      match.title = "^(Datei öffnen|Datei speichern|Datei auswählen|Ordner auswählen|Eigenschaften|Einstellungen|Über)( .*)?$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "generic-utility-dialogs";
+      match.title = "^(Save As|Open Folder|Open Files|Choose Application|Authentication Required|Confirm|Confirmation|Warning|Error|Information)( .*)?$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "generic-utility-dialogs-de";
+      match.title = "^(Speichern unter|Bestätigung|Warnung|Fehler|Information|Authentifizierung erforderlich|Anmeldung|Anmelden)( .*)?$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "generic-auth-dialogs";
+      match.title = "^(Sign In|Sign in|Login|Log in|Authenticate|Authentication)( .*)?$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "generic-settings-substring";
+      match.title = "^(.*(Preferences|Settings|Properties|Dialog|Picker|Chooser).*)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "generic-settings-substring-de";
+      match.title = "^(.*(Einstellungen|Eigenschaften|Auswahl|Dialog|Anmeldung|Anmelden).*)$";
+      float = true;
+      center = true;
+    }
+
+    {
+      name = "bambu-studio-class-no-center-override";
+      match.class = "^(BambuStudio)$";
+      float = true;
+      center = false;
+    }
+    {
+      name = "bambu-studio-title-no-center-override";
+      match.title = "^(bambu-studio)$";
+      float = true;
+      center = false;
+    }
+
+    {
+      name = "float-nmtui";
+      match = {
+        class = "^(foot)$";
+        title = "^(nmtui)$";
+      };
+      float = true;
+      size = [ "60%" "70%" ];
+      center = true;
+    }
+    {
+      name = "float-gnome-settings";
+      match.class = "^(org\\.gnome\\.Settings)$";
+      float = true;
+      size = [ "70%" "80%" ];
+      center = true;
+    }
+    {
+      name = "float-pavucontrol-large";
+      match.class = "^(org\\.pulseaudio\\.pavucontrol|pavucontrol|yad-icon-browser)$";
+      float = true;
+      size = [ "60%" "70%" ];
+      center = true;
+    }
+    {
+      name = "float-nwg-look";
+      match.class = "^(nwg-look)$";
+      float = true;
+      size = [ "50%" "60%" ];
+      center = true;
+    }
+    {
+      name = "float-wineboot";
+      match = {
+        class = "^(wineboot\\.exe)$";
+        title = "^(Wine)$";
+      };
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-naps2-secondary-dialogs";
+      match = {
+        class = "^(naps2)$";
+        title = "negative:^NAPS2.*";
+      };
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-twintail-launcher";
+      match.class = "^(app\\.twintaillauncher\\.ttl)$";
+      float = true;
+      center = true;
+    }
+    {
+      name = "float-browser-utility-dialogs";
+      match = {
+        class = "^(firefox|org\\.mozilla\\.firefox|LibreWolf|librewolf|google-chrome|google-chrome-beta|chromium|chromium-browser|brave-browser)$";
+        title = "^(Library|Downloads|Page Info|Bookmarks Manager|Extension Manager|Extensions|Add-ons Manager|Task Manager|Clear browsing data|Import bookmarks and settings|Choose Profile|Create Profile|About Mozilla Firefox|About Google Chrome|About Chromium|About Brave|Firefox Settings|Chrome Settings|Chromium Settings|Brave Settings)( .*)?$";
+      };
+      float = true;
+      center = true;
+    }
+    {
+      name = "picture-in-picture";
+      match.title = "^(Picture(-| )in(-| )[Pp]icture)$";
+      float = true;
+      pin = true;
+      keep_aspect_ratio = true;
+      move = [ "100%-w-2%" "100%-h-3%" ];
+    }
+    {
+      name = "steam-friends-list";
+      match = {
+        class = "^(steam)$";
+        title = "^(Friends List)$";
+      };
+      float = true;
+      center = true;
+    }
+    {
+      name = "workspace-discord";
+      match.class = "^(discord|Discord|vesktop|Vesktop|equibop|Equibop|ArmCord|armcord|WebCord|webcord|element-desktop|Element)$";
+      workspace = "special:discord";
+    }
+    {
+      name = "workspace-media";
+      match.class = "^(spotify|Spotify|feishin|Feishin|supersonic|Supersonic|cider|Cider|com\\.github\\.th_ch\\.youtube_music)$";
+      workspace = "special:media";
+    }
+    {
+      name = "workspace-passwords";
+      match.class = "^(KeePassXC|org\\.keepassxc\\.KeePassXC)$";
+      workspace = "special:passwords";
+    }
+    {
+      name = "ueberzugpp-no-initial-focus";
+      match.class = "^(ueberzugpp_.*)$";
+      float = true;
+      no_initial_focus = true;
+    }
+  ];
+in
 {
-  default = [
-    # Do not center every floating window globally: popup/context menus in Flatpak apps
-    # can also be floating and would otherwise jump to screen center.
-    "match:modal 1, float 1, center 1"
-    "match:group 1, float 1, center 1"
-
-    # Common utility windows that are almost always better as floating dialogs.
-    "match:class ^(pavucontrol)$, float 1, center 1"
-    "match:class ^(nm-applet|nm-connection-editor)$, float 1, center 1"
-    "match:class ^(blueman-manager)$, float 1, center 1"
-    "match:class ^(org\\.gnome\\.Calculator)$, float 1, center 1"
-    "match:class ^(zenity)$, float 1, center 1"
-    "match:class ^(yad)$, float 1, center 1"
-    "match:class ^(pinentry.*)$, float 1, center 1"
-    "match:class ^(polkit-gnome-authentication-agent-1)$, float 1, center 1"
-    "match:class ^(org\\.freedesktop\\.secrets)$, float 1, center 1"
-    "match:class ^(org\\.gnome\\.FileRoller)$, float 1, center 1"
-    "match:class ^(file-pdf-load)$, float 1, center 1"
-    "match:class ^(file-pdf-export)$, float 1, center 1"
-    "match:class ^(qt5ct|qt6ct)$, float 1, center 1"
-    "match:class ^(xdg-desktop-portal-gtk)$, float 1, center 1"
-    "match:class ^(org\\.freedesktop\\.impl\\.portal\\.FileChooser)$, float 1, center 1"
-    # GIMP reuses its main class for child dialogs across locales. Match non-main
-    # GIMP surfaces structurally instead of by translated titles.
-    "match:class ^(org\\.gimp\\.GIMP|gimp-2\\.10|Gimp-2\\.10|gimp)$, match:group 1, float 1, center 1"
-
-    # Bambu Studio popup dialogs (e.g. filament selection) position themselves;
-    # forcing center breaks the in-window send/print flow. Keep this before generic
-    # title rules in case the parser/runtime applies first-match semantics.
-    "match:class ^(BambuStudio)$, float 1, center 0"
-    "match:title ^(bambu-studio)$, float 1, center 0"
-
-    # Generic dialog-like titles (file choosers, properties, about/preferences dialogs).
-    "match:title ^(Open( File)?|Save( File)?|Select (File|Folder)|Choose (File|Folder)|Properties|Preferences|Settings|About)( .*)?$, float 1, center 1"
-    "match:title ^(Datei öffnen|Datei speichern|Datei auswählen|Ordner auswählen|Eigenschaften|Einstellungen|Über)( .*)?$, float 1, center 1"
-    "match:title ^(Save As|Open Folder|Open Files|Choose Application|Authentication Required|Confirm|Confirmation|Warning|Error|Information)( .*)?$, float 1, center 1"
-    "match:title ^(Speichern unter|Bestätigung|Warnung|Fehler|Information|Authentifizierung erforderlich|Anmeldung|Anmelden)( .*)?$, float 1, center 1"
-    "match:title ^(Sign In|Sign in|Login|Log in|Authenticate|Authentication)( .*)?$, float 1, center 1"
-    "match:title ^(.*(Preferences|Settings|Properties|Dialog|Picker|Chooser).*)$, float 1, center 1"
-    "match:title ^(.*(Einstellungen|Eigenschaften|Auswahl|Dialog|Anmeldung|Anmelden).*)$, float 1, center 1"
-
-    # Duplicate Bambu exceptions after generic rules as well, so they still win if
-    # Hyprland applies last-match semantics for rule actions.
-    "match:class ^(BambuStudio)$, float 1, center 0"
-    "match:title ^(bambu-studio)$, float 1, center 0"
-  ];
-
-  extra = [
-    # Terminal TUIs: keep nmtui readable and centered.
-    "match:class ^(foot)$, match:title ^(nmtui)$, float 1, size 60% 70%, center 1"
-
-    # Larger settings dialogs benefit from a predictable size.
-    "match:class ^(org\\.gnome\\.Settings)$, float 1, size 70% 80%, center 1"
-    "match:class ^(org\\.pulseaudio\\.pavucontrol|pavucontrol|yad-icon-browser)$, float 1, size 60% 70%, center 1"
-    "match:class ^(nwg-look)$, float 1, size 50% 60%, center 1"
-    "match:class ^(wineboot\\.exe)$, match:title ^(Wine)$, float 1, center 1"
-    "match:class ^(naps2)$, match:title negative:^NAPS2.*, float 1, center 1"
-    "match:class ^(app\\.twintaillauncher\\.ttl)$, float 1, center 1"
-    # Browser child windows use the same class as the main window, so match the
-    # common utility/dialog titles explicitly instead of floating the browser itself.
-    "match:class ^(firefox|org\\.mozilla\\.firefox|LibreWolf|librewolf|google-chrome|google-chrome-beta|chromium|chromium-browser|brave-browser)$, match:title ^(Library|Downloads|Page Info|Bookmarks Manager|Extension Manager|Extensions|Add-ons Manager|Task Manager|Clear browsing data|Import bookmarks and settings|Choose Profile|Create Profile|About Mozilla Firefox|About Google Chrome|About Chromium|About Brave|Firefox Settings|Chrome Settings|Chromium Settings|Brave Settings)( .*)?$, float 1, center 1"
-
-    # Picture-in-picture windows: keep them floating, pinned and ratio-safe.
-    "match:title ^(Picture(-| )in(-| )[Pp]icture)$, float 1, pin 1, keep_aspect_ratio 1, move 100%-w-2% 100%-h-3%"
-
-    # Steam friends list should behave like a utility window.
-    "match:class ^(steam)$, match:title ^(Friends List)$, float 1, center 1"
-
-    # Route dedicated workflow apps onto their shell special workspaces.
-    "match:class ^(discord|Discord|vesktop|Vesktop|equibop|Equibop|ArmCord|armcord|WebCord|webcord|element-desktop|Element)$, workspace special:discord"
-    "match:class ^(spotify|Spotify|feishin|Feishin|supersonic|Supersonic|cider|Cider|com\\.github\\.th_ch\\.youtube_music)$, workspace special:media"
-    "match:class ^(KeePassXC|org\\.keepassxc\\.KeePassXC)$, workspace special:passwords"
-
-    # Ueberzugpp helper surfaces should not steal focus.
-    "match:class ^(ueberzugpp_.*)$, float 1, no_initial_focus 1"
-  ];
+  structured = baseRules;
+  default = map renderRule (lib.take 30 baseRules);
+  extra = map renderRule (lib.drop 30 baseRules);
 }
