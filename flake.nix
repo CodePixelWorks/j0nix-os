@@ -10,96 +10,9 @@
     }@inputs:
     let
       baseDir = ./.;
-
-      vscodeOverlay = inputs.nix-vscode-extensions.overlays.default;
-      localFixesOverlay = final: prev: {
-          bottles-j0nix = final.callPackage ./system/software/pkgs/windows/bottles-j0nix.nix {
-            bottles = prev.bottles;
-          };
-          autodesk-fusion-linux = final.callPackage ./integrations/autodesk-fusion-nixos/pkgs/autodesk-fusion-linux { };
-          j0nix-wallpapers = final.callPackage ./system/software/pkgs/assets/j0nix-wallpapers.nix { };
-          gparted-j0nix = final.callPackage ./system/software/pkgs/storage/gparted-j0nix.nix {
-            gparted = prev.gparted;
-          };
-          vuescan = final.callPackage ./system/software/pkgs/scanning/vuescan.nix { };
-          darkly-qt6 = final.kdePackages.callPackage ./system/software/pkgs/qt/darkly-qt6.nix { };
-          hyprqt6engine = final.callPackage ./system/software/pkgs/qt/hyprqt6engine.nix { };
-          mauiman4 = final.callPackage ./system/software/pkgs/maui/mauiman4.nix { };
-          mauikit4 = final.callPackage ./system/software/pkgs/maui/mauikit4.nix { };
-          naps2 = prev.naps2.overrideAttrs (old: {
-            postInstall = (old.postInstall or "") + ''
-              substituteInPlace $out/lib/naps2/appsettings.xml \
-                --replace-fail '<Theme mode="default">Default</Theme>' \
-                               '<Theme mode="default">Dark</Theme>'
-            '';
-          });
-          qmlgreet = final.callPackage ./system/software/pkgs/greetd/qmlgreet.nix { };
-          bettersoundcloud = final.callPackage ./system/software/pkgs/audio/better-soundcloud.nix { };
-          mcp-language-server-j0nix = final.callPackage ./system/software/pkgs/dev/mcp-language-server.nix {
-            src = inputs.mcp-language-server-src;
-          };
-          python3Packages = prev.python3Packages // {
-            fastmcp = prev.python3Packages.fastmcp.overridePythonAttrs (_: {
-              doCheck = false;
-            });
-          };
-          openldap = prev.openldap.overrideAttrs (old: {
-            doCheck = false;
-            doInstallCheck = false;
-            dontCheck = true;
-          });
-          vagrant-with-libvirt = final.callPackage ./system/software/pkgs/dev/vagrant-with-libvirt.nix {
-            nixpkgsSrc = nixpkgs.outPath;
-          };
-          hyprland-minimizer-orteip = prev.rustPlatform.buildRustPackage {
-            pname = "hyprland_minimizer";
-            version = "unstable";
-            src = inputs."hyprland-minimizer-orteip";
-            cargoLock = {
-              lockFile = "${inputs."hyprland-minimizer-orteip"}/Cargo.lock";
-            };
-            meta = with prev.lib; {
-              description = "Hyprland minimizer implementation by 0rteip";
-              homepage = "https://github.com/0rteip/hyprland_minimizer";
-              license = licenses.mit;
-              maintainers = [ ];
-              mainProgram = "hyprland-minimizer";
-              platforms = platforms.linux;
-            };
-          };
-          lager = prev.lager.overrideAttrs (old: {
-            cmakeFlags = (old.cmakeFlags or [ ]) ++ [
-              "-DBoost_NO_BOOST_CMAKE=ON"
-              "-Dlager_BUILD_TESTS=OFF"
-            ];
-          });
-          sunshine = prev.sunshine.overrideAttrs (old: {
-            buildInputs = (old.buildInputs or [ ]) ++ [ prev.boost.out ];
-            postPatch = (old.postPatch or "") + ''
-              substituteInPlace cmake/dependencies/Boost_Sunshine.cmake \
-                --replace-fail $'        system\n' ""
-              substituteInPlace cmake/dependencies/Boost_Sunshine.cmake \
-                --replace-fail 'find_package(Boost CONFIG ''${BOOST_VERSION} EXACT COMPONENTS ''${BOOST_COMPONENTS})' \
-                               $'set(Boost_NO_BOOST_CMAKE ON)\nfind_package(Boost 1.56 REQUIRED COMPONENTS ''${BOOST_COMPONENTS})'
-              substituteInPlace third-party/Simple-Web-Server/CMakeLists.txt \
-                --replace-fail 'find_package(Boost 1.53.0 COMPONENTS system REQUIRED)' \
-                               'find_package(Boost 1.53.0 REQUIRED)' \
-                --replace-fail 'target_link_libraries(simple-web-server INTERFACE Boost::boost Boost::system)' \
-                               'target_link_libraries(simple-web-server INTERFACE Boost::boost)'
-              substituteInPlace cmake/compile_definitions/linux.cmake \
-                --replace-fail 'add_compile_definitions(SUNSHINE_PLATFORM="linux")' \
-                               $'add_compile_definitions(SUNSHINE_PLATFORM="linux")\nadd_compile_definitions(BOOST_LOG_DYN_LINK BOOST_LOG_SETUP_DYN_LINK)'
-              substituteInPlace cmake/compile_definitions/common.cmake \
-                --replace-fail '        ''${Boost_LIBRARIES}' $'        ''${Boost_LIBRARIES}\n        ${prev.boost.out}/lib/libboost_log_setup.so\n        ${prev.boost.out}/lib/libboost_thread.so\n        ${prev.boost.out}/lib/libboost_chrono.so\n        ${prev.boost.out}/lib/libboost_atomic.so\n        ${prev.boost.out}/lib/libboost_regex.so\n        ${prev.boost.out}/lib/libboost_date_time.so'
-              substituteInPlace cmake/compile_definitions/common.cmake \
-                --replace-fail '        ${prev.boost.out}/lib/libboost_log_setup.so' \
-                               $'        ${prev.boost.out}/lib/libboost_log.so\n        ${prev.boost.out}/lib/libboost_log_setup.so'
-              substituteInPlace cmake/targets/common.cmake \
-                --replace-fail 'target_link_libraries(sunshine ''${SUNSHINE_EXTERNAL_LIBRARIES} ''${EXTRA_LIBS})' \
-                               $'target_link_libraries(sunshine ''${SUNSHINE_EXTERNAL_LIBRARIES} ''${EXTRA_LIBS})\ntarget_link_libraries(sunshine ${prev.boost.out}/lib/libboost_log.so ${prev.boost.out}/lib/libboost_log_setup.so ${prev.boost.out}/lib/libboost_thread.so ${prev.boost.out}/lib/libboost_chrono.so ${prev.boost.out}/lib/libboost_atomic.so ${prev.boost.out}/lib/libboost_regex.so ${prev.boost.out}/lib/libboost_date_time.so)'
-            '';
-          });
-        };
+      overlays = import (baseDir + "/system/lib/flake/overlays.nix") {
+        inherit baseDir inputs nixpkgs;
+      };
       profileName = "desktop";
       profileDir = baseDir + "/profiles/${profileName}";
       profileDetails = import (profileDir + "/details.nix") { };
@@ -109,10 +22,7 @@
 
       pkgs = import nixpkgs {
         system = profileMeta.system;
-        overlays = [
-          vscodeOverlay
-          localFixesOverlay
-        ];
+        overlays = overlays.default;
         config.allowUnfree = true;
       };
 
@@ -142,178 +52,12 @@
       hmSharedModulesNixos = hmSharedModulesCommon;
       hmSharedModulesStandalone = hmSharedModulesCommon ++ [ inputs.stylix.homeModules.stylix ];
 
-      mkUserSettings =
-        username:
-        let
-          userOverride = userOverrides.${username} or { };
-          userSecretOverride = userOverride.secrets or { };
-          userDevOverride = userOverride.dev or { };
-          userProgramOverride = userOverride.programs or { };
-          userHyprlandOverride = userOverride.hyprland or { };
-          merged =
-            baseSettings
-            // (builtins.removeAttrs userOverride [
-              "secrets"
-              "dev"
-              "programs"
-              "hyprland"
-            ])
-            // {
-              inherit username;
-              dotfilesDir = "/home/${username}/DEV/j0nix-os";
-            };
-          themeDetails = import (baseDir + "/themes/${merged.theme}.nix") { inherit pkgs; };
-          defaultWMFromLegacy =
-            if userOverride ? wms && (builtins.length userOverride.wms) > 0 then
-              builtins.head userOverride.wms
-            else
-              null;
-          resolvedDefaultWMS =
-            if userOverride ? defaultWMS then
-              userOverride.defaultWMS
-            else if defaultWMFromLegacy != null then
-              defaultWMFromLegacy
-            else
-              "hyprland";
-          resolvedDefaultSession =
-            if resolvedDefaultWMS == "hyprland" then
-              (if ((merged.hyprland or { }).useUWSM or true) then "hyprland-uwsm" else "hyprland")
-            else
-              resolvedDefaultWMS;
-        in
-        merged
-        // {
-          inherit profileDetails;
-          secrets = (baseSettings.secrets or { }) // {
-            user = userSecretOverride;
-          };
-          dev = lib.recursiveUpdate (baseSettings.dev or { }) userDevOverride;
-          programs = lib.recursiveUpdate (baseSettings.programs or { }) userProgramOverride;
-          hyprland = lib.recursiveUpdate (baseSettings.hyprland or { }) userHyprlandOverride;
-          inherit themeDetails;
-          wmShell = merged.wmShell or (merged.hyprlandShell or (themeDetails.shell or "caelestia-shell"));
-          hyprlandShell =
-            merged.wmShell or (merged.hyprlandShell or (themeDetails.shell or "caelestia-shell"));
-          defaultWMS = resolvedDefaultWMS;
-          defaultSession = resolvedDefaultSession;
-          _userOverride = userOverride;
-        };
-
-      mkEditorModule =
-        editor:
-        let
-          localDefault = baseDir + "/user/editors/${editor}/default.nix";
-          localFile = baseDir + "/user/editors/${editor}.nix";
-        in
-        if builtins.pathExists localDefault then
-          localDefault
-        else if builtins.pathExists localFile then
-          localFile
-        else
-          null;
-
-      mkBrowserModule =
-        browser:
-        let
-          browserFile = baseDir + "/user/browsers/${browser}.nix";
-        in
-        if builtins.pathExists browserFile then browserFile else null;
-
-      mkWmModule =
-        wm:
-        let
-          wmDefault = baseDir + "/user/wm/${wm}/default.nix";
-          wmFile = baseDir + "/user/wm/${wm}.nix";
-        in
-        if builtins.pathExists wmDefault then
-          wmDefault
-        else if builtins.pathExists wmFile then
-          wmFile
-        else
-          null;
-
-      mkUserRoleHomeModule =
-        role:
-        let
-          roleModule = baseDir + "/user-roles/home/${role}.nix";
-        in
-        if builtins.pathExists roleModule then roleModule else null;
-
-      mkHomeModules =
-        userSettings:
-        let
-          shellModule = baseDir + "/user/shells/${userSettings.shell}.nix";
-          resolvedShellModule =
-            if builtins.pathExists shellModule then shellModule else baseDir + "/user/shells/zsh.nix";
-
-          wmShellModule = baseDir + "/user/wm/hyprland/shells/${userSettings.wmShell}";
-          wmShellExists = builtins.pathExists wmShellModule;
-          wmNeedsShell = builtins.elem userSettings.defaultWMS [
-            "hyprland"
-            "mangowc"
-            "niri"
-          ];
-          wmShellLauncherModule = baseDir + "/user/wm/shell-launcher.nix";
-          wmShellCommonModule = baseDir + "/user/wm/hyprland/shells/common/default.nix";
-
-          wmModules = lib.filter (m: m != null) [ (mkWmModule userSettings.defaultWMS) ];
-          editorModules = lib.filter (m: m != null) (map mkEditorModule userSettings.editors);
-          browserModules = lib.filter (m: m != null) (map mkBrowserModule userSettings.browsers);
-          roleNames = userSettings.roles or [ ];
-          roleHomeModules = lib.filter (m: m != null) (map mkUserRoleHomeModule roleNames);
-          missingRoleNames = lib.filter (role: (mkUserRoleHomeModule role) == null) roleNames;
-          devModule = baseDir + "/user/dev/default.nix";
-          devEnabled = (userSettings.dev or { }).enable or true;
-        in
-        [
-          (profileDir + "/home.nix")
-          (baseDir + "/user/software/default.nix")
-          (baseDir + "/user/custom/default.nix")
-          (baseDir + "/user/security/secrets.nix")
-          resolvedShellModule
-          (baseDir + "/user/session-default.nix")
-          (baseDir + "/user/programs/default.nix")
-          (
-            { lib, ... }:
-            {
-              assertions = [
-                {
-                  assertion = builtins.elem userSettings.defaultWMS [
-                    "hyprland"
-                    "gnome"
-                    "mangowc"
-                    "niri"
-                  ];
-                  message = "userSettings.<name>.defaultWMS must be one of: hyprland, gnome, mangowc, niri";
-                }
-                {
-                  assertion = !(userSettings._userOverride ? wms);
-                  message = "Per-user wm list is deprecated. Use userSettings.<name>.defaultWMS only.";
-                }
-                {
-                  assertion = !(userSettings._userOverride ? defaultSession);
-                  message = "Per-user defaultSession is deprecated. Use userSettings.<name>.defaultWMS and global settings.hyprland.useUWSM.";
-                }
-                {
-                  assertion = missingRoleNames == [ ];
-                  message = "Unknown user role(s) for ${userSettings.username}: ${lib.concatStringsSep ", " missingRoleNames}. Expected modules under user-roles/home/<role>.nix";
-                }
-              ]
-              ++ lib.optional wmNeedsShell {
-                assertion = wmShellExists;
-                message = "Unknown wmShell '${userSettings.wmShell}'. Valid examples: ags, caelestia-shell, noctalia-shell, none. dank-material-shell is temporarily broken during the Hyprland Lua migration.";
-              };
-            }
-          )
-        ]
-        ++ lib.optional wmNeedsShell wmShellCommonModule
-        ++ lib.optional wmNeedsShell wmShellLauncherModule
-        ++ wmModules
-        ++ editorModules
-        ++ browserModules
-        ++ roleHomeModules
-        ++ lib.optional (devEnabled && builtins.pathExists devModule) devModule
-        ++ lib.optional (wmNeedsShell && wmShellExists) wmShellModule;
+      mkUserSettings = import (baseDir + "/system/lib/settings/mk-user-settings.nix") {
+        inherit baseDir baseSettings lib pkgs profileDetails userOverrides;
+      };
+      mkHomeModules = import (baseDir + "/system/lib/home/mk-home-modules.nix") {
+        inherit baseDir lib profileDir;
+      };
       systemSettings = settings;
 
       mkHmUserModule =
@@ -340,8 +84,8 @@
               { ... }:
               {
                 nixpkgs.overlays = [
-                  vscodeOverlay
-                  localFixesOverlay
+                  overlays.vscodeOverlay
+                  overlays.localFixesOverlay
                 ];
               }
             )
@@ -384,10 +128,7 @@
             home-manager.lib.homeManagerConfiguration {
               pkgs = import nixpkgs {
                 system = profileMeta.system;
-                overlays = [
-                  vscodeOverlay
-                  localFixesOverlay
-                ];
+                overlays = overlays.default;
                 config.allowUnfree = true;
               };
               modules = (mkHomeModules userSettings) ++ hmSharedModulesStandalone;
