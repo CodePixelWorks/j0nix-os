@@ -313,6 +313,7 @@ let
     inherit
       lib
       settings
+      hyprlandKeybinds
       sessionEnv
       useUWSM
       ;
