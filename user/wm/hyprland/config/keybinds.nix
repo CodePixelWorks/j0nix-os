@@ -28,6 +28,7 @@
 }:
 let
   hasValue = value: value != null && value != "";
+  trim = lib.strings.trim;
   directionalKeys = [
     {
       key = "h";
@@ -239,6 +240,48 @@ let
   renderBindLines =
     key: entries: lib.concatStringsSep "\n" (map (entry: "${key} = ${entry}") entries);
 
+  bindFlagsByType = {
+    bind = { };
+    bindi = { ignore_mods = true; };
+    bindin = {
+      ignore_mods = true;
+      non_consuming = true;
+    };
+    binde = { repeating = true; };
+    bindl = { locked = true; };
+    bindle = {
+      locked = true;
+      repeating = true;
+    };
+    bindr = { release = true; };
+    bindm = { mouse = true; };
+  };
+
+  parseBindEntry =
+    bindType: entry:
+    let
+      parts = map trim (lib.splitString "," entry);
+      partCount = builtins.length parts;
+      mods = if partCount > 0 then builtins.elemAt parts 0 else "";
+      key = if partCount > 1 then builtins.elemAt parts 1 else "";
+      dispatcher = if partCount > 2 then builtins.elemAt parts 2 else "";
+      argument =
+        if partCount > 3 then
+          lib.concatStringsSep ", " (lib.drop 3 parts)
+        else if partCount == 3 then
+          null
+        else
+          null;
+    in
+    {
+      type = bindType;
+      inherit mods key dispatcher argument;
+      flags = bindFlagsByType.${bindType} or { };
+      raw = entry;
+    };
+
+  parseBindList = bindType: entries: map (parseBindEntry bindType) entries;
+
   effectiveBindLists = {
     bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ mergedBindList "bind";
     bindi = mergedBindList "bindi";
@@ -249,6 +292,9 @@ let
     bindr = mergedBindList "bindr";
     bindm = mergedBindList "bindm";
   };
+
+  structuredBindLists = lib.mapAttrs parseBindList effectiveBindLists;
+  structuredBinds = lib.concatLists (lib.attrValues structuredBindLists);
 
   caelestiaSubmapConfig =
     if isCaelestiaShell then
@@ -288,5 +334,5 @@ let
       "";
 in
 {
-  inherit shellHyprKeybinds effectiveBindLists caelestiaSubmapConfig;
+  inherit shellHyprKeybinds effectiveBindLists structuredBindLists structuredBinds caelestiaSubmapConfig;
 }
