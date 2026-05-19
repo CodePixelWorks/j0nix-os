@@ -2,6 +2,7 @@
   lib,
   settings,
   profileDetails,
+  hyprlandKeybinds,
   hyprlandWindowRules,
   sessionEnv,
   startupCommands,
@@ -38,6 +39,82 @@ let
       } // builtins.removeAttrs rule [ "match" "name" ];
     in
     "hl.window_rule(${luaValue body})";
+  renderBindFlags = flags:
+    if flags == { } then
+      null
+    else
+      "{ "
+      + lib.concatStringsSep ", " (
+        lib.mapAttrsToList (
+          name: value:
+          if builtins.isBool value then
+            "${name} = ${if value then "true" else "false"}"
+          else
+            "${name} = ${builtins.toJSON value}"
+        ) flags
+      )
+      + " }";
+  renderBindKeys =
+    bind:
+    let
+      mods = builtins.filter (part: part != "") (lib.splitString " " (bind.mods or ""));
+      normalizedMods = map (part: if part == "$mainMod" then "SUPER" else part) mods;
+      segments = normalizedMods ++ [ bind.key ];
+    in
+    builtins.toJSON (lib.concatStringsSep " + " segments);
+  renderRawDispatchCommand =
+    bind:
+    let
+      dispatcher = bind.dispatcher or "";
+      argument = if bind.argument == null || bind.argument == "" then "_" else bind.argument;
+    in
+    "hyprctl dispatch -- ${dispatcher} ${lib.escapeShellArg argument}";
+  renderBindDispatcher =
+    bind:
+    let
+      dispatcher = bind.dispatcher or "";
+      argument = bind.argument;
+      argumentString = if argument == null then "" else argument;
+    in
+    if dispatcher == "exec" then
+      "hl.dsp.exec_cmd(${builtins.toJSON argumentString})"
+    else if dispatcher == "global" then
+      "hl.dsp.global(${builtins.toJSON argumentString})"
+    else if dispatcher == "movefocus" then
+      "hl.dsp.focus({ direction = ${builtins.toJSON argumentString} })"
+    else if dispatcher == "workspace" then
+      "hl.dsp.focus({ workspace = ${builtins.toJSON argumentString} })"
+    else if dispatcher == "movewindow" && (bind.flags.mouse or false) then
+      "hl.dsp.window.drag()"
+    else if dispatcher == "resizewindow" && (bind.flags.mouse or false) then
+      "hl.dsp.window.resize()"
+    else if dispatcher == "killactive" then
+      "hl.dsp.window.close()"
+    else if dispatcher == "togglefloating" then
+      "hl.dsp.window.float({ action = \"toggle\" })"
+    else if dispatcher == "fullscreen" && argument == "0" then
+      "hl.dsp.window.fullscreen({ mode = \"fullscreen\", action = \"toggle\" })"
+    else if dispatcher == "fullscreen" && argument == "1" then
+      "hl.dsp.window.fullscreen({ mode = \"maximized\", action = \"toggle\" })"
+    else if dispatcher == "layoutmsg" then
+      "hl.dsp.layout(${builtins.toJSON argumentString})"
+    else if dispatcher == "exit" then
+      "hl.dsp.exit()"
+    else
+      "hl.dsp.exec_cmd(${builtins.toJSON (renderRawDispatchCommand bind)})";
+  renderBind = bind:
+    let
+      keysExpr = renderBindKeys bind;
+      dispatcherExpr = renderBindDispatcher bind;
+      flagsExpr = renderBindFlags (bind.flags or { });
+      args =
+        [
+          keysExpr
+          dispatcherExpr
+        ]
+        ++ lib.optionals (flagsExpr != null) [ flagsExpr ];
+    in
+    "hl.bind(" + lib.concatStringsSep ", " args + ")";
 
   parseMonitorLine =
     line:
@@ -166,6 +243,7 @@ let
     ) monitorEntries
   );
   windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
+  keybindLua = lib.concatStringsSep "\n" (map renderBind hyprlandKeybinds.structuredBinds);
 in
 {
   files = {
@@ -239,7 +317,8 @@ in
     '';
 
     "hypr/j0nix/keybinds.lua" = ''
-      -- TODO(scope-4): port generated keybind lists into hl.bind() calls.
+      -- Keybind scaffold generated from the shared bind model.
+      ${keybindLua}
     '';
 
     "hypr/j0nix/shell.lua" = ''

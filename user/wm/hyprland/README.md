@@ -86,10 +86,10 @@ Current scaffold coverage:
 - decoration
 - misc
 - window rules
+- keybinds
 
 Still pending before activation:
 
-- keybinds
 - shell-specific overlays
 
 ## Session Environment
