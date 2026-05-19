@@ -65,11 +65,6 @@ let
   );
   sunshineUsesPhysicalOutput = sunshineDisplayTargetBackend == "physical-output";
   sunshineUsesHeadlessOutput = sunshineDisplayTargetBackend == "hyprland-headless";
-  profileHeadlessOutput = profileDetails.hyprlandSunshineHeadlessOutput or null;
-  profilePhysicalOutput = profileDetails.hyprlandSunshinePhysicalOutput or null;
-  profileOutputBindingsBase = profileDetails.hyprlandOutputBindingsBase or [ ];
-  profileInitialOutputStatesBase = profileDetails.hyprlandInitialOutputStatesBase or [ ];
-  profileToggleableOutputsBase = profileDetails.hyprlandToggleableOutputsBase or [ ];
   monitorToolsCfg = hyprlandCfg.monitorTools or { };
   installNwgDisplays = monitorToolsCfg.installNwgDisplays or false;
   nwgDisplaysPackage =
@@ -94,24 +89,9 @@ let
   };
   inherit (outputs)
     headlessOutputs
-    headlessOutputsWithBindings
     headlessOutputNames
-    headlessOutputsAutoEnsure
-    headlessOutputsJson
-    outputBindings
-    outputBindingsWithKeys
-    outputBindingNames
-    outputBindingIndices
-    outputBindingsJson
     initialOutputStates
     initialOutputStateNames
-    initialOutputStatesJson
-    toggleableOutputs
-    toggleableOutputsWithBindings
-    toggleableOutputNames
-    managedOutputsWithBindings
-    managedOutputBindIndices
-    toggleableOutputsJson
     ;
   keybindDiag = import ./config/keybind-diagnostics.nix {
     inherit
@@ -166,35 +146,6 @@ let
   keepassWorkspaceCfg = keepassCfg.workspace or { };
   keepassWorkspaceEnable = keepassWorkspaceCfg.enable or true;
   keepassToggleBind = keepassWorkspaceCfg.toggleBind or "$mainMod SHIFT, p";
-  toggleableOutputBindLines = lib.concatMap (
-    output:
-    let
-      binds = output.binds or { };
-      bindKey = output.bindKey or "";
-      outputNameArg = lib.escapeShellArg output.name;
-      hasBind = bind: bind != null && bind != "";
-      mkBind = bind: command: lib.optional (hasBind bind) "${bind}, exec, ${command}";
-    in
-    [
-      "$mainMod CTRL, ${bindKey}, exec, ${homeBinDir}/wm-monitor-toggle ${outputNameArg}"
-      "$mainMod CTRL SHIFT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-restore ${outputNameArg}"
-    ]
-    ++ (mkBind (binds.toggle or null) "${homeBinDir}/wm-monitor-toggle ${outputNameArg}")
-    ++ (mkBind (binds.on or null) "${homeBinDir}/wm-monitor-on ${outputNameArg}")
-    ++ (mkBind (binds.off or null) "${homeBinDir}/wm-monitor-off ${outputNameArg}")
-    ++ (mkBind (binds.restore or null) "${homeBinDir}/wm-monitor-restore ${outputNameArg}")
-  ) managedOutputsWithBindings;
-  workspaceOutputBindLines = lib.concatMap (
-    output:
-    let
-      bindKey = output.bindKey or "";
-      outputNameArg = lib.escapeShellArg output.name;
-    in
-    [
-      "$mainMod ALT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-workspace-to ${outputNameArg}"
-      "$mainMod CTRL ALT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-focused-workspaces-to ${outputNameArg}"
-    ]
-  ) outputBindingsWithKeys;
   preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
@@ -204,7 +155,6 @@ let
   userHyprShellOverridesDir = "${config.home.homeDirectory}/.config/hypr/shell-overrides/${selectedShell}";
   userHyprConfigPath = "${userHyprShellOverridesDir}/user-overrides.conf";
   mainHyprConfigDir = "${config.home.homeDirectory}/.config/hypr/conf.d";
-  hyprlandRuntimeMonitorConfigPath = "${mainHyprConfigDir}/11-runtime-monitors.conf";
   shellGeneratedConfigDir = "${config.home.homeDirectory}/.config/hypr/shells/${selectedShell}/generated";
   hyprlandWindowRules = import ./config/window-rules.nix;
   hyprlandKeybinds = import ./config/keybinds.nix {
@@ -235,7 +185,7 @@ let
       workspaceSwitchBinds
       workspaceMoveBinds
       ;
-    toggleableOutputBindLines = toggleableOutputBindLines ++ workspaceOutputBindLines;
+    toggleableOutputBindLines = [ ];
   };
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
   shellStartupCommand =
@@ -257,87 +207,6 @@ let
       ${importSessionEnvArgs} >/dev/null 2>&1 || true
     fi
   '';
-  runtimeMonitorResetScript = pkgs.writeShellScriptBin "wm-monitor-reset-runtime" ''
-    set -eu
-    exec ${lib.getExe monitorStateScript} sync-defaults
-  '';
-  headlessOutputsEnsureScript = pkgs.writeShellScriptBin "wm-headless-output-ensure" ''
-    set -eu
-
-    hyprctl_bin="${hyprctlExec}"
-    jq_bin="${pkgs.jq}/bin/jq"
-    outputs_json=${lib.escapeShellArg headlessOutputsJson}
-
-    [ -x "$hyprctl_bin" ] || exit 0
-
-    ensure_output() {
-      name="$1"
-      mode="$2"
-      position="$3"
-      scale="$4"
-
-      if ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
-        "$hyprctl_bin" output create headless "$name" >/dev/null 2>&1 || true
-        for _ in $(seq 1 50); do
-          if "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
-            break
-          fi
-          sleep 0.1
-        done
-      fi
-
-      "$hyprctl_bin" keyword monitor "$name,$mode,$position,$scale" >/dev/null 2>&1 || true
-    }
-
-    "$jq_bin" -c '.[]' "$outputs_json" | while IFS= read -r output; do
-      name="$(printf '%s' "$output" | "$jq_bin" -r '.name')"
-      mode="$(printf '%s' "$output" | "$jq_bin" -r '.mode // "preferred"')"
-      position="$(printf '%s' "$output" | "$jq_bin" -r '.position // "10000x10000"')"
-      scale="$(printf '%s' "$output" | "$jq_bin" -r '(.scale // 1) | tostring')"
-      [ -n "$name" ] || continue
-      ensure_output "$name" "$mode" "$position" "$scale"
-    done
-  '';
-  headlessOutputsRemoveScript = pkgs.writeShellScriptBin "wm-headless-output-remove" ''
-    set -eu
-
-    hyprctl_bin="${hyprctlExec}"
-    jq_bin="${pkgs.jq}/bin/jq"
-    outputs_json=${lib.escapeShellArg headlessOutputsJson}
-
-    [ -x "$hyprctl_bin" ] || exit 0
-
-    "$jq_bin" -r '.[].name // empty' "$outputs_json" | while IFS= read -r name; do
-      [ -n "$name" ] || continue
-      "$hyprctl_bin" output remove "$name" >/dev/null 2>&1 || true
-    done
-  '';
-  monitorScripts = import ./config/monitor-scripts.nix {
-    inherit lib pkgs hyprctlExec;
-    inherit
-      toggleableOutputsJson
-      initialOutputStatesJson
-      outputBindingsJson
-      headlessOutputsJson
-      ;
-    hyprlandRuntimeMonitorConfigPath = hyprlandRuntimeMonitorConfigPath;
-    homeDirectory = config.home.homeDirectory;
-  };
-  inherit (monitorScripts)
-    monitorStateScript
-    monitorOnScript
-    monitorOffScript
-    monitorToggleScript
-    monitorRestoreScript
-    monitorStatusScript
-    monitorWorkspaceToScript
-    monitorFocusedWorkspacesToScript
-    monitorListScript
-    monitorDiscoverScript
-    monitorSuggestScript
-    monitorNewDialogScript
-    monitorDebugScript
-    ;
   startGraphicalSessionTargetScript = pkgs.writeShellScriptBin "wm-start-graphical-session-target" ''
     runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     if [ -S "$runtime_dir/bus" ]; then
@@ -367,7 +236,6 @@ let
     sleep ${toString keybindDiagnosticsDelaySeconds}
     ${homeBinDir}/wm-hypr-keybind-dump --phase=login-delayed
   '';
-  managedStaticMonitorNames = lib.unique (toggleableOutputNames ++ headlessOutputNames);
   initialOutputStateToMonitorLine =
     output:
     let
@@ -425,15 +293,11 @@ let
     swwwDaemonCommand = lib.getExe' pkgs.awww "awww-daemon";
     startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
     keybindDiagnosticsStartupCommand = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
-    runtimeMonitorResetCommand = lib.getExe runtimeMonitorResetScript;
     managedMonitorLines = managedConfigMonitorLines;
   };
   hyprlandFragmentFiles = lib.mapAttrs' (
     path: text: lib.nameValuePair path { inherit text; }
   ) hyprlandFragments.files;
-  hyprlandMutableConfigPaths = [
-    "hypr/conf.d/11-runtime-monitors.conf"
-  ];
   hyprlandMainConfig = ''
     # ------------------------------------------------------------------
     # j0nix Hyprland main config
@@ -465,25 +329,6 @@ in
     ++ lib.optionals keybindDiagnosticsEnable [
       keybindDiagnosticsScript
       keybindDiagnosticsProbeScript
-    ]
-    ++ lib.optionals (headlessOutputs != [ ]) [
-      headlessOutputsEnsureScript
-      headlessOutputsRemoveScript
-    ]
-    ++ lib.optionals (initialOutputStates != [ ]) [
-      monitorStateScript
-      monitorOnScript
-      monitorOffScript
-      monitorToggleScript
-      monitorRestoreScript
-      monitorStatusScript
-      monitorWorkspaceToScript
-      monitorFocusedWorkspacesToScript
-      monitorListScript
-      monitorDiscoverScript
-      monitorSuggestScript
-      monitorNewDialogScript
-      monitorDebugScript
     ]
     ++ lib.optionals hasHyprKcsPackage [ hyprKcsPackage ]
     ++ lib.optional (installRawQuickshell && (pkgs ? quickshell)) pkgs.quickshell
@@ -530,81 +375,14 @@ in
         fi
   '';
 
-  home.activation.hyprlandRuntimeMonitorOverridesInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    cfg_dir="$HOME/.config/hypr/conf.d"
-    cfg_file="$cfg_dir/11-runtime-monitors.conf"
-
-    if [ -L "$cfg_file" ]; then
-      $DRY_RUN_CMD rm -f "$cfg_file"
-    fi
-
-    $DRY_RUN_CMD mkdir -p "$cfg_dir"
-    $DRY_RUN_CMD ${lib.getExe runtimeMonitorResetScript}
-    $DRY_RUN_CMD chmod 0644 "$cfg_file"
-  '';
-
-  home.activation.hyprlandHeadlessOutputsReload = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
-    runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
-    if [ -S "$runtime_dir/bus" ]; then
-      ${lib.optionalString headlessOutputsAutoEnsure ''
-        ${pkgs.systemd}/bin/systemctl --user daemon-reload >/dev/null 2>&1 || true
-        ${pkgs.systemd}/bin/systemctl --user restart hyprland-headless-outputs.service >/dev/null 2>&1 || true
-      ''}
-      ${pkgs.systemd}/bin/systemctl --user daemon-reload >/dev/null 2>&1 || true
-      ${pkgs.systemd}/bin/systemctl --user restart hyprland-runtime-monitor-defaults.service >/dev/null 2>&1 || true
-    fi
-  '';
-
   xdg.configFile =
-    builtins.removeAttrs hyprlandFragmentFiles hyprlandMutableConfigPaths
+    hyprlandFragmentFiles
     // lib.optionalAttrs useUWSM {
       "uwsm/env".text = uwsmEnvText;
     }
     // {
       "hypr/hyprland.conf".force = true;
     };
-
-  systemd.user.services.hyprland-headless-outputs = lib.mkIf headlessOutputsAutoEnsure {
-    Unit = {
-      Description = "Ensure Hyprland headless outputs";
-      PartOf = [ "graphical-session.target" ];
-      After = [ "graphical-session.target" ];
-      Wants = [ "graphical-session.target" ];
-    };
-
-    Install = {
-      WantedBy = [ "graphical-session.target" ];
-    };
-
-    Service = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      ExecStart = lib.getExe headlessOutputsEnsureScript;
-      ExecStop = lib.getExe headlessOutputsRemoveScript;
-    };
-  };
-
-  systemd.user.services.hyprland-runtime-monitor-defaults = lib.mkIf (initialOutputStates != [ ]) {
-    Unit = {
-      Description = "Manage Hyprland runtime monitor overrides";
-      PartOf = [ "graphical-session.target" ];
-      After = [ "graphical-session.target" ];
-      Wants = [ "graphical-session.target" ];
-    };
-
-    Install = {
-      WantedBy = [ "graphical-session.target" ];
-    };
-
-    Service = {
-      Type = "simple";
-      Restart = "always";
-      RestartSec = 1;
-      ExecStartPre = "${lib.getExe monitorStateScript} sync-defaults";
-      ExecStart = "${lib.getExe monitorStateScript} watch";
-      ExecStopPost = "${lib.getExe monitorStateScript} sync-defaults";
-    };
-  };
 
   assertions = [
     {
@@ -661,10 +439,6 @@ in
       message = "settings.hyprland.headlessOutputs names must be unique.";
     }
     {
-      assertion = lib.all (name: name != "") outputBindingNames;
-      message = "settings.hyprland.outputBindings entries must have a non-empty name.";
-    }
-    {
       assertion = lib.all (name: name != "") initialOutputStateNames;
       message = "settings.hyprland.initialOutputStates entries must have a non-empty name.";
     }
@@ -672,46 +446,6 @@ in
       assertion =
         (builtins.length initialOutputStateNames) == (builtins.length (lib.unique initialOutputStateNames));
       message = "settings.hyprland.initialOutputStates names must be unique.";
-    }
-    {
-      assertion =
-        (builtins.length outputBindingNames) == (builtins.length (lib.unique outputBindingNames));
-      message = "settings.hyprland.outputBindings names must be unique.";
-    }
-    {
-      assertion = lib.all (index: index >= 1 && index <= 10) outputBindingIndices;
-      message = "settings.hyprland.outputBindings bindIndex values must be between 1 and 10.";
-    }
-    {
-      assertion =
-        (builtins.length outputBindingIndices) == (builtins.length (lib.unique outputBindingIndices));
-      message = "settings.hyprland.outputBindings bindIndex values must be unique.";
-    }
-    {
-      assertion = lib.all (name: name != "") toggleableOutputNames;
-      message = "settings.hyprland.toggleableOutputs entries must have a non-empty name.";
-    }
-    {
-      assertion =
-        (builtins.length toggleableOutputNames) == (builtins.length (lib.unique toggleableOutputNames));
-      message = "settings.hyprland.toggleableOutputs names must be unique.";
-    }
-    {
-      assertion = lib.all (index: index >= 1 && index <= 10) managedOutputBindIndices;
-      message = "Managed output bindIndex values must be between 1 and 10.";
-    }
-    {
-      assertion =
-        (builtins.length managedOutputBindIndices)
-        == (builtins.length (lib.unique managedOutputBindIndices));
-      message = "Managed output bindIndex values must be unique.";
-    }
-    {
-      assertion = lib.all (
-        output:
-        !(output.workspaceHandoff.enable or false) || ((output.workspaceHandoff.targetMonitor or "") != "")
-      ) toggleableOutputs;
-      message = "settings.hyprland.toggleableOutputs.<name>.workspaceHandoff.targetMonitor must be set when workspaceHandoff.enable is true.";
     }
     {
       assertion = hasHyprKcsPackage;
