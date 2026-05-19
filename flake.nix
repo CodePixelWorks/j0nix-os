@@ -191,9 +191,9 @@
           programs = lib.recursiveUpdate (baseSettings.programs or { }) userProgramOverride;
           hyprland = lib.recursiveUpdate (baseSettings.hyprland or { }) userHyprlandOverride;
           inherit themeDetails;
-          wmShell = merged.wmShell or (merged.hyprlandShell or (themeDetails.shell or "dank-material-shell"));
+          wmShell = merged.wmShell or (merged.hyprlandShell or (themeDetails.shell or "caelestia-shell"));
           hyprlandShell =
-            merged.wmShell or (merged.hyprlandShell or (themeDetails.shell or "dank-material-shell"));
+            merged.wmShell or (merged.hyprlandShell or (themeDetails.shell or "caelestia-shell"));
           defaultWMS = resolvedDefaultWMS;
           defaultSession = resolvedDefaultSession;
           _userOverride = userOverride;
@@ -301,7 +301,7 @@
               ]
               ++ lib.optional wmNeedsShell {
                 assertion = wmShellExists;
-                message = "Unknown wmShell '${userSettings.wmShell}'. Valid examples: ags, dank-material-shell, noctalia-shell, caelestia-shell, none.";
+                message = "Unknown wmShell '${userSettings.wmShell}'. Valid examples: ags, caelestia-shell, noctalia-shell, none. dank-material-shell is temporarily broken during the Hyprland Lua migration.";
               };
             }
           )
