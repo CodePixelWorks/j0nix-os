@@ -176,81 +176,32 @@ Lock helpers:
 
 ## Headless Outputs
 
-`settings.hyprland.headlessOutputs` declares virtual Hyprland outputs. j0nix materializes them through the user service `hyprland-headless-outputs.service`, and Home Manager restarts that service on rebuilds in an active session. `wm-headless-output-ensure` remains available as the manual fallback command.
+`settings.hyprland.headlessOutputs` remains the declarative source for Hyprland virtual outputs that other modules, especially Sunshine, may reference.
 
-On this host, the default monitor topology now comes from `profiles/desktop/details.nix`. `settings.hyprland.*` can still override it explicitly, but the physical layout data is no longer kept in `settings.nix`.
+Hyprland itself no longer materializes or manages those virtual outputs during session startup. The normal startup path is intentionally generic:
 
-## Toggleable Outputs
+- physical outputs come from the static profile monitor lines plus the fallback `monitor = ,preferred,auto,1`
+- the Sunshine display target is rendered as disabled by default in `10-monitors.conf`
+- Sunshine is the single authority that enables its target output when a stream starts
 
-`settings.hyprland.toggleableOutputs` declares physical outputs that should be manageable at runtime even if Hyprland still sees the connector when the screen itself is powered off.
+On this host, the static monitor topology still comes from `profiles/desktop/details.nix`. `settings.hyprland.initialOutputStates` is now only needed when you want to override the default disabled-at-start behavior for the Sunshine target output.
 
-`settings.hyprland.outputBindings` declares the global numeric monitor map used by the workspace-move binds and the monitor picker list.
+## Monitor Policy
 
-Current default TV setup:
+The previous runtime monitor management layer has been intentionally removed from the user session.
 
-- `outputBindings` maps:
-  - `1` -> `DP-1` (Primary PC Monitor)
-  - `2` -> `HDMI-A-2` (Living Room TV)
-  - `3` -> the active Sunshine display target
-- with `settings.sunshine.displayTarget.backend = "physical-output"`, monitor `3` is `DP-2` (Sunshine Dummy Plug)
-- with `settings.sunshine.displayTarget.backend = "hyprland-headless"`, monitor `3` is `SUNSHINE-HEADLESS` (Adaptive Display)
-- `HDMI-A-2` is declared as a toggleable output
-- `HDMI-A-2` uses `bindIndex = 2`
-- it starts enabled by default when `HDMI-A-2` is connected
-- `SUPER+CTRL+2`: toggle monitor `2`
-- `SUPER+CTRL+SHIFT+2`: restore monitor `2` and move its saved workspaces back
-- `SUPER+ALT+1`: move the active workspace to monitor `1`
-- `SUPER+CTRL+ALT+1`: move all normal workspaces from the other active monitors to monitor `1`
-- `SUPER+ALT+2`: move the active workspace to monitor `2`
-- `SUPER+CTRL+ALT+2`: move all normal workspaces from the other active monitors to monitor `2`
-- `SUPER+ALT+3`: move the active workspace to monitor `3`
-- `SUPER+CTRL+ALT+3`: move all normal workspaces from the other active monitors to monitor `3`
+That means:
 
-Runtime commands:
+- no runtime `11-runtime-monitors.conf`
+- no Home Manager services that create, remove, or watch Hyprland outputs
+- no monitor toggle, restore, or workspace-handoff keybinds
+- no `wm-monitor-*` helper commands in the supported baseline
 
-- `wm-monitor-list`
-- `wm-monitor-debug`
-- `wm-monitor-discover`
-- `wm-monitor-suggest <monitor-name>`
-- `wm-monitor-new-dialog`
-- `wm-monitor-toggle HDMI-A-2`
-- `wm-monitor-on HDMI-A-2`
-- `wm-monitor-off HDMI-A-2`
-- `wm-monitor-restore HDMI-A-2`
-- `wm-monitor-status HDMI-A-2`
-- `wm-monitor-workspace-to HDMI-A-2`
-- `wm-monitor-focused-workspaces-to HDMI-A-2`
+The only monitor behavior that remains declaratively managed in the Hyprland user module is:
 
-The toggle layer saves the output's workspace/focus state before disabling it, moves those workspaces onto the configured fallback monitor, and restores them when the output comes back. The same workspace handoff logic is also exposed through the numeric `SUPER+ALT+<number>` and `SUPER+CTRL+ALT+<number>` monitor binds. The “move all” variant only targets normal numbered workspaces (`id > 0`) and leaves special workspaces alone.
-
-Runtime monitor state now has a single writer contract:
-
-- `10-monitors.conf` contains the declarative startup defaults
-- `11-runtime-monitors.conf` contains runtime overrides only
-- `wm-monitor` is the only runtime tool that rewrites `11-runtime-monitors.conf`
-- `wm-monitor sync-defaults` reseeds the runtime file from the declarative defaults
-- `wm-monitor watch` runs under the `hyprland-runtime-monitor-defaults.service` user service and keeps the runtime file recreated and refreshed continuously during the session
-- the same watch loop also checks for newly attached unmanaged monitors and triggers the existing monitor dialog once per unknown monitor set
-- the compatibility helper `wm-monitor-reset-runtime` now delegates to `wm-monitor sync-defaults`
-- the activation path, session service, and runtime toggle path all use the same lock file, so they cannot clobber each other during reloads, file recreation, or rapid keybind toggles
-
-Initial output states are now expressed in two layers:
-
-- `10-monitors.conf` renders the declarative startup defaults for managed physical outputs
-- `11-runtime-monitors.conf` stays empty in the declarative baseline and is reserved for runtime overrides
-- the fallback `monitor = ,preferred,auto,1` line is always emitted last unless `settings.hyprland.unknownMonitorFallbackRule = null`
-
-This keeps boot-time monitor state deterministic and gives runtime tools a separate override file instead of racing the startup config.
-
-Unknown physical monitors are intentionally not auto-written into `settings.nix`. Instead:
-
-- `wm-monitor-discover` lists connected outputs that are not yet part of the declarative monitor map
-- `wm-monitor-new-dialog` offers a YAD picker to either enable a newly seen monitor temporarily, open `nwg-displays`, or show a suggested Nix snippet
-- the auto mode keeps a small session signature, so the same unknown monitor set does not keep reopening the dialog every polling cycle
-- `wm-monitor-suggest <monitor-name>` prints a candidate `settings.nix` fragment for declarative adoption
-- unknown active outputs are persisted into `11-runtime-monitors.conf` as `preferred` mode lines so reloads do not pin them to a stale one-off mode string
-
-All extra monitor profile tooling is intentionally disabled for now. The only supported runtime path is the built-in `wm-monitor-*` command set and the corresponding Hyprland binds.
+- the static monitor layout from `profiles/desktop/details.nix`
+- the wildcard fallback rule for unknown physical outputs
+- the disabled-by-default startup override for the configured Sunshine display target
 
 ## Caelestia App Binds
 
