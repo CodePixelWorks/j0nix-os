@@ -110,7 +110,7 @@ let
       }
     ];
 
-  mkSshMatchBlocks =
+  mkSshSettingsBlocks =
     name: sshProfile:
     let
       host = sshProfile.host or name;
@@ -138,19 +138,94 @@ let
             (sshProfile.identityFile or null)
         else
           (sshProfile.identityFile or null);
-      commonValue = {
-        hostname = host;
-        user = sshProfile.user or "git";
-        identitiesOnly = sshProfile.identitiesOnly or false;
-        extraOptions = sshProfile.options or { };
-      }
-      // lib.optionalAttrs (resolvedIdentityFile != null) {
-        identityFile = resolvedIdentityFile;
-      }
-      // lib.optionalAttrs (sshProfile ? match) {
-        match = sshProfile.match;
-      }
-      // lib.filterAttrs (key: _: builtins.elem key supportedSshProfileKeys) sshProfile;
+      commonValue =
+        {
+          HostName = host;
+          User = sshProfile.user or "git";
+          IdentitiesOnly = sshProfile.identitiesOnly or false;
+        }
+        // lib.optionalAttrs (resolvedIdentityFile != null) {
+          IdentityFile = resolvedIdentityFile;
+        }
+        // lib.optionalAttrs (sshProfile ? match) {
+          header = "Match ${sshProfile.match}";
+        }
+        // lib.optionalAttrs (sshProfile ? port) {
+          Port = sshProfile.port;
+        }
+        // lib.optionalAttrs (sshProfile ? forwardAgent) {
+          ForwardAgent = sshProfile.forwardAgent;
+        }
+        // lib.optionalAttrs (sshProfile ? forwardX11) {
+          ForwardX11 = sshProfile.forwardX11;
+        }
+        // lib.optionalAttrs (sshProfile ? forwardX11Trusted) {
+          ForwardX11Trusted = sshProfile.forwardX11Trusted;
+        }
+        // lib.optionalAttrs (sshProfile ? identityAgent) {
+          IdentityAgent = sshProfile.identityAgent;
+        }
+        // lib.optionalAttrs (sshProfile ? serverAliveInterval) {
+          ServerAliveInterval = sshProfile.serverAliveInterval;
+        }
+        // lib.optionalAttrs (sshProfile ? serverAliveCountMax) {
+          ServerAliveCountMax = sshProfile.serverAliveCountMax;
+        }
+        // lib.optionalAttrs (sshProfile ? sendEnv) {
+          SendEnv = sshProfile.sendEnv;
+        }
+        // lib.optionalAttrs (sshProfile ? setEnv) {
+          SetEnv = sshProfile.setEnv;
+        }
+        // lib.optionalAttrs (sshProfile ? compression) {
+          Compression = sshProfile.compression;
+        }
+        // lib.optionalAttrs (sshProfile ? checkHostIP) {
+          CheckHostIP = sshProfile.checkHostIP;
+        }
+        // lib.optionalAttrs (sshProfile ? proxyCommand) {
+          ProxyCommand = sshProfile.proxyCommand;
+        }
+        // lib.optionalAttrs (sshProfile ? proxyJump) {
+          ProxyJump = sshProfile.proxyJump;
+        }
+        // lib.optionalAttrs (sshProfile ? addKeysToAgent) {
+          AddKeysToAgent = sshProfile.addKeysToAgent;
+        }
+        // lib.optionalAttrs (sshProfile ? hashKnownHosts) {
+          HashKnownHosts = sshProfile.hashKnownHosts;
+        }
+        // lib.optionalAttrs (sshProfile ? userKnownHostsFile) {
+          UserKnownHostsFile = sshProfile.userKnownHostsFile;
+        }
+        // lib.optionalAttrs (sshProfile ? controlMaster) {
+          ControlMaster = sshProfile.controlMaster;
+        }
+        // lib.optionalAttrs (sshProfile ? controlPath) {
+          ControlPath = sshProfile.controlPath;
+        }
+        // lib.optionalAttrs (sshProfile ? controlPersist) {
+          ControlPersist = sshProfile.controlPersist;
+        }
+        // lib.optionalAttrs (sshProfile ? certificateFile) {
+          CertificateFile = sshProfile.certificateFile;
+        }
+        // lib.optionalAttrs (sshProfile ? addressFamily) {
+          AddressFamily = sshProfile.addressFamily;
+        }
+        // lib.optionalAttrs (sshProfile ? kexAlgorithms) {
+          KexAlgorithms = sshProfile.kexAlgorithms;
+        }
+        // lib.optionalAttrs (sshProfile ? localForwards) {
+          LocalForward = sshProfile.localForwards;
+        }
+        // lib.optionalAttrs (sshProfile ? remoteForwards) {
+          RemoteForward = sshProfile.remoteForwards;
+        }
+        // lib.optionalAttrs (sshProfile ? dynamicForwards) {
+          DynamicForward = sshProfile.dynamicForwards;
+        }
+        // (sshProfile.options or { });
       mkBlock = attrName: {
         name = attrName;
         value = commonValue;
@@ -318,20 +393,20 @@ in
     programs.ssh = lib.mkIf sshEnabled {
       enable = true;
       enableDefaultConfig = false;
-      matchBlocks =
-        (builtins.listToAttrs (lib.concatLists (lib.mapAttrsToList mkSshMatchBlocks sshHosts)))
+      settings =
+        (builtins.listToAttrs (lib.concatLists (lib.mapAttrsToList mkSshSettingsBlocks sshHosts)))
         // {
           "*" = {
-            forwardAgent = false;
-            addKeysToAgent = if sshAddKeysToAgent != null then sshAddKeysToAgent else "no";
-            compression = false;
-            serverAliveInterval = 0;
-            serverAliveCountMax = 3;
-            hashKnownHosts = false;
-            userKnownHostsFile = "~/.ssh/known_hosts";
-            controlMaster = "no";
-            controlPath = "~/.ssh/master-%r@%n:%p";
-            controlPersist = "no";
+            ForwardAgent = false;
+            AddKeysToAgent = if sshAddKeysToAgent != null then sshAddKeysToAgent else "no";
+            Compression = false;
+            ServerAliveInterval = 0;
+            ServerAliveCountMax = 3;
+            HashKnownHosts = false;
+            UserKnownHostsFile = "~/.ssh/known_hosts";
+            ControlMaster = "no";
+            ControlPath = "~/.ssh/master-%r@%n:%p";
+            ControlPersist = "no";
           };
         };
     };
