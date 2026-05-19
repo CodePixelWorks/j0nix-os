@@ -268,11 +268,8 @@ let
 in
 {
   files = {
-    "hypr/j0nix-scaffold.lua" = ''
-      -- j0nix staged Hyprland Lua migration scaffold.
-      -- This file is intentionally not the active production config yet.
-      -- Manual testing path:
-      --   Hyprland --config "$HOME/.config/hypr/j0nix-scaffold.lua"
+    "hypr/hyprland.lua" = ''
+      -- j0nix Hyprland Lua config.
 
       require("j0nix.vars")
       require("j0nix.env")
@@ -285,6 +282,12 @@ in
       require("j0nix.window-rules")
       require("j0nix.keybinds")
       require("j0nix.shell")
+      require("j0nix.user-overrides")
+    '';
+
+    "hypr/j0nix-scaffold.lua" = ''
+      -- Compatibility alias for the staged migration path.
+      dofile(os.getenv("HOME") .. "/.config/hypr/hyprland.lua")
     '';
 
     "hypr/j0nix/vars.lua" = ''
@@ -345,6 +348,19 @@ in
     "hypr/j0nix/shell.lua" = ''
       -- Shell-specific staged Lua integration.
       ${if shellLua == "" then "-- No shell-specific Lua overlay for the selected shell." else shellLua}
+    '';
+
+    "hypr/j0nix/user-overrides.lua" = ''
+      local selectedShell = ${builtins.toJSON (settings.wmShell or (settings.hyprlandShell or "caelestia-shell"))}
+      local overridePath = os.getenv("HOME") .. "/.config/hypr/shell-overrides/" .. selectedShell .. "/user-overrides.lua"
+      local ok, err = pcall(dofile, overridePath)
+      if not ok then
+        local file = io.open(overridePath, "r")
+        if file ~= nil then
+          file:close()
+          error(err)
+        end
+      end
     '';
   };
 }
