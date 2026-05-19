@@ -270,19 +270,20 @@ in
   files = {
     "hypr/hyprland.lua" = ''
       -- j0nix Hyprland Lua config.
+      local j0nixDir = os.getenv("HOME") .. "/.config/hypr/j0nix"
 
-      require("j0nix.vars")
-      require("j0nix.env")
-      require("j0nix.monitors")
-      require("j0nix.startup")
-      require("j0nix.input")
-      require("j0nix.general")
-      require("j0nix.decoration")
-      require("j0nix.misc")
-      require("j0nix.window-rules")
-      require("j0nix.keybinds")
-      require("j0nix.shell")
-      require("j0nix.user-overrides")
+      dofile(j0nixDir .. "/vars.lua")
+      dofile(j0nixDir .. "/env.lua")
+      dofile(j0nixDir .. "/monitors.lua")
+      dofile(j0nixDir .. "/startup.lua")
+      dofile(j0nixDir .. "/input.lua")
+      dofile(j0nixDir .. "/general.lua")
+      dofile(j0nixDir .. "/decoration.lua")
+      dofile(j0nixDir .. "/misc.lua")
+      dofile(j0nixDir .. "/window-rules.lua")
+      dofile(j0nixDir .. "/keybinds.lua")
+      dofile(j0nixDir .. "/shell.lua")
+      dofile(j0nixDir .. "/user-overrides.lua")
     '';
 
     "hypr/j0nix-scaffold.lua" = ''
