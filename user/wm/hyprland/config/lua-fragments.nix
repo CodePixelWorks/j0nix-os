@@ -196,7 +196,6 @@ let
       hover_icon_on_border = true;
     };
     dwindle = {
-      pseudotile = true;
       preserve_split = true;
     };
     binds = {
@@ -220,7 +219,6 @@ let
 
   miscConfig = {
     misc = {
-      vfr = true;
       vrr = 0;
       animate_manual_resizes = false;
       animate_mouse_windowdragging = false;
