@@ -18,7 +18,6 @@
   swwwDaemonCommand,
   startupAppsCommand,
   keybindDiagnosticsStartupCommand,
-  runtimeMonitorResetCommand,
   managedMonitorLines,
   mainConfigDir,
   shellConfigDir,
@@ -36,7 +35,6 @@ let
     "${mainConfigDir}/00-vars.conf"
     "${mainConfigDir}/05-env.conf"
     "${mainConfigDir}/10-monitors.conf"
-    "${mainConfigDir}/11-runtime-monitors.conf"
     "${mainConfigDir}/20-startup.conf"
     "${mainConfigDir}/30-input.conf"
     "${mainConfigDir}/40-general.conf"
@@ -61,7 +59,6 @@ let
   ]
   ++ [
     startGraphicalSessionTargetCommand
-    runtimeMonitorResetCommand
     swwwDaemonCommand
     startupAppsCommand
   ]
@@ -130,15 +127,6 @@ in
       # Order: wildcard fallback first, specific per-monitor rules after.
       # Hyprland applies rules top-to-bottom; later rules override earlier ones.
       ${renderLines "monitor" monitorLines}
-    '';
-
-    "hypr/conf.d/11-runtime-monitors.conf" = ''
-      # ------------------------------------------------------------------
-      # Runtime Monitor Overrides
-      # ------------------------------------------------------------------
-      # This file is intentionally reserved for runtime monitor tooling. Keep
-      # it empty in the declarative baseline so the startup monitor defaults
-      # remain authoritative until an explicit runtime override is applied.
     '';
 
     "hypr/conf.d/20-startup.conf" = ''
