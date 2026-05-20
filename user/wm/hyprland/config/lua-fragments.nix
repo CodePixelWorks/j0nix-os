@@ -141,6 +141,16 @@ let
     in
     "hl.bind(" + lib.concatStringsSep ", " args + ")";
   renderIndentedBind = bind: "  " + renderBind bind;
+  renderUniversalIndentedBind = bind:
+    "  "
+    + renderBind (
+      bind
+      // {
+        flags = (bind.flags or { }) // {
+          submap_universal = true;
+        };
+      }
+    );
 
   parseMonitorLine =
     line:
@@ -280,12 +290,12 @@ let
     if selectedShell == "caelestia-shell" then
       ''
         hl.define_submap("global", function()
-          hl.bind("Super_L", function()
+          hl.bind("SUPER + Super_L", function()
             hl.dispatch(hl.dsp.global("caelestia:launcher"))
             hl.dispatch(hl.dsp.submap("caelestia-launcher"))
           end, { ignore_mods = true })
 
-        ${lib.concatStringsSep "\n" (map renderIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
+        ${lib.concatStringsSep "\n" (map renderUniversalIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
         end)
 
         hl.define_submap("caelestia-launcher", "global", function()
