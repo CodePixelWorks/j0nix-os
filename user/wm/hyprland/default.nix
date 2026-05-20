@@ -315,6 +315,7 @@ let
       settings
       hyprlandKeybinds
       sessionEnv
+      hyprctlExec
       useUWSM
       ;
     profileDetails = filteredProfileDetails;

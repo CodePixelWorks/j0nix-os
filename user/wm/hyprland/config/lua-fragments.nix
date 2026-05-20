@@ -7,6 +7,7 @@
   sessionEnv,
   startupCommands,
   managedMonitorLines,
+  hyprctlExec,
   useUWSM,
 }:
 let
@@ -141,17 +142,6 @@ let
     in
     "hl.bind(" + lib.concatStringsSep ", " args + ")";
   renderIndentedBind = bind: "  " + renderBind bind;
-  renderUniversalIndentedBind = bind:
-    "  "
-    + renderBind (
-      bind
-      // {
-        flags = (bind.flags or { }) // {
-          submap_universal = true;
-        };
-      }
-    );
-
   parseMonitorLine =
     line:
     let
@@ -278,32 +268,18 @@ let
   );
   windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
   keybindLua = lib.concatStringsSep "\n" (map renderBind hyprlandKeybinds.structuredLuaGlobalBinds);
-  renderLauncherInterruptBind =
-    key:
-    ''
-          hl.bind(${builtins.toJSON key}, function()
-            hl.dispatch(hl.dsp.global("caelestia:launcherInterrupt"))
-            hl.dispatch(hl.dsp.submap("global"))
-          end, { ignore_mods = true, non_consuming = true })
-    '';
   caelestiaShellLua =
     if selectedShell == "caelestia-shell" then
       ''
         hl.define_submap("global", function()
-          hl.bind("Super_L", function()
-            hl.dispatch(hl.dsp.global("caelestia:launcher"))
-            hl.dispatch(hl.dsp.submap("caelestia-launcher"))
-          end, { ignore_mods = true })
-
-        ${lib.concatStringsSep "\n" (map renderUniversalIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
+        ${lib.concatStringsSep "\n" (map renderIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
         end)
 
-        hl.define_submap("caelestia-launcher", "global", function()
-        ${lib.concatStringsSep "\n" (map renderLauncherInterruptBind hyprlandKeybinds.launcherInterruptKeys)}
+        -- Mirror the pre-Lua setup: keep "global" as the active submap via an
+        -- external hyprctl dispatch instead of the crashing in-process Lua call.
+        hl.on("hyprland.start", function()
+          hl.exec_cmd(${builtins.toJSON "${hyprctlExec} dispatch submap global"})
         end)
-
-        -- Hyprland 0.55.1 can segfault when Lua activates a submap during init.
-        -- Keep the bootstrap on the runtime hyprctl path used by wm-shell-start.
       ''
     else
       "";
