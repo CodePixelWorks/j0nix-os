@@ -398,6 +398,35 @@ let
       exit 0
     fi
 
+    lua_string() {
+      "$jq_bin" -Rn -r --arg value "$1" '$value | @json'
+    }
+
+    render_monitor_enabled() {
+      local name="$1"
+      local mode="$2"
+      local position="$3"
+      local scale="$4"
+      printf 'hl.monitor({ output = %s, disabled = false, mode = %s, position = %s, scale = %s })\n' \
+        "$(lua_string "$name")" \
+        "$(lua_string "$mode")" \
+        "$(lua_string "$position")" \
+        "$(lua_string "$scale")"
+    }
+
+    render_monitor_disabled() {
+      local name="$1"
+      printf 'hl.monitor({ output = %s, disabled = true })\n' "$(lua_string "$name")"
+    }
+
+    apply_monitor_enabled() {
+      "$hyprctl_bin" eval "$(render_monitor_enabled "$1" "$2" "$3" "$4")" >/dev/null 2>&1 || true
+    }
+
+    apply_monitor_disabled() {
+      "$hyprctl_bin" eval "$(render_monitor_disabled "$1")" >/dev/null 2>&1 || true
+    }
+
     width="''${SUNSHINE_CLIENT_WIDTH:-}"
     height="''${SUNSHINE_CLIENT_HEIGHT:-}"
     fps="''${SUNSHINE_CLIENT_FPS:-}"
@@ -460,7 +489,7 @@ let
       fi
     fi
 
-    "$hyprctl_bin" keyword monitor "$target_name,$mode,$staging_position,$target_scale" >/dev/null 2>&1 || true
+    apply_monitor_enabled "$target_name" "$mode" "$staging_position" "$target_scale"
     "$coreutils_bin"/mkdir -p "$state_dir"
     ${lib.optionalString sunshineDisableLockScreenDuringStream ''
       : > "$lockscreen_disable_marker"
@@ -498,10 +527,10 @@ let
     ${lib.concatStringsSep "\n    " (
       map (
         name:
-        "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg "${name},disable"} >/dev/null 2>&1 || true"
+        "apply_monitor_disabled ${lib.escapeShellArg name}"
       ) sunshineDisplayTargetDisableOtherMonitorNames
     )}
-    "$hyprctl_bin" keyword monitor "$target_name,$mode,$stream_position,$target_scale" >/dev/null 2>&1 || true
+    apply_monitor_enabled "$target_name" "$mode" "$stream_position" "$target_scale"
     "$hyprctl_bin" dispatch focusmonitor "$target_name" >/dev/null 2>&1 || true
     if command -v wm-shell-restart-detached >/dev/null 2>&1; then
       wm-shell-restart-detached >/dev/null 2>&1 || true
@@ -529,8 +558,50 @@ let
       exit 0
     fi
 
+    lua_string() {
+      ${pkgs.jq}/bin/jq -Rn -r --arg value "$1" '$value | @json'
+    }
+
+    render_monitor_enabled() {
+      local name="$1"
+      local mode="$2"
+      local position="$3"
+      local scale="$4"
+      printf 'hl.monitor({ output = %s, disabled = false, mode = %s, position = %s, scale = %s })\n' \
+        "$(lua_string "$name")" \
+        "$(lua_string "$mode")" \
+        "$(lua_string "$position")" \
+        "$(lua_string "$scale")"
+    }
+
+    render_monitor_disabled() {
+      local name="$1"
+      printf 'hl.monitor({ output = %s, disabled = true })\n' "$(lua_string "$name")"
+    }
+
+    apply_monitor_enabled() {
+      "$hyprctl_bin" eval "$(render_monitor_enabled "$1" "$2" "$3" "$4")" >/dev/null 2>&1 || true
+    }
+
+    apply_monitor_disabled() {
+      "$hyprctl_bin" eval "$(render_monitor_disabled "$1")" >/dev/null 2>&1 || true
+    }
+
+    apply_monitor_spec() {
+      local spec="$1"
+      local name mode position scale
+      IFS=, read -r name mode position scale <<EOF
+$spec
+EOF
+      if [ "$mode" = "disable" ]; then
+        apply_monitor_disabled "$name"
+      else
+        apply_monitor_enabled "$name" "$mode" "$position" "$scale"
+      fi
+    }
+
     ${lib.concatStringsSep "\n    " (
-      map (spec: "\"$hyprctl_bin\" keyword monitor ${lib.escapeShellArg spec} >/dev/null 2>&1 || true") (
+      map (spec: "apply_monitor_spec ${lib.escapeShellArg spec}") (
         map initialOutputStateToMonitorSpec configuredPhysicalOutputStates
       )
     )}
@@ -569,9 +640,9 @@ let
     fi
 
     if [ -n "$target_default_spec" ]; then
-      "$hyprctl_bin" keyword monitor "$target_default_spec" >/dev/null 2>&1 || true
+      apply_monitor_spec "$target_default_spec"
     else
-      "$hyprctl_bin" keyword monitor "$target_name,disable" >/dev/null 2>&1 || true
+      apply_monitor_disabled "$target_name"
     fi
     if [ -n "$focused_monitor" ]; then
       "$hyprctl_bin" dispatch focusmonitor "$focused_monitor" >/dev/null 2>&1 || true
@@ -594,6 +665,26 @@ let
     rm -f "$tmp_config"
     ${pkgs.coreutils}/bin/install -m 600 "$base_config" "$tmp_config"
 
+    lua_string() {
+      "$jq_bin" -Rn -r --arg value "$1" '$value | @json'
+    }
+
+    render_monitor_enabled() {
+      local name="$1"
+      local mode="$2"
+      local position="$3"
+      local scale="$4"
+      printf 'hl.monitor({ output = %s, disabled = false, mode = %s, position = %s, scale = %s })\n' \
+        "$(lua_string "$name")" \
+        "$(lua_string "$mode")" \
+        "$(lua_string "$position")" \
+        "$(lua_string "$scale")"
+    }
+
+    apply_monitor_enabled() {
+      "$hyprctl_bin" eval "$(render_monitor_enabled "$1" "$2" "$3" "$4")" >/dev/null 2>&1 || true
+    }
+
     ${lib.optionalString
       (sunshineDisplayTargetEnabled && sunshineDisplayTargetIsPhysical && sunshineKmsOutputIndex != null)
       ''
@@ -607,7 +698,7 @@ let
         target_scale=${lib.escapeShellArg defaultTargetScale}
 
         if [ -n "$target_name" ] && [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -x "$hyprctl_bin" ]; then
-          "$hyprctl_bin" keyword monitor "$target_name,$target_mode,$target_position,$target_scale" >/dev/null 2>&1 || true
+          apply_monitor_enabled "$target_name" "$target_mode" "$target_position" "$target_scale"
           for _ in $(seq 1 50); do
             if "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$target_name" '.[] | select(.name == $name and (.disabled // false) == false and (.width // 0) > 0 and (.height // 0) > 0)' >/dev/null 2>&1; then
               break
@@ -620,31 +711,6 @@ let
 
     ${lib.optionalString (sunshineKmsOutputIndex != null) ''
       printf 'output_name = %s\n' ${lib.escapeShellArg (toString sunshineKmsOutputIndex)} >> "$tmp_config"
-    ''}
-
-    ${lib.optionalString (sunshineDisplayTargetEnabled && sunshineDisplayTargetIsHeadless) ''
-      target_name=${
-        lib.escapeShellArg (
-          if sunshineDisplayTargetOutputName != null then sunshineDisplayTargetOutputName else ""
-        )
-      }
-      target_mode=${lib.escapeShellArg defaultTargetMode}
-      target_position=${lib.escapeShellArg defaultTargetPosition}
-      target_scale=${lib.escapeShellArg defaultTargetScale}
-
-      if [ -n "$target_name" ] && [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -x "$hyprctl_bin" ]; then
-        if ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$target_name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
-          "$hyprctl_bin" output create headless "$target_name" >/dev/null 2>&1 || true
-          for _ in $(seq 1 50); do
-            if "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$target_name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
-              break
-            fi
-            sleep 0.1
-          done
-        fi
-
-        "$hyprctl_bin" keyword monitor "$target_name,$target_mode,$target_position,$target_scale" >/dev/null 2>&1 || true
-      fi
     ''}
 
     exec ${sunshineExecutable} "$tmp_config"
