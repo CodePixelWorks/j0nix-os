@@ -272,23 +272,23 @@ let
     key:
     ''
           hl.bind(${builtins.toJSON key}, function()
-            hl.dispatch(hl.dsp.submap("reset"))
             hl.dispatch(hl.dsp.global("caelestia:launcherInterrupt"))
+            hl.dispatch(hl.dsp.submap("global"))
           end, { ignore_mods = true, non_consuming = true })
     '';
   caelestiaShellLua =
     if selectedShell == "caelestia-shell" then
       ''
         hl.define_submap("global", function()
+          hl.bind("Super_L", function()
+            hl.dispatch(hl.dsp.global("caelestia:launcher"))
+            hl.dispatch(hl.dsp.submap("caelestia-launcher"))
+          end, { ignore_mods = true })
+
         ${lib.concatStringsSep "\n" (map renderIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
         end)
 
-        hl.bind("Super_L", function()
-          hl.dispatch(hl.dsp.global("caelestia:launcher"))
-          hl.dispatch(hl.dsp.submap("caelestia-launcher"))
-        end, { ignore_mods = true })
-
-        hl.define_submap("caelestia-launcher", function()
+        hl.define_submap("caelestia-launcher", "global", function()
         ${lib.concatStringsSep "\n" (map renderLauncherInterruptBind hyprlandKeybinds.launcherInterruptKeys)}
         end)
 
