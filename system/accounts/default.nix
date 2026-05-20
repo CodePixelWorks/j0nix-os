@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, settings, ... }:
 let
   cfg = config.j0nix.desktop.accounts;
   allowedShells = [ "zsh" "fish" ];
@@ -7,6 +7,25 @@ let
   hmServiceNames = map (username: "home-manager-${username}") cfg.users;
   useZsh = builtins.elem "zsh" resolvedShells;
   useFish = builtins.elem "fish" resolvedShells;
+  userSettings = settings.userSettings or { };
+  mkUserPasswordSecret = username:
+    let
+      userCfg = userSettings.${username} or { };
+      passwordSecret = userCfg.passwordSecret or null;
+    in
+    lib.optionalAttrs (passwordSecret != null) {
+      "${username}-password" = {
+        key = passwordSecret.key or "users.${username}.hashedPassword";
+        sopsFile = passwordSecret.sopsFile or (settings.secrets.defaultUserSopsFile or null);
+        neededForUsers = true;
+      };
+    };
+  passwordSecrets = lib.foldl' (acc: username: acc // mkUserPasswordSecret username) { } cfg.users;
+  userHasPasswordFile = username:
+    let
+      userCfg = userSettings.${username} or { };
+    in
+    (userCfg.passwordSecret or null) != null;
 in
 {
   options.j0nix.desktop.accounts = {
@@ -62,7 +81,11 @@ in
         ++ cfg.additionalExtraGroups
         ++ lib.optionals (builtins.elem username cfg.dockerUsers) [ "docker" ]
       );
+    } // lib.optionalAttrs (userHasPasswordFile username) {
+      hashedPasswordFile = config.sops.secrets."${username}-password".path;
     });
+
+    sops.secrets = lib.mkIf (settings.enableSops or false) passwordSecrets;
 
     # HM activation scripts call `systemctl`; make it available inside the
     # generated home-manager-<user> systemd service environment.
