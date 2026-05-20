@@ -142,6 +142,44 @@ let
     in
     "hl.bind(" + lib.concatStringsSep ", " args + ")";
   renderIndentedBind = bind: "  " + renderBind bind;
+  bindUsesMainMod =
+    bind:
+    builtins.any (
+      part:
+      part == "$mainMod" || lib.toUpper part == "SUPER"
+    ) (builtins.filter (part: part != "") (lib.splitString " " (bind.mods or "")));
+  bindIsModOnlyLauncher =
+    bind:
+    let
+      key = lib.toUpper (bind.key or "");
+    in
+    bindUsesMainMod bind && (key == "SUPER_L" || key == "SUPER_R");
+  renderLauncherInterruptBind =
+    bind:
+    let
+      interruptBind = bind // {
+        flags = (builtins.removeAttrs (bind.flags or { }) [
+          "click"
+          "drag"
+          "long_press"
+          "mouse"
+          "release"
+          "repeating"
+        ]) // {
+          ignore_mods = true;
+          non_consuming = true;
+          submap_universal = true;
+        };
+      };
+      flagsExpr = renderBindFlags interruptBind.flags;
+    in
+    "  hl.bind("
+    + lib.concatStringsSep ", " [
+      (renderBindKeys interruptBind)
+      ''hl.dsp.global("caelestia:launcherInterrupt")''
+      flagsExpr
+    ]
+    + ")";
   renderUniversalIndentedBind = bind:
     "  "
     + renderBind (
@@ -278,27 +316,24 @@ let
   );
   windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
   keybindLua = lib.concatStringsSep "\n" (map renderBind hyprlandKeybinds.structuredLuaGlobalBinds);
-  caelestiaLauncherHyprlang = ''
-    exec = ${hyprctlExec} dispatch submap global
-    submap = global
-    bindi = Super, Super_L, global, caelestia:launcher
-    bindin = Super, catchall, global, caelestia:launcherInterrupt
-    bindin = Super, mouse:272, global, caelestia:launcherInterrupt
-    bindin = Super, mouse:273, global, caelestia:launcherInterrupt
-    bindin = Super, mouse:274, global, caelestia:launcherInterrupt
-    bindin = Super, mouse:275, global, caelestia:launcherInterrupt
-    bindin = Super, mouse:276, global, caelestia:launcherInterrupt
-    bindin = Super, mouse:277, global, caelestia:launcherInterrupt
-    bindin = Super, mouse_up, global, caelestia:launcherInterrupt
-    bindin = Super, mouse_down, global, caelestia:launcherInterrupt
-    submap = reset
-  '';
+  caelestiaLauncherInterruptLua = lib.concatStringsSep "\n" (
+    lib.unique (
+      map renderLauncherInterruptBind (
+        builtins.filter (
+          bind: bindUsesMainMod bind && !(bindIsModOnlyLauncher bind)
+        ) hyprlandKeybinds.structuredLuaShellBinds
+      )
+    )
+  );
   caelestiaShellLua =
     if selectedShell == "caelestia-shell" then
       ''
-        hl.exec_cmd("hyprctl keyword source " .. os.getenv("HOME") .. "/.config/hypr/j0nix/caelestia-launcher.conf")
+        -- Hyprland 0.55 Lua configs cannot load legacy Hyprlang via hyprctl keyword source.
+        -- Keep the Caelestia launcher path native Lua: Super release toggles, Super combos interrupt.
+        hl.bind("SUPER + SUPER_L", hl.dsp.global("caelestia:launcher"), { release = true, ignore_mods = true, submap_universal = true })
 
         hl.define_submap("global", function()
+        ${caelestiaLauncherInterruptLua}
         ${lib.concatStringsSep "\n" (map renderUniversalIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
         end)
       ''
@@ -391,12 +426,6 @@ in
     "hypr/j0nix/keybinds.lua" = ''
       -- Keybind scaffold generated from the shared bind model.
       ${keybindLua}
-    '';
-
-    "hypr/j0nix/caelestia-launcher.conf" = ''
-      # Caelestia upstream launcher submap. Keep this in Hyprlang so
-      # catchall keeps the same semantics as the original dotfiles.
-      ${caelestiaLauncherHyprlang}
     '';
 
     "hypr/j0nix/shell.lua" = ''
