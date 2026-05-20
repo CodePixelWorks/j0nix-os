@@ -311,7 +311,7 @@ let
       if monitor ? disabled then
         "hl.monitor(${luaValue { output = monitor.output; disabled = true; }})"
       else
-        "hl.monitor(${luaValue { output = monitor.output; mode = monitor.mode; position = monitor.position; scale = monitor.scale; }})"
+        "hl.monitor(${luaValue { output = monitor.output; disabled = false; mode = monitor.mode; position = monitor.position; scale = monitor.scale; }})"
     ) monitorEntries
   );
   windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
@@ -356,6 +356,14 @@ in
       dofile(j0nixDir .. "/vars.lua")
       dofile(j0nixDir .. "/env.lua")
       dofile(j0nixDir .. "/monitors.lua")
+      local runtimeMonitorsOk, runtimeMonitorsErr = pcall(dofile, j0nixDir .. "/runtime-monitors.lua")
+      if not runtimeMonitorsOk then
+        local file = io.open(j0nixDir .. "/runtime-monitors.lua", "r")
+        if file ~= nil then
+          file:close()
+          error(runtimeMonitorsErr)
+        end
+      end
       dofile(j0nixDir .. "/startup.lua")
       dofile(j0nixDir .. "/input.lua")
       dofile(j0nixDir .. "/general.lua")
