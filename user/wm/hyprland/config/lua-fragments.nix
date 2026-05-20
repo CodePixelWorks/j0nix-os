@@ -290,10 +290,7 @@ let
     if selectedShell == "caelestia-shell" then
       ''
         hl.define_submap("global", function()
-          hl.bind("SUPER + Super_L", function()
-            hl.dispatch(hl.dsp.global("caelestia:launcher"))
-            hl.dispatch(hl.dsp.submap("caelestia-launcher"))
-          end, { ignore_mods = true })
+          hl.bind("SUPER + Super_L", hl.dsp.global("caelestia:launcher"), { ignore_mods = true })
 
         ${lib.concatStringsSep "\n" (map renderUniversalIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
         end)
