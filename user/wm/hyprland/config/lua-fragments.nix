@@ -59,7 +59,6 @@ let
   renderBindKeys =
     bind:
     let
-      isCatchall = (bind.flags or { }).catchall or false;
       mods = builtins.filter (part: part != "") (lib.splitString " " (bind.mods or ""));
       normalizeMod =
         part:
@@ -81,18 +80,8 @@ let
       usesMainMod = builtins.elem "SUPER" normalizedMods;
       suffixSegments = (lib.filter (part: part != "SUPER") normalizedMods) ++ [ bind.key ];
       suffix = lib.concatStringsSep " + " suffixSegments;
-      nonSuperMods = lib.filter (part: part != "SUPER") normalizedMods;
-      modPrefix = lib.concatStringsSep " + " normalizedMods;
     in
-    if isCatchall && bind.key == "" then
-      if usesMainMod then
-        if nonSuperMods == [ ] then
-          "mainMod .. \" + \""
-        else
-          "mainMod .. \" + " + (lib.concatStringsSep " + " nonSuperMods) + " + \""
-      else
-        builtins.toJSON (modPrefix + lib.optionalString (modPrefix != "") " + ")
-    else if usesMainMod then
+    if usesMainMod then
       if suffix == "" then
         "mainMod"
       else
@@ -153,6 +142,24 @@ let
     in
     "hl.bind(" + lib.concatStringsSep ", " args + ")";
   renderIndentedBind = bind: "  " + renderBind bind;
+  renderUniversalIndentedBind = bind:
+    "  "
+    + renderBind (
+      bind
+      // {
+        flags = (bind.flags or { }) // {
+          submap_universal = true;
+        };
+      }
+    );
+  renderLauncherInterruptBind =
+    key:
+    ''
+          hl.bind(${builtins.toJSON ("SUPER + " + key)}, function()
+            hl.dispatch(hl.dsp.global("caelestia:launcherInterrupt"))
+            hl.dispatch(hl.dsp.submap("global"))
+          end, { ignore_mods = true, non_consuming = true })
+    '';
   parseMonitorLine =
     line:
     let
@@ -283,7 +290,16 @@ let
     if selectedShell == "caelestia-shell" then
       ''
         hl.define_submap("global", function()
-        ${lib.concatStringsSep "\n" (map renderIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
+          hl.bind("SUPER + Super_L", function()
+            hl.dispatch(hl.dsp.global("caelestia:launcher"))
+            hl.dispatch(hl.dsp.submap("caelestia-launcher"))
+          end, { ignore_mods = true })
+
+        ${lib.concatStringsSep "\n" (map renderUniversalIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
+        end)
+
+        hl.define_submap("caelestia-launcher", "global", function()
+        ${lib.concatStringsSep "\n" (map renderLauncherInterruptBind hyprlandKeybinds.launcherInterruptKeys)}
         end)
 
         -- Mirror the pre-Lua setup: keep "global" as the active submap via an
