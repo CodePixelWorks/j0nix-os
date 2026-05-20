@@ -70,7 +70,7 @@ let
   ) "${overviewToggleBind}, exec, wm-overview-toggle";
   mainFocusBinds = map (entry: mkMainBind "" entry.key "movefocus" entry.direction) directionalKeys;
   mainMoveBinds = map (
-    entry: mkMainBind "SHIFT" entry.key "movetoworkspace" entry.direction
+    entry: mkMainBind "ALT" entry.key "movetoworkspace" entry.direction
   ) directionalKeys;
   mainResizeBinds = map (
     entry: mkMainBind "ALT" entry.key "resizeactive" entry.resizeDelta
@@ -85,10 +85,12 @@ let
       "$mainMod CTRL, G, workspace, previous_per_monitor"
       "$mainMod, left, workspace, -1"
       "$mainMod, right, workspace, +1"
-      "$mainMod SHIFT, left, movetoworkspace, -1"
-      "$mainMod SHIFT, right, movetoworkspace, +1"
+      "$mainMod ALT, left, movetoworkspace, -1"
+      "$mainMod ALT, right, movetoworkspace, +1"
       "$mainMod, mouse_down, workspace, -1"
       "$mainMod, mouse_up, workspace, +1"
+      "$mainMod ALT, mouse_down, movetoworkspace, -1"
+      "$mainMod ALT, mouse_up, movetoworkspace, +1"
       "$mainMod CTRL, Backslash, centerwindow, 1"
     ]
     ++ mainFocusBinds
