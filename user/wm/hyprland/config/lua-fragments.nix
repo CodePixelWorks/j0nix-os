@@ -268,11 +268,28 @@ let
   );
   windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
   keybindLua = lib.concatStringsSep "\n" (map renderBind hyprlandKeybinds.structuredLuaGlobalBinds);
+  renderLauncherInterruptBind =
+    key:
+    ''
+          hl.bind(${builtins.toJSON key}, function()
+            hl.dispatch(hl.dsp.submap("reset"))
+            hl.dispatch(hl.dsp.global("caelestia:launcherInterrupt"))
+          end, { ignore_mods = true, non_consuming = true })
+    '';
   caelestiaShellLua =
     if selectedShell == "caelestia-shell" then
       ''
         hl.define_submap("global", function()
         ${lib.concatStringsSep "\n" (map renderIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
+        end)
+
+        hl.bind("Super_L", function()
+          hl.dispatch(hl.dsp.global("caelestia:launcher"))
+          hl.dispatch(hl.dsp.submap("caelestia-launcher"))
+        end, { ignore_mods = true })
+
+        hl.define_submap("caelestia-launcher", function()
+        ${lib.concatStringsSep "\n" (map renderLauncherInterruptBind hyprlandKeybinds.launcherInterruptKeys)}
         end)
 
         hl.dispatch(hl.dsp.submap("global"))
