@@ -268,16 +268,18 @@ let
   );
   windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
   keybindLua = lib.concatStringsSep "\n" (map renderBind hyprlandKeybinds.structuredLuaGlobalBinds);
-  legacyCaelestiaShellConf = lib.concatStringsSep "\n\n" (
-    lib.filter (line: line != "") [
-      (hyprlandKeybinds.shellHyprKeybinds.extraConfig or "")
-      hyprlandKeybinds.caelestiaSubmapConfig
-    ]
-  );
   caelestiaShellLua =
     if selectedShell == "caelestia-shell" then
       ''
-        hl.exec_cmd("hyprctl keyword source " .. os.getenv("HOME") .. "/.config/hypr/j0nix/legacy-shell.conf")
+        hl.define_submap("global", function()
+        ${lib.concatStringsSep "\n" (map renderIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
+        end)
+
+        hl.dispatch(hl.dsp.submap("global"))
+
+        hl.on("hyprland.start", function()
+          hl.dispatch(hl.dsp.submap("global"))
+        end)
       ''
     else
       "";
@@ -368,11 +370,6 @@ in
     "hypr/j0nix/keybinds.lua" = ''
       -- Keybind scaffold generated from the shared bind model.
       ${keybindLua}
-    '';
-
-    "hypr/j0nix/legacy-shell.conf" = ''
-      # Legacy shell-specific Hyprland integration sourced from the Lua path.
-      ${if legacyCaelestiaShellConf == "" then "# No legacy shell config generated." else legacyCaelestiaShellConf}
     '';
 
     "hypr/j0nix/shell.lua" = ''
