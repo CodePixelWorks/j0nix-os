@@ -91,8 +91,19 @@ let
   inherit (outputs)
     headlessOutputs
     headlessOutputNames
+    headlessOutputsJson
     initialOutputStates
     initialOutputStateNames
+    initialOutputStatesJson
+    outputBindingsWithKeys
+    outputBindingNames
+    outputBindingIndices
+    outputBindingsJson
+    toggleableOutputs
+    toggleableOutputNames
+    toggleableOutputsJson
+    managedOutputsWithBindings
+    managedOutputBindIndices
     ;
   keybindDiag = import ./config/keybind-diagnostics.nix {
     inherit
@@ -147,6 +158,35 @@ let
   keepassWorkspaceCfg = keepassCfg.workspace or { };
   keepassWorkspaceEnable = keepassWorkspaceCfg.enable or true;
   keepassToggleBind = keepassWorkspaceCfg.toggleBind or "$mainMod SHIFT, p";
+  toggleableOutputBindLines = lib.concatMap (
+    output:
+    let
+      binds = output.binds or { };
+      bindKey = output.bindKey or "";
+      outputNameArg = lib.escapeShellArg output.name;
+      hasBind = bind: bind != null && bind != "";
+      mkBind = bind: command: lib.optional (hasBind bind) "${bind}, exec, ${command}";
+    in
+    [
+      "$mainMod CTRL, ${bindKey}, exec, ${homeBinDir}/wm-monitor-toggle ${outputNameArg}"
+      "$mainMod CTRL SHIFT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-restore ${outputNameArg}"
+    ]
+    ++ (mkBind (binds.toggle or null) "${homeBinDir}/wm-monitor-toggle ${outputNameArg}")
+    ++ (mkBind (binds.on or null) "${homeBinDir}/wm-monitor-on ${outputNameArg}")
+    ++ (mkBind (binds.off or null) "${homeBinDir}/wm-monitor-off ${outputNameArg}")
+    ++ (mkBind (binds.restore or null) "${homeBinDir}/wm-monitor-restore ${outputNameArg}")
+  ) managedOutputsWithBindings;
+  workspaceOutputBindLines = lib.concatMap (
+    output:
+    let
+      bindKey = output.bindKey or "";
+      outputNameArg = lib.escapeShellArg output.name;
+    in
+    [
+      "$mainMod ALT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-workspace-to ${outputNameArg}"
+      "$mainMod CTRL ALT, ${bindKey}, exec, ${homeBinDir}/wm-monitor-focused-workspaces-to ${outputNameArg}"
+    ]
+  ) outputBindingsWithKeys;
   preferredFileManager = settings.preferredFileManager or "nautilus";
   layoutToggleBind = hyprlandCfg.layoutToggleBind or "$mainMod SHIFT, SPACE";
   overviewToggleBind = hyprlandCfg.overviewToggleBind or "$mainMod, TAB";
@@ -156,6 +196,7 @@ let
   userHyprShellOverridesDir = "${config.home.homeDirectory}/.config/hypr/shell-overrides/${selectedShell}";
   userHyprConfigPath = "${userHyprShellOverridesDir}/user-overrides.lua";
   mainHyprConfigDir = "${config.home.homeDirectory}/.config/hypr/conf.d";
+  hyprlandRuntimeMonitorConfigPath = "${config.home.homeDirectory}/.config/hypr/j0nix/runtime-monitors.lua";
   shellGeneratedConfigDir = "${config.home.homeDirectory}/.config/hypr/shells/${selectedShell}/generated";
   hyprlandWindowRules = import ./config/window-rules.nix { inherit lib; };
   hyprlandKeybinds = import ./config/keybinds.nix {
@@ -186,7 +227,7 @@ let
       workspaceSwitchBinds
       workspaceMoveBinds
       ;
-    toggleableOutputBindLines = [ ];
+    toggleableOutputBindLines = toggleableOutputBindLines ++ workspaceOutputBindLines;
   };
   installRawQuickshell = hyprlandDebug.installRawQuickshell or false;
   shellStartupCommand =
@@ -237,6 +278,32 @@ let
     sleep ${toString keybindDiagnosticsDelaySeconds}
     ${homeBinDir}/wm-hypr-keybind-dump --phase=login-delayed
   '';
+  monitorScripts = import ./config/monitor-scripts.nix {
+    inherit lib pkgs hyprctlExec;
+    inherit
+      toggleableOutputsJson
+      initialOutputStatesJson
+      outputBindingsJson
+      headlessOutputsJson
+      ;
+    inherit hyprlandRuntimeMonitorConfigPath;
+    homeDirectory = config.home.homeDirectory;
+  };
+  inherit (monitorScripts)
+    monitorStateScript
+    monitorOnScript
+    monitorOffScript
+    monitorToggleScript
+    monitorRestoreScript
+    monitorStatusScript
+    monitorWorkspaceToScript
+    monitorFocusedWorkspacesToScript
+    monitorListScript
+    monitorDiscoverScript
+    monitorSuggestScript
+    monitorNewDialogScript
+    monitorDebugScript
+    ;
   hyprlandStartupCommands =
     [
       (lib.getExe importSessionEnvScript)
@@ -257,16 +324,8 @@ let
       scale = toString (output.scale or 1);
     in
     if enabledByDefault then "${name},${mode},${position},${scale}" else "${name},disable";
-  managedConfigMonitorNames = map (output: output.name or "") (
-    builtins.filter (
-      output: !(builtins.elem (output.name or "") headlessOutputNames)
-    ) initialOutputStates
-  );
-  managedConfigMonitorLines = map initialOutputStateToMonitorLine (
-    builtins.filter (
-      output: !(builtins.elem (output.name or "") headlessOutputNames)
-    ) initialOutputStates
-  );
+  managedConfigMonitorNames = map (output: output.name or "") initialOutputStates;
+  managedConfigMonitorLines = map initialOutputStateToMonitorLine initialOutputStates;
   monitorNameFromLine =
     line:
     let
@@ -357,6 +416,21 @@ in
       keybindDiagnosticsScript
       keybindDiagnosticsProbeScript
     ]
+    ++ lib.optionals (initialOutputStates != [ ]) [
+      monitorStateScript
+      monitorOnScript
+      monitorOffScript
+      monitorToggleScript
+      monitorRestoreScript
+      monitorStatusScript
+      monitorWorkspaceToScript
+      monitorFocusedWorkspacesToScript
+      monitorListScript
+      monitorDiscoverScript
+      monitorSuggestScript
+      monitorNewDialogScript
+      monitorDebugScript
+    ]
     ++ lib.optionals hasHyprKcsPackage [ hyprKcsPackage ]
     ++ lib.optional (installRawQuickshell && (pkgs ? quickshell)) pkgs.quickshell
     ++ lib.optional (nwgDisplaysPackage != null) nwgDisplaysPackage
@@ -412,6 +486,19 @@ in
           fi
           $DRY_RUN_CMD chmod 0644 "$cfg_file"
         fi
+  '';
+
+  home.activation.hyprlandRuntimeMonitorOverridesInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    cfg_dir="$HOME/.config/hypr/j0nix"
+    cfg_file="$cfg_dir/runtime-monitors.lua"
+
+    if [ -L "$cfg_file" ]; then
+      $DRY_RUN_CMD rm -f "$cfg_file"
+    fi
+
+    $DRY_RUN_CMD mkdir -p "$cfg_dir"
+    $DRY_RUN_CMD ${lib.getExe monitorStateScript} sync-defaults
+    $DRY_RUN_CMD chmod 0644 "$cfg_file"
   '';
 
   xdg.configFile =
@@ -479,6 +566,10 @@ in
       message = "settings.hyprland.headlessOutputs names must be unique.";
     }
     {
+      assertion = lib.all (name: name != "") outputBindingNames;
+      message = "settings.hyprland.outputBindings entries must have a non-empty name.";
+    }
+    {
       assertion = lib.all (name: name != "") initialOutputStateNames;
       message = "settings.hyprland.initialOutputStates entries must have a non-empty name.";
     }
@@ -486,6 +577,46 @@ in
       assertion =
         (builtins.length initialOutputStateNames) == (builtins.length (lib.unique initialOutputStateNames));
       message = "settings.hyprland.initialOutputStates names must be unique.";
+    }
+    {
+      assertion =
+        (builtins.length outputBindingNames) == (builtins.length (lib.unique outputBindingNames));
+      message = "settings.hyprland.outputBindings names must be unique.";
+    }
+    {
+      assertion = lib.all (index: index >= 1 && index <= 10) outputBindingIndices;
+      message = "settings.hyprland.outputBindings bindIndex values must be between 1 and 10.";
+    }
+    {
+      assertion =
+        (builtins.length outputBindingIndices) == (builtins.length (lib.unique outputBindingIndices));
+      message = "settings.hyprland.outputBindings bindIndex values must be unique.";
+    }
+    {
+      assertion = lib.all (name: name != "") toggleableOutputNames;
+      message = "settings.hyprland.toggleableOutputs entries must have a non-empty name.";
+    }
+    {
+      assertion =
+        (builtins.length toggleableOutputNames) == (builtins.length (lib.unique toggleableOutputNames));
+      message = "settings.hyprland.toggleableOutputs names must be unique.";
+    }
+    {
+      assertion = lib.all (index: index >= 1 && index <= 10) managedOutputBindIndices;
+      message = "Managed output bindIndex values must be between 1 and 10.";
+    }
+    {
+      assertion =
+        (builtins.length managedOutputBindIndices)
+        == (builtins.length (lib.unique managedOutputBindIndices));
+      message = "Managed output bindIndex values must be unique.";
+    }
+    {
+      assertion = lib.all (
+        output:
+        !(output.workspaceHandoff.enable or false) || ((output.workspaceHandoff.targetMonitor or "") != "")
+      ) toggleableOutputs;
+      message = "settings.hyprland.toggleableOutputs.<name>.workspaceHandoff.targetMonitor must be set when workspaceHandoff.enable is true.";
     }
     {
       assertion = hasHyprKcsPackage;
