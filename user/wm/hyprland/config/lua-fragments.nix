@@ -152,14 +152,6 @@ let
         };
       }
     );
-  renderLauncherInterruptBind =
-    key:
-    ''
-          hl.bind(${builtins.toJSON ("SUPER + " + key)}, function()
-            hl.dispatch(hl.dsp.global("caelestia:launcherInterrupt"))
-            hl.dispatch(hl.dsp.submap("global"))
-          end, { ignore_mods = true, non_consuming = true })
-    '';
   parseMonitorLine =
     line:
     let
@@ -286,23 +278,28 @@ let
   );
   windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
   keybindLua = lib.concatStringsSep "\n" (map renderBind hyprlandKeybinds.structuredLuaGlobalBinds);
+  caelestiaLauncherHyprlang = ''
+    exec = ${hyprctlExec} dispatch submap global
+    submap = global
+    bindi = Super, Super_L, global, caelestia:launcher
+    bindin = Super, catchall, global, caelestia:launcherInterrupt
+    bindin = Super, mouse:272, global, caelestia:launcherInterrupt
+    bindin = Super, mouse:273, global, caelestia:launcherInterrupt
+    bindin = Super, mouse:274, global, caelestia:launcherInterrupt
+    bindin = Super, mouse:275, global, caelestia:launcherInterrupt
+    bindin = Super, mouse:276, global, caelestia:launcherInterrupt
+    bindin = Super, mouse:277, global, caelestia:launcherInterrupt
+    bindin = Super, mouse_up, global, caelestia:launcherInterrupt
+    bindin = Super, mouse_down, global, caelestia:launcherInterrupt
+    submap = reset
+  '';
   caelestiaShellLua =
     if selectedShell == "caelestia-shell" then
       ''
+        hl.exec_cmd("hyprctl keyword source " .. os.getenv("HOME") .. "/.config/hypr/j0nix/caelestia-launcher.conf")
+
         hl.define_submap("global", function()
-          hl.bind("SUPER + Super_L", hl.dsp.global("caelestia:launcher"), { ignore_mods = true })
-
         ${lib.concatStringsSep "\n" (map renderUniversalIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
-        end)
-
-        hl.define_submap("caelestia-launcher", "global", function()
-        ${lib.concatStringsSep "\n" (map renderLauncherInterruptBind hyprlandKeybinds.launcherInterruptKeys)}
-        end)
-
-        -- Mirror the pre-Lua setup: keep "global" as the active submap via an
-        -- external hyprctl dispatch instead of the crashing in-process Lua call.
-        hl.on("hyprland.start", function()
-          hl.exec_cmd(${builtins.toJSON "${hyprctlExec} dispatch submap global"})
         end)
       ''
     else
@@ -394,6 +391,12 @@ in
     "hypr/j0nix/keybinds.lua" = ''
       -- Keybind scaffold generated from the shared bind model.
       ${keybindLua}
+    '';
+
+    "hypr/j0nix/caelestia-launcher.conf" = ''
+      # Caelestia upstream launcher submap. Keep this in Hyprlang so
+      # catchall keeps the same semantics as the original dotfiles.
+      ${caelestiaLauncherHyprlang}
     '';
 
     "hypr/j0nix/shell.lua" = ''

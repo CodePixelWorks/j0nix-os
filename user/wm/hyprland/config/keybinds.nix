@@ -281,17 +281,6 @@ let
     };
 
   parseBindList = bindType: entries: map (parseBindEntry bindType) entries;
-  launcherInterruptKeys = [
-    "mouse:272"
-    "mouse:273"
-    "mouse:274"
-    "mouse:275"
-    "mouse:276"
-    "mouse:277"
-    "mouse_up"
-    "mouse_down"
-  ];
-
   effectiveBindLists = {
     bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ mergedBindList "bind";
     bindi = mergedBindList "bindi";
@@ -357,7 +346,6 @@ in
     structuredBinds
     structuredLuaGlobalBinds
     structuredLuaShellBinds
-    launcherInterruptKeys
     caelestiaSubmapConfig
     ;
 }
