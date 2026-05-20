@@ -112,6 +112,8 @@ let
       "hl.dsp.focus({ workspace = ${builtins.toJSON argumentString} })"
     else if dispatcher == "movewindow" && (bind.flags.mouse or false) then
       "hl.dsp.window.drag()"
+    else if dispatcher == "movewindow" then
+      "hl.dsp.window.move({ direction = ${builtins.toJSON argumentString} })"
     else if dispatcher == "resizewindow" && (bind.flags.mouse or false) then
       "hl.dsp.window.resize()"
     else if dispatcher == "killactive" then
