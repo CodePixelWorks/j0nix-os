@@ -75,9 +75,17 @@ let
         else
           part;
       normalizedMods = map normalizeMod mods;
-      segments = normalizedMods ++ [ bind.key ];
+      usesMainMod = builtins.elem "SUPER" normalizedMods;
+      suffixSegments = (lib.filter (part: part != "SUPER") normalizedMods) ++ [ bind.key ];
+      suffix = lib.concatStringsSep " + " suffixSegments;
     in
-    builtins.toJSON (lib.concatStringsSep " + " segments);
+    if usesMainMod then
+      if suffix == "" then
+        "mainMod"
+      else
+        "mainMod .. \" + " + suffix + "\""
+    else
+      builtins.toJSON suffix;
   renderRawDispatchCommand =
     bind:
     let
@@ -307,10 +315,11 @@ in
 
     "hypr/j0nix/vars.lua" = ''
       -- Shared constants for the staged Lua config.
-      local mainMod = "SUPER"
+      mainMod = "SUPER"
+      useUWSM = ${if useUWSM then "true" else "false"}
       return {
         mainMod = mainMod,
-        useUWSM = ${if useUWSM then "true" else "false"},
+        useUWSM = useUWSM,
       }
     '';
 
