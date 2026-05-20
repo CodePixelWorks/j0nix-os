@@ -205,28 +205,28 @@ Lock helpers:
 
 `settings.hyprland.headlessOutputs` remains the declarative source for Hyprland virtual outputs that other modules, especially Sunshine, may reference.
 
-Hyprland itself no longer materializes or manages those virtual outputs during session startup. The normal startup path is intentionally generic:
+Hyprland itself keeps headless outputs disabled during session startup. The normal startup path is intentionally generic:
 
-- physical outputs come from the static profile monitor lines plus the fallback `monitor = ,preferred,auto,1`
-- the Sunshine display target is rendered as disabled by default in `10-monitors.conf`
+- physical outputs come from the profile output state model plus the fallback `monitor = ,preferred,auto,1`
+- the Sunshine display target is rendered as disabled by default in the generated Lua monitor config
 - Sunshine is the single authority that enables its target output when a stream starts
 
 On this host, the static monitor topology still comes from `profiles/desktop/details.nix`. `settings.hyprland.initialOutputStates` is now only needed when you want to override the default disabled-at-start behavior for the Sunshine target output.
 
 ## Monitor Policy
 
-The previous runtime monitor management layer has been intentionally removed from the user session.
+Runtime monitor management is Lua-native. `wm-monitor` writes current managed output state to `~/.config/hypr/j0nix/runtime-monitors.lua`, which is loaded after the declarative monitor defaults.
 
-That means:
+Supported controls:
 
-- no runtime `11-runtime-monitors.conf`
-- no Home Manager services that create, remove, or watch Hyprland outputs
-- no monitor toggle, restore, or workspace-handoff keybinds
-- no `wm-monitor-*` helper commands in the supported baseline
+- `SUPER+CTRL+1/2/3`: toggle managed outputs
+- `SUPER+CTRL+SHIFT+1/2/3`: restore saved output state
+- `SUPER+ALT+1/2/3`: move active workspace to output
+- `SUPER+CTRL+ALT+1/2/3`: move focused workspaces to output
 
-The only monitor behavior that remains declaratively managed in the Hyprland user module is:
+The monitor behavior declaratively managed in the Hyprland user module is:
 
-- the static monitor layout from `profiles/desktop/details.nix`
+- the initial output state model from `profiles/desktop/details.nix`
 - the wildcard fallback rule for unknown physical outputs
 - the disabled-by-default startup override for the configured Sunshine display target
 
