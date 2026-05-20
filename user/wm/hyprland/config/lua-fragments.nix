@@ -11,6 +11,7 @@
 }:
 let
   trim = lib.strings.trim;
+  selectedShell = settings.wmShell or (settings.hyprlandShell or "caelestia-shell");
 
   luaValue =
     value:
@@ -267,21 +268,21 @@ let
   );
   windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
   keybindLua = lib.concatStringsSep "\n" (map renderBind hyprlandKeybinds.structuredLuaGlobalBinds);
+  legacyCaelestiaShellConf = lib.concatStringsSep "\n\n" (
+    lib.filter (line: line != "") [
+      (hyprlandKeybinds.shellHyprKeybinds.extraConfig or "")
+      hyprlandKeybinds.caelestiaSubmapConfig
+    ]
+  );
   caelestiaShellLua =
-    if settings.wmShell or (settings.hyprlandShell or "caelestia-shell") == "caelestia-shell" then
+    if selectedShell == "caelestia-shell" then
       ''
-        hl.define_submap("global", function()
-        ${lib.concatStringsSep "\n" (map renderIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
-        end)
-
-        hl.on("hyprland.start", function()
-          hl.dispatch(hl.dsp.submap("global"))
-        end)
+        hl.exec_cmd("hyprctl keyword source " .. os.getenv("HOME") .. "/.config/hypr/j0nix/legacy-shell.conf")
       ''
     else
       "";
   shellLua =
-    if settings.wmShell or (settings.hyprlandShell or "caelestia-shell") == "dank-material-shell" then
+    if selectedShell == "dank-material-shell" then
       ''
         error("dank-material-shell is temporarily marked broken during the Hyprland Lua migration. Use caelestia-shell.")
       ''
@@ -369,13 +370,18 @@ in
       ${keybindLua}
     '';
 
+    "hypr/j0nix/legacy-shell.conf" = ''
+      # Legacy shell-specific Hyprland integration sourced from the Lua path.
+      ${if legacyCaelestiaShellConf == "" then "# No legacy shell config generated." else legacyCaelestiaShellConf}
+    '';
+
     "hypr/j0nix/shell.lua" = ''
       -- Shell-specific staged Lua integration.
       ${if shellLua == "" then "-- No shell-specific Lua overlay for the selected shell." else shellLua}
     '';
 
     "hypr/j0nix/user-overrides.lua" = ''
-      local selectedShell = ${builtins.toJSON (settings.wmShell or (settings.hyprlandShell or "caelestia-shell"))}
+      local selectedShell = ${builtins.toJSON selectedShell}
       local overridePath = os.getenv("HOME") .. "/.config/hypr/shell-overrides/" .. selectedShell .. "/user-overrides.lua"
       local ok, err = pcall(dofile, overridePath)
       if not ok then
