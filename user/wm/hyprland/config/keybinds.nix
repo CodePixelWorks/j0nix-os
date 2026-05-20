@@ -306,11 +306,13 @@ let
       {
         type = "bindin";
         mods = "Super";
-        key = "catchall";
+        key = "";
         dispatcher = "global";
         argument = "caelestia:launcherInterrupt";
-        flags = bindFlagsByType.bindin;
-        raw = "Super, catchall, global, caelestia:launcherInterrupt";
+        flags = (bindFlagsByType.bindin or { }) // {
+          catchall = true;
+        };
+        raw = "Super, <lua-catchall>, global, caelestia:launcherInterrupt";
       }
     ]
     ++ map
