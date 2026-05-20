@@ -1,169 +1,133 @@
-# Secrets
+# SOPS-NIX Backup & Recovery Guide
 
-This repository is wired for `sops-nix` and expects encrypted secret files to live here.
+## Critical Files to Backup
 
-For the full step-by-step setup guide, see:
+### 1. Host Age Key
+**Path:** `/var/lib/sops-nix/key.txt`
 
-- `secrets/SETUP.md`
+Systemd service decrypts host secrets. Lose this = reinstall or manual secret recovery.
 
-Recommended layout:
+```bash
+# Backup
+sudo cat /var/lib/sops-nix/key.txt > host-key-backup.txt
 
-- `secrets/common.yaml`
-- `secrets/hosts/Jonas-PC.yaml`
-- `secrets/users/jonas.yaml`
-- `.sops.yaml`
-- `secrets/scripts/sops-safe-rekey.sh`
-- `secrets/scripts/sops-migrate-system-split.sh`
-- `secrets/scripts/sops-autofix-decrypt.sh`
+# Restore on new machine
+sudo install -d -m 700 /var/lib/sops-nix
+sudo install -m 600 host-key-backup.txt /var/lib/sops-nix/key.txt
+```
 
-Recommended key model:
+### 2. User Age Key
+**Path:** `~/.config/sops/age/keys.txt`
 
-- host key for `secrets/hosts/*`
-- one user key per user for `secrets/users/*`
-- optionally encrypt user files for both the user key and the host key
+Your personal key for user secrets. Lose this = re-encrypt all user secrets with new key.
 
-Bootstrap:
+```bash
+# Backup
+cp ~/.config/sops/age/keys.txt user-key-backup.txt
 
-1. Copy `.sops.yaml.example` to `.sops.yaml`
-2. Replace the placeholder `age1...` recipients with separate host/user Age public keys
-3. Create an encrypted file, for example:
-   - `sops secrets/hosts/Jonas-PC.yaml`
-4. Reference entries from `settings.secrets.system`
+# Restore on new machine
+install -d -m 700 ~/.config/sops/age
+install -m 600 user-key-backup.txt ~/.config/sops/age/keys.txt
+```
 
-For user secrets:
+### 3. Repository Files
+- `.sops.yaml` - key recipients and rules
+- `secrets/` - encrypted secret files
+- `settings.nix` - secret references
 
-1. Create an encrypted file, for example:
-   - `sops secrets/users/jonas.yaml`
-2. Reference generic secret files from `settings.userSettings.jonas.secrets.files`
-3. Reference secret-backed SSH keys from `settings.userSettings.jonas.secrets.sshKeys`
+## New Machine Rollout
 
-When you change recipients in `.sops.yaml`, run:
+### Step 1: Install NixOS
+Standard installation. Host key can be:
+- **Option A:** Copy existing `/var/lib/sops-nix/key.txt` from backup
+- **Option B:** Generate new key, re-encrypt all secrets
 
-- `./secrets/scripts/sops-safe-rekey.sh`
+### Step 2: Copy User Key
+```bash
+install -d -m 700 ~/.config/sops/age
+install -m 600 /path/to/backup/keys.txt ~/.config/sops/age/keys.txt
+```
 
-This script creates timestamped encrypted backups in `secrets/.backups/` and then runs
-`sops updatekeys --yes` for all host/user secret YAML files.
+### Step 3: Clone Repository
+```bash
+git clone <repo> ~/j0nix-os
+cd ~/j0nix-os
+```
 
-To move known system-owned keys from a user file into the host file:
+### Step 4: Verify Decryption Works
+```bash
+# Test host secrets
+sudo sops -d secrets/hosts/Jonas-PC.yaml
 
-- `./secrets/scripts/sops-migrate-system-split.sh`
+# Test user secrets  
+sops -d secrets/users/jonas.yaml
+```
 
-By default this migrates `syncthing.gui_password` from `secrets/users/jonas.yaml` to
-`secrets/hosts/Jonas-PC.yaml`, re-encrypts both files, and keeps encrypted backups.
+### Step 5: Rebuild System
+```bash
+sudo nixos-rebuild switch --flake .#<hostname>
+```
 
-If decrypt fails during rebuild with `0 successful groups required, got 0`, run:
+## User Passwords via SOPS
 
-- `./secrets/scripts/sops-autofix-decrypt.sh`
+### Create Password Hash
+```bash
+# Generate hash (method: sha-512)
+mkpasswd -m sha-512
 
-This re-encrypts host/user files with recipients derived from local key files
-(`~/.config/sops/age/keys.txt` and `/var/lib/sops-nix/key.txt`) and verifies decryptability.
-It enforces a strict mapping:
+# Or use yescrypt (modern, recommended)
+mkpasswd -m yescrypt
+```
 
-- `secrets/hosts/*` -> host key recipient only
-- `secrets/users/*` -> user key recipient + host key recipient
+### Structure in secrets/users.yaml
+```yaml
+users:
+  jonas:
+    hashedPassword: "<hash-from-mkpasswd>"
+```
 
-If host secrets exist, run it with permissions that can read `/var/lib/sops-nix/key.txt`:
-
-- `sudo ./secrets/scripts/sops-autofix-decrypt.sh`
-
-Example:
-
+### Reference in settings.nix
 ```nix
-secrets = {
-  defaultSopsFile = ./secrets/hosts/Jonas-PC.yaml;
-  system.samba-media = {
-    key = "samba/media";
-  };
+users.users.jonas = {
+  hashedPasswordFile = config.sops.secrets.jonas-password.path;
 };
 ```
 
-At runtime this becomes available as:
+## Key Rotation
 
-- `/run/secrets/samba-media`
+### Rotate User Key
+1. Generate new key: `age-keygen -o ~/.config/sops/age/keys.txt.new`
+2. Add both old+new to `.sops.yaml` recipients
+3. Re-encrypt: `sops rotate -i secrets/users/*.yaml`
+4. Remove old key from `.sops.yaml`
+5. Replace key file: `mv keys.txt.new keys.txt`
 
-Use that path from modules (for example Samba `credentials=` files) instead of storing passwords in `settings.nix`.
+### Rotate Host Key
+1. Generate new key on host
+2. Add both keys to `.sops.yaml`
+3. Re-encrypt host secrets
+4. Remove old key
+5. Update `/var/lib/sops-nix/key.txt`
 
-User example:
+## Troubleshooting
 
-```nix
-userSettings.jonas.secrets = {
-  defaultSopsFile = ./secrets/users/jonas.yaml;
-  files = { };
-  sshKeys.jonas-pixel-und-code = {
-    key = "ssh/id_ed25519_jonas-pixel-und-code";
-    targetName = "id_ed25519_jonas-pixel-und-code";
-  };
-};
+### "0 successful groups required, got 0"
+Key missing or wrong recipient. Run:
+```bash
+./secrets/scripts/sops-autofix-decrypt.sh
 ```
 
-User modules consume these via:
+### "Could not decrypt with AES_GCM"
+SOPS file corrupted or key renamed incorrectly. Restore from backup or re-create.
 
-- `config.sops.secrets.<name>.path`
+### Forgot User Key
+1. If host key also recipient: decrypt with host key, re-encrypt with new user key
+2. If not: secrets lost, recreate from source
 
-This is the intended path for SSH private keys, API tokens, and user-scoped application secrets.
+## Security Notes
 
-For `sshKeys`, Home Manager deploys:
-
-- `~/.ssh/<name>` as a symlink to the secret-backed private key
-- `~/.ssh/<name>.pub` regenerated from that private key during activation
-
-For passphrase-protected private keys, set one of these on the `sshKeys` entry:
-
-- `publicKey = "ssh-ed25519 AAAA... comment"`
-- `publicKeyFile = ./public/users/jonas/ssh/<name>.pub`
-- `passphraseKey = "ssh_passphrases/<name>"` to materialize a second secret and allow automatic agent loading
-
-If neither is set, Home Manager tries `ssh-keygen -y` as a fallback.
-If that fails, it keeps the existing `.pub` file instead of truncating it.
-
-If `passphraseKey` is set and the user uses `dev.ssh.agent.provider = "gnome-keyring"`,
-the user session installs `ssh-load-secret-keys` and automatically loads those keys into
-the SSH agent during the graphical session.
-
-## SOPS Rename Rule
-
-Do not rename encrypted key paths in a SOPS file with a normal text edit.
-
-Reason:
-
-- SOPS binds encrypted values to their exact tree path and MAC
-- manually renaming a key like `ssh.id_ed22519_foo` -> `ssh.id_ed25519_foo`
-  can make the affected value undecryptable
-- the result is typically:
-  - `Could not decrypt with AES_GCM: cipher: message authentication failed`
-
-Use one of these methods instead:
-
-- `sops edit <file>`
-- `sops set`
-- `sops unset`
-
-Safe migration pattern:
-
-1. decrypt or extract the old value with `sops`
-2. write it to the new path with `sops set`
-3. remove the old path with `sops unset`
-
-Do not "refactor" encrypted YAML keys with plain text search/replace.
-
-Store repo-tracked public keys outside `secrets/`, for example:
-
-- `public/users/jonas/ssh/`
-
-If you want an explicit filename scheme, set `targetName`. Example:
-
-- `targetName = "id_ed25519_jonas-pixel-und-code"`
-
-Without an `sshKeys` entry, no visible `~/.ssh/<name>` file is created. Use `secrets.files` for ordinary secret files that should stay only in the SOPS-managed path.
-
-Under NixOS, the Home Manager layer can automatically reuse the system Age key:
-
-- `sops.age.keyFile = /var/lib/sops-nix/key.txt`
-
-For a professional multi-user setup, explicitly set a per-user key source via:
-
-- `settings.userSettings.<name>.secrets.age.keyFile`
-
-The full recommended host-key + per-user-key workflow is documented in:
-
-- `secrets/SETUP.md`
+- **Never commit plaintext keys**
+- **Backup keys offline** (password manager, encrypted USB)
+- **Host key = root access to all system secrets**
+- **User key = access to that user's secrets only**
+- **Rotation:** do user keys yearly, host keys on compromise suspicion
