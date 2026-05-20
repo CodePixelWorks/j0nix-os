@@ -59,6 +59,7 @@ let
   renderBindKeys =
     bind:
     let
+      isCatchall = (bind.flags or { }).catchall or false;
       mods = builtins.filter (part: part != "") (lib.splitString " " (bind.mods or ""));
       normalizeMod =
         part:
@@ -80,8 +81,18 @@ let
       usesMainMod = builtins.elem "SUPER" normalizedMods;
       suffixSegments = (lib.filter (part: part != "SUPER") normalizedMods) ++ [ bind.key ];
       suffix = lib.concatStringsSep " + " suffixSegments;
+      nonSuperMods = lib.filter (part: part != "SUPER") normalizedMods;
+      modPrefix = lib.concatStringsSep " + " normalizedMods;
     in
-    if usesMainMod then
+    if isCatchall && bind.key == "" then
+      if usesMainMod then
+        if nonSuperMods == [ ] then
+          "mainMod .. \" + \""
+        else
+          "mainMod .. \" + " + (lib.concatStringsSep " + " nonSuperMods) + " + \""
+      else
+        builtins.toJSON (modPrefix + lib.optionalString (modPrefix != "") " + ")
+    else if usesMainMod then
       if suffix == "" then
         "mainMod"
       else
