@@ -70,7 +70,7 @@ let
   ) "${overviewToggleBind}, exec, wm-overview-toggle";
   mainFocusBinds = map (entry: mkMainBind "" entry.key "movefocus" entry.direction) directionalKeys;
   mainMoveBinds = map (
-    entry: mkMainBind "SHIFT" entry.key "movewindow" entry.direction
+    entry: mkMainBind "SHIFT" entry.key "movetoworkspace" entry.direction
   ) directionalKeys;
   mainResizeBinds = map (
     entry: mkMainBind "ALT" entry.key "resizeactive" entry.resizeDelta
