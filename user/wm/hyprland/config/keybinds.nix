@@ -282,7 +282,6 @@ let
 
   parseBindList = bindType: entries: map (parseBindEntry bindType) entries;
   launcherInterruptKeys = [
-    "catchall"
     "mouse:272"
     "mouse:273"
     "mouse:274"
@@ -292,49 +291,6 @@ let
     "mouse_up"
     "mouse_down"
   ];
-  launcherStructuredBinds =
-    [
-      {
-        type = "bindi";
-        mods = "Super";
-        key = "Super_L";
-        dispatcher = "global";
-        argument = "caelestia:launcher";
-        flags = bindFlagsByType.bindi;
-        raw = "Super, Super_L, global, caelestia:launcher";
-      }
-      {
-        type = "bindin";
-        mods = "Super";
-        key = "";
-        dispatcher = "global";
-        argument = "caelestia:launcherInterrupt";
-        flags = (bindFlagsByType.bindin or { }) // {
-          catchall = true;
-        };
-        raw = "Super, <lua-catchall>, global, caelestia:launcherInterrupt";
-      }
-    ]
-    ++ map
-      (key: {
-        type = "bindin";
-        mods = "Super";
-        inherit key;
-        dispatcher = "global";
-        argument = "caelestia:launcherInterrupt";
-        flags = bindFlagsByType.bindin;
-        raw = "Super, ${key}, global, caelestia:launcherInterrupt";
-      })
-      [
-        "mouse:272"
-        "mouse:273"
-        "mouse:274"
-        "mouse:275"
-        "mouse:276"
-        "mouse:277"
-        "mouse_up"
-        "mouse_down"
-      ];
 
   effectiveBindLists = {
     bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ mergedBindList "bind";
@@ -352,7 +308,7 @@ let
   structuredLuaGlobalBinds = if isCaelestiaShell then [ ] else structuredBinds;
   structuredLuaShellBinds =
     if isCaelestiaShell then
-      launcherStructuredBinds ++ structuredBinds
+      structuredBinds
     else
       [ ];
 
