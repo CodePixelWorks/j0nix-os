@@ -302,11 +302,8 @@ let
         ${lib.concatStringsSep "\n" (map renderLauncherInterruptBind hyprlandKeybinds.launcherInterruptKeys)}
         end)
 
-        hl.dispatch(hl.dsp.submap("global"))
-
-        hl.on("hyprland.start", function()
-          hl.dispatch(hl.dsp.submap("global"))
-        end)
+        -- Hyprland 0.55.1 can segfault when Lua activates a submap during init.
+        -- Keep the bootstrap on the runtime hyprctl path used by wm-shell-start.
       ''
     else
       "";
