@@ -335,8 +335,8 @@ let
         hl.bind("SUPER + SUPER_L", hl.dsp.global("caelestia:launcher"), { release = true, ignore_mods = true, submap_universal = true })
 
         hl.define_submap("global", function()
-        ${caelestiaLauncherInterruptLua}
         ${lib.concatStringsSep "\n" (map renderUniversalIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
+        ${caelestiaLauncherInterruptLua}
         end)
       ''
     else
