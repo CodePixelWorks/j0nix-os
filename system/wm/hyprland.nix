@@ -8,7 +8,7 @@
 let
   dm = import ./display-manager/contract.nix { inherit lib; };
   resolveEnabledWms = import ../lib/enabled-wms.nix { inherit lib; };
-  greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
+  greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs settings; };
   users = builtins.attrNames (settings.userSettings or { });
   hasUsers = users != [ ];
   primaryUser = if hasUsers then builtins.head users else "root";
@@ -228,6 +228,10 @@ let
     # compositor's IPC/display variables leak into the authenticated session.
     unset HYPRLAND_INSTANCE_SIGNATURE
     unset WAYLAND_DISPLAY
+    unset GTK_IM_MODULE
+    unset QT_IM_MODULE
+    unset SDL_IM_MODULE
+    unset XMODIFIERS
 
     if [ "${if useUWSM then "1" else "0"}" = "1" ]; then
       exec ${lib.getExe pkgs.uwsm} start hyprland.desktop "$@"
