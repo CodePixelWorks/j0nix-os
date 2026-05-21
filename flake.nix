@@ -13,7 +13,7 @@
       overlays = import (baseDir + "/system/lib/flake/overlays.nix") {
         inherit baseDir inputs nixpkgs;
       };
-      profileName = "desktop";
+      profileName = rawSettings.profileName or "desktop";
       profileDir = baseDir + "/profiles/${profileName}";
       settingsFile =
         if builtins.pathExists (baseDir + "/settings.nix") then
