@@ -61,6 +61,7 @@ let
   };
 
 in
+rec
 {
   inherit monitorSubmodule;
 
@@ -112,6 +113,11 @@ in
       }
     else
       null;
+
+  /* Accept either a legacy string or an attrset and return a normalized
+     attrset. */
+  normalizeMonitor = m:
+    if builtins.isString m then parseMonitorRule m else m;
 
   # Type shorthand for option declarations.
   monitorList = types.listOf (types.submodule monitorSubmodule);
