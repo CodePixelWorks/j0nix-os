@@ -203,6 +203,7 @@ let
     inherit
       lib
       settings
+      homeBinDir
       isCaelestiaShell
       hyprctlExec
       appExec
