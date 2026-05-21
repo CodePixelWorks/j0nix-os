@@ -15,7 +15,7 @@ let
     in
     lib.optionalAttrs (passwordSecret != null) {
       "${username}-password" = {
-        key = passwordSecret.key or "users.${username}.hashedPassword";
+        key = passwordSecret.key or "hashedPassword";
         sopsFile = passwordSecret.sopsFile or (settings.secrets.defaultUserSopsFile or null);
         neededForUsers = true;
       };
