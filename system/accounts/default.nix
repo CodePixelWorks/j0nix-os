@@ -26,6 +26,7 @@ let
       userCfg = userSettings.${username} or { };
     in
     (userCfg.passwordSecret or null) != null;
+  hasDeclarativePasswordSecrets = lib.any userHasPasswordFile cfg.users;
 in
 {
   options.j0nix.desktop.accounts = {
@@ -71,6 +72,7 @@ in
     programs.zsh.enable = useZsh;
     programs.fish.enable = useFish;
     services.getty.autologinUser = lib.mkForce cfg.autologinUser;
+    users.mutableUsers = lib.mkIf hasDeclarativePasswordSecrets (lib.mkDefault false);
 
     users.users = lib.genAttrs cfg.users (username: {
       isNormalUser = true;
