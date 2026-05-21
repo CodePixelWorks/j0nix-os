@@ -72,12 +72,12 @@
           outputName = "SUNSHINE-HEADLESS";
           capture = "auto"; # On Hyprland this resolves to wlroots/wlr so the legacy fallback stays on the Wayland capture path.
           resolutions = [
-            "2880x1800"
-            "2560x1600"
-            "1920x1200"
-            "1920x1080"
-            "1600x900"
-            "1280x720"
+            { width = 2880; height = 1800; }
+            { width = 2560; height = 1600; }
+            { width = 1920; height = 1200; }
+            { width = 1920; height = 1080; }
+            { width = 1600; height = 900; }
+            { width = 1280; height = 720; }
           ];
           fps = [
             60
