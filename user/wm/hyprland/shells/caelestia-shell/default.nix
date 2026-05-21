@@ -494,9 +494,14 @@ let
         [ -f "$cfg_file" ] || return 0
         "$jq_bin" -e . "$cfg_file" >/dev/null 2>&1 || return 0
 
-        "$jq_bin" \
-          --arg defaultMaterial "${materialIconFontDefault}" \
-          --argjson allowedFonts '${materialIconFontAllowedJson}' '
+      "$jq_bin" \
+        --arg defaultMaterial "${materialIconFontDefault}" \
+        --arg keepassWorkspaceName "${keepassWorkspaceName}" \
+        --argjson keepassEnabled ${if keepassEnabled then "true" else "false"} \
+        --argjson keepassSpecialWorkspaceEnabled ${
+          if keepassSpecialWorkspaceEnabled then "true" else "false"
+        } \
+        --argjson allowedFonts '${materialIconFontAllowedJson}' '
           def as_num($default):
             if type == "number" then . else $default end;
           def clamp($min; $max):
@@ -530,11 +535,30 @@ let
                       .command = ["system-power-action", "poweroff"]
                     elif (.name? == "Reboot") then
                       .command = ["system-power-action", "reboot"]
+                    elif (.name? == "Auto Theme") then
+                      .command = ["caelestia-smart-theme", "enable"]
+                    elif (.name? == "Manual Theme") then
+                      .command = ["caelestia-smart-theme", "disable"]
+                    elif ($keepassEnabled and .name? == "Passwords") then
+                      .command = ["${homeBinDir}/keepassxc-toggle"]
                     else
                       .
                     end
                   )
+                | if any(.[]; .name? == "Auto Theme") then . else . + [{ "name": "Auto Theme", "command": ["caelestia-smart-theme", "enable"] }] end
+                | if any(.[]; .name? == "Manual Theme") then . else . + [{ "name": "Manual Theme", "command": ["caelestia-smart-theme", "disable"] }] end
+                | if ($keepassEnabled and (any(.[]; .name? == "Passwords") | not)) then . + [{ "name": "Passwords", "command": ["${homeBinDir}/keepassxc-toggle"] }] else . end
               )
+            else
+              .
+            end
+          | if $keepassSpecialWorkspaceEnabled then
+              .bar = (.bar // {})
+              | .bar.workspaces = (.bar.workspaces // {})
+              | .bar.workspaces.specialWorkspaceIcons = (
+                  (if ((.bar.workspaces.specialWorkspaceIcons? | type) == "array") then .bar.workspaces.specialWorkspaceIcons else [] end)
+                  | if any(.[]; .name? == $keepassWorkspaceName) then . else . + [{ "name": $keepassWorkspaceName, "icon": "password" }] end
+                )
             else
               .
             end
