@@ -22,6 +22,9 @@ in
 
     # Hibernate via swapfile on / (ext4). resumeOffset is derived from
     # `filefrag -v /swapfile` and must be updated if the swapfile is recreated.
+    #
+    # VERIFY: sudo filefrag -v /swapfile | grep -E "^\s*0:" | awk '{print $4}'
+    # If the output differs from the value below, update it before hibernate will work.
     resumeDevice = "/dev/disk/by-uuid/28c5e755-f2df-4f57-af8a-36998a4a2f25";
     resumeOffset = 63145984;
 
