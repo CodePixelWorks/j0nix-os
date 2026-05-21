@@ -18,6 +18,5 @@ in
     ./ollama.nix
     ./syncthing.nix
     ./twintail-launcher.nix
-    ./vuescan.nix
   ];
 }
