@@ -8,10 +8,15 @@
 let
   resolveEnabledWms = import ../../system/lib/enabled-wms.nix { inherit lib; };
   enabledWms = resolveEnabledWms settings;
+  hardwareConfigurationFile =
+    if builtins.pathExists ./hardware-configuration.nix then
+      ./hardware-configuration.nix
+    else
+      ./hardware-configuration.nix.example;
 in
 {
   imports = [
-    ./hardware-configuration.nix
+    hardwareConfigurationFile
     ./modules/boot.nix
     ./modules/binfmt.nix
     ./modules/audio.nix
