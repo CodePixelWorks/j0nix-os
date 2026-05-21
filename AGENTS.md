@@ -215,6 +215,7 @@ Controlled by:
 - Make system scripts robust: explicit inputs, deterministic outputs, predictable cleanup, and no hidden cross-script coupling.
 - Keep `profiles/*/modules/` focused on theme/profile configuration (data + simple toggles), not heavy transformation logic.
 - Put reusable processing logic (generators, validations, mappers) into `system/*` modules and `system/lib/*` helpers.
+- **Profiles host-specific data; settings host-generic data.** Hardware IDs (resume UUIDs, USB device IDs, fan controllers), host-specific package versions (`nvidiaPackages.beta`), and per-host kernel blacklists belong in `profiles/`, never in `settings.nix`. `settings` is for feature toggles, cross-platform defaults, and user preferences that stay correct across different machines (e.g. enabling Docker, selecting a Hyprland shell, audio backend preference).
 - Prefer generic list/attr-driven models (e.g. declarative mount lists) over one-off `fooDisk*` variable trees.
 - Use append-style aggregation for extensible config snippets (e.g. `mkAfter` / list aggregation) so modules do not overwrite each other.
 - Keep kernel preset/config modules outside `profiles/` (e.g. under `system/`), and let profiles select/import them.
@@ -232,6 +233,7 @@ Controlled by:
 - Don’t duplicate package declarations across system/home modules without reason.
 - Don’t put host/profile-specific data into `system/lib/*`.
 - Don’t put reusable logic helpers into `profiles/*`.
+- **Don’t move host-specific declarations into `settings.nix`.** Resume device UUIDs, kernel module blacklists, hardware-specific NVMe tunables, custom fan controller configs, and per-device GPU packages stay in their profile module. Thin-piping every profile to `settings` destroys the host/profile boundary and pollutes cross-platform settings with machine-local data.
 - Don’t introduce speculative features not requested.
 
 ## Common Tasks
