@@ -7,7 +7,7 @@
   ...
 }:
 let
-  selectedShell = settings.wmShell or (settings.hyprlandShell or "dank-material-shell");
+  selectedShell = settings.wmShell or (settings.hyprlandShell or "caelestia-shell");
   dmsSettings = settings.dms or { };
   overviewSettings = dmsSettings.overview or { };
   overviewEnable = overviewSettings.enable or false;
