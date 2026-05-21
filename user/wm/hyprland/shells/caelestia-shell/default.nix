@@ -1,4 +1,5 @@
 {
+  config,
   inputs,
   lib,
   pkgs,
@@ -28,6 +29,7 @@ let
     else
       null;
   dmsSettings = settings.dms or { };
+  homeBinDir = "${config.home.profileDirectory}/bin";
   caelestiaSettings = (settings.programs or { }).caelestia or { };
   caelestiaThemeSettings = caelestiaSettings.theme or { };
   quickshellRuntime = caelestiaSettings.quickshellRuntime or "wrapped";
@@ -282,7 +284,7 @@ let
       ++ lib.optionals keepassEnabled [
         {
           name = "Passwords";
-          command = [ "keepassxc-toggle" ];
+          command = [ "${homeBinDir}/keepassxc-toggle" ];
         }
       ];
     };
@@ -1022,14 +1024,14 @@ in
                           elif (.name? == "Manual Theme") then
                             .command = ["caelestia-smart-theme", "disable"]
                           elif ($keepassEnabled and .name? == "Passwords") then
-                            .command = ["keepassxc-toggle"]
+                            .command = ["${homeBinDir}/keepassxc-toggle"]
                           else
                             .
                           end
                         )
                       | if any(.[]; .name? == "Auto Theme") then . else . + [{ "name": "Auto Theme", "command": ["caelestia-smart-theme", "enable"] }] end
                       | if any(.[]; .name? == "Manual Theme") then . else . + [{ "name": "Manual Theme", "command": ["caelestia-smart-theme", "disable"] }] end
-                      | if ($keepassEnabled and (any(.[]; .name? == "Passwords") | not)) then . + [{ "name": "Passwords", "command": ["keepassxc-toggle"] }] else . end
+                      | if ($keepassEnabled and (any(.[]; .name? == "Passwords") | not)) then . + [{ "name": "Passwords", "command": ["${homeBinDir}/keepassxc-toggle"] }] else . end
                     )
                   else
                     .

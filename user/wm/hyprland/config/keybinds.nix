@@ -1,6 +1,7 @@
 {
   lib,
   settings,
+  homeBinDir,
   isCaelestiaShell,
   hyprctlExec,
   appExec,
@@ -141,7 +142,7 @@ let
     "$mainMod SHIFT, F12, exec, wm-hypr-keybind-probe super-shift-f12"
   ]
   ++ lib.optionals (keepassEnabled && keepassWorkspaceEnable) [
-    "${keepassToggleBind}, exec, keepassxc-toggle"
+    "${keepassToggleBind}, exec, ${homeBinDir}/keepassxc-toggle"
   ]
   ++ lib.optionals minimizerEnabled [
     "${minimizerToggleBind}, exec, ${minimizerToggleCommand}"
