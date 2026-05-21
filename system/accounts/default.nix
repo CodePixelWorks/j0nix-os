@@ -11,12 +11,13 @@ let
   mkUserPasswordSecret = username:
     let
       userCfg = userSettings.${username} or { };
+      userSecretsCfg = userCfg.secrets or { };
       passwordSecret = userCfg.passwordSecret or null;
     in
     lib.optionalAttrs (passwordSecret != null) {
       "${username}-password" = {
         key = passwordSecret.key or "hashedPassword";
-        sopsFile = passwordSecret.sopsFile or (settings.secrets.defaultUserSopsFile or null);
+        sopsFile = passwordSecret.sopsFile or (userSecretsCfg.defaultSopsFile or settings.secrets.defaultUserSopsFile or null);
         neededForUsers = true;
       };
     };
