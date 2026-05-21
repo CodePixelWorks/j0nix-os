@@ -24,7 +24,11 @@
 }:
 let
   renderLines = key: values: lib.concatStringsSep "\n" (map (value: "${key} = ${value}") values);
-  staticMonitorLines = profileDetails.hyprlandMonitors or [ ];
+  monitorLib = import ../../../../system/lib/monitor.nix { inherit lib; };
+  staticMonitorLines =
+    map
+      (m: if builtins.isString m then m else monitorLib.renderMonitorRule m)
+      (profileDetails.hyprlandMonitors or [ ]);
   hyprlandCfg = settings.hyprland or { };
   unknownMonitorFallbackRule = hyprlandCfg.unknownMonitorFallbackRule or ",preferred,auto,1";
   hasUnknownMonitorFallbackRule =
