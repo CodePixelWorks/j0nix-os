@@ -6,6 +6,7 @@
   ...
 }:
 let
+  monitorLib = import ../lib/monitor.nix { inherit lib; };
   gaming = config.j0nix.desktop.gaming or { };
   gamingEnabled = gaming.enable or true;
   drivers = config.j0nix.desktop.drivers or { };
@@ -209,7 +210,7 @@ let
   defaultTargetScale = toString (
     if sunshineDisplayTargetConfig != null then sunshineDisplayTargetConfig.scale or 1 else 1
   );
-  allowedTargetResolutions = lib.concatStringsSep " " sunshineDisplayTargetResolutions;
+  allowedTargetResolutions = lib.concatStringsSep " " (map monitorLib.renderResolution sunshineDisplayTargetResolutions);
   allowedTargetFps = lib.concatStringsSep " " (map toString sunshineDisplayTargetFps);
   settingsFormat = pkgs.formats.keyValue { };
   sunshineServicePriorityConfig =
@@ -865,9 +866,9 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
       assertion =
         !sunshineDisplayTargetEnabled
         || builtins.all (
-          mode: builtins.match "^[0-9]+x[0-9]+$" mode != null
+          mode: builtins.match "^[0-9]+x[0-9]+$" (monitorLib.renderResolution mode) != null
         ) sunshineDisplayTargetResolutions;
-      message = "settings.sunshine.displayTarget.resolutions must contain WIDTHxHEIGHT strings such as 2880x1800";
+      message = "settings.sunshine.displayTarget.resolutions must contain WIDTHxHEIGHT strings or attrsets";
     }
     {
       assertion = !sunshineDisplayTargetEnabled || builtins.all (fps: fps > 0) sunshineDisplayTargetFps;
