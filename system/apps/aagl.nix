@@ -7,7 +7,7 @@ in
 {
   imports = lib.optional enabled inputs.aagl.nixosModules.default;
 
-  config = lib.mkIf enabled {
+  config = lib.optionalAttrs enabled {
     j0nix.desktop.nix = {
       substituters = lib.mkAfter (inputs.aagl.nixConfig.substituters or [ ]);
       trustedPublicKeys = lib.mkAfter (inputs.aagl.nixConfig."trusted-public-keys" or [ ]);

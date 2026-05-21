@@ -1,0 +1,154 @@
+{ ... }:
+
+{
+  # Public starter defaults.
+  #
+  # Copy this file to `settings.nix` in the public mirror, then replace the
+  # placeholder user/profile values with your own.
+
+  enableSops = true;
+
+  timezone = "Europe/Berlin";
+  locale = "en_US.UTF-8";
+  keyboard = {
+    layouts = [ "us" ];
+    options = [ "caps:escape" ];
+  };
+  keyboardLayout = "us";
+  keyboardOptions = "caps:escape";
+  consoleKeyMap = "us";
+
+  preferredEditor = "nvim";
+  preferredBrowser = "chromium";
+  preferredFileManager = "nautilus";
+  preferredTerminal = "kitty";
+
+  programs = {
+    fastfetch.enable = true;
+    aagl = {
+      enable = false;
+      launchers = {
+        animeGame = false;
+        animeGames = false;
+        honkers = false;
+        honkersRailway = false;
+        sleepy = false;
+        wavey = false;
+      };
+    };
+    kitty = {
+      enable = true;
+      enableThemes = true;
+      theme = "github-dark";
+      enableTabs = true;
+      fontSize = 12;
+      padding = {
+        x = 8;
+        y = 8;
+      };
+      opacity = 1.0;
+    };
+  };
+
+  wms = [ ];
+  theme = "catppuccin";
+  colorSchemePreference = "dark";
+  iconTheme = {
+    enable = true;
+    package = "papirus";
+    name = "Papirus-Dark";
+  };
+
+  hyprland = {
+    useUWSM = true;
+    appExecBackend = "auto";
+    sessionEnv = {
+      qtPlatformTheme = "hyprqt6engine";
+      app2unitSlices = "a=app-graphical.slice b=background-graphical.slice s=session-graphical.slice";
+      extra = { };
+    };
+    layoutToggleBind = "$mainMod CTRL, BackSpace";
+    overviewToggleBind = "$mainMod, TAB";
+    monitorTools = {
+      default = "nwg-displays";
+      installHyprdynamicmonitors = false;
+      installNwgDisplays = true;
+      autoStart = true;
+    };
+  };
+
+  dms = {
+    mode = "integrated";
+    startup.mode = "systemd";
+    overview = {
+      enable = false;
+      autostart = false;
+    };
+  };
+
+  sunshine = {
+    disableLockScreenDuringStream = true;
+    displayTarget = {
+      enable = false;
+      backend = "hyprland-headless";
+      outputName = "SUNSHINE-HEADLESS";
+      appName = "Adaptive Display";
+      capture = "auto";
+      resolutions = [ ];
+      fps = [ ];
+    };
+    virtualDisplay = {
+      enable = false;
+    };
+  };
+
+  displayManager = "greetd";
+  greetd = {
+    greeter = "qmlgreet";
+    regreetCompositor = "cage";
+    qmlgreet = {
+      defaultSession = "Auto (User Default)";
+      colorSchemePath = null;
+      backgroundImage = null;
+      iconTheme = null;
+      font = "";
+      fontSize = 10;
+      showAvatars = true;
+    };
+  };
+
+  custom = {
+    systemPackages = [ ];
+    sysctl = { };
+  };
+
+  # Add one entry per user. User names are derived from these keys.
+  userSettings = {
+    "your-user" = {
+      name = "Your Name";
+      email = "you@example.com";
+      shell = "zsh";
+      defaultWMS = "hyprland";
+      wmShell = "none";
+      editors = [ "neovim" ];
+      browsers = [ "chromium" ];
+      fileManagers = [ "nautilus" ];
+      preferredFileManager = "nautilus";
+      extraSoftware = [ ];
+      programs = {
+        elementDesktop.enable = false;
+        keepassxc.enable = false;
+        syncthing.enable = false;
+      };
+      secrets = { };
+      dev = {
+        docker.enable = false;
+        ai.enable = false;
+      };
+      roles = [
+        "desktop-basics"
+        "developer"
+      ];
+    };
+  };
+}
