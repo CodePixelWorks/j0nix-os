@@ -15,7 +15,6 @@ let
     gparted-j0nix = final.callPackage (baseDir + "/system/software/pkgs/storage/gparted-j0nix.nix") {
       gparted = prev.gparted;
     };
-    vuescan = final.callPackage (baseDir + "/system/software/pkgs/scanning/vuescan.nix") { };
     darkly-qt6 = final.kdePackages.callPackage (baseDir + "/system/software/pkgs/qt/darkly-qt6.nix") { };
     hyprqt6engine = final.callPackage (baseDir + "/system/software/pkgs/qt/hyprqt6engine.nix") { };
     mauiman4 = final.callPackage (baseDir + "/system/software/pkgs/maui/mauiman4.nix") { };
