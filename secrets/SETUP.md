@@ -48,6 +48,10 @@ Use:
 - host files for system services and machine-local credentials
 - user files for SSH keys, API tokens, and user-scoped app secrets
 
+If you are using the public GitHub mirror, start from the template files and
+copy them into the live paths in your local checkout before creating or
+decrypting any secret payloads.
+
 ## 1. Create The Host Key
 
 The system key should live at:
