@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
   cfg = config.j0nix.desktop.scanning;
 in
@@ -13,7 +13,7 @@ in
     extraBackends = lib.mkOption {
       type = lib.types.listOf lib.types.package;
       default = [ ];
-      description = "Additional SANE backend packages (for example hplipWithPlugin).";
+      description = "Additional SANE backend packages.";
     };
 
     software = lib.mkOption {
@@ -25,17 +25,23 @@ in
     enableNetBackend = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Enable SANE net backend (listens on 0.0.0.0:6566, exposes scanner to network).";
+      description = "Enable SANE net backend.";
+    };
+
+    useHplipBackend = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Include hplipWithPlugin as a SANE backend (requires allowUnfree).";
     };
   };
 
   config = lib.mkIf cfg.enable {
     hardware.sane = {
       enable = true;
-      extraBackends = cfg.extraBackends;
+      extraBackends = cfg.extraBackends ++ lib.optionals cfg.useHplipBackend [ pkgs.hplipWithPlugin ];
       disabledDefaultBackends = lib.optionals (!cfg.enableNetBackend) [ "net" ];
     };
 
-    j0nix.software.systemPackages = cfg.software;
+    j0nix.software.systemPackages = cfg.software ++ lib.optionals cfg.useHplipBackend [ pkgs.hplip ];
   };
 }
