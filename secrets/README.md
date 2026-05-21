@@ -1,5 +1,9 @@
 # SOPS-NIX Backup & Recovery Guide
 
+The private repo may keep encrypted secret files as the source-of-truth setup.
+The public GitHub mirror generated from it excludes those payloads and ships
+only templates and documentation needed to recreate the secrets locally.
+
 ## Critical Files to Backup
 
 ### 1. Host Age Key
