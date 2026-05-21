@@ -119,6 +119,31 @@ rec
   normalizeMonitor = m:
     if builtins.isString m then parseMonitorRule m else m;
 
+  /* Render a resolution attrset { width; height; } to "WIDTHxHEIGHT". */
+  renderResolution = res:
+    if builtins.isString res then res
+    else "${toString res.width}x${toString res.height}";
+
+  /* Parse a resolution string "WIDTHxHEIGHT" into an attrset. */
+  parseResolution = str:
+    let
+      match = builtins.match "^([0-9]+)x([0-9]+)$" str;
+    in
+    if match == null then null
+    else { width = lib.toInt (builtins.elemAt match 0); height = lib.toInt (builtins.elemAt match 1); };
+
+  /* Accept either a string or an attrset and return a normalized attrset. */
+  normalizeResolution = res:
+    if builtins.isString res then parseResolution res else res;
+
   # Type shorthand for option declarations.
   monitorList = types.listOf (types.submodule monitorSubmodule);
+
+  # Type shorthand for resolution lists.
+  resolutionList = types.listOf (types.either types.str (types.submodule {
+    options = {
+      width = mkOption { type = types.int; };
+      height = mkOption { type = types.int; };
+    };
+  }));
 }
