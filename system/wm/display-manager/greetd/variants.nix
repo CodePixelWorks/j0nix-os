@@ -1,6 +1,10 @@
-{ lib, pkgs }:
+{ lib, pkgs, settings }:
 let
   regreetPackage = if pkgs ? regreet then pkgs.regreet else pkgs.greetd.regreet;
+  keyboardLayout = settings.keyboardLayout or "de";
+  keyboardOptions = settings.keyboardOptions or "caps:escape";
+  xkbEnv = "${pkgs.coreutils}/bin/env XKB_DEFAULT_LAYOUT=${lib.escapeShellArg keyboardLayout}"
+    + " XKB_DEFAULT_OPTIONS=${lib.escapeShellArg keyboardOptions}";
 in
 {
   tuigreet = { user, sessionCommand }: {
@@ -14,7 +18,7 @@ in
       if compositor == "hyprland" then
         hyprlandCommand
       else
-        "${lib.getExe pkgs.cage} -s -mlast -- ${lib.getExe regreetPackage}";
+        "${xkbEnv} ${lib.getExe pkgs.cage} -s -mlast -- ${lib.getExe regreetPackage}";
   };
 
   qmlgreet = {
@@ -28,7 +32,7 @@ in
       if compositor == "hyprland" then
         hyprlandCommand
       else
-        "${lib.getExe pkgs.cage} -s -mlast -- ${lib.getExe package} -c ${lib.escapeShellArg configPath}";
+        "${xkbEnv} ${lib.getExe pkgs.cage} -s -mlast -- ${lib.getExe package} -c ${lib.escapeShellArg configPath}";
   };
 
   dmsGreeter = { command }: {
