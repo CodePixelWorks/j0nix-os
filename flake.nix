@@ -15,10 +15,20 @@
       };
       profileName = "desktop";
       profileDir = baseDir + "/profiles/${profileName}";
-      profileDetails = import (profileDir + "/details.nix") { };
+      settingsFile =
+        if builtins.pathExists (baseDir + "/settings.nix") then
+          baseDir + "/settings.nix"
+        else
+          baseDir + "/settings.nix.example";
+      profileDetailsFile =
+        if builtins.pathExists (profileDir + "/details.nix") then
+          profileDir + "/details.nix"
+        else
+          profileDir + "/details.nix.example";
+      profileDetails = import profileDetailsFile { };
       profileMeta = profileDetails;
       profileSecrets = import (profileDir + "/secrets.nix");
-      rawSettings = import (baseDir + "/settings.nix") { inherit inputs; };
+      rawSettings = import settingsFile { inherit inputs; };
 
       pkgs = import nixpkgs {
         system = profileMeta.system;

@@ -1,0 +1,14 @@
+{ ... }:
+rec {
+  system = "x86_64-linux";
+  hostname = "your-hostname";
+
+  # Add your own monitor/output data here when you have it.
+  # The public mirror keeps these arrays empty so fresh clones still evaluate.
+  hyprlandMonitors = [ ];
+  hyprlandOutputBindingsBase = [ ];
+  hyprlandSunshineHeadlessOutput = null;
+  hyprlandSunshinePhysicalOutput = null;
+  hyprlandInitialOutputStatesBase = [ ];
+  hyprlandToggleableOutputsBase = [ ];
+}

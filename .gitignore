@@ -25,6 +25,8 @@ Thumbs.db
 # Logs / temp
 *.log
 tmp/
+.public-export/
+public-export/
 
 # SOPS migration/rekey backups
 secrets/.backups/
@@ -32,3 +34,8 @@ secrets/.backups/
 # AI session resume scripts
 /r.sh
 /RESUME.sh
+
+# Optional local-only overrides for downstream mirrors
+settings.local.nix
+profiles/desktop/details.local.nix
+profiles/desktop/hardware-configuration.local.nix

@@ -7,8 +7,10 @@ Main desktop profile for `j0nix-os`.
 - `configuration.nix`: core system config, users, audio, locale, packages
 - `home.nix`: base user packages and XDG defaults
 - `details.nix`: profile-specific metadata used by settings merge
+- `details.nix.example`: public starter copy of the profile metadata
 - `secrets.nix`: profile-scoped system secret defaults (merged into settings.secrets)
 - `hardware-configuration.nix`: hardware-generated baseline
+- `hardware-configuration.nix.example`: public starter placeholder for new machines
 
 ## Key Settings Hooks
 
