@@ -10,7 +10,7 @@ let
   hasUsers = users != [ ];
   primaryUser = if hasUsers then builtins.head users else "root";
   dm = import ./display-manager/contract.nix { inherit lib; };
-  greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs; };
+  greetdVariants = import ./display-manager/greetd/variants.nix { inherit lib pkgs settings; };
   selectedDisplayManager = dm.resolveDisplayManager settings;
   useGreetd = selectedDisplayManager == "greetd";
   useSddm = selectedDisplayManager == "sddm";
