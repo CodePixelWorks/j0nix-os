@@ -2,7 +2,7 @@
 let
   preferredTerminal = settings.preferredTerminal or "kitty";
   homeBinDir = "${config.home.profileDirectory}/bin";
-  selectedShell = settings.wmShell or (settings.hyprlandShell or "dank-material-shell");
+  selectedShell = settings.wmShell or (settings.hyprlandShell or "caelestia-shell");
   useDmsShell = selectedShell == "dank-material-shell";
   dms = (settings.dms or { });
   dmsMode = dms.mode or "integrated";
