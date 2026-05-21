@@ -200,19 +200,6 @@ let
     }
 
     {
-      name = "bambu-studio-class-no-center-override";
-      match.class = "^(BambuStudio)$";
-      float = true;
-      center = false;
-    }
-    {
-      name = "bambu-studio-title-no-center-override";
-      match.title = "^(bambu-studio)$";
-      float = true;
-      center = false;
-    }
-
-    {
       name = "float-nmtui";
       match = {
         class = "^(foot)$";
