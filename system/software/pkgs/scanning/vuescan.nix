@@ -82,6 +82,14 @@ stdenv.mkDerivation rec {
     runHook postInstall
   '';
 
+  preFixup = ''
+    # VueScan is sensitive to some custom GTK theme CSS; force a known-safe
+    # theme so the binary does not pick up the session theme's gtk.css.
+    gappsWrapperArgs+=(
+      --set GTK_THEME Adwaita:dark
+    )
+  '';
+
   meta = with lib; {
     description = "Scanner software for Linux";
     homepage = "https://www.vuescan.com/";
