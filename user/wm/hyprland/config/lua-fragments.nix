@@ -194,43 +194,18 @@ let
         };
       }
     );
-  parseMonitorLine =
-    line:
-    let
-      parts = map trim (lib.splitString "," line);
-      len = builtins.length parts;
-    in
-    if len == 0 then
-      null
+
+  rawDispatchCommandWithArgument = command:
+    if lib.strings.hasPrefix "hyprctl " command then
+      command
     else
-      let
-        output = builtins.elemAt parts 0;
-      in
-      if output == "" then
-        {
-          output = "";
-          mode = "preferred";
-          position = "auto";
-          scale = "1";
-        }
-      else if len >= 2 && builtins.elemAt parts 1 == "disable" then
-        {
-          inherit output;
-          disabled = true;
-        }
-      else if len >= 4 then
-        {
-          inherit output;
-          mode = builtins.elemAt parts 1;
-          position = builtins.elemAt parts 2;
-          scale = builtins.elemAt parts 3;
-        }
-      else
-        null;
+      "hyprctl dispatch -- ${command}";
+
+  monitorLib = import ../../../../system/lib/monitor.nix { inherit lib; };
 
   staticMonitorLines = profileDetails.hyprlandMonitors or [ ];
   allMonitorLines = staticMonitorLines ++ managedMonitorLines;
-  monitorEntries = builtins.filter (entry: entry != null) (map parseMonitorLine allMonitorLines);
+  monitorEntries = builtins.filter (entry: entry != null) (map monitorLib.parseMonitorRule allMonitorLines);
 
   inputConfig = {
     input = {
