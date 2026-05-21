@@ -32,6 +32,7 @@ remove_paths=(
   "settings.nix"
   "profiles/desktop/details.nix"
   "profiles/desktop/hardware-configuration.nix"
+  "nix-bug.txt"
 )
 
 for path in "${remove_paths[@]}"; do
