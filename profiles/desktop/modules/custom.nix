@@ -1,9 +1,9 @@
-{ lib, settings, ... }:
-let
-  custom = settings.custom or { };
-  customSysctl = custom.sysctl or { };
-in
+{ settings, ... }:
+
 {
   j0nix.desktop.sysctl.extraFragments =
-    lib.optional (customSysctl != { }) customSysctl;
+    let
+      sysctl = (settings.custom or { }).sysctl or { };
+    in
+    if sysctl != { } then [ sysctl ] else [ ];
 }
