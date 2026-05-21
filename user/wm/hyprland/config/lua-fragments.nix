@@ -203,9 +203,8 @@ let
 
   monitorLib = import ../../../../system/lib/monitor.nix { inherit lib; };
 
-  staticMonitorLines = profileDetails.hyprlandMonitors or [ ];
-  allMonitorLines = staticMonitorLines ++ managedMonitorLines;
-  monitorEntries = builtins.filter (entry: entry != null) (map monitorLib.parseMonitorRule allMonitorLines);
+  staticMonitorEntries = builtins.filter (e: e != null) (map monitorLib.normalizeMonitor (profileDetails.hyprlandMonitors or [ ]));
+  allMonitorEntries = staticMonitorEntries ++ builtins.filter (e: e != null) (map monitorLib.normalizeMonitor managedMonitorLines);
 
   inputConfig = {
     input = {
@@ -291,7 +290,7 @@ let
         "hl.monitor(${luaValue { output = monitor.output; disabled = true; }})"
       else
         "hl.monitor(${luaValue { output = monitor.output; disabled = false; mode = monitor.mode; position = monitor.position; scale = monitor.scale; }})"
-    ) monitorEntries
+    ) allMonitorEntries
   );
   windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
   keybindLua = lib.concatStringsSep "\n" (map renderBind hyprlandKeybinds.structuredLuaGlobalBinds);

@@ -328,10 +328,13 @@ let
   managedConfigMonitorLines = map initialOutputStateToMonitorLine initialOutputStates;
   monitorNameFromLine =
     line:
-    let
-      match = builtins.match "[[:space:]]*([^,[:space:]]+)[[:space:]]*,.*" line;
-    in
-    if match == null then line else builtins.elemAt match 0;
+    if builtins.isString line then
+      let
+        match = builtins.match "[[:space:]]*([^,[:space:]]+)[[:space:]]*,.*" line;
+      in
+      if match == null then line else builtins.elemAt match 0
+    else
+      line.output or "";
   filteredProfileDetails = profileDetails // {
     hyprlandMonitors = builtins.filter (
       line: !(builtins.elem (monitorNameFromLine line) managedConfigMonitorNames)
