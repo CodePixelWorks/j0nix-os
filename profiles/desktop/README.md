@@ -16,7 +16,6 @@ Main desktop profile for `j0nix-os`.
 - `settings.audio.*`
 - `settings.userSettings.<name>.storage.*`
 - `settings.locale`, `settings.timezone`
-- `settings.inputMethod.*`
 - `settings.wms`
 
 ## Storage
