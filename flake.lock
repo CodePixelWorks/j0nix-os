@@ -77,6 +77,25 @@
         "type": "github"
       }
     },
+    "autodesk-fusion": {
+      "inputs": {
+        "home-manager": [
+          "home-manager"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "./integrations/autodesk-fusion-nixos",
+        "type": "path"
+      },
+      "original": {
+        "path": "./integrations/autodesk-fusion-nixos",
+        "type": "path"
+      },
+      "parent": []
+    },
     "base16": {
       "inputs": {
         "fromYaml": "fromYaml"
@@ -1482,6 +1501,7 @@
       "inputs": {
         "aagl": "aagl",
         "ags": "ags",
+        "autodesk-fusion": "autodesk-fusion",
         "caelestia-shell": "caelestia-shell",
         "caelestia-shell-dev": "caelestia-shell-dev",
         "codex-cli-nix": "codex-cli-nix",
