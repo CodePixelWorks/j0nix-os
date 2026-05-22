@@ -59,7 +59,7 @@ in
   coreBinds = [
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
-    "$mainMod, grave, exec, ${keybindHelpCommand}"
+    "$mainMod, apostrophe, exec, ${keybindHelpCommand}"
     "$mainMod CTRL, k, exec, wm-screen-keyboard-toggle"
     "$mainMod, f, fullscreen, 0"          # true fullscreen (hides shell/waybar)
     "$mainMod SHIFT, f, fullscreen, 1"    # maximize-ish, keeps shell visible
