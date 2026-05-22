@@ -3,6 +3,7 @@ set -euo pipefail
 
 output_dir="${1:?usage: export-public-github.sh OUTPUT_DIR}"
 repo_root="$(git rev-parse --show-toplevel)"
+cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-}"
 tmp_dir="$(mktemp -d)"
 
 cleanup() {
@@ -14,6 +15,9 @@ trap cleanup EXIT INT TERM
 rm -rf "$output_dir"
 mkdir -p "$(dirname "$output_dir")"
 
+# ---------------------------------------------------------------------------
+# 1. Copy working tree (current HEAD, with all changes since cutoff applied).
+# ---------------------------------------------------------------------------
 git -C "$repo_root" ls-files -co --exclude-standard -z | while IFS= read -r -d '' path; do
   case "$path" in
     .git|.git/*)
@@ -27,6 +31,9 @@ git -C "$repo_root" ls-files -co --exclude-standard -z | while IFS= read -r -d '
   cp -a "$src" "$dst"
 done
 
+# ---------------------------------------------------------------------------
+# 2. Strip secrets and host-specific data.
+# ---------------------------------------------------------------------------
 remove_paths=(
   ".sops.yaml"
   "settings.nix"
@@ -46,10 +53,31 @@ if [ -d "$tmp_dir/secrets/users" ]; then
   find "$tmp_dir/secrets/users" -mindepth 1 -maxdepth 1 -type f -delete
 fi
 
+# Drop backup directories within secrets
+rm -rf "$tmp_dir/secrets/.backups"
+
+# 3. Replace removed files with their public-safe example templates.
 cp -f "$tmp_dir/settings.nix.example" "$tmp_dir/settings.nix"
 cp -f "$tmp_dir/profiles/desktop/details.nix.example" "$tmp_dir/profiles/desktop/details.nix"
 cp -f "$tmp_dir/profiles/desktop/hardware-configuration.nix.example" "$tmp_dir/profiles/desktop/hardware-configuration.nix"
 cp -f "$tmp_dir/.sops.yaml.example" "$tmp_dir/.sops.yaml"
+
+# 4. Record cutoff metadata if configured.
+if [ -n "$cutoff_commit" ]; then
+  mkdir -p "$tmp_dir/.well-known"
+  total_commits=$(git -C "$repo_root" rev-list --all --count 2>/dev/null || echo "unknown")
+  kept_commits=$(git -C "$repo_root" rev-list "$cutoff_commit..HEAD" --count 2>/dev/null || echo "unknown")
+  cat > "$tmp_dir/.well-known/public-mirror-metadata.json" <<EOF
+{
+  "source_repository": "${PUBLIC_SOURCE_URL:-}",
+  "cutoff_commit": "$cutoff_commit",
+  "original_total_commits": $total_commits,
+  "commits_after_cutoff": $kept_commits,
+  "cutoff_reason": "Experimental phase concluded. Stable Settings/Profiles architecture established. Dead references removed.",
+  "exported_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+fi
 
 mv "$tmp_dir" "$output_dir"
 
