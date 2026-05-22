@@ -1,30 +1,97 @@
 { ... }:
 
 {
-  # Public starter defaults.
+  # ===========================================================================
+  # settings.nix.example — Fully commented reference for j0nix-os
+  # ===========================================================================
+  # Copy this file to settings.nix and replace all placeholders.
   #
-  # Copy this file to `settings.nix` in the public mirror, then replace the
-  # placeholder user/profile values with your own.
+  # Architecture boundary (AGENTS.md):
+  #   settings.nix = cross-platform toggles and defaults (no host data!)
+  #   profiles/     = host-specific hardware (monitors, UUIDs, drivers)
+  #   flake.nix     = host → profile wiring
+  #
+  # After editing: nix flake check --no-build
+  # ===========================================================================
 
-  enableSops = true;
-
+  # ---------------------------------------------------------------------------
+  # Locale & Input
+  # ---------------------------------------------------------------------------
   timezone = "Europe/Berlin";
   locale = "en_US.UTF-8";
   keyboard = {
+    # Multi-layout XKB for Wayland compositors.
     layouts = [ "us" ];
     options = [ "caps:escape" ];
   };
+  # Legacy flattened keys (kept for module compatibility).
   keyboardLayout = "us";
   keyboardOptions = "caps:escape";
   consoleKeyMap = "us";
 
+  # ---------------------------------------------------------------------------
+  # Secrets & Key Management (SOPS-nix)
+  # ---------------------------------------------------------------------------
+  enableSops = true;
+  secrets = {
+    # Default encrypted source for user-scoped secrets.
+    # Per-user override: userSettings.<name>.secrets.defaultSopsFile
+    defaultUserSopsFile = null;
+    defaultSopsFormat = "yaml"; # "yaml" | "json" | "binary" | "dotenv" | "ini"
+  };
+
+  # ---------------------------------------------------------------------------
+  # User Defaults (global fallbacks)
+  # ---------------------------------------------------------------------------
   preferredEditor = "nvim";
   preferredBrowser = "chromium";
   preferredFileManager = "nautilus";
   preferredTerminal = "kitty";
 
+  # ---------------------------------------------------------------------------
+  # Programs
+  # ---------------------------------------------------------------------------
   programs = {
+    kitty = {
+      enable = true;
+      enableThemes = true;
+      theme = "github-dark";
+      enableTabs = true;
+      fontSize = 12;
+      padding = { x = 8; y = 8; };
+      opacity = 1.0;
+    };
+
+    # VSCode / VSCodium extensions and theme
+    vscode = {
+      theme = {
+        colorTheme = "Dynamic Base16 DankShell";
+      };
+      extensions = {
+        openVSX = [
+          "vscodevim.vim"
+          "bbenoist.nix"
+          "jnoortheen.nix-ide"
+          "arrterian.nix-env-selector"
+          "ms-python.python"
+          "rust-lang.rust-analyzer"
+          "golang.go"
+          "redhat.vscode-yaml"
+          "ms-azuretools.vscode-docker"
+          "tamasfe.even-better-toml"
+          "esbenp.prettier-vscode"
+        ];
+        marketplace = [
+          "eamodio.gitlens"
+          "github.copilot"
+          "github.copilot-chat"
+        ];
+      };
+    };
+
+    # Application toggles (enable = true/false)
     fastfetch.enable = true;
+    alacritty.enable = false;
     aagl = {
       enable = false;
       launchers = {
@@ -36,53 +103,258 @@
         wavey = false;
       };
     };
-    kitty = {
-      enable = true;
-      enableThemes = true;
-      theme = "github-dark";
-      enableTabs = true;
-      fontSize = 12;
-      padding = {
-        x = 8;
-        y = 8;
+    autodeskFusion = {
+      enable = false;
+      installMode = "wine"; # "wine" | "wine-fix" | "proton"
+      gpuMode = "dxvk";     # "dxvk" | "opengl"
+      autoSetupOnLogin = false;
+    };
+    betterdiscord = {
+      enable = false;
+      installDiscord = true;
+    };
+    elementDesktop = {
+      enable = false;
+      brand = "Element";
+      homeserver.baseUrl = "https://matrix.example.com";
+      homeserver.serverName = "matrix.example.com";
+    };
+    bambulab = {
+      provider = "flatpak"; # "appimage" | "flatpak"
+    };
+    wlogout.enable = true;
+    caelestia = {
+      channel = "stable";      # "stable" | "dev"
+      quickshellRuntime = "wrapped"; # "wrapped" | "upstream"
+      theme = {
+        scheme = "catppuccin";
+        flavour = "mocha";
+        variant = "tonalspot";
+        mode = "dark"; # "light" | "dark" | null
+        smartScheme = false;
       };
-      opacity = 1.0;
+    };
+    windowsExe = {
+      enable = false;
+      bottleName = "Default";
+      runner = "kron4ek-wine-11.2-amd64";
+      autoBootstrapOnLogin = false;
+    };
+    windowsApps = {
+      packages = [ ];
+      autoSetupOnLogin = false;
     };
   };
 
-  wms = [ ];
+  # ---------------------------------------------------------------------------
+  # Gaming Defaults
+  # ---------------------------------------------------------------------------
+  gaming = {
+    openSourceGames = false;
+  };
+
+  # ---------------------------------------------------------------------------
+  # Storage (system mounts)
+  # ---------------------------------------------------------------------------
+  # Host-specific device paths/UUIDs belong HERE in settings (mount data),
+  # or in profiles for boot-critical filesystems. Pick one convention.
+  storage = {
+    systemMounts = [
+      # {
+      #   name = "games";
+      #   enable = true;
+      #   mountPoint = "/mnt/Games";
+      #   device = "/dev/disk/by-uuid/REPLACE-ME";
+      #   fsType = "ntfs3";
+      #   options = [ "rw" "umask=0002" "nofail" ];
+      #   gvfsShow = true;
+      #   gvfsName = "GAMES";
+      #   automount = false;
+      # }
+    ];
+  };
+
+  # ---------------------------------------------------------------------------
+  # Networking
+  # ---------------------------------------------------------------------------
+  network = {
+    wifiManagerGui.enable = true;
+    wifi = {
+      powersave = false;
+      backend = "wpa_supplicant";
+      scanRandMacAddress = false;
+      secretsAgent = "nm-applet";
+    };
+    tailscale = {
+      enable = false;
+    };
+    resolver = {
+      enable = false;
+      listenAddress = "127.0.0.1";
+      upstreamServers = [ "1.1.1.1" "1.0.0.1" ];
+      wildcardDomains = [ ];
+      records = { };
+    };
+    routing.preferWired = {
+      enable = true;
+      ethernetRouteMetric = 100;
+      wifiRouteMetric = 600;
+    };
+  };
+
+  # ---------------------------------------------------------------------------
+  # Hardware & Boot
+  # ---------------------------------------------------------------------------
+  drivers = {
+    firmware = {
+      enableRedistributable = true;
+    };
+    nvidia = {
+      package = "production"; # "production" | " beta" | "legacy"
+      persistenced = true;
+      powerManagement = {
+        enable = true;
+        finegrained = false;
+      };
+      lact.enable = true;
+    };
+  };
+
+  boot = {
+    splash = {
+      enable = true;
+      theme = "cuts";
+      quietBoot = true;
+      highResolution = true;
+    };
+  };
+
+  logging = {
+    journal = {
+      persistent = true;
+      maxRetention = "14day";
+      systemMaxUse = "1G";
+      runtimeMaxUse = "256M";
+      compress = true;
+    };
+  };
+
+  # ---------------------------------------------------------------------------
+  # Devices & Peripherals
+  # ---------------------------------------------------------------------------
+  scanning = {
+    enable = true;
+    useHplipBackend = true;
+  };
+
+  audio = {
+    backend = "pipewire"; # "pipewire" | "pulseaudio"
+    preventInterfaceSuspend = true;
+    bluetooth = {
+      enableHiFiCodecs = true;
+      enableMsbc = true;
+      codecs = [ "sbc" "sbc_xq" "aac" "aptx" "aptx_hd" "ldac" ];
+    };
+  };
+
+  # ---------------------------------------------------------------------------
+  # Developer Tooling
+  # ---------------------------------------------------------------------------
+  dev = {
+    enable = true;
+    docker = {
+      autoPrune = true;
+      addressPools = [
+        { base = "10.66.0.0/16"; size = 24; }
+      ];
+    };
+    nixLd = {
+      enable = true;
+    };
+    python = {
+      enable = true;
+      versionManager = "mise"; # "mise" | "none"
+      installUv = true;
+    };
+    androidStudio = false;
+    wvkbd = false;
+    virtualisation = {
+      enable = false;
+      vagrant = false;
+      qemu = false;
+    };
+    ai = {
+      installScope = "system"; # "system" | "user"
+      codex = {
+        enable = false;
+        provider = "upstream"; # "upstream" | "compat"
+        vscode = true;
+        mcp = {
+          nixos = true;
+          hyprland = true;
+          lsp = {
+            enable = true;
+            languages = [ "nix" "rust" "python" "typescript" "go" ];
+          };
+        };
+      };
+      ncp = false;
+      kiloCode = false;
+      caveman = false;
+      opencode = false;
+      claudeCode = false;
+      gemini = false;
+      hermes = false;
+      mcpRemotes = { };
+    };
+  };
+
+  # ---------------------------------------------------------------------------
+  # Global Escape Hatches
+  # ---------------------------------------------------------------------------
+  custom = {
+    systemPackages = [ ];
+    sysctl = {
+      # "kernel.sched_bore" = 1;
+    };
+  };
+
+  # ---------------------------------------------------------------------------
+  # Desktop, WM & Theming
+  # ---------------------------------------------------------------------------
+  wms = [ ]; # Extra WM modules to install globally
   theme = "catppuccin";
-  colorSchemePreference = "dark";
+  colorSchemePreference = "dark"; # "light" | "dark"
   iconTheme = {
     enable = true;
-    package = "papirus";
-    name = "Papirus-Dark";
+    package = "colloid"; # "colloid" | "papirus" | "adwaita" | "breeze"
+    name = "Colloid-Dark";
   };
 
   hyprland = {
     useUWSM = true;
-    appExecBackend = "auto";
+    appExecBackend = "auto"; # "auto" | "app2unit" | "uwsm"
     sessionEnv = {
-      qtPlatformTheme = "hyprqt6engine";
+      qtPlatformTheme = "hyprqt6engine"; # "hyprqt6engine" | "qtengine" | "qt6ct" | "qt5ct" | null
       app2unitSlices = "a=app-graphical.slice b=background-graphical.slice s=session-graphical.slice";
       extra = { };
     };
     layoutToggleBind = "$mainMod CTRL, BackSpace";
     overviewToggleBind = "$mainMod, TAB";
     monitorTools = {
-      default = "nwg-displays";
+      default = "nwg-displays"; # "hyprdynamicmonitors" | "nwg-displays"
       installHyprdynamicmonitors = false;
       installNwgDisplays = true;
       autoStart = true;
     };
-  };
-
-  dms = {
-    mode = "integrated";
-    startup.mode = "systemd";
-    overview = {
-      enable = false;
-      autostart = false;
+    debug = {
+      # Keep false with "dank-material-shell" to avoid package collisions.
+      installRawQuickshell = false;
+      keybindDiagnostics = {
+        enable = false;
+        delaySeconds = 8;
+        logDir = "\${XDG_STATE_HOME:-$HOME/.local/state}/hyprland/diagnostics";
+      };
     };
   };
 
@@ -90,22 +362,48 @@
     disableLockScreenDuringStream = true;
     displayTarget = {
       enable = false;
-      backend = "hyprland-headless";
+      backend = "hyprland-headless"; # "hyprland-headless" | "physical-output"
       outputName = "SUNSHINE-HEADLESS";
       appName = "Adaptive Display";
-      capture = "auto";
-      resolutions = [ ];
-      fps = [ ];
+      capture = "auto"; # "auto" | "wlr" | "kms" | "x11" | "nvfbc"
+      resolutions = [
+        { width = 1920; height = 1080; }
+        { width = 1280; height = 720; }
+      ];
+      fps = [ 60 ];
     };
     virtualDisplay = {
       enable = false;
     };
   };
 
-  displayManager = "greetd";
+  dms = {
+    mode = "integrated"; # "integrated" | "separate"
+    startup.mode = "systemd"; # "systemd" | "exec-once"
+    install = {
+      flakeRef = "github:AvengeMedia/DankMaterialShell";
+      dgopRef = "github:AvengeMedia/dgop";
+      cliVersion = "0.2.3";
+    };
+    wallpaper = {
+      wallpaperPath = "/run/current-system/sw/share/j0nix/wallpapers/wallhaven-21d3r9.jpg";
+      wallpaperFillMode = "PreserveAspectCrop";
+      monitorWallpapers = { };
+    };
+    workspaces = {
+      count = 10;
+      showOccupiedOnly = false;
+    };
+    overview = {
+      enable = true;
+      autostart = true;
+    };
+  };
+
+  displayManager = "greetd"; # "greetd" | "sddm" | "gdm"
   greetd = {
-    greeter = "qmlgreet";
-    regreetCompositor = "cage";
+    greeter = "qmlgreet"; # "tuigreet" | "regreet" | "qmlgreet" | "dms-greeter"
+    regreetCompositor = "cage"; # "cage" | "hyprland"
     qmlgreet = {
       defaultSession = "Auto (User Default)";
       colorSchemePath = null;
@@ -117,19 +415,18 @@
     };
   };
 
-  custom = {
-    systemPackages = [ ];
-    sysctl = { };
-  };
-
-  # Add one entry per user. User names are derived from these keys.
+  # ---------------------------------------------------------------------------
+  # Per-User Overrides
+  # ---------------------------------------------------------------------------
+  # Add one entry per user. The username is the attribute name.
+  # Only specify differences from global defaults above.
   userSettings = {
     "your-user" = {
       name = "Your Name";
       email = "you@example.com";
-      shell = "zsh";
-      defaultWMS = "hyprland";
-      wmShell = "none";
+      shell = "zsh"; # "zsh" | "fish"
+      defaultWMS = "hyprland"; # "hyprland" | "gnome" | "niri" | "mangowc"
+      wmShell = "none"; # "ags" | "dank-material-shell" | "noctalia-shell" | "caelestia-shell" | "none"
       editors = [ "neovim" ];
       browsers = [ "chromium" ];
       fileManagers = [ "nautilus" ];
@@ -140,10 +437,49 @@
         keepassxc.enable = false;
         syncthing.enable = false;
       };
-      secrets = { };
+      secrets = {
+        age.keyFile = "/home/your-user/.config/sops/age/keys.txt";
+        defaultSopsFile = null;
+        files = { };
+        sshKeys = { };
+        gpgKeys = { };
+      };
+      storage = {
+        sambaShares = [ ];
+      };
       dev = {
         docker.enable = false;
         ai.enable = false;
+        git = {
+          enable = true;
+          defaultBranch = "main";
+          hostProfiles = {
+            github = {
+              userName = "your-username";
+              userEmail = "you@example.com";
+            };
+          };
+        };
+        ssh = {
+          enable = true;
+          addKeysToAgent = "yes";
+          agent = {
+            enable = true;
+            provider = "openssh"; # "openssh" | "gnome-keyring" | "none"
+          };
+          hosts = {
+            github = {
+              host = "github.com";
+              user = "git";
+              identityFile = "~/.ssh/id_ed25519";
+              identitiesOnly = true;
+            };
+          };
+        };
+        gpg = {
+          enable = false;
+          keys = { };
+        };
       };
       roles = [
         "desktop-basics"
