@@ -1,14 +1,127 @@
 { ... }:
 rec {
+  # ===========================================================================
+  # profiles/<profile>/details.nix.example — Per-host hardware data
+  # ===========================================================================
+  # Copy to details.nix and fill in your actual monitor layout.
+  #
+  # Architecture boundary (AGENTS.md):
+  #   This file = host-specific data (monitors, resume UUIDs, fan controllers)
+  #   settings.nix = cross-platform toggles (generics, no host data!)
+  #   NEVER put device UUIDs, kernel blacklists, or GPU overrides in settings.nix.
+  #
+  # After editing: nix flake check --no-build
+  # ===========================================================================
+
+  # Target system architecture.
   system = "x86_64-linux";
+
+  # Hostname used by the profile. Must match the flake.nix host mapping.
   hostname = "your-hostname";
 
-  # Add your own monitor/output data here when you have it.
-  # The public mirror keeps these arrays empty so fresh clones still evaluate.
-  hyprlandMonitors = [ ];
-  hyprlandOutputBindingsBase = [ ];
-  hyprlandSunshineHeadlessOutput = null;
+  # ---------------------------------------------------------------------------
+  # Hyprland Monitor Configuration
+  # ---------------------------------------------------------------------------
+  # Each monitor is an attrset with these fields:
+  #   output          — Connector name, e.g. "DP-1", "HDMI-A-2"
+  #   mode            — "2560x1440@240" or "preferred"
+  #   position        — "0x0" or "auto"
+  #   scale           — Float scale factor (default: 1.0)
+  #   disabled        — Start disabled (default: false)
+  #   description     — Human-readable label
+  #   bindIndex       — Workspace number for toggle keybind (1..10)
+  #   focusOnEnable   — Focus this monitor when enabled (default: false)
+  #   enabledByDefault — Start enabled (default: true)
+  #   workspaceHandoff — { enable = true; targetMonitor = "DP-1"; }
+  #
+  # Use `nix shell nixpkgs#wlr-randr --command wlr-randr` to discover outputs.
+  # ---------------------------------------------------------------------------
+
+  # Primary monitor list (simple layout).
+  # Example: single 1440p monitor at 144Hz
+  hyprlandMonitors = [
+    { output = "DP-1"; mode = "2560x1440@144"; position = "0x0"; scale = 1; }
+    # { output = "HDMI-A-1"; mode = "1920x1080@60"; position = "2560x0"; scale = 1; }
+  ];
+
+  # Output bindings for monitor toggle keybinds (SUPER+1..0).
+  # Each entry needs: name, description, bindIndex.
+  hyprlandOutputBindingsBase = [
+    {
+      name = "DP-1";
+      description = "Primary Monitor";
+      bindIndex = 1;
+    }
+    # {
+    #   name = "HDMI-A-1";
+    #   description = "Secondary Monitor";
+    #   bindIndex = 2;
+    # }
+  ];
+
+  # Sunshine headless output (for game streaming).
+  # Set to null if not using Sunshine streaming.
+  hyprlandSunshineHeadlessOutput = {
+    name = "SUNSHINE-HEADLESS";
+    description = "Adaptive Display";
+    bindIndex = 3;
+    mode = "1920x1080@60";
+    position = "10000x10000";
+    scale = 1;
+  };
+
+  # Physical dummy plug for Sunshine (alternative to headless).
+  # Set to null if using headless output above.
   hyprlandSunshinePhysicalOutput = null;
-  hyprlandInitialOutputStatesBase = [ ];
-  hyprlandToggleableOutputsBase = [ ];
+  # hyprlandSunshinePhysicalOutput = {
+  #   name = "DP-2";
+  #   description = "Sunshine Dummy Plug";
+  #   bindIndex = 3;
+  #   mode = "1920x1080@60";
+  #   position = "0x4000";
+  #   scale = 1;
+  #   enabledByDefault = false;
+  #   focusOnEnable = false;
+  # };
+
+  # Initial output states (what Hyprland sees at startup).
+  # Mirrors hyprlandMonitors but with full control over enabled/disabled.
+  hyprlandInitialOutputStatesBase = [
+    {
+      name = "DP-1";
+      enabledByDefault = true;
+      mode = "preferred";
+      position = "0x0";
+      scale = 1;
+    }
+  ];
+
+  # Toggleable outputs (monitors that can be hot-toggled via keybind).
+  # Each entry is a full monitor spec plus toggle behavior.
+  hyprlandToggleableOutputsBase = [
+    {
+      name = "DP-1";
+      description = "Primary Monitor";
+      bindIndex = 1;
+      mode = "preferred";
+      position = "0x0";
+      scale = 1;
+      enabledByDefault = true;
+      focusOnEnable = true;
+    }
+    # {
+    #   name = "HDMI-A-1";
+    #   description = "TV";
+    #   bindIndex = 2;
+    #   mode = "preferred";
+    #   position = "2560x0";
+    #   scale = 1;
+    #   enabledByDefault = false;
+    #   focusOnEnable = true;
+    #   workspaceHandoff = {
+    #     enable = true;
+    #     targetMonitor = "DP-1";
+    #   };
+    # }
+  ];
 }
