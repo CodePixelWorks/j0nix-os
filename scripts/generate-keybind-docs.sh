@@ -29,11 +29,12 @@ nix eval --json --impure --file scripts/generate-keybind-data.nix \
 }
 
 # ---------------------------------------------------------------------------
-# Generate Markdown from JSON
+# Generate Markdown from JSON — all output appended to OUTFILE
 # ---------------------------------------------------------------------------
 mkdir -p "$(dirname "$OUTFILE")"
 
-cat > "$OUTFILE" <<'HEADER'
+{
+  cat <<'HEADER'
 # Keybind Reference
 
 Auto-generated from `user/wm/hyprland/config/keybinds/`.
@@ -43,8 +44,8 @@ Auto-generated from `user/wm/hyprland/config/keybinds/`.
 
 HEADER
 
-# Category ordering
-CATEGORIES="
+  # Category ordering
+  CATEGORIES="
 Navigation
 Window Management
 Resizing
@@ -59,29 +60,31 @@ Shell
 Other
 "
 
-for category in $CATEGORIES; do
-  # Skip if category not present in JSON
-  count=$(jq --arg cat "$category" '.[$cat] | length' /tmp/keybinds.json)
-  if [ "$count" -eq 0 ]; then
-    continue
-  fi
+  for category in $CATEGORIES; do
+    # Skip if category not present in JSON
+    count=$(jq --arg cat "$category" '.[$cat] | length' /tmp/keybinds.json)
+    if [ "$count" -eq 0 ]; then
+      continue
+    fi
+
+    echo ""
+    echo "## ${category}"
+    echo ""
+    echo "| Mods | Key | Dispatcher | Argument | Type |"
+    echo "|------|-----|------------|----------|------|"
+
+    jq -r --arg cat "$category" '
+      .[$cat] | sort_by(.dispatcher // "", .key // "") | .[] |
+      "| \(.mods // "" | gsub("\\\$mainMod"; "`SUPER`")) | \(.key // "" | gsub("XF86"; "")) | \(.dispatcher // "") | \(.arg // "" ) | \(._type // "bind") |"
+    ' /tmp/keybinds.json | sed 's/|  |/|  |/g'
+  done
 
   echo ""
-  echo "## ${category}"
+  echo "---"
   echo ""
-  echo "| Mods | Key | Dispatcher | Argument | Type |"
-  echo "|------|-----|------------|----------|------|"
+  echo "Generated at $(date -Iseconds)"
 
-  jq -r --arg cat "$category" '
-    .[$cat] | sort_by(.dispatcher // "", .key // "") | .[] |
-    "| \(.mods // "" | gsub("\\\$mainMod"; "`SUPER`")) | \(.key // "" | gsub("XF86"; "")) | \(.dispatcher // "") | \(.arg // "" ) | \(._type // "bind") |"
-  ' /tmp/keybinds.json | sed 's/|  |/|  |/g'
-done
-
-echo ""
-echo "---"
-echo ""
-echo "Generated at $(date -Iseconds)"
+} > "$OUTFILE"
 
 echo ""
 echo "Keybind reference written to: $OUTFILE"
