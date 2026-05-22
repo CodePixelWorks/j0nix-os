@@ -6,7 +6,8 @@ remote_url="${2:?usage: publish-public-github.sh OUTPUT_DIR REMOTE_URL [BRANCH]}
 branch="${3:-main}"
 commit_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
-cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-}"
+# Prefer secret over fallback constant. Either may be absent.
+cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-${PUBLIC_CUTOFF_COMMIT_FALLBACK:-}}"
 timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
