@@ -19,12 +19,11 @@ Related deep dives:
 ```mermaid
 flowchart TD
   A[settings.nix] --> B[flake.nix]
-  B --> C[mkUserSettings for each user]
-  C --> D[home-manager modules per user]
-  B --> E[systemSettings aggregate]
-  E --> F[nixosSystem profiles/<profile>/configuration.nix]
-  D --> G[homeConfigurations.<user>]
-  F --> H[nixosConfigurations.<hostname>]
+  B --> |mkNixosSystem<br>{ profileName = "desktop"; hostname = "Jonas-PC"; }| C[nixosSystem profiles/<profile>/configuration.nix]
+  C --> D[nixosConfigurations.<hostname>]
+  B --> |mkHomeManagerConfiguration| E[mkUserSettings per user]
+  E --> F[home-manager modules per user]
+  F --> G[homeConfigurations."user@hostname"]
 ```
 
 ## Module Layers
@@ -69,12 +68,10 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  A[settings.users] --> B[users.users.<name> in system config]
+  A[settings.userSettings.<name>] --> B[users.users.<name>]
   A --> C[home-manager.users.<name>]
-  D[userSettings.<name>] --> B
-  D --> C
-  B --> E[login shell + unix groups]
-  C --> F[per-user WM/editor/browser/shell config]
+  B --> D[login shell + unix groups]
+  C --> E[per-user WM/editor/browser/shell config]
 ```
 
 ## Display Manager and Session Flow
@@ -154,11 +151,12 @@ sequenceDiagram
 flowchart TD
   A[settings.hyprland.useUWSM] --> B[programs.hyprland.withUWSM]
   A --> C[default session name]
-  D[userSettings.<name>.hyprlandShell] --> E[user/wm/hyprland/default.nix]
+  D[userSettings.<name>.wmShell] --> E[user/wm/hyprland/default.nix]
   E --> F{shellStartupCommand}
   F -->|ags| G[ags]
-  F -->|dank-material-shell| H[dms run]
-  F -->|noctalia-shell| I[noctalia-shell]
+  F -->|caelestia-shell| H[caelestia-shell]
+  F -->|dank-material-shell| I[dms run]
+  F -->|noctalia-shell| J[noctalia-shell]
 ```
 
 ## Gaming and Dev Stacks
@@ -193,7 +191,7 @@ flowchart TD
   - `user/wm/<name>/default.nix` (optional)
 - Add a new Hyprland shell:
   - `user/wm/hyprland/shells/<shell>/default.nix`
-  - expose name via `settings.hyprlandShell` or `userSettings.<name>.hyprlandShell`
+  - expose name via `userSettings.<name>.wmShell` (legacy alias: `hyprlandShell`)
 - Add a new feature domain:
   - `system/<domain>/...`
   - `user/<domain>/...`
