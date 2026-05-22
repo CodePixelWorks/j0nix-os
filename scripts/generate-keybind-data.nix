@@ -2,8 +2,11 @@
 # Usage: nix eval --impure --file scripts/generate-keybind-data.nix
 # Must be run from the repository root.
 let
+  # Determine repo root from the script directory (this file lives in scripts/)
+  repoRoot = builtins.dirOf (builtins.toPath ./.);
+
   # Import the repo flake to get lib, settings, etc.
-  flake = builtins.getFlake (toString ./.);
+  flake = builtins.getFlake (toString repoRoot);
   system = builtins.currentSystem;
   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
   lib = pkgs.lib;
@@ -11,7 +14,7 @@ let
   # ---------------------------------------------------------------------------
   # Load keybind lib helpers
   # ---------------------------------------------------------------------------
-  keybindLib = import ./user/wm/hyprland/config/keybinds/lib.nix { inherit lib; };
+  keybindLib = import (repoRoot + "/user/wm/hyprland/config/keybinds/lib.nix") { inherit lib; };
 
   # ---------------------------------------------------------------------------
   # Mock dependencies for core.nix evaluation
@@ -50,7 +53,7 @@ let
   # ---------------------------------------------------------------------------
   # Evaluate core binds
   # ---------------------------------------------------------------------------
-  coreModule = import ./user/wm/hyprland/config/keybinds/core.nix {
+  coreModule = import (repoRoot + "/user/wm/hyprland/config/keybinds/core.nix") {
     inherit lib homeBinDir appExec preferredTerminalCmd keybindHelpCommand;
     inherit layoutToggleBind overviewToggleBind dmsOverviewEnabled;
     inherit keepassEnabled keepassWorkspaceEnable keepassToggleBind;
@@ -75,7 +78,7 @@ let
   # ---------------------------------------------------------------------------
   # Evaluate shell binds
   # ---------------------------------------------------------------------------
-  shellModule = import ./user/wm/hyprland/config/keybinds/shells.nix {
+  shellModule = import (repoRoot + "/user/wm/hyprland/config/keybinds/shells.nix") {
     launcherAppExec = x: x;
     settings = { preferredBrowser = "chromium"; preferredEditor = "nvim"; };
     preferredFileManager = "nautilus";
@@ -85,7 +88,7 @@ let
 
   parseShellBinds = type: lines:
     map (line: (keybindLib.parseBindString line) // { _type = type; _shell = "caelestia"; })
-      (lines or [ ]);
+      lines;
 
   allShell =
     parseShellBinds "bind"   (caelestiaData.bind   or [ ]) ++
