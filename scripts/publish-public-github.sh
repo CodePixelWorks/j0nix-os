@@ -4,6 +4,12 @@ set -euo pipefail
 output_dir="${1:?usage: publish-public-github.sh OUTPUT_DIR REMOTE_URL [BRANCH]}"
 remote_url="${2:?usage: publish-public-github.sh OUTPUT_DIR REMOTE_URL [BRANCH]}"
 branch="${3:-main}"
+
+if [ -z "$remote_url" ]; then
+    printf '%s\n' "Missing secret: PUBLIC_GITHUB_REMOTE is empty or not injected" >&2
+    exit 1
+fi
+
 commit_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
 # Prefer secret over fallback constant. Either may be absent.
