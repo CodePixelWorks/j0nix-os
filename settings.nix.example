@@ -91,6 +91,7 @@
 
     # Application toggles (enable = true/false)
     fastfetch.enable = true;
+    streambert.enable = false;
     alacritty.enable = false;
     aagl = {
       enable = false;
@@ -120,6 +121,7 @@
       homeserver.serverName = "matrix.example.com";
     };
     bambulab = {
+      enable = false;
       provider = "flatpak"; # "appimage" | "flatpak"
     };
     wlogout.enable = true;

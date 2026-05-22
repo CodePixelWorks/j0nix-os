@@ -1,7 +1,7 @@
 { lib, settings, ... }:
 let
   cfg = (settings.programs or { }).fastfetch or { };
-  enabled = cfg.enable or true;
+  enabled = cfg.enable or false;
 in
 lib.mkIf enabled {
   programs.fastfetch = {
