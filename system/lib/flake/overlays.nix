@@ -39,6 +39,7 @@ let
     vagrant-with-libvirt = final.callPackage (baseDir + "/system/software/pkgs/dev/vagrant-with-libvirt.nix") {
       nixpkgsSrc = nixpkgs.outPath;
     };
+    streambert = final.callPackage (baseDir + "/system/software/pkgs/streaming/streambert.nix") { };
     hyprland-minimizer-orteip = prev.rustPlatform.buildRustPackage {
       pname = "hyprland_minimizer";
       version = "unstable";
