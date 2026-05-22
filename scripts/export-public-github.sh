@@ -56,13 +56,19 @@ fi
 # Drop backup directories within secrets
 rm -rf "$tmp_dir/secrets/.backups"
 
-# 3. Replace removed files with their public-safe example templates.
+# 3b. Replace the private-source indicator in README so public clone
+# users don't see stale / misleading phrasing.
+if [ -f "$tmp_dir/README.md" ]; then
+  sed -i 's/\[\!NOTE\]/[!IMPORTANT]/ ; s/> This repository is the \*\*private source\*\*. A public mirror is maintained separately with secrets and host keys stripped out./> This is the public mirror of j0nix-os. Secrets and machine-specific data have been stripped. Contributions welcome — open an issue or PR!/' "$tmp_dir/README.md"
+fi
+
+# 4. Replace removed files with their public-safe example templates.
 cp -f "$tmp_dir/settings.nix.example" "$tmp_dir/settings.nix"
 cp -f "$tmp_dir/profiles/desktop/details.nix.example" "$tmp_dir/profiles/desktop/details.nix"
 cp -f "$tmp_dir/profiles/desktop/hardware-configuration.nix.example" "$tmp_dir/profiles/desktop/hardware-configuration.nix"
 cp -f "$tmp_dir/.sops.yaml.example" "$tmp_dir/.sops.yaml"
 
-# 4. Record cutoff metadata if configured.
+# 5. Record cutoff metadata if configured.
 if [ -n "$cutoff_commit" ]; then
   mkdir -p "$tmp_dir/.well-known"
   total_commits=$(git -C "$repo_root" rev-list --all --count 2>/dev/null || echo "unknown")
