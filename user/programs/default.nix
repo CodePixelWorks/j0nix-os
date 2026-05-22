@@ -9,6 +9,7 @@
     ./fastfetch
     ./keepassxc
     ./kitty
+    ./streambert
     ./twintail-launcher
     ./windows-apps
     ./windows-exe
