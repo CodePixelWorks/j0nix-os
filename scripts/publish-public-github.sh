@@ -16,6 +16,21 @@ commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
 cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-${PUBLIC_CUTOFF_COMMIT_FALLBACK:-}}"
 timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
+# ---------------------------------------------------------------------------
+# SSH key: inject if provided via Drone secret, otherwise assume agent or
+# that the remote uses https.
+# ---------------------------------------------------------------------------
+GIT_SSH_CMD="ssh"
+if [ -n "${PUBLIC_GITHUB_PRIVATE_KEY:-}" ]; then
+    ssh_key_path="$(mktemp -t public_github.XXXXXX)"
+    chmod 600 "$ssh_key_path"
+    # Drone strips newlines from multiline secrets by default; restore LF
+    # via printf %b which interprets \n as newline.
+    printf '%b\n' "$PUBLIC_GITHUB_PRIVATE_KEY" > "$ssh_key_path"
+    GIT_SSH_CMD="ssh -i '$ssh_key_path' -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+fi
+export GIT_SSH_COMMAND="$GIT_SSH_CMD"
+
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 "$script_dir/export-public-github.sh" "$output_dir"
 
