@@ -5,6 +5,12 @@
   appimageTools,
 }:
 
+let
+  icon = fetchurl {
+    url = "https://raw.githubusercontent.com/truelockmc/streambert/main/public/sized/256x256.png";
+    hash = "sha256-OGMPrFKFvpQIHRUYYV+hubNQwHnU2TLG9zi2pLE++iM=";
+  };
+in
 appimageTools.wrapType2 rec {
   pname = "streambert";
   version = "2.4.0";
@@ -23,9 +29,12 @@ Name=Streambert
 Exec=streambert
 Type=Application
 Terminal=false
+Icon=streambert
 Categories=AudioVideo;Video;Player;
 Comment=Stream and download movies, TV series, and anime
 EOF
+
+    install -Dm644 ${icon} $out/share/icons/hicolor/256x256/apps/streambert.png
   '';
 
   meta = {
