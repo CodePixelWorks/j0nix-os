@@ -5,7 +5,7 @@
   ...
 }:
 let
-  cfg = (lib.attrByPath [ "userSettings" "jonas" "programs" "streambert" ] { } settings);
+  cfg = (settings.programs or { }).streambert or { };
   enabled = cfg.enable or false;
 in
 lib.mkIf enabled {
