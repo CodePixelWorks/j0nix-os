@@ -6,9 +6,10 @@
 }:
 let
   programsCfg = settings.programs or { };
-  bambuCfg = programsCfg.bambulab or { };
-  provider = bambuCfg.provider or "appimage";
-  bambuAppImagePackage = pkgs.callPackage ./appimage-package.nix { };
+  cfg = programsCfg.bambulab or { };
+  enabled = cfg.enable or false;
+  provider = cfg.provider or "appimage";
+  bambuAppImagePackage = pkgs.bambu-studio-appimage;
   nixpkgsBambuStudio = pkgs.bambu-studio;
   bambuFlatpakBranch = "stable";
   steamRunBin = "${pkgs.steam-run}/bin/steam-run";
@@ -46,7 +47,7 @@ let
     startupNotify = true;
   };
 in
-{
+lib.mkIf enabled {
   assertions = [
     {
       assertion = builtins.elem provider [
