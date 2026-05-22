@@ -4,6 +4,8 @@ let
 in
 {
   imports = [
+    # Autodesk Fusion — vendored integration (subflake at integrations/autodesk-fusion-nixos/)
+    # Home Manager module imported locally; overlay provides pkgs.autodesk-fusion-linux.
     ../../../integrations/autodesk-fusion-nixos/modules/home-manager/autodesk-fusion.nix
   ];
 
