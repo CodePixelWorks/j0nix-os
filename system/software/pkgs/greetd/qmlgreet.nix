@@ -51,6 +51,13 @@ stdenv.mkDerivation (finalAttrs: {
     "--prefix QML2_IMPORT_PATH : ${kdePackages.qqc2-desktop-style}/lib/qt-6/qml"
   ];
 
+  postPatch = ''
+    # Remove hibernation variants from the greeter bottom bar.
+    # They share the same icon (system-suspend-hibernate) and are
+    # visually indistinguishable from each other in the UI.
+    sed -i '/StyledButton { iconName: "system-suspend-hibernate";/d' qml/main.qml
+  '';
+
   postInstall = ''
     install -Dm644 "$src/qmlgreet.conf" "$out/share/qmlgreet/qmlgreet.conf"
     install -Dm644 "$src/QMLGreetDefault.colors" "$out/share/qmlgreet/QMLGreetDefault.colors"
