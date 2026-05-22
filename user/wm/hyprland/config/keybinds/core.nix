@@ -59,7 +59,7 @@ in
   coreBinds = [
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
-    "$mainMod, comma, exec, ${keybindHelpCommand}"
+    "$mainMod, grave, exec, ${keybindHelpCommand}"
     "$mainMod CTRL, k, exec, wm-screen-keyboard-toggle"
     "$mainMod, f, fullscreen, 0"          # true fullscreen (hides shell/waybar)
     "$mainMod SHIFT, f, fullscreen, 1"    # maximize-ish, keeps shell visible
@@ -69,6 +69,15 @@ in
     "$mainMod CTRL SHIFT, v, layoutmsg, preselect d"
     "$mainMod SHIFT, l, exec, wm-lock-screen"
     "$mainMod SHIFT, q, exit,"
+
+    # Window groups (from Caelestia upstream)
+    "$mainMod, semicolon, togglegroup"
+    "$mainMod SHIFT, semicolon, moveoutofgroup"
+    "CTRL ALT, Tab, changegroupactive, f"
+    "CTRL SHIFT ALT, Tab, changegroupactive, b"
+
+    # Pin window (from Caelestia upstream)
+    "$mainMod SHIFT, p, pin"
   ]
   ++ mainSplitBinds
   ++ keyboardLayoutToggleBind
@@ -99,6 +108,18 @@ in
     "$mainMod ALT, mouse_down, movetoworkspace, -1"
     "$mainMod ALT, mouse_up, movetoworkspace, +1"
     "$mainMod CTRL, Backslash, centerwindow, 1"
+
+    # Arrow-key focus (parallel to h/j/k/l)
+    "$mainMod, up, movefocus, u"
+    "$mainMod, down, movefocus, d"
+    "$mainMod, left, movefocus, l"
+    "$mainMod, right, movefocus, r"
+
+    # Arrow-key move window (parallel to h/j/k/l)
+    "$mainMod SHIFT, up, movewindow, u"
+    "$mainMod SHIFT, down, movewindow, d"
+    "$mainMod SHIFT, left, movewindow, l"
+    "$mainMod SHIFT, right, movewindow, r"
   ]
   ++ mainFocusBinds
   ++ mainMoveBinds
@@ -124,6 +145,17 @@ in
     ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
     ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
     ", Print, exec, wm-screenshot-area"
+
+    # Media keys (from Caelestia upstream)
+    ", XF86AudioPlay, exec, playerctl play-pause"
+    ", XF86AudioPause, exec, playerctl play-pause"
+    ", XF86AudioNext, exec, playerctl next"
+    ", XF86AudioPrev, exec, playerctl previous"
+    ", XF86AudioStop, exec, playerctl stop"
+
+    # Brightness keys (from Caelestia upstream)
+    ", XF86MonBrightnessUp, exec, brightnessctl set +10%"
+    ", XF86MonBrightnessDown, exec, brightnessctl set 10%-"
   ];
 
   baseBindle = [
