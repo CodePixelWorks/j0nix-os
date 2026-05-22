@@ -15,14 +15,12 @@ Primary goals:
 
 ## Non-Negotiable Rules
 
-1. Never import local modules from `AlfheimOS/`, `black-don-os/`, or `athena-nix/`.
-2. Those folders are reference-only for ideas and patterns.
-3. Active configuration must live under the repo root and be wired by root `flake.nix`.
-4. Keep user-facing configuration centralized in `settings.nix`.
-5. Validate changes with `nix flake check --no-build` before finishing.
-6. Before adding a new system script, evaluate whether an existing script, module, or settings contract should be extended instead.
-7. System scripts must have a single clear authority, high-quality input/output handling, and no overlapping side effects with other scripts.
-8. User-facing outputs from scripts and tooling must be written in English and kept localization-friendly so multilingual usage remains possible.
+1. Active configuration must live under the repo root and be wired by root `flake.nix`.
+2. Keep user-facing configuration centralized in `settings.nix`.
+3. Validate changes with `nix flake check --no-build` before finishing.
+4. Before adding a new system script, evaluate whether an existing script, module, or settings contract should be extended instead.
+5. System scripts must have a single clear authority, high-quality input/output handling, and no overlapping side effects with other scripts.
+6. User-facing outputs from scripts and tooling must be written in English and kept localization-friendly so multilingual usage remains possible.
 
 ## Agent Workflow (Required)
 
