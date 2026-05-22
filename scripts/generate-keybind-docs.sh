@@ -18,7 +18,7 @@ fi
 # ---------------------------------------------------------------------------
 # Evaluate structured bind data as JSON via separate Nix file
 # ---------------------------------------------------------------------------
-nix eval --json --impure --file scripts/generate-keybind-data.nix \
+nix eval --json --impure --expr 'import ./scripts/generate-keybind-data.nix' \
   > /tmp/keybinds.json 2>/tmp/keybind-eval.err || {
   echo "Error: Failed to evaluate bind data via Nix." >&2
   if [ -s /tmp/keybind-eval.err ]; then
@@ -75,8 +75,8 @@ Other
 
     jq -r --arg cat "$category" '
       .[$cat] | sort_by(.dispatcher // "", .key // "") | .[] |
-      "| \(.mods // "" | gsub("\\\$mainMod"; "`SUPER`")) | \(.key // "" | gsub("XF86"; "")) | \(.dispatcher // "") | \(.arg // "" ) | \(._type // "bind") |"
-    ' /tmp/keybinds.json | sed 's/|  |/|  |/g'
+      "| \(.mods // "" ) | \(.key // "" | gsub("XF86"; "")) | \(.dispatcher // "") | \(.arg // "" ) | \(._type // "bind") |"
+    ' /tmp/keybinds.json | sed -e 's/\$mainMod/`SUPER`/g' -e 's/|  |/|  |/g'
   done
 
   echo ""
