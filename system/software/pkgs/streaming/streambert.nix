@@ -14,12 +14,18 @@ appimageTools.wrapType2 rec {
     hash = "sha256-/y4DZTE01RqV67bUzdeDXonVniKquh1afZSG/Im8piY=";
   };
 
+  # No upstream .desktop in the AppImage; provide a minimal one manually.
   extraInstallCommands = ''
-    install -Dm644 $out/share/applications/streambert.desktop \
-      $out/share/applications/streambert.desktop
-
-    substituteInPlace $out/share/applications/streambert.desktop \
-      --replace-fail "Exec=AppRun" "Exec=streambert"
+    mkdir -p $out/share/applications
+    cat > $out/share/applications/streambert.desktop <<EOF
+[Desktop Entry]
+Name=Streambert
+Exec=streambert
+Type=Application
+Terminal=false
+Categories=AudioVideo;Video;Player;
+Comment=Stream and download movies, TV series, and anime
+EOF
   '';
 
   meta = {
