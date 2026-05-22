@@ -40,6 +40,7 @@ let
       nixpkgsSrc = nixpkgs.outPath;
     };
     streambert = final.callPackage (baseDir + "/system/software/pkgs/streaming/streambert.nix") { };
+    bambu-studio-appimage = final.callPackage (baseDir + "/system/software/pkgs/printing/bambu-studio-appimage.nix") { };
     hyprland-minimizer-orteip = prev.rustPlatform.buildRustPackage {
       pname = "hyprland_minimizer";
       version = "unstable";
