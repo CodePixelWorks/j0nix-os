@@ -125,11 +125,12 @@ nix flake lock --update-input nixpkgs
 ## Architecture
 
 ### Configuration Flow
-1. Root `flake.nix` loads `settings.nix`.
-2. `mkUserSettings` applies per-user overrides from `settings.userSettings`.
-3. System profile from `profiles/desktop/configuration.nix` is built.
-4. Home Manager modules are composed per user from `user/*`, `profiles/`, and `user-roles/home/`.
-5. WM shell layer is selected per user via `settings.userSettings.<name>.wmShell` (legacy alias: `hyprlandShell`).
+1. Root `flake.nix` defines hosts via `mkNixosSystem` / `mkHomeManagerConfiguration` with explicit `profileName`.
+2. `mkNixosSystem` loads the profile directory (`profiles/<profileName>/`), merging `details.nix` and `secrets.nix` into the settings object.
+3. `mkUserSettings` applies per-user overrides from `settings.userSettings`.
+4. System profile `profiles/<profile>/configuration.nix` is built.
+5. Home Manager modules are composed per user from `user/*`, `profiles/`, and `user-roles/home/`.
+6. WM shell layer is selected per user via `settings.userSettings.<name>.wmShell` (legacy alias: `hyprlandShell`).
 
 ### Key Directories
 - `settings.nix`: central settings, feature toggles, per-user overrides
