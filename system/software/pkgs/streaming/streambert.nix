@@ -11,7 +11,7 @@ appimageTools.wrapType2 rec {
 
   src = fetchurl {
     url = "https://github.com/truelockmc/streambert/releases/download/2.4/Streambert-${version}.AppImage";
-    hash = "sha256-09m6pj4zr1llgmd1vfma4agdb2ayhgbwvm5nxfaimm9l65jh6bpz";
+    hash = "sha256-/y4DZTE01RqV67bUzdeDXonVniKquh1afZSG/Im8piY=";
   };
 
   extraInstallCommands = ''
