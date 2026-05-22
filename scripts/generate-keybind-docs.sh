@@ -1,61 +1,38 @@
 #!/usr/bin/env bash
 # Usage: generate-keybind-docs.sh [OUTPUT_FILE]
 # Generates a Markdown keybind reference by evaluating bind data via Nix.
-# This script must be run from the repository root.
+# Must be run from the repository root.
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUTFILE="${1:-$REPO_ROOT/docs/KEYBINDS.md}"
 
 cd "$REPO_ROOT"
 
-# Evaluate structured bind data as JSON via the flake.
-# We use nix eval with the flake root to access all required inputs.
-nix eval --json --impure --expr '
-  let
-    # Import the repo flake to get lib, settings, etc.
-    flake = builtins.getFlake (toString ./.);
-    pkgs = flake.inputs.nixpkgs.legacyPackages.x86_64-linux;
-    lib = pkgs.lib;
+# Ensure jq is available
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Error: jq is required but not found in PATH" >&2
+  exit 1
+fi
 
-    # Load keybind lib
-    keybindLib = import ./user/wm/hyprland/config/keybinds/lib.nix { inherit lib; };
-
-    # Load shell binds (raw strings)
-    shellBindsRaw = import ./user/wm/hyprland/config/keybinds/shells.nix {
-      launcherAppExec = x: x;
-      settings = { preferredBrowser = "chromium"; preferredEditor = "nvim"; };
-      preferredFileManager = "nautilus";
-    };
-
-    # Parse all bind strings into structured data
-    parseAllBinds = shellData:
-      let
-        allBinds = lib.concatLists (lib.mapAttrsToList (shellName: bindTypes:
-          lib.concatLists (lib.mapAttrsToList (bindType: lines:
-            map (line:
-              let parsed = keybindLib.parseBindString line;
-              in parsed // {
-                _shell = shellName;
-                _bindType = bindType;
-                _original = line;
-              }
-            ) lines
-          ) bindTypes)
-        ) shellData);
-      in allBinds;
-
-    allParsed = parseAllBinds shellBindsRaw;
-    categorized = keybindLib.categorizeBinds allParsed;
-  in
-  categorized
-' > /tmp/keybinds.json 2>/dev/null || {
+# ---------------------------------------------------------------------------
+# Evaluate structured bind data as JSON via separate Nix file
+# ---------------------------------------------------------------------------
+nix eval --json --impure --file scripts/generate-keybind-data.nix \
+  > /tmp/keybinds.json 2>/tmp/keybind-eval.err || {
   echo "Error: Failed to evaluate bind data via Nix." >&2
-  echo "Ensure you're running this from the repo root with flake.nix present." >&2
+  if [ -s /tmp/keybind-eval.err ]; then
+    echo "--- Nix stderr ---" >&2
+    cat /tmp/keybind-eval.err >&2
+  fi
   exit 1
 }
 
+# ---------------------------------------------------------------------------
 # Generate Markdown from JSON
+# ---------------------------------------------------------------------------
+mkdir -p "$(dirname "$OUTFILE")"
+
 cat > "$OUTFILE" <<'HEADER'
 # Keybind Reference
 
@@ -66,18 +43,39 @@ Auto-generated from `user/wm/hyprland/config/keybinds/`.
 
 HEADER
 
-# Process each category
-jq -r 'keys | sort | .[]' /tmp/keybinds.json | while IFS= read -r category; do
+# Category ordering
+CATEGORIES="
+Navigation
+Window Management
+Resizing
+Layout
+Window State
+Session
+Screenshot
+Media
+Launcher
+App Launch
+Shell
+Other
+"
+
+for category in $CATEGORIES; do
+  # Skip if category not present in JSON
+  count=$(jq --arg cat "$category" '.[$cat] | length' /tmp/keybinds.json)
+  if [ "$count" -eq 0 ]; then
+    continue
+  fi
+
   echo ""
   echo "## ${category}"
   echo ""
-  echo "| Mods | Key | Action | Argument |"
-  echo "|------|-----|--------|----------|"
+  echo "| Mods | Key | Dispatcher | Argument | Type |"
+  echo "|------|-----|------------|----------|------|"
 
   jq -r --arg cat "$category" '
-    .[$cat] | sort_by(.dispatcher, .key) | .[] |
-    "| \(.mods // "") | \(.key // "") | \(.dispatcher // "") | \(.arg // "" ) |"
-  ' /tmp/keybinds.json | sed 's/| \$mainMod |/| `SUPER` |/g'
+    .[$cat] | sort_by(.dispatcher // "", .key // "") | .[] |
+    "| \(.mods // "" | gsub("\\\$mainMod"; "`SUPER`")) | \(.key // "" | gsub("XF86"; "")) | \(.dispatcher // "") | \(.arg // "" ) | \(._type // "bind") |"
+  ' /tmp/keybinds.json | sed 's/|  |/|  |/g'
 done
 
 echo ""
@@ -85,4 +83,5 @@ echo "---"
 echo ""
 echo "Generated at $(date -Iseconds)"
 
+echo ""
 echo "Keybind reference written to: $OUTFILE"
