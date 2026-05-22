@@ -344,5 +344,14 @@
       url = "github:ezKEa/aagl-gtk-on-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Local sub Flake: Autodesk Fusion integration for NixOS/Home Manager.
+    # Vendored at integrations/autodesk-fusion-nixos/; tracked as a flake input
+    # so nixpkgs/home-manager versions stay aligned with the main flake.
+    autodesk-fusion = {
+      url = "path:./integrations/autodesk-fusion-nixos";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
   };
 }
