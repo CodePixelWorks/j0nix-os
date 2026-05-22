@@ -5,9 +5,8 @@
   ...
 }:
 let
-  cfg = (settings.programs or { }).streambert or { };
-  enabled = cfg.enable or false;
+  cfg = lib.attrByPath [ "programs" "streambert" ] { enable = false; } settings;
 in
-lib.mkIf enabled {
+lib.mkIf cfg.enable {
   j0nix.user.software.packages = [ pkgs.streambert ];
 }
