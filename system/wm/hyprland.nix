@@ -206,8 +206,6 @@ let
     "auto-wm-session.desktop"
     "${hyprlandSessionName}.desktop"
   ]
-  ++ lib.optional useUWSM "hyprland.desktop"
-  ++ lib.optional (!useUWSM) "hyprland-uwsm.desktop"
   ++ lib.optional (builtins.elem "mangowc" enabledWms) "mangowc.desktop"
   ++ lib.optional (builtins.elem "niri" enabledWms) "niri.desktop"
   ++ lib.optional (builtins.elem "gnome" enabledWms) "gnome.desktop";
