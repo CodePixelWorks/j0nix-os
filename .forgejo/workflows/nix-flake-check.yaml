@@ -14,5 +14,4 @@ jobs:
 
       - name: Run flake check
         run: |
-          export NIX_CONFIG="experimental-features = nix-command flakes"
-          nix flake check --no-build
+          nix --extra-experimental-features 'nix-command flakes' flake check --no-build
