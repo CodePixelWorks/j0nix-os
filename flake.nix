@@ -10,83 +10,76 @@
     }@inputs:
     let
       baseDir = ./.;
+      lib = nixpkgs.lib;
+
       overlays = import (baseDir + "/system/lib/flake/overlays.nix") {
         inherit baseDir inputs nixpkgs;
       };
-      profileName = rawSettings.profileName or "desktop";
-      profileDir = baseDir + "/profiles/${profileName}";
-      settingsFile =
-        if builtins.pathExists (baseDir + "/settings.nix") then
-          baseDir + "/settings.nix"
-        else
-          baseDir + "/settings.nix.example";
-      profileDetailsFile =
-        if builtins.pathExists (profileDir + "/details.nix") then
-          profileDir + "/details.nix"
-        else
-          profileDir + "/details.nix.example";
-      profileDetails = import profileDetailsFile { };
-      profileMeta = profileDetails;
-      profileSecrets = import (profileDir + "/secrets.nix");
-      rawSettings = import settingsFile { inherit inputs; };
 
-      pkgs = import nixpkgs {
-        system = profileMeta.system;
-        overlays = overlays.default;
-        config.allowUnfree = true;
-      };
-
-      settings = rawSettings // {
-        secrets = (rawSettings.secrets or { }) // profileSecrets;
-        inherit profileDetails;
-        themeDetails = import (baseDir + "/themes/${rawSettings.theme}.nix") { inherit pkgs; };
-      };
-
-      lib = nixpkgs.lib;
-      hmUsers = builtins.attrNames (settings.userSettings or { });
-      userOverrides = settings.userSettings or { };
-
-      baseSettings = builtins.removeAttrs settings [
-        "profileDetails"
-        "themeDetails"
-        "username"
-        "dotfilesDir"
-      ];
-
-      hmSharedModulesCommon = [
-        inputs.plasma-manager.homeModules.plasma-manager
-        inputs.nixvim.homeModules.nixvim
-      ]
-      ++ lib.optional settings.enableSops inputs.sops-nix.homeManagerModules.sops;
-
-      hmSharedModulesNixos = hmSharedModulesCommon;
-      hmSharedModulesStandalone = hmSharedModulesCommon ++ [ inputs.stylix.homeModules.stylix ];
-
-      mkUserSettings = import (baseDir + "/system/lib/settings/mk-user-settings.nix") {
-        inherit baseDir baseSettings lib pkgs profileDetails userOverrides;
-      };
-      mkHomeModules = import (baseDir + "/system/lib/home/mk-home-modules.nix") {
-        inherit baseDir lib profileDir;
-      };
-      systemSettings = settings;
-
-      mkHmUserModule =
-        username:
+      # -----------------------------------------------------------------------
+      # Host configuration builder
+      # -----------------------------------------------------------------------
+      # Builds everything needed for one NixOS host.  `profileName`
+      # selects the directory under profiles/ (host-specific hw data).
+      # Profile name is intentionally kept out of settings.nix — it is a
+      # host/selection concern, not a cross-platform default.
+      # -----------------------------------------------------------------------
+      mkHostAttrs = profileName:
         let
-          userSettings = mkUserSettings username;
-        in
-        { ... }:
-        {
-          _module.args = {
-            inherit inputs profileMeta;
-            settings = userSettings;
+          profileDir = baseDir + "/profiles/${profileName}";
+
+          profileDetailsFile =
+            if builtins.pathExists (profileDir + "/details.nix") then
+              profileDir + "/details.nix"
+            else
+              profileDir + "/details.nix.example";
+          profileDetails = import profileDetailsFile { };
+          profileMeta = profileDetails;
+          profileSecrets = import (profileDir + "/secrets.nix");
+
+          pkgs = import nixpkgs {
+            system = profileMeta.system;
+            overlays = overlays.default;
+            config.allowUnfree = true;
           };
-          imports = mkHomeModules userSettings;
+
+          rawSettings = import settingsFile { inherit inputs; };
+          settings = rawSettings // {
+            secrets = (rawSettings.secrets or { }) // profileSecrets;
+            inherit profileDetails;
+            themeDetails = import (baseDir + "/themes/${rawSettings.theme}.nix") { inherit pkgs; };
+          };
+
+          baseSettings = builtins.removeAttrs settings [
+            "profileDetails"
+            "themeDetails"
+            "username"
+            "dotfilesDir"
+          ];
+
+          userOverrides = settings.userSettings or { };
+
+          mkUserSettings = import (baseDir + "/system/lib/settings/mk-user-settings.nix") {
+            inherit baseDir baseSettings lib pkgs profileDetails userOverrides;
+          };
+
+          mkHomeModules = import (baseDir + "/system/lib/home/mk-home-modules.nix") {
+            inherit baseDir lib profileDir;
+          };
+
+          # Backward compat: old settings.nix may still contain profileName,
+          # but it is ignored here.  The flake owns host → profile mapping.
+        in
+        {
+          inherit profileDir profileDetails profileMeta profileSecrets pkgs settings baseSettings userOverrides mkUserSettings mkHomeModules;
         };
-    in
-    {
-      nixosConfigurations = {
-        ${profileMeta.hostname} = nixpkgs.lib.nixosSystem {
+
+      mkNixosSystem = { profileName }:
+        let
+          host = mkHostAttrs profileName;
+          hmUsers = builtins.attrNames (host.settings.userSettings or { });
+        in
+        nixpkgs.lib.nixosSystem {
           modules = [
             inputs.stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
@@ -106,49 +99,115 @@
                   useGlobalPkgs = true;
                   useUserPackages = true;
                   backupFileExtension = "backup";
-                  extraSpecialArgs = { inherit inputs profileMeta; };
-                  sharedModules = hmSharedModulesNixos;
+                  extraSpecialArgs = {
+                    inherit inputs;
+                    profileMeta = host.profileMeta;
+                  };
+                  sharedModules = hmSharedModules host.settings;
                   users = builtins.listToAttrs (
                     map (username: {
                       name = username;
-                      value = mkHmUserModule username;
+                      value = { ... }:
+                        let
+                          userSettings = host.mkUserSettings username;
+                        in
+                        {
+                          _module.args = {
+                            inherit inputs;
+                            profileMeta = host.profileMeta;
+                            settings = userSettings;
+                          };
+                          imports = host.mkHomeModules userSettings;
+                        };
                     }) hmUsers
                   );
                 };
               }
             )
-            (profileDir + "/configuration.nix")
+            (host.profileDir + "/configuration.nix")
           ]
-          ++ lib.optional settings.enableSops inputs.sops-nix.nixosModules.sops;
+          ++ lib.optional host.settings.enableSops inputs.sops-nix.nixosModules.sops;
 
           specialArgs = {
-            inherit inputs profileMeta;
-            settings = systemSettings;
+            inherit inputs;
+            profileMeta = host.profileMeta;
+            settings = host.settings;
           };
         };
+
+      mkHomeManagerConfiguration = { username, profileName }:
+        let
+          host = mkHostAttrs profileName;
+          userSettings = host.mkUserSettings username;
+        in
+        home-manager.lib.homeManagerConfiguration {
+          pkgs = import nixpkgs {
+            system = host.profileMeta.system;
+            overlays = overlays.default;
+            config.allowUnfree = true;
+          };
+          modules = (host.mkHomeModules userSettings) ++ hmSharedModulesStandalone host.settings;
+          extraSpecialArgs = {
+            inherit inputs;
+            profileMeta = host.profileMeta;
+            settings = userSettings;
+          };
+        };
+
+      # Shared modules helpers (need settings to gate sops)
+      hmSharedModules = settings: [
+        inputs.plasma-manager.homeModules.plasma-manager
+        inputs.nixvim.homeModules.nixvim
+      ]
+      ++ lib.optional (settings.enableSops or false) inputs.sops-nix.homeManagerModules.sops;
+
+      hmSharedModulesStandalone = settings: (hmSharedModules settings) ++ [ inputs.stylix.homeModules.stylix ];
+
+      # Settings file discovery (host-independent)
+      settingsFile =
+        if builtins.pathExists (baseDir + "/settings.nix") then
+          baseDir + "/settings.nix"
+        else
+          baseDir + "/settings.nix.example";
+
+    in
+    {
+      # -----------------------------------------------------------------------
+      # NixOS hosts — explicit host → profile mapping
+      # Add new hosts here.  The rebuild command is:
+      #   sudo nixos-rebuild switch --flake .#<hostname>
+      # -----------------------------------------------------------------------
+      nixosConfigurations = {
+        Jonas-PC = mkNixosSystem { profileName = "desktop"; };
+        # Example for a future laptop host:
+        # Jonas-Laptop = mkNixosSystem { profileName = "laptop"; };
       };
 
-      homeConfigurations = builtins.listToAttrs (
-        map (username: {
-          name = username;
-          value =
-            let
-              userSettings = mkUserSettings username;
-            in
-            home-manager.lib.homeManagerConfiguration {
-              pkgs = import nixpkgs {
-                system = profileMeta.system;
-                overlays = overlays.default;
-                config.allowUnfree = true;
+      # -----------------------------------------------------------------------
+      # Home-manager standalone configurations
+      # Format: username@hostname  (e.g. jonas@Jonas-PC)
+      # This mirrors the per-host profile selection so a standalone home-manager
+      # install uses the correct hw-derived settings (monitors, etc.).
+      # -----------------------------------------------------------------------
+      homeConfigurations =
+        let
+          hosts = [
+            { name = "Jonas-PC"; profile = "desktop"; }
+            # { name = "Jonas-Laptop"; profile = "laptop"; }
+          ];
+          allUsers = builtins.attrNames ((import settingsFile { inherit inputs; }).userSettings or { });
+        in
+        builtins.listToAttrs (
+          lib.concatMap (host:
+            map (username: {
+              name = "${username}@${host.name}";
+              value = mkHomeManagerConfiguration {
+                inherit username;
+                profileName = host.profile;
               };
-              modules = (mkHomeModules userSettings) ++ hmSharedModulesStandalone;
-              extraSpecialArgs = {
-                inherit inputs profileMeta;
-                settings = userSettings;
-              };
-            };
-        }) hmUsers
-      );
+            }) allUsers
+          ) hosts
+        );
     };
 
   inputs = {
@@ -203,7 +262,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Quickshell overview plugin (Hyprland-focused, runs alongside DMS).
     quickshell-overview = {
       url = "github:Shanu-Kumawat/quickshell-overview";
       flake = false;
