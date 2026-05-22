@@ -343,6 +343,7 @@ in {
   j0nix.user.shells.fonts.packages = lib.mkAfter shellFontPackages;
 
   programs = {
+    # Keep parity with black-don behavior and avoid parallel shell bars.
     waybar.enable = lib.mkForce false;
   } // lib.optionalAttrs (integratedMode && hasHomeModule) {
     dank-material-shell = {
