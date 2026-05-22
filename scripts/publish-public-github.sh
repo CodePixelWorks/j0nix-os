@@ -14,6 +14,9 @@ set -euo pipefail
 #   PUBLIC_CUTOFF_COMMIT         — Optional. Commits BEFORE this hash are
 #                                    removed entirely from mirror history.
 #   PUBLIC_CUTOFF_COMMIT_FALLBACK — Fallback when the above secret is unset.
+#   PUBLIC_GITHUB_FORCE_PUSH     — "true" (default) to force-push + force-push tags.
+#                                    Set to "false" to push non-destructively.
+#                                    Disabling force may fail if history diverged.
 #   PUBLIC_SOURCE_URL             — Optional, recorded in metadata.
 #
 # Rewrites every commit since the cutoff (or all commits if no cutoff):
@@ -27,6 +30,7 @@ branch="${2:-main}"
 commit_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
 cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-${PUBLIC_CUTOFF_COMMIT_FALLBACK:-}}"
+force_push="${PUBLIC_GITHUB_FORCE_PUSH:-true}"
 
 repo_root="$(git rev-parse --show-toplevel)"
 
@@ -105,6 +109,12 @@ tree_filter='
     cp -f profiles/desktop/hardware-configuration.nix.example profiles/desktop/hardware-configuration.nix 2>/dev/null || true
     cp -f .sops.yaml.example                 .sops.yaml 2>/dev/null || true
 
+    # Remove the .example files so they do not linger as duplicates.
+    rm -f settings.nix.example
+    rm -f profiles/desktop/details.nix.example
+    rm -f profiles/desktop/hardware-configuration.nix.example
+    rm -f .sops.yaml.example
+
     if [ -f README.md ]; then
         # Patch README: switch note type and replace private-source line.
         sed -i "s/\[\!NOTE\]/[!IMPORTANT]/ ; s/> This repository is the \*\*private source\*\*. A public mirror is maintained separately with secrets and host keys stripped out./> This is the public mirror of j0nix-os. Secrets and machine-specific data have been stripped. Contributions welcome \xe2\x80\x94 open an issue or PR!/" README.md 2>/dev/null || true
@@ -170,7 +180,12 @@ fi
 # ---------------------------------------------------------------------------
 git remote add github "$git_auth_remote" 2>/dev/null || git remote set-url github "$git_auth_remote"
 
-git push --force github "HEAD:$branch"
-git push --force --tags github
+if [ "$force_push" = "true" ]; then
+    git push --force github "HEAD:$branch"
+    git push --force --tags github
+else
+    git push github "HEAD:$branch"
+    git push --tags github
+fi
 
 trap - EXIT INT TERM
