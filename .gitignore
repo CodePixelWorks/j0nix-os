@@ -34,7 +34,6 @@ secrets/.backups/
 # AI session resume scripts
 /r.sh
 /RESUME.sh
-nix-bug.txt
 
 # Optional local-only overrides for downstream mirrors
 settings.local.nix
