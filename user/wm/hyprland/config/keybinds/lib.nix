@@ -79,45 +79,32 @@ let
   # ---------------------------------------------------------------------------
   # Parsing: string bind → attrset (inverse of mkBindString)
   # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # Parsing: string bind → attrset
+  # ---------------------------------------------------------------------------
+  # Hyprland bind syntax: [mods], key, dispatcher, arg1, arg2, ...
+  # If no mods: key, dispatcher, arg1, arg2, ...
   parseBindString = s:
     let
       parts = map trim (lib.splitString "," s);
-      partCount = builtins.length parts;
-      # Heuristic: first part with space = mods, without = key (or just key)
-      hasSpace = p: builtins.match ".* .*" p != null;
+      n = builtins.length parts;
+      # Parts 0..(n-4) are mods (when there are enough parts for key+dispatcher)
+      # Simple rule: first part = mods, second = key, third = dispatcher, rest = args
+      mods_ = if n > 0 then builtins.elemAt parts 0 else "";
+      key_ = if n > 1 then builtins.elemAt parts 1 else "";
+      dispatcher_ = if n > 2 then builtins.elemAt parts 2 else "";
+      argument_ =
+        if n > 3 then
+          lib.concatStringsSep ", " (lib.drop 3 parts)
+        else
+          null;
     in
-    if partCount == 0 then { mods = ""; key = ""; dispatcher = ""; arg = null; }
-    else if partCount == 1 then { mods = ""; key = builtins.elemAt parts 0; dispatcher = ""; arg = null; }
-    else if partCount == 2 then
-      # Could be "key, dispatcher" or "mods key, dispatcher" (but no comma after mods)
-      # Single part mods means first token is "mods key" combined
-      let
-        first = builtins.elemAt parts 0;
-      in
-      if hasSpace first then
-        let
-          firstParts = lib.splitString " " first;
-          modsStr = lib.concatStringsSep " " (lib.init firstParts);
-          keyStr = lib.last firstParts;
-        in
-        { mods = modsStr; key = keyStr; dispatcher = builtins.elemAt parts 1; arg = null; }
-      else
-        { mods = ""; key = first; dispatcher = builtins.elemAt parts 1; arg = null; }
-    else
-      let
-        first = builtins.elemAt parts 0;
-      in
-      if hasSpace first then
-        let
-          firstParts = lib.splitString " " first;
-          modsStr = lib.concatStringsSep " " (lib.init firstParts);
-          keyStr = lib.last firstParts;
-          dispatcherStr = builtins.elemAt parts 1;
-          argStr = lib.concatStringsSep ", " (lib.drop 2 parts);
-        in
-        { mods = modsStr; key = keyStr; dispatcher = dispatcherStr; arg = if argStr != "" then argStr else null; }
-      else
-        { mods = ""; key = first; dispatcher = builtins.elemAt parts 1; arg = builtins.elemAt parts 2; };
+    {
+      mods = mods_;
+      key = key_;
+      dispatcher = dispatcher_;
+      arg = if argument_ != "" then argument_ else null;
+    };
 
   # ---------------------------------------------------------------------------
   # Bind type flags (for documentation / analysis, not rendering)
