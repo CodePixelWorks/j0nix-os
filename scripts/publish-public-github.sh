@@ -109,7 +109,16 @@ env_filter="
 "
 
 tree_filter='
-    rm -f nix-bug.txt RESUME.sh
+    # Remove blacklisted files; the blacklist file itself also gets stripped.
+    if [ -f .mirror-blacklist ]; then
+        while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            case "$line" in \#*) continue ;; esac
+            rm -rf "$line"
+        done < .mirror-blacklist
+        rm -f .mirror-blacklist
+    fi
+
     rm -f .sops.yaml settings.nix profiles/desktop/details.nix profiles/desktop/hardware-configuration.nix
     if [ -d secrets/hosts ]; then
         find secrets/hosts -mindepth 1 -maxdepth 1 -type f -delete
@@ -117,7 +126,6 @@ tree_filter='
     if [ -d secrets/users ]; then
         find secrets/users -mindepth 1 -maxdepth 1 -type f -delete
     fi
-    rm -rf secrets/.backups
 
     # Substitute templates.  Use cp -f so a missing .example does not abort.
     cp -f settings.nix.example               settings.nix 2>/dev/null || true
