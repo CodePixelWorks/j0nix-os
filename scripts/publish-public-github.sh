@@ -46,7 +46,8 @@ if [ -n "${PUBLIC_GITHUB_TOKEN:-}" ]; then
             git_auth_remote="${remote_url/https:\/\//https:\/\/x-access-token:${PUBLIC_GITHUB_TOKEN}@}"
             ;;
         git@github.com:*)
-            git_auth_remote="https://x-access-token:${PUBLIC_GITHUB_TOKEN}@github.com${remote_url#git@github.com}"
+            repo_path="${remote_url#git@github.com:}"
+            git_auth_remote="https://x-access-token:${PUBLIC_GITHUB_TOKEN}@github.com/${repo_path}"
             ;;
         *)
             printf '%s\n' "WARN: Unknown remote_url format; attempting to embed PAT" >&2
@@ -128,14 +129,29 @@ env_filter="${env_filter//__COMMIT_EMAIL__/$commit_email}"
 if [ -n "$cutoff_commit" ]; then
     # --parent-filter removes the cutoff commit as parent from the first
     # rewritten commit after the cutoff, creating a new root = clean history.
+    # 
+    # git-filter-branch runs filters in a minimal subshell where `sed`
+    # may not be available (observed in nixos/nix:2.26.1 containers).
+    # We write a tiny standalone bash script instead of relying on sed.
+    parent_filter_script="$(mktemp -t parent_filter.XXXXXX)"
+    # shellcheck disable=SC2016
+    printf '%s\n' "#!/usr/bin/env bash" \
+                  "while IFS= read -r line; do" \
+                  "    line=\"\${line//-p ${cutoff_commit}/}\"" \
+                  "    printf '%s\\n' \"\$line\"" \
+                  "done" > "$parent_filter_script"
+    chmod +x "$parent_filter_script"
+
     git filter-branch \
         --force \
-        --parent-filter "sed 's/-p ${cutoff_commit}//'" \
+        --parent-filter "$parent_filter_script" \
         --env-filter "$env_filter" \
         --tree-filter "$tree_filter" \
         --prune-empty \
         --tag-name-filter cat \
         -- --all
+
+    rm -f "$parent_filter_script"
 else
     git filter-branch \
         --force \
