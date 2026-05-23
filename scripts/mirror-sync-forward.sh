@@ -139,7 +139,7 @@ else
 fi
 
 # strip any embedded tokens from generated README
-sed -i 's|https://oauth2:[^@]*@github.com|https://github.com|g' "$readme_tmp" 2>/dev/null || true
+sed -i 's|https://oauth2:.*@github.com|https://github.com|g' "$readme_tmp" 2>/dev/null || true
 
 # --- discover sync base from GitHub -----------------------------------------
 git remote add github "$git_auth_remote" 2>/dev/null || git remote set-url github "$git_auth_remote"

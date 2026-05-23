@@ -164,10 +164,10 @@ ms_build_env_filter() {
 
     if ms_should_sanitize_author "$orig_name" "$orig_email"; then
         result="
-            export GIT_AUTHOR_NAME='$MS_SANITIZE_AUTHOR_NAME'
-            export GIT_AUTHOR_EMAIL='$MS_SANITIZE_AUTHOR_EMAIL'
-            export GIT_COMMITTER_NAME='$MS_SANITIZE_AUTHOR_NAME'
-            export GIT_COMMITTER_EMAIL='$MS_SANITIZE_AUTHOR_EMAIL'
+            export GIT_AUTHOR_NAME='${MS_SANITIZE_AUTHOR_NAME}'
+            export GIT_AUTHOR_EMAIL='${MS_SANITIZE_AUTHOR_EMAIL}'
+            export GIT_COMMITTER_NAME='${MS_SANITIZE_AUTHOR_NAME}'
+            export GIT_COMMITTER_EMAIL='${MS_SANITIZE_AUTHOR_EMAIL}'
         "
     fi
 
