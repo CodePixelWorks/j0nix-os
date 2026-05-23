@@ -47,11 +47,11 @@ if [ -n "${PUBLIC_GITHUB_TOKEN:-}" ]; then
             ;;
         git@github.com:*)
             repo_path="${remote_url#git@github.com:}"
-            git_auth_remote="https://x-access-token:${PUBLIC_GITHUB_TOKEN}@github.com/${repo_path}"
+            git_auth_remote="https://x-access-token:***@github.com/${repo_path}"
             ;;
         *)
             printf '%s\n' "WARN: Unknown remote_url format; attempting to embed PAT" >&2
-            git_auth_remote="https://x-access-token:${PUBLIC_GITHUB_TOKEN}@${remote_url#*://}"
+            git_auth_remote="https://x-access-token:***@${remote_url#*://}"
             ;;
     esac
 else
@@ -69,8 +69,10 @@ fi
 # 2. Clone source repo into a temporary workspace.
 # ---------------------------------------------------------------------------
 work_dir="$(mktemp -d)"
+readme_path="$repo_root/README.md.public"
 cleanup() {
     rm -rf "$work_dir"
+    rm -f "$readme_path"
     [ -n "$ssh_key_path" ] && rm -f "$ssh_key_path" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
@@ -79,26 +81,23 @@ git clone --local --no-hardlinks "$repo_root" "$work_dir"
 cd "$work_dir"
 
 # ---------------------------------------------------------------------------
-# 2b. Generate public-facing README.md (outside filter-branch, in container).
-#     filter-branch runs in a minimal subshell where python3 may not exist.
-#     Fall back to nixpkgs#python3 when system python3 is unavailable.
-#
-#     We overwrite README.md directly in the temporary clone with the public
-#     variant.  We do NOT stage — a dirty index blocks filter-branch.
-#     The tree-filter strips the template so it never reaches the mirror.
+# 2b. Generate public-facing README.md OUTSIDE the worktree.
+#     filter-branch aborts on any unstaged change; we must not touch the
+#     worktree before it runs. The file is injected into every commit by
+#     the tree-filter via its absolute path.
 # ---------------------------------------------------------------------------
-readme_public_path="$work_dir/README.md"
+readme_path="$repo_root/README.md.public"
 if command -v python3 >/dev/null 2>&1; then
-    python3 "$repo_root/scripts/regenerate-readme.py" --scope public --output "$readme_public_path"
+    python3 "$repo_root/scripts/regenerate-readme.py" --scope public --output "$readme_path"
 elif command -v nix >/dev/null 2>&1; then
-    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#python3 -- "$repo_root/scripts/regenerate-readme.py" --scope public --output "$readme_public_path"
+    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#python3 -- "$repo_root/scripts/regenerate-readme.py" --scope public --output "$readme_path"
 else
     printf '%s\n' "ERROR: python3 not found and nix not available" >&2
     exit 1
 fi
 
-# Strip auth from embedded URLs before filter-branch touches the tree.
-sed -i 's|https://x-access-token:***@github.com|https://github.com|g' "$readme_public_path" 2>/dev/null || true
+# Strip embedded auth tokens so they never leak into the published tree.
+sed -i 's|https://x-access-token:***@github.com|https://github.com|g' "$readme_path" 2>/dev/null || true
 
 git remote remove origin 2>/dev/null || true
 
@@ -116,13 +115,13 @@ env_filter="
     export GIT_COMMITTER_EMAIL='__COMMIT_EMAIL__'
 "
 
-tree_filter='
+tree_filter="
     # Remove blacklisted files; the blacklist file itself also gets stripped.
     if [ -f .mirror-blacklist ]; then
         while IFS= read -r line; do
-            [ -z "$line" ] && continue
-            case "$line" in \#*) continue ;; esac
-            rm -rf "$line"
+            [ -z \"\$line\" ] && continue
+            case \"\$line\" in \#*) continue ;; esac
+            rm -rf \"\$line\"
         done < .mirror-blacklist
         rm -f .mirror-blacklist
     fi
@@ -135,9 +134,9 @@ tree_filter='
         find secrets/users -mindepth 1 -maxdepth 1 -type f -delete
     fi
 
-    # Substitute templates.  Use cp -f so a missing .example does not abort.
+    # Substitute templates. Use cp -f so a missing .example does not abort.
     cp -f settings.nix.example               settings.nix 2>/dev/null || true
-    cp -f profiles/desktop/details.nix.example       profiles/desktop/details.nix 2>/dev/null || true
+    cp -f profiles/desktop/details.nix.example profiles/desktop/details.nix 2>/dev/null || true
     cp -f profiles/desktop/hardware-configuration.nix.example profiles/desktop/hardware-configuration.nix 2>/dev/null || true
     cp -f .sops.yaml.example                 .sops.yaml 2>/dev/null || true
 
@@ -147,9 +146,9 @@ tree_filter='
     rm -f profiles/desktop/hardware-configuration.nix.example
     rm -f .sops.yaml.example
 
-    # Remove the template so it cannot leak into the mirror.
-    rm -f templates/README.md.tmpl
-'
+    # Inject the pre-generated public README into every commit.
+    cp -f '$repo_root/README.md.public' README.md 2>/dev/null || true
+"
 
 # Inline-commit placeholders replaced at script build time.
 env_filter="${env_filter//__COMMIT_NAME__/$commit_name}"
@@ -160,7 +159,7 @@ parent_filter_script=""
 if [ -n "$cutoff_commit" ]; then
     # --parent-filter removes the cutoff commit as parent from the first
     # rewritten commit after the cutoff, creating a new root = clean history.
-    # 
+    #
     # git-filter-branch runs filters in a minimal subshell where `sed`
     # may not be available (observed in nixos/nix:2.26.1 containers).
     # We write a tiny standalone bash script instead of relying on sed.
