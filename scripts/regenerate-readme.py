@@ -62,11 +62,11 @@ def _build_screenshots_section() -> str:
         return ""
 
     caption_map = {
-        "desktop-caelistia-shell-open-all.png": "Post-login desktop with open overview",
-        "desktop-caelistia-shell-application-starter.png": "Application starter / app grid",
-        "desktop-caelistia-shell-bambulab-app.png": "Bambu Lab 3D printer slicer in focus",
-        "dekstop-caelistia-shell-dev-terminal-with-sysinfo.png": "Dev terminal with system info",
-        "desktop-caelistia-shell-gaming-nte.png": "Gaming session (NTE)",
+        "desktop-caelestia-shell-open-all.png": "Post-login desktop with open overview",
+        "desktop-caelestia-shell-application-starter.png": "Application starter / app grid",
+        "desktop-caelestia-shell-bambulab-app.png": "Bambu Lab 3D printer slicer in focus",
+        "dekstop-caelestia-shell-dev-terminal-with-sysinfo.png": "Dev terminal with system info",
+        "desktop-caelestia-shell-gaming-nte.png": "Gaming session (NTE)",
     }
 
     shots = sorted(screenshots_dir.glob("*.png"))
