@@ -117,8 +117,14 @@ tree_filter='
     rm -f .sops.yaml.example
 
     if [ -f README.md ]; then
-        # Patch README: switch note type and replace private-source line.
-        sed -i "s/\[\!NOTE\]/[!IMPORTANT]/ ; s/> This repository is the \*\*private source\*\*. A public mirror is maintained separately with secrets and host keys stripped out./> This is the public mirror of j0nix-os. Secrets and machine-specific data have been stripped. Contributions welcome \xe2\x80\x94 open an issue or PR!/" README.md 2>/dev/null || true
+        # Patch README without sed (unavailable in filter-branch subshell).
+        _tmp="README.md.tmp.$$"
+        while IFS= read -r _line || [ -n "$_line" ]; do
+            _line="${_line//[\!NOTE]/[!IMPORTANT]}"
+            _line="${_line//> This repository is the **private source**. A public mirror is maintained separately with secrets and host keys stripped out./> This is the public mirror of j0nix-os. Secrets and machine-specific data have been stripped. Contributions welcome — open an issue or PR!}"
+            printf "%s\\n" "$_line"
+        done < README.md > "$_tmp"
+        mv -f "$_tmp" README.md
     fi
 '
 
