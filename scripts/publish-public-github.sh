@@ -151,6 +151,8 @@ tree_filter='
 env_filter="${env_filter//__COMMIT_NAME__/$commit_name}"
 env_filter="${env_filter//__COMMIT_EMAIL__/$commit_email}"
 
+# Always run --parent-filter: strip cutoff parent if set, otherwise passthrough.
+parent_filter_script=""
 if [ -n "$cutoff_commit" ]; then
     # --parent-filter removes the cutoff commit as parent from the first
     # rewritten commit after the cutoff, creating a new root = clean history.
@@ -166,26 +168,22 @@ if [ -n "$cutoff_commit" ]; then
                   "    printf '%s\\n' \"\$line\"" \
                   "done" > "$parent_filter_script"
     chmod +x "$parent_filter_script"
-
-    git filter-branch \
-        --force \
-        --parent-filter "$parent_filter_script" \
-        --env-filter "$env_filter" \
-        --tree-filter "$tree_filter" \
-        --prune-empty \
-        --tag-name-filter cat \
-        -- --all
-
-    rm -f "$parent_filter_script"
+    parent_filter_cmd="$parent_filter_script"
 else
-    git filter-branch \
-        --force \
-        --env-filter "$env_filter" \
-        --tree-filter "$tree_filter" \
-        --prune-empty \
-        --tag-name-filter cat \
-        -- --all
+    # No cutoff: passthrough so we still share a single filter-branch invocation.
+    parent_filter_cmd="cat"
 fi
+
+git filter-branch \
+    --force \
+    --parent-filter "$parent_filter_cmd" \
+    --env-filter "$env_filter" \
+    --tree-filter "$tree_filter" \
+    --prune-empty \
+    --tag-name-filter cat \
+    -- --all
+
+[ -n "${parent_filter_script:-}" ] && rm -f "$parent_filter_script"
 
 # filter-branch leaves refs in refs/original/ — drop them so they are
 # not accidentally pushed and do not bloat the clone.
