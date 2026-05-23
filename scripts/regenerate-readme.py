@@ -55,6 +55,48 @@ While the full setup instructions below are shown for context, the secret-depend
 }
 
 
+def _build_screenshots_section() -> str:
+    """Build the screenshots gallery section (shared across both scopes)."""
+    screenshots_dir = Path("screenshots")
+    if not screenshots_dir.exists():
+        return ""
+
+    caption_map = {
+        "desktop-caelistia-shell-open-all.png": "Post-login desktop with open overview",
+        "desktop-caelistia-shell-application-starter.png": "Application starter / app grid",
+        "desktop-caelistia-shell-bambulab-app.png": "Bambu Lab 3D printer slicer in focus",
+        "dekstop-caelistia-shell-dev-terminal-with-sysinfo.png": "Dev terminal with system info",
+        "desktop-caelistia-shell-gaming-nte.png": "Gaming session (NTE)",
+    }
+
+    shots = sorted(screenshots_dir.glob("*.png"))
+
+    rows = []
+    current_row = []
+    for shot in shots:
+        filename = shot.name
+        if filename not in caption_map:
+            continue
+        caption = caption_map[filename]
+        img_tag = f'<img src="screenshots/{filename}" width="400" alt="{caption}" />'
+        cell = f"{img_tag}<br><sub>{caption}</sub>"
+        current_row.append(cell)
+        if len(current_row) == 3:
+            rows.append("| " + " | ".join(current_row) + " |")
+            current_row = []
+
+    if current_row:
+        while len(current_row) < 3:
+            current_row.append("")
+        rows.append("| " + " | ".join(current_row) + " |")
+
+    if not rows:
+        return ""
+
+    header = "| " + " | ".join([""] * 3) + " |\n" + "|" + "|".join([":---:"] * 3) + "|"
+    return "## 📸 Screenshots\n\n" + header + "\n" + "\n".join(rows) + "\n"
+
+
 def render(scope: str) -> str:
     """Render README for the given scope."""
     template_path = Path("templates/README.md.tmpl")
@@ -66,6 +108,8 @@ def render(scope: str) -> str:
     if not config:
         print(f"ERROR: Unknown scope '{scope}'", file=sys.stderr)
         sys.exit(1)
+
+    config["screenshots_section"] = _build_screenshots_section()
 
     template = Template(template_path.read_text(encoding="utf-8"))
     return template.substitute(**config)
