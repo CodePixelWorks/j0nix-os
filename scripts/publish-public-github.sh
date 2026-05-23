@@ -82,23 +82,31 @@ cd "$work_dir"
 # 2b. Generate public-facing README.md (outside filter-branch, in container).
 #     filter-branch runs in a minimal subshell where python3 may not exist.
 #     Fall back to nixpkgs#python3 when system python3 is unavailable.
+#
+#     We generate the file OUTSIDE the worktree first, then copy it into the
+#     temporary clone so the tree-filter can inject it into every commit.
+#     We do NOT stage it — a dirty index blocks filter-branch.
 # ---------------------------------------------------------------------------
+readme_public_path="/tmp/readme.public.$$"
 if command -v python3 >/dev/null 2>&1; then
-    python3 "$repo_root/scripts/regenerate-readme.py" --scope public --output README.md.public
+    python3 "$repo_root/scripts/regenerate-readme.py" --scope public --output "$readme_public_path"
 elif command -v nix >/dev/null 2>&1; then
-    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#python3 -- "$repo_root/scripts/regenerate-readme.py" --scope public --output README.md.public
+    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#python3 -- "$repo_root/scripts/regenerate-readme.py" --scope public --output "$readme_public_path"
 else
     printf '%s\n' "ERROR: python3 not found and nix not available" >&2
     exit 1
 fi
-git add README.md.public
 
-# Remove template + generator from published tree — README.md.public will
-# be injected into every commit via the tree-filter below.
-rm -f templates/README.md.tmpl
+# Strip auth from embedded URLs before injection.
+sed -i 's|https://x-access-token:***@github.com|https://github.com|g' "$readme_public_path" 2>/dev/null || true
 
-# Strip auth from embedded URLs before the tree-filter copy.
-sed -i 's|https://x-access-token:.*@github.com|https://github.com|g' README.md.public 2>/dev/null || true
+# Place the generated file into the worktree (NOT staged) so tree-filter finds it.
+cp "$readme_public_path" "$work_dir/README.md.public"
+rm -f "$readme_public_path"
+
+# Remove the template from the tree so it cannot leak into the mirror.
+# This is a worktree deletion only; it does NOT touch the index.
+rm -f "$work_dir/templates/README.md.tmpl"
 
 git remote remove origin 2>/dev/null || true
 
