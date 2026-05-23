@@ -9,17 +9,21 @@
 # Usage: mirror-sync-forward.sh REMOTE_URL [BRANCH]
 #
 # Environment:
-#   PUBLIC_GITHUB_TOKEN          — GitHub PAT (HTTPS auth).
-#   PUBLIC_GITHUB_PRIVATE_KEY    — SSH key fallback.
-#   PUBLIC_CUTOFF_COMMIT         — Optional fallback when no sync tag exists.
+#   PUBLIC_GITHUB_TOKEN           — GitHub PAT (HTTPS auth).
+#   PUBLIC_GITHUB_PRIVATE_KEY     — SSH key fallback.
+#   PUBLIC_CUTOFF_COMMIT          — Optional fallback when no sync tag exists.
 #   PUBLIC_CUTOFF_COMMIT_FALLBACK — Fallback for the above secret.
-#   PUBLIC_GITHUB_COMMIT_NAME    — Author name for sanitised commits.
-#   PUBLIC_GITHUB_COMMIT_EMAIL   — Author email for sanitised commits.
-#   PUBLIC_SANITIZE_AUTHOR_REGEX — Regex to match authors that should be
-#                                    rewritten (default: ^(jonas|j0nix)).
-#   PUBLIC_SOURCE_URL            — Recorded in metadata.
-#   PUBLIC_SYNC_TAG              — Tag on GitHub tracking last sync
-#                                    (default: last-synced-from-gitea).
+#   PUBLIC_GITHUB_COMMIT_NAME     — Author name for sanitised commits.
+#   PUBLIC_GITHUB_COMMIT_EMAIL    — Author email for sanitised commits.
+#   PUBLIC_SANITIZE_AUTHOR_REGEX  — Regex to match authors that should be
+#                                     rewritten (default: ^(jonas|j0nix)).
+#   PUBLIC_GITHUB_IDENTITY_MODE   — Identity rewrite policy:
+#                                     selective  → rewrite authors matching regex (default)
+#                                     rewrite_all → rewrite every author to bot
+#                                     preserve   → keep original identity for all
+#   PUBLIC_SOURCE_URL             — Recorded in metadata.
+#   PUBLIC_SYNC_TAG               — Tag on GitHub tracking last sync
+#                                     (default: last-synced-from-gitea).
 #
 # Design:
 #   1. Clone Gitea repo into temp worktree.
@@ -47,6 +51,7 @@ cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-${PUBLIC_CUTOFF_COMMIT_FALLBACK:-}}"
 commit_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
 sanitize_regex="${PUBLIC_SANITIZE_AUTHOR_REGEX:-^(jonas|j0nix)}"
+identity_mode="${PUBLIC_GITHUB_IDENTITY_MODE:-selective}"
 
 repo_root="$(git rev-parse --show-toplevel)"
 
@@ -57,6 +62,8 @@ export MS_SANITIZE_MATCH_REGEX="$sanitize_regex"
 # shellcheck source=scripts/lib/mirror-sanitize.sh
 source "$repo_root/scripts/lib/mirror-sanitize.sh"
 ms_init "$repo_root"
+
+printf '%s\n' "Identity mode: $identity_mode"
 
 # --- auth setup -------------------------------------------------------------
 git_auth_remote="$remote_url"
@@ -131,7 +138,7 @@ elif [ -n "$cutoff_commit" ] && git rev-parse "$cutoff_commit" >/dev/null 2>&1; 
     sync_base="$cutoff_commit"
     printf '%s\n' "No sync tag; using cutoff $sync_base"
 else
-    # first ever run: no tag, no cutoff → start from first commit
+    # first ever run: no tag, no cutoff -> start from first commit
     sync_base="$(git rev-list --max-parents=0 HEAD 2>/dev/null | head -n1)"
     printf '%s\n' "No sync tag or cutoff; starting from root $sync_base"
 fi
@@ -155,7 +162,7 @@ printf '%s\n' "=== ${#new_commits[@]} new commit(s) to sync ==="
 #
 # Because cherry-pick preserves merge structure, we use --first-parent above
 # and cherry-pick each commit individually.  This flattens merges into a
-# linear history — acceptable for a public mirror.
+# linear history - acceptable for a public mirror.
 
 # create a detached HEAD at github_head to start the new chain
 git checkout "$github_head" --detach 2>/dev/null
@@ -196,10 +203,26 @@ for entry in "${new_commits[@]}"; do
     ms_apply_tree_filter "."
 
     # --- decide identity ------------------------------------------------
-    local_env_filter=""
-    ms_build_env_filter "$commit_hash" local_env_filter
+    # Identity policy per PUBLIC_GITHUB_IDENTITY_MODE:
+    #   selective   - rewrite only authors matching SANITIZE_REGEX (default)
+    #   rewrite_all - rewrite every author's identity to the bot
+    #   preserve    - keep original identity for all commits
+    should_rewrite=0
+    case "$identity_mode" in
+        rewrite_all)
+            should_rewrite=1
+            ;;
+        preserve)
+            should_rewrite=0
+            ;;
+        *)
+            local_env_filter=""
+            ms_build_env_filter "$commit_hash" local_env_filter
+            [ -n "$local_env_filter" ] && should_rewrite=1
+            ;;
+    esac
 
-    if [ -n "$local_env_filter" ]; then
+    if [ "$should_rewrite" -eq 1 ]; then
         # sanitise: rewrite author/committer to mirror bot, preserve date
         GIT_AUTHOR_DATE="$commit_date" \
         GIT_COMMITTER_DATE="$commit_date" \
