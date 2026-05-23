@@ -78,6 +78,20 @@ trap cleanup EXIT INT TERM
 git clone --local --no-hardlinks "$repo_root" "$work_dir"
 cd "$work_dir"
 
+# ---------------------------------------------------------------------------
+# 2b. Generate public-facing README.md (outside filter-branch, in container).
+#     filter-branch runs in a minimal subshell where python3 may not exist.
+# ---------------------------------------------------------------------------
+python3 "$repo_root/scripts/regenerate-readme.py" --scope public --output README.md.public
+git add README.md.public
+
+# Remove template + generator from published tree — README.md.public will
+# be injected into every commit via the tree-filter below.
+rm -f templates/README.md.tmpl
+
+# Strip auth from embedded URLs before the tree-filter copy.
+sed -i 's|https://x-access-token:.*@github.com|https://github.com|g' README.md.public 2>/dev/null || true
+
 git remote remove origin 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
@@ -117,15 +131,11 @@ tree_filter='
     rm -f profiles/desktop/hardware-configuration.nix.example
     rm -f .sops.yaml.example
 
-    if [ -f README.md ]; then
-        # Patch README without sed (unavailable in filter-branch subshell).
-        _tmp="README.md.tmp.$$"
-        while IFS= read -r _line || [ -n "$_line" ]; do
-            _line="${_line//[\!NOTE]/[!IMPORTANT]}"
-            _line="${_line//> This repository is the **private source**. A public mirror is maintained separately with secrets and host keys stripped out./> This is the public mirror of j0nix-os. Secrets and machine-specific data have been stripped. Contributions welcome — open an issue or PR!}"
-            printf "%s\\n" "$_line"
-        done < README.md > "$_tmp"
-        mv -f "$_tmp" README.md
+    # Replace README.md with the pre-generated public variant.
+    # Generated outside filter-branch where python3 is available.
+    if [ -f README.md.public ]; then
+        cp -f README.md.public README.md
+        rm -f README.md.public
     fi
 '
 
