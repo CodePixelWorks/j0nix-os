@@ -95,6 +95,7 @@ env_filter="
 "
 
 tree_filter='
+    rm -f nix-bug.txt
     rm -f .sops.yaml settings.nix profiles/desktop/details.nix profiles/desktop/hardware-configuration.nix
     if [ -d secrets/hosts ]; then
         find secrets/hosts -mindepth 1 -maxdepth 1 -type f -delete
