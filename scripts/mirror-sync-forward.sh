@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# mirror-sync-forward.sh — incremental, selective mirror: Gitea → GitHub.
+# mirror-sync-forward.sh -- incremental, selective mirror: Gitea -> GitHub.
 #
 # Only processes new commits since the last sync tag.
 # Commits from the configured author (default: jonas/j0nix) are sanitised
@@ -9,20 +9,26 @@
 # Usage: mirror-sync-forward.sh REMOTE_URL [BRANCH]
 #
 # Environment:
-#   PUBLIC_GITHUB_TOKEN           — GitHub PAT (HTTPS auth).
-#   PUBLIC_GITHUB_PRIVATE_KEY     — SSH key fallback.
-#   PUBLIC_CUTOFF_COMMIT          — Optional fallback when no sync tag exists.
-#   PUBLIC_CUTOFF_COMMIT_FALLBACK — Fallback for the above secret.
-#   PUBLIC_GITHUB_COMMIT_NAME     — Author name for sanitised commits.
-#   PUBLIC_GITHUB_COMMIT_EMAIL    — Author email for sanitised commits.
-#   PUBLIC_SANITIZE_AUTHOR_REGEX  — Regex to match authors that should be
+#   PUBLIC_GITHUB_TOKEN           -- GitHub PAT (HTTPS auth).
+#   PUBLIC_GITHUB_PRIVATE_KEY     -- SSH key fallback.
+#   PUBLIC_CUTOFF_COMMIT          -- Optional fallback when no sync tag exists.
+#   PUBLIC_CUTOFF_COMMIT_FALLBACK -- Fallback for the above secret.
+#   PUBLIC_GITHUB_COMMIT_NAME     -- Author name for sanitised commits.
+#   PUBLIC_GITHUB_COMMIT_EMAIL    -- Author email for sanitised commits.
+#   PUBLIC_GITHUB_SIGNING_KEY     -- GPG private key (ASCII-armored) for signing
+#                                     mirrored commits.  If set, all rewritten
+#                                     commits are GPG-signed; the public key must
+#                                     be registered at the GitHub account that
+#                                     owns PUBLIC_GITHUB_COMMIT_EMAIL.  Omit to
+#                                     keep commits unsigned.
+#   PUBLIC_SANITIZE_AUTHOR_REGEX  -- Regex to match authors that should be
 #                                     rewritten (default: ^(jonas|j0nix)).
-#   PUBLIC_GITHUB_IDENTITY_MODE   — Identity rewrite policy:
-#                                     selective  → rewrite authors matching regex (default)
-#                                     rewrite_all → rewrite every author to bot
-#                                     preserve   → keep original identity for all
-#   PUBLIC_SOURCE_URL             — Recorded in metadata.
-#   PUBLIC_SYNC_TAG               — Tag on GitHub tracking last sync
+#   PUBLIC_GITHUB_IDENTITY_MODE   -- Identity rewrite policy:
+#                                     selective  -> rewrite authors matching regex (default)
+#                                     rewrite_all -> rewrite every author to bot
+#                                     preserve   -> keep original identity for all
+#   PUBLIC_SOURCE_URL             -- Recorded in metadata.
+#   PUBLIC_SYNC_TAG               -- Tag on GitHub tracking last sync
 #                                     (default: last-synced-from-gitea).
 #
 # Design:
@@ -34,7 +40,7 @@
 #      - cherry-pick --no-commit
 #      - apply tree-filter (blacklist/whitelist/templates/README)
 #      - decide identity: rewrite (sanitise) or keep original
-#      - commit with appropriate author/committer
+#      - commit with appropriate author/committer, optionally GPG-signed
 #   6. Rebase resulting branch onto GitHub HEAD for fast-forward push.
 #   7. Update sync tag, push branch + tag.
 #
@@ -54,6 +60,23 @@ sanitize_regex="${PUBLIC_SANITIZE_AUTHOR_REGEX:-^(jonas|j0nix)}"
 identity_mode="${PUBLIC_GITHUB_IDENTITY_MODE:-selective}"
 
 repo_root="$(git rev-parse --show-toplevel)"
+
+# --- gpg signing setup (before work_dir exists) -------------------------------
+gpg_key_id=""
+gpg_dir=""
+if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
+    gpg_dir="$(mktemp -d -t mirror_gpg.XXXXXX)"
+    chmod 700 "$gpg_dir"
+    export GNUPGHOME="$gpg_dir"
+    printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | gpg --batch --import 2>/dev/null
+    gpg_key_id="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^sec/{print $5}' | head -n1)"
+    if [ -n "$gpg_key_id" ]; then
+        printf '%s\n' "GPG signing configured (key ${gpg_key_id:0:16}...)"
+        git config --global user.signingkey "$gpg_key_id"
+    else
+        printf '%s\n' "WARN: could not import GPG signing key" >&2
+    fi
+fi
 
 # --- load shared sanitisation engine ----------------------------------------
 export MS_SANITIZE_AUTHOR_NAME="$commit_name"
@@ -97,6 +120,7 @@ work_dir="$(mktemp -d)"
 cleanup() {
     rm -rf "$work_dir"
     [ -n "$ssh_key_path" ] && rm -f "$ssh_key_path" 2>/dev/null || true
+    [ -n "$gpg_dir" ] && rm -rf "$gpg_dir" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -222,6 +246,12 @@ for entry in "${new_commits[@]}"; do
             ;;
     esac
 
+    # determine commit arguments (sign if configured)
+    commit_args="--allow-empty"
+    if [ -n "$gpg_key_id" ]; then
+        commit_args="$commit_args -S"
+    fi
+
     if [ "$should_rewrite" -eq 1 ]; then
         # sanitise: rewrite author/committer to mirror bot, preserve date
         GIT_AUTHOR_DATE="$commit_date" \
@@ -230,7 +260,7 @@ for entry in "${new_commits[@]}"; do
         GIT_AUTHOR_EMAIL="$commit_email" \
         GIT_COMMITTER_NAME="$commit_name" \
         GIT_COMMITTER_EMAIL="$commit_email" \
-            git commit -m "$commit_msg" --allow-empty 2>/dev/null || {
+            git commit $commit_args -m "$commit_msg" 2>/dev/null || {
                 printf '%s\n' "    FAILED: commit after sanitise" >&2
                 failed=$((failed + 1))
                 git reset --hard HEAD
@@ -244,7 +274,7 @@ for entry in "${new_commits[@]}"; do
         GIT_AUTHOR_EMAIL="$author_email" \
         GIT_COMMITTER_NAME="$committer_name" \
         GIT_COMMITTER_EMAIL="$committer_email" \
-            git commit -m "$commit_msg" --allow-empty 2>/dev/null || {
+            git commit $commit_args -m "$commit_msg" 2>/dev/null || {
                 printf '%s\n' "    FAILED: commit with original identity" >&2
                 failed=$((failed + 1))
                 git reset --hard HEAD
@@ -268,7 +298,10 @@ cat > .well-known/public-mirror-metadata.json <<EOF
 }
 EOF
 git add -A
-git commit -m "chore(mirror): sync metadata" --allow-empty 2>/dev/null || true
+
+meta_args="--allow-empty"
+[ -n "$gpg_key_id" ] && meta_args="$meta_args -S"
+git commit $meta_args -m "chore(mirror): sync metadata" 2>/dev/null || true
 
 # --- push (non-force) -------------------------------------------------------
 # We push the new HEAD to github/$branch.  Because we built on top of
@@ -302,5 +335,7 @@ printf '%s\n' "  synced:      $((total - failed))"
 printf '%s\n' "  skipped:     $failed"
 printf '%s\n' "  github head: ${github_head:0:12}"
 printf '%s\n' "  new head:    ${new_head:0:12}"
+
+[ -n "$gpg_key_id" ] && printf '%s\n' "  gpg signing: enabled"
 
 trap - EXIT INT TERM
