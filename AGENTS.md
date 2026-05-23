@@ -236,6 +236,26 @@ Controlled by:
 - **Don’t move host-specific declarations into `settings.nix`.** Resume device UUIDs, kernel module blacklists, hardware-specific NVMe tunables, custom fan controller configs, and per-device GPU packages stay in their profile module. Thin-piping every profile to `settings` destroys the host/profile boundary and pollutes cross-platform settings with machine-local data.
 - Don’t introduce speculative features not requested.
 
+## Public Mirror
+
+This repo publishes a secrets-stripped GitHub mirror via `scripts/publish-public-github.sh`.
+
+### Control Files
+
+| File | Visibility | Purpose |
+|------|-----------|---------|
+| `.mirror-blacklist` | Removed by filter-branch | Lists files/dirs to strip (relative paths). Read from source repo, so current rules apply to ALL commits retroactively. |
+| `.mirror-root-whitelist` | Public; stripped from mirror | Lists top-level root files explicitly allowed. Any regular file at root NOT in this list is stripped as a safety net against accidentally leaked secrets or temp files. |
+
+### Workflow
+
+1. Generate `README.md.public` outside the worktree → injected into every commit via tree-filter
+2. `tree-filter` reads `.mirror-blacklist` and `.mirror-root-whitelist` from the source tree (not the commit) so rules are retroactive
+3. The filter-branch run operates on a 100% clean temp worktree (no unstaged changes)
+4. After push, temp files and the worktree are cleaned up
+
+Add root files to `.mirror-root-whitelist` AND `.gitignore` if they should safely remain in the repo but are not publishable. Add files to `.mirror-blacklist` with relative paths to strip them from the mirror.
+
 ## Common Tasks
 
 ### Add a new user
