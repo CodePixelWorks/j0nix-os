@@ -86,7 +86,7 @@ cd "$work_dir"
 if command -v python3 >/dev/null 2>&1; then
     python3 "$repo_root/scripts/regenerate-readme.py" --scope public --output README.md.public
 elif command -v nix >/dev/null 2>&1; then
-    nix run nixpkgs#python3 -- "$repo_root/scripts/regenerate-readme.py" --scope public --output README.md.public
+    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#python3 -- "$repo_root/scripts/regenerate-readme.py" --scope public --output README.md.public
 else
     printf '%s\n' "ERROR: python3 not found and nix not available" >&2
     exit 1
