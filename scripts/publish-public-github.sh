@@ -81,8 +81,16 @@ cd "$work_dir"
 # ---------------------------------------------------------------------------
 # 2b. Generate public-facing README.md (outside filter-branch, in container).
 #     filter-branch runs in a minimal subshell where python3 may not exist.
+#     Fall back to nixpkgs#python3 when system python3 is unavailable.
 # ---------------------------------------------------------------------------
-python3 "$repo_root/scripts/regenerate-readme.py" --scope public --output README.md.public
+if command -v python3 >/dev/null 2>&1; then
+    python3 "$repo_root/scripts/regenerate-readme.py" --scope public --output README.md.public
+elif command -v nix >/dev/null 2>&1; then
+    nix run nixpkgs#python3 -- "$repo_root/scripts/regenerate-readme.py" --scope public --output README.md.public
+else
+    printf '%s\n' "ERROR: python3 not found and nix not available" >&2
+    exit 1
+fi
 git add README.md.public
 
 # Remove template + generator from published tree — README.md.public will
