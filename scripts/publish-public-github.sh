@@ -131,8 +131,30 @@ tree_filter="
         done < "\$blacklist_path"
     fi
 
-    # The blacklist file itself must not appear in the mirror either.
-    rm -f .mirror-blacklist
+    # --- Root whitelist: strip unknown top-level files as safety net ---
+    # Any regular file at the repo root that is NOT listed in the
+    # source .mirror-root-whitelist is removed. Directories are untouched.
+    whitelist_path='${repo_root}/.mirror-root-whitelist'
+    if [ -f "\$whitelist_path" ]; then
+        whitelist=""
+        while IFS= read -r line; do
+            [ -z "\$line" ] && continue
+            case "\$line" in \#*) continue ;; esac
+            whitelist="\$whitelist \$line"
+        done < "\$whitelist_path"
+
+        for entry in .* *; do
+            case "\$entry" in '.'|'..') continue ;; esac
+            [ -f "\$entry" ] || continue
+            case " \$whitelist " in
+                *" \$entry "*) ;;
+                *) rm -f "\$entry" ;;
+            esac
+        done
+    fi
+
+    # The control files themselves must not appear in the mirror either.
+    rm -f .mirror-blacklist .mirror-root-whitelist
 
     rm -f .sops.yaml settings.nix profiles/desktop/details.nix profiles/desktop/hardware-configuration.nix
     if [ -d secrets/hosts ]; then
