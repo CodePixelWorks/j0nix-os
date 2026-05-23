@@ -118,15 +118,21 @@ env_filter="
 "
 
 tree_filter="
-    # Remove blacklisted files; the blacklist file itself also gets stripped.
-    if [ -f .mirror-blacklist ]; then
+    # Remove blacklisted files from the SOURCE repo's current blacklist.
+    # We read $repo_root/.mirror-blacklist (not ./.mirror-blacklist) so
+    # the current blacklist applies to ALL commits, even ones where the
+    # blacklist file did not yet exist.
+    blacklist_path='${repo_root}/.mirror-blacklist'
+    if [ -f "\$blacklist_path" ]; then
         while IFS= read -r line; do
             [ -z \"\$line\" ] && continue
             case \"\$line\" in \#*) continue ;; esac
             rm -rf \"\$line\"
-        done < .mirror-blacklist
-        rm -f .mirror-blacklist
+        done < "\$blacklist_path"
     fi
+
+    # The blacklist file itself must not appear in the mirror either.
+    rm -f .mirror-blacklist
 
     rm -f .sops.yaml settings.nix profiles/desktop/details.nix profiles/desktop/hardware-configuration.nix
     if [ -d secrets/hosts ]; then
