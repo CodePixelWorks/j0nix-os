@@ -83,11 +83,11 @@ cd "$work_dir"
 #     filter-branch runs in a minimal subshell where python3 may not exist.
 #     Fall back to nixpkgs#python3 when system python3 is unavailable.
 #
-#     We generate the file OUTSIDE the worktree first, then copy it into the
-#     temporary clone so the tree-filter can inject it into every commit.
-#     We do NOT stage it — a dirty index blocks filter-branch.
+#     We overwrite README.md directly in the temporary clone with the public
+#     variant.  We do NOT stage — a dirty index blocks filter-branch.
+#     The tree-filter strips the template so it never reaches the mirror.
 # ---------------------------------------------------------------------------
-readme_public_path="/tmp/readme.public.$$"
+readme_public_path="$work_dir/README.md"
 if command -v python3 >/dev/null 2>&1; then
     python3 "$repo_root/scripts/regenerate-readme.py" --scope public --output "$readme_public_path"
 elif command -v nix >/dev/null 2>&1; then
@@ -97,16 +97,8 @@ else
     exit 1
 fi
 
-# Strip auth from embedded URLs before injection.
+# Strip auth from embedded URLs before filter-branch touches the tree.
 sed -i 's|https://x-access-token:***@github.com|https://github.com|g' "$readme_public_path" 2>/dev/null || true
-
-# Place the generated file into the worktree (NOT staged) so tree-filter finds it.
-cp "$readme_public_path" "$work_dir/README.md.public"
-rm -f "$readme_public_path"
-
-# Remove the template from the tree so it cannot leak into the mirror.
-# This is a worktree deletion only; it does NOT touch the index.
-rm -f "$work_dir/templates/README.md.tmpl"
 
 git remote remove origin 2>/dev/null || true
 
@@ -155,12 +147,8 @@ tree_filter='
     rm -f profiles/desktop/hardware-configuration.nix.example
     rm -f .sops.yaml.example
 
-    # Replace README.md with the pre-generated public variant.
-    # Generated outside filter-branch where python3 is available.
-    if [ -f README.md.public ]; then
-        cp -f README.md.public README.md
-        rm -f README.md.public
-    fi
+    # Remove the template so it cannot leak into the mirror.
+    rm -f templates/README.md.tmpl
 '
 
 # Inline-commit placeholders replaced at script build time.
