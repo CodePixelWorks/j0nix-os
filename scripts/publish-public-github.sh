@@ -41,17 +41,19 @@ git_auth_remote="$remote_url"
 ssh_key_path=""
 
 if [ -n "${PUBLIC_GITHUB_TOKEN:-}" ]; then
+    # GitHub PAT auth: oauth2 as username, token as password.
+    # Works for both classic and Fine-Grained tokens.
     case "$remote_url" in
         https://github.com/*)
-            git_auth_remote="${remote_url/https:\/\//https:\/\/x-access-token:${PUBLIC_GITHUB_TOKEN}@}"
+            git_auth_remote="${remote_url/https:\/\//https:\/\/oauth2:${PUBLIC_GITHUB_TOKEN}@}"
             ;;
         git@github.com:*)
             repo_path="${remote_url#git@github.com:}"
-            git_auth_remote="https://x-access-token:***@github.com/${repo_path}"
+            git_auth_remote="https://oauth2:${PUBLIC_GITHUB_TOKEN}@github.com/${repo_path}"
             ;;
         *)
             printf '%s\n' "WARN: Unknown remote_url format; attempting to embed PAT" >&2
-            git_auth_remote="https://x-access-token:***@${remote_url#*://}"
+            git_auth_remote="https://oauth2:${PUBLIC_GITHUB_TOKEN}@${remote_url#*://}"
             ;;
     esac
 else
@@ -96,8 +98,8 @@ else
     exit 1
 fi
 
-# Strip embedded auth tokens so they never leak into the published tree.
-sed -i 's|https://x-access-token:***@github.com|https://github.com|g' "$readme_path" 2>/dev/null || true
+# Strip any embedded auth tokens so they never leak into the published tree.
+sed -i 's|https://oauth2:[^@]*@github.com|https://github.com|g' "$readme_path" 2>/dev/null || true
 
 git remote remove origin 2>/dev/null || true
 
