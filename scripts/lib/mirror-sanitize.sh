@@ -1,10 +1,10 @@
-# mirror-sanitize.sh — shared sanitization engine for Gitea → GitHub mirror.
+# mirror-sanitize.sh -- shared sanitization engine for Gitea -> GitHub mirror.
 #
 # Usage (source this file):
 #   source "$(dirname "$0")/lib/mirror-sanitize.sh"
 #
 # Environment (must be set by caller):
-#   SANITIZE_REPO_ROOT — absolute path to source repo root
+#   SANITIZE_REPO_ROOT -- absolute path to source repo root
 #
 # Functions:
 #   ms_init  repo_root
@@ -27,7 +27,7 @@ MS_SANITIZE_AUTHOR_EMAIL="${MS_SANITIZE_AUTHOR_EMAIL:-mirror@example.invalid}"
 MS_SANITIZE_MATCH_REGEX="${MS_SANITIZE_MATCH_REGEX:-^(jonas|j0nix)}"
 
 # ============================================================================
-# Init — validate repo root, preload control files.
+# Init -- validate repo root, preload control files.
 # ============================================================================
 ms_init() {
     local repo_root="${1:?ms_init: repo_root required}"
@@ -42,7 +42,7 @@ ms_init() {
 }
 
 # ============================================================================
-# ms_should_sanitize_author — return 0 if this author should be rewritten.
+# ms_should_sanitize_author -- return 0 if this author should be rewritten.
 #
 # Policy: Only rewrite authors that match the configured regex (default:
 #     jonas / j0nix).  External contributors (Dependabot, GitHub Actions,
@@ -66,7 +66,7 @@ ms_should_sanitize_author() {
 }
 
 # ============================================================================
-# ms_apply_tree_filter — apply blacklist, whitelist, templates, README.
+# ms_apply_tree_filter -- apply blacklist, whitelist, templates, README.
 #
 # Must be run inside a git worktree (the mirror clone).
 # Reads control files from SANITIZE_REPO_ROOT (source tree), applies
@@ -142,7 +142,7 @@ ms_apply_tree_filter() {
 }
 
 # ============================================================================
-# ms_build_env_filter — output env-filter commands for a single commit.
+# ms_build_env_filter -- output env-filter commands for a single commit.
 #
 # Reads the original author/committer from the commit, decides whether
 # to rewrite identity, and prints export statements for
