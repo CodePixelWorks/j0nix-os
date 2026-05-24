@@ -49,11 +49,11 @@ if [ -n "${PUBLIC_GITHUB_TOKEN:-}" ]; then
             ;;
         git@github.com:*)
             repo_path="${remote_url#git@github.com:}"
-            git_auth_remote="https://oauth2:***@github.com/${repo_path}"
+            git_auth_remote="https://oauth2:${PUBLIC_GITHUB_TOKEN}@github.com/${repo_path}"
             ;;
         *)
             printf '%s\n' "WARN: Unknown remote_url format; attempting to embed PAT" >&2
-            git_auth_remote="https://oauth2:***@${remote_url#*://}"
+            git_auth_remote="https://oauth2:${PUBLIC_GITHUB_TOKEN}@${remote_url#*://}"
             ;;
     esac
 else
