@@ -31,7 +31,23 @@ stdenv.mkDerivation rec {
     hash = "sha256-DF3DFbVR5osAAczCd46EDvZspmJGWs3cc37bPymYQwQ=";
   };
 
-  npmDeps = importNpmLock { npmRoot = src; };
+  npmDeps = importNpmLock {
+    npmRoot = src;
+    packageSourceOverrides = {
+      "node_modules/electron" = fetchFromGitHub {
+        owner = "castlabs";
+        repo = "electron-releases";
+        rev = "f785b9dc477b1227e473c79a1c12fb9701c6eb1b";
+        hash = "sha256-sovL0uKQWX0Bh44CVnOOcZuQNcnHU3JmwKRmZUon6fA=";
+      };
+      "node_modules/@electron/node-gyp" = fetchFromGitHub {
+        owner = "electron";
+        repo = "node-gyp";
+        rev = "06b29aafb7708acef8b3669835c8a7857ebc92d2";
+        hash = "sha256-AzsnndqdhXYXRDj6+4BPKycXNDOl/gNZIyMw/+WjsVU=";
+      };
+    };
+  };
 
   # electron-forge tries to download electron binary during build; we provide it.
   env.ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
