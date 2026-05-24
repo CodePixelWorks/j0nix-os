@@ -94,8 +94,10 @@ All variables use the `PUBLIC_` prefix for namespacing. Those listed without
 
 | Variable | In `.drone.star` | Type | Default | Description |
 |----------|-------------------|------|---------|-------------|
-| `PUBLIC_GITHUB_COMMIT_NAME` | `from_secret` | Secret | `j0nix mirror bot` | Author/committer name for rewritten commits |
-| `PUBLIC_GITHUB_COMMIT_EMAIL` | `from_secret` | Secret | `mirror@example.invalid` | Author/committer email for rewritten commits |
+| `PUBLIC_GITHUB_COMMIT_NAME` | `from_secret` | Secret | `j0nix mirror bot` | Author name for rewritten commits |
+| `PUBLIC_GITHUB_COMMIT_EMAIL` | `from_secret` | Secret | `mirror@example.invalid` | Author email for rewritten commits |
+| `PUBLIC_GITHUB_COMMITTER_NAME` | `from_secret` | Secret | *(COMMIT_NAME)* | Committer name. Use to distinguish the CI runner (e.g. `"Drone CI"`) from the public mirror author |
+| `PUBLIC_GITHUB_COMMITTER_EMAIL` | `from_secret` | Secret | *(COMMIT_EMAIL)* | Committer email. Falls back to COMMIT_EMAIL when not set |
 
 ### Selective Author Rewrite
 
