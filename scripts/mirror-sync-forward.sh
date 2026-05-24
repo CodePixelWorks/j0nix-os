@@ -15,6 +15,13 @@
 #   PUBLIC_CUTOFF_COMMIT_FALLBACK -- Fallback for the above secret.
 #   PUBLIC_GITHUB_COMMIT_NAME     -- Author name for sanitised commits.
 #   PUBLIC_GITHUB_COMMIT_EMAIL    -- Author email for sanitised commits.
+#   PUBLIC_GITHUB_COMMITTER_NAME  -- Optional committer name for sanitised
+#                                      commits. Falls back to COMMIT_NAME.
+#                                      Use this to distinguish the CI runner
+#                                      (e.g. "Drone CI") from the public mirror
+#                                      author.
+#   PUBLIC_GITHUB_COMMITTER_EMAIL -- Optional committer email. Falls back to
+#                                      COMMIT_EMAIL.
 #   PUBLIC_GITHUB_SIGNING_KEY     -- GPG private key (ASCII-armored) for signing
 #                                     mirrored commits.  If the key has a
 #                                     passphrase, also set PUBLIC_GITHUB_SIGNING_
@@ -65,6 +72,8 @@ tag="${PUBLIC_SYNC_TAG:-last-synced-from-gitea}"
 cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-${PUBLIC_CUTOFF_COMMIT_FALLBACK:-}}"
 commit_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
+committer_name="${PUBLIC_GITHUB_COMMITTER_NAME:-$commit_name}"
+committer_email="${PUBLIC_GITHUB_COMMITTER_EMAIL:-$commit_email}"
 rewrite_emails="${PUBLIC_GITHUB_REWRITE_EMAILS:-jonas,j0nix}"
 rewrite_names="${PUBLIC_GITHUB_REWRITE_NAMES:-}"
 identity_mode="${PUBLIC_GITHUB_IDENTITY_MODE:-selective}"
@@ -310,8 +319,8 @@ for entry in "${new_commits[@]}"; do
         GIT_COMMITTER_DATE="$commit_date" \
         GIT_AUTHOR_NAME="$commit_name" \
         GIT_AUTHOR_EMAIL="$commit_email" \
-        GIT_COMMITTER_NAME="$commit_name" \
-        GIT_COMMITTER_EMAIL="$commit_email" \
+        GIT_COMMITTER_NAME="$committer_name" \
+        GIT_COMMITTER_EMAIL="$committer_email" \
             git commit $commit_args -m "$commit_msg" 2>/dev/null || {
                 printf '%s\n' "    FAILED: commit after sanitise" >&2
                 failed=$((failed + 1))
