@@ -11,6 +11,12 @@ set -euo pipefail
 #   PUBLIC_GITHUB_PRIVATE_KEY    — SSH key for git push (fallback when PAT absent).
 #   PUBLIC_GITHUB_COMMIT_NAME    — Author/committer name for rewritten history.
 #   PUBLIC_GITHUB_COMMIT_EMAIL   — Author/committer email for rewritten history.
+#   PUBLIC_GITHUB_REWRITE_EMAIL_REGEX — Regex for email-based selective rewrite.
+#                                       Default: ^(jonas|j0nix)  (from_secret)
+#   PUBLIC_GITHUB_REWRITE_EMAIL_REGEX_FALLBACK — Fallback when secret unset.
+#   PUBLIC_GITHUB_REWRITE_NAME_REGEX  — Optional. Regex for name-based matching.
+#                                       Disabled by default.               (from_secret)
+#   PUBLIC_GITHUB_REWRITE_NAME_REGEX_FALLBACK — Fallback when secret unset.
 #   PUBLIC_CUTOFF_COMMIT         — Optional. Commits BEFORE this hash are
 #                                    removed entirely from mirror history.
 #   PUBLIC_CUTOFF_COMMIT_FALLBACK — Fallback when the above secret is unset.
@@ -29,7 +35,8 @@ branch="${2:-main}"
 
 commit_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
-rewrite_regex="${PUBLIC_GITHUB_REWRITE_REGEX:-^(jonas|j0nix)}"
+rewrite_email_regex="${PUBLIC_GITHUB_REWRITE_EMAIL_REGEX:-${PUBLIC_GITHUB_REWRITE_EMAIL_REGEX_FALLBACK:-^(jonas|j0nix)}}"
+rewrite_name_regex="${PUBLIC_GITHUB_REWRITE_NAME_REGEX:-${PUBLIC_GITHUB_REWRITE_NAME_REGEX_FALLBACK:-}}"
 
 cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-${PUBLIC_CUTOFF_COMMIT_FALLBACK:-}}"
 force_push="${PUBLIC_GITHUB_FORCE_PUSH:-true}"
@@ -122,10 +129,15 @@ git remote remove origin 2>/dev/null || true
 
 env_filter_path="$(mktemp -t env_filter.XXXXXX)"
 cat > "$env_filter_path" <<ENVFILTER
-ORIG_NAME="$GIT_AUTHOR_NAME"
-ORIG_EMAIL="$GIT_AUTHOR_EMAIL"
-if printf '%s\n' "$ORIG_NAME" | grep -qiE '$rewrite_regex' 2>/dev/null || \
-   printf '%s\n' "$ORIG_EMAIL" | grep -qiE '$rewrite_regex' 2>/dev/null; then
+match_email=0
+match_name=0
+if [ -n '$rewrite_email_regex' ] && printf '%s\n' "\$GIT_AUTHOR_EMAIL" | grep -qiE '$rewrite_email_regex' 2>/dev/null; then
+    match_email=1
+fi
+if [ -n '$rewrite_name_regex' ] && printf '%s\n' "\$GIT_AUTHOR_NAME" | grep -qiE '$rewrite_name_regex' 2>/dev/null; then
+    match_name=1
+fi
+if [ "\$match_email" -eq 1 ] || [ "\$match_name" -eq 1 ]; then
     export GIT_AUTHOR_NAME='$commit_name'
     export GIT_AUTHOR_EMAIL='$commit_email'
     export GIT_COMMITTER_NAME='$commit_name'
