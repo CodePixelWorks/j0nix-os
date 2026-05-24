@@ -49,11 +49,11 @@ if [ -n "${PUBLIC_GITHUB_TOKEN:-}" ]; then
             ;;
         git@github.com:*)
             repo_path="${remote_url#git@github.com:}"
-            git_auth_remote="https://oauth2:${PUBLIC_GITHUB_TOKEN}@github.com/${repo_path}"
+            git_auth_remote="https://oauth2:***@github.com/${repo_path}"
             ;;
         *)
             printf '%s\n' "WARN: Unknown remote_url format; attempting to embed PAT" >&2
-            git_auth_remote="https://oauth2:${PUBLIC_GITHUB_TOKEN}@${remote_url#*://}"
+            git_auth_remote="https://oauth2:***@${remote_url#*://}"
             ;;
     esac
 else
@@ -72,10 +72,19 @@ fi
 # ---------------------------------------------------------------------------
 work_dir="$(mktemp -d)"
 readme_path="$repo_root/README.md.public"
+
+# Temp path placeholders (set below)
+env_filter_path=""
+tree_filter_path=""
+parent_filter_script=""
+
 cleanup() {
     rm -rf "$work_dir"
     rm -f "$readme_path"
     [ -n "$ssh_key_path" ] && rm -f "$ssh_key_path" 2>/dev/null || true
+    [ -n "${env_filter_path:-}" ] && rm -f "$env_filter_path" 2>/dev/null || true
+    [ -n "${tree_filter_path:-}" ] && rm -f "$tree_filter_path" 2>/dev/null || true
+    [ -n "${parent_filter_script:-}" ] && rm -f "$parent_filter_script" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -104,88 +113,74 @@ sed -i 's|https://oauth2:[^@]*@github.com|https://github.com|g' "$readme_path" 2
 git remote remove origin 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
-# 3. Combined filter-branch pass: orphan history from cutoff + sanitize
-#    all remaining commits + rewrite identity.
+# 3. Build filter scripts as temp files instead of inline strings.
+#    git-filter-branch passes strings through eval; quoting fights are
+#    impossible to win reliably with double-quoted heredoc content.
 # ---------------------------------------------------------------------------
-export FILTER_BRANCH_SQUELCH_WARNING=1
 
-# Environment variables expanded at script build time.
-env_filter="
-    export GIT_AUTHOR_NAME='__COMMIT_NAME__'
-    export GIT_AUTHOR_EMAIL='__COMMIT_EMAIL__'
-    export GIT_COMMITTER_NAME='__COMMIT_NAME__'
-    export GIT_COMMITTER_EMAIL='__COMMIT_EMAIL__'
-"
+env_filter_path="$(mktemp -t env_filter.XXXXXX)"
+cat > "$env_filter_path" <<ENVFILTER
+export GIT_AUTHOR_NAME='***'
+export GIT_AUTHOR_EMAIL='***'
+export GIT_COMMITTER_NAME='***'
+export GIT_COMMITTER_EMAIL='***'
+ENVFILTER
 
-tree_filter="
-    # Remove blacklisted files from the SOURCE repo's current blacklist.
-    # We read $repo_root/.mirror-blacklist (not ./.mirror-blacklist) so
-    # the current blacklist applies to ALL commits, even ones where the
-    # blacklist file did not yet exist.
-    blacklist_path='${repo_root}/.mirror-blacklist'
-    if [ -f "\$blacklist_path" ]; then
-        while IFS= read -r line; do
-            [ -z \"\$line\" ] && continue
-            case \"\$line\" in \#*) continue ;; esac
-            rm -rf \"\$line\"
-        done < "\$blacklist_path"
-    fi
+tree_filter_path="$(mktemp -t tree_filter.XXXXXX)"
+cat > "$tree_filter_path" <<TREEFILTER
+blacklist_path='${repo_root}/.mirror-blacklist'
+if [ -f "\$blacklist_path" ]; then
+    while IFS= read -r line; do
+        [ -z "\$line" ] && continue
+        case "\$line" in '#'* ) continue ;; esac
+        rm -rf "\$line"
+    done < "\$blacklist_path"
+fi
 
-    # --- Root whitelist: strip unknown top-level files as safety net ---
-    # Any regular file at the repo root that is NOT listed in the
-    # source .mirror-root-whitelist is removed. Directories are untouched.
-    whitelist_path='${repo_root}/.mirror-root-whitelist'
-    if [ -f "\$whitelist_path" ]; then
-        whitelist=""
-        while IFS= read -r line; do
-            [ -z "\$line" ] && continue
-            case "\$line" in \#*) continue ;; esac
-            whitelist="\$whitelist \$line"
-        done < "\$whitelist_path"
+whitelist_path='${repo_root}/.mirror-root-whitelist'
+if [ -f "\$whitelist_path" ]; then
+    whitelist=""
+    while IFS= read -r line; do
+        [ -z "\$line" ] && continue
+        case "\$line" in '#'* ) continue ;; esac
+        whitelist="\$whitelist \$line"
+    done < "\$whitelist_path"
 
-        for entry in .* *; do
-            case "\$entry" in '.'|'..') continue ;; esac
-            [ -f "\$entry" ] || continue
-            case " \$whitelist " in
-                *" \$entry "*) ;;
-                *) rm -f "\$entry" ;;
-            esac
-        done
-    fi
+    for entry in .* *; do
+        case "\$entry" in '.'|'..') continue ;; esac
+        [ -f "\$entry" ] || continue
+        case " \$whitelist " in
+            *" \$entry "*) ;;
+            *) rm -f "\$entry" ;;
+        esac
+    done
+fi
 
-    # The control files themselves must not appear in the mirror either.
-    rm -f .mirror-blacklist .mirror-root-whitelist
+rm -f .mirror-blacklist .mirror-root-whitelist
 
-    rm -f .sops.yaml settings.nix profiles/desktop/details.nix profiles/desktop/hardware-configuration.nix
-    if [ -d secrets/hosts ]; then
-        find secrets/hosts -mindepth 1 -maxdepth 1 -type f -delete
-    fi
-    if [ -d secrets/users ]; then
-        find secrets/users -mindepth 1 -maxdepth 1 -type f -delete
-    fi
+rm -f .sops.yaml settings.nix profiles/desktop/details.nix profiles/desktop/hardware-configuration.nix
+if [ -d secrets/hosts ]; then
+    find secrets/hosts -mindepth 1 -maxdepth 1 -type f -delete
+fi
+if [ -d secrets/users ]; then
+    find secrets/users -mindepth 1 -maxdepth 1 -type f -delete
+fi
 
-    # Substitute templates. Use cp -f so a missing .example does not abort.
-    cp -f settings.nix.example               settings.nix 2>/dev/null || true
-    cp -f profiles/desktop/details.nix.example profiles/desktop/details.nix 2>/dev/null || true
-    cp -f profiles/desktop/hardware-configuration.nix.example profiles/desktop/hardware-configuration.nix 2>/dev/null || true
-    cp -f .sops.yaml.example                 .sops.yaml 2>/dev/null || true
+cp -f settings.nix.example               settings.nix 2>/dev/null || true
+cp -f profiles/desktop/details.nix.example profiles/desktop/details.nix 2>/dev/null || true
+cp -f profiles/desktop/hardware-configuration.nix.example profiles/desktop/hardware-configuration.nix 2>/dev/null || true
+cp -f .sops.yaml.example                 .sops.yaml 2>/dev/null || true
 
-    # Remove the .example files so they do not linger as duplicates.
-    rm -f settings.nix.example
-    rm -f profiles/desktop/details.nix.example
-    rm -f profiles/desktop/hardware-configuration.nix.example
-    rm -f .sops.yaml.example
+rm -f settings.nix.example
+rm -f profiles/desktop/details.nix.example
+rm -f profiles/desktop/hardware-configuration.nix.example
+rm -f .sops.yaml.example
 
-    # Inject the pre-generated public README into every commit.
-    cp -f '$repo_root/README.md.public' README.md 2>/dev/null || true
-"
-
-# Inline-commit placeholders replaced at script build time.
-env_filter="${env_filter//__COMMIT_NAME__/$commit_name}"
-env_filter="${env_filter//__COMMIT_EMAIL__/$commit_email}"
+cp -f '${repo_root}/README.md.public' README.md 2>/dev/null || true
+TREEFILTER
 
 # Always run --parent-filter: strip cutoff parent if set, otherwise passthrough.
-parent_filter_script=""
+parent_filter_cmd="cat"
 if [ -n "$cutoff_commit" ]; then
     # --parent-filter removes the cutoff commit as parent from the first
     # rewritten commit after the cutoff, creating a new root = clean history.
@@ -202,21 +197,18 @@ if [ -n "$cutoff_commit" ]; then
                   "done" > "$parent_filter_script"
     chmod +x "$parent_filter_script"
     parent_filter_cmd="$parent_filter_script"
-else
-    # No cutoff: passthrough so we still share a single filter-branch invocation.
-    parent_filter_cmd="cat"
 fi
+
+export FILTER_BRANCH_SQUELCH_WARNING=1
 
 git filter-branch \
     --force \
     --parent-filter "$parent_filter_cmd" \
-    --env-filter "$env_filter" \
-    --tree-filter "$tree_filter" \
+    --env-filter "source '$env_filter_path'" \
+    --tree-filter "source '$tree_filter_path'" \
     --prune-empty \
     --tag-name-filter cat \
     -- --all
-
-[ -n "${parent_filter_script:-}" ] && rm -f "$parent_filter_script"
 
 # filter-branch leaves refs in refs/original/ — drop them so they are
 # not accidentally pushed and do not bloat the clone.
@@ -260,4 +252,4 @@ else
     git push --tags github
 fi
 
-trap - EXIT INT TERM
+# Done; cleanup runs via trap EXIT.
