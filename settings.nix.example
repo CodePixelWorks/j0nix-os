@@ -1,492 +1,979 @@
-{ ... }:
+# =============================================================================
+# settings.nix.example — j0nix-os machine configuration template
+# =============================================================================
+# Copy this file to settings.nix in the repo root and edit to taste.
+# Host-specific data (UUIDs, kernel params, GPU variants, fan curves) stays
+# inside profiles/<profileName>/. This file is for cross-platform toggles
+# and user-facing defaults only.
+#
+# Parameter: { inputs, ... }
+#   inputs — flake inputs forwarded by flake.nix. Needed when secret files
+#   are referenced as ./relative paths inside userSettings.
+#
+# Architecture rules (from AGENTS.md):
+#   - profiles/ = host-specific hardware declarations
+#   - settings.nix = cross-platform defaults, feature toggles, user prefs
+# =============================================================================
 
+{ inputs, ... }:
+
+let
+  # Shared keyboard layout definitions for Wayland/XKB compositors.
+  # Add more if needed (e.g. "fr", "dvorak"). The order controls the
+  # keybind rotation.
+  keyboardLayouts = [ "de" "us" ];
+
+  # Shared XKB options. "caps:escape" remaps CapsLock to Escape.
+  # Common alternatives: "compose:ralt", "ctrl:nocaps".
+  keyboardOptions = [ "caps:escape" ];
+in
 {
-  # ===========================================================================
-  # settings.nix.example — Fully commented reference for j0nix-os
-  # ===========================================================================
-  # Copy this file to settings.nix and replace all placeholders.
-  #
-  # Architecture boundary (AGENTS.md):
-  #   settings.nix = cross-platform toggles and defaults (no host data!)
-  #   profiles/     = host-specific hardware (monitors, UUIDs, drivers)
-  #   flake.nix     = host → profile wiring
-  #
-  # After editing: nix flake check --no-build
-  # ===========================================================================
+  # ==========================================================================
+  # 01 LOCALE & INPUT
+  # ==========================================================================
+  # Machine-wide locale and keyboard defaults.
 
-  # ---------------------------------------------------------------------------
-  # Locale & Input
-  # ---------------------------------------------------------------------------
   timezone = "Europe/Berlin";
-  locale = "en_US.UTF-8";
+  locale   = "de_DE.UTF-8";                  # e.g. "en_US.UTF-8"
+
   keyboard = {
-    # Multi-layout XKB for Wayland compositors.
-    layouts = [ "us" ];
-    options = [ "caps:escape" ];
+    # XKB layout list used by Wayland compositors.
+    layouts = keyboardLayouts;
+    # XKB option strings (see xkeyboard-config docs).
+    options = keyboardOptions;
   };
-  # Legacy flattened keys (kept for module compatibility).
-  keyboardLayout = "us";
-  keyboardOptions = "caps:escape";
-  consoleKeyMap = "us";
 
-  # ---------------------------------------------------------------------------
-  # Secrets & Key Management (SOPS-nix)
-  # ---------------------------------------------------------------------------
+  # Legacy flattened keys. Kept for backwards-compat with older modules
+  # that expect a comma-separated string instead of a list.
+  keyboardLayout  = builtins.concatStringsSep "," keyboardLayouts;
+  keyboardOptions = builtins.concatStringsSep "," keyboardOptions;
+  consoleKeyMap   = "de";
+
+
+  # ==========================================================================
+  # 02 SECRETS & KEY MANAGEMENT
+  # ==========================================================================
+  # This repo uses sops-nix for decryptable secrets.
+  #   - System secrets come from the active profile (profiles/<name>/secrets.nix).
+  #   - User secrets live under userSettings.<name>.secrets.
+
   enableSops = true;
+
   secrets = {
-    # Default encrypted source for user-scoped secrets.
-    # Per-user override: userSettings.<name>.secrets.defaultSopsFile
+    # Default encrypted file for user-scoped secrets when the user block
+    # itself does not set defaultSopsFile.  null = no default.
     defaultUserSopsFile = null;
-    defaultSopsFormat = "yaml"; # "yaml" | "json" | "binary" | "dotenv" | "ini"
+
+    # Sops file format. Valid: "yaml" | "json" | "binary" | "dotenv" | "ini".
+    defaultSopsFormat = "yaml";
   };
 
-  # ---------------------------------------------------------------------------
-  # User Defaults (global fallbacks)
-  # ---------------------------------------------------------------------------
-  preferredEditor = "nvim";
-  preferredBrowser = "chromium";
-  preferredFileManager = "nautilus";
-  preferredTerminal = "kitty";
 
-  # ---------------------------------------------------------------------------
-  # Programs
-  # ---------------------------------------------------------------------------
+  # ==========================================================================
+  # 03 USER INTERFACE DEFAULTS
+  # ==========================================================================
+  # Preference-style fallbacks. Per-user overrides go inside
+  # userSettings.<name>.
+
+  preferredEditor      = "nvim";      # "nvim" | "emacs" | "nano"
+  preferredBrowser     = "chromium";  # "chromium" | "firefox" | "zen"
+  preferredFileManager = "nautilus";  # "nautilus" | "thunar" | "pcmanfm"
+  preferredTerminal    = "kgx";       # "kgx" | "kitty" | "alacritty"
+
+
+  # ==========================================================================
+  # 04 PROGRAM SELECTIONS
+  # ==========================================================================
+  # Application-level toggles. Keep service implementation in modules;
+  # keep user-facing on/off switches and data here.
+  #
+  # Most booleans default to false so the template is safe to build as-is.
+  # Toggle the ones you need after copying.
+
   programs = {
+    # -------------------------------------------------------------------------
+    # Terminal: Kitty
+    # -------------------------------------------------------------------------
     kitty = {
-      enable = true;
+      enable       = false;
       enableThemes = true;
-      theme = "github-dark";
-      enableTabs = true;
-      fontSize = 12;
-      padding = { x = 8; y = 8; };
-      opacity = 1.0;
+      theme        = "github-dark";  # Theme name from kitty-themes
+      enableTabs   = true;
+      fontSize     = 12;
+      padding = {
+        x = 8;
+        y = 8;
+      };
+      opacity = 1.0;                 # 0.0–1.0
     };
 
-    # VSCode / VSCodium extensions and theme
+    # -------------------------------------------------------------------------
+    # Editor: VS Code / Codium
+    # -------------------------------------------------------------------------
     vscode = {
       theme = {
         colorTheme = "Dynamic Base16 DankShell";
       };
       extensions = {
+        # Extensions from open-vsx.org
         openVSX = [
           "vscodevim.vim"
           "bbenoist.nix"
           "jnoortheen.nix-ide"
           "arrterian.nix-env-selector"
           "ms-python.python"
+          "ms-python.vscode-pylance"
           "rust-lang.rust-analyzer"
           "golang.go"
           "redhat.vscode-yaml"
           "ms-azuretools.vscode-docker"
+          "ms-vscode-remote.remote-ssh"
+          "ms-vscode-remote.remote-containers"
+          "ms-vscode.cpptools-extension-pack"
           "tamasfe.even-better-toml"
           "esbenp.prettier-vscode"
         ];
+        # Extensions from MS Marketplace (VSCodium only)
         marketplace = [
           "eamodio.gitlens"
           "github.copilot"
           "github.copilot-chat"
+          "openai.chatgpt"
         ];
       };
     };
 
-    # Application toggles (enable = true/false)
-    fastfetch.enable = true;
-    streambert.enable = false;
-    alacritty.enable = false;
+    # -------------------------------------------------------------------------
+    # Application Toggles & Integrations
+    # -------------------------------------------------------------------------
+
+    # Alternative terminal (PoC / scratchpad). If you prefer kitty, keep off.
+    alacritty = {
+      enable   = false;
+      fontSize = 12;
+      opacity  = 0.92;
+      padding  = { x = 8; y = 8; };
+    };
+
+    # Autodesk Fusion 360 via Bottles/Wine runner.
+    autodeskFusion = {
+      enable          = false;
+      installMode     = "wine";      # "wine" | "wine-fix" | "proton"
+      installDir      = null;        # default: ~/.local/share/autodesk-fusion
+      gpuMode         = "dxvk";      # "dxvk" | "opengl"
+      protonVersion   = null;
+      autoSetupOnLogin= false;
+      desktopEntry.enable = true;
+      urlHandler.enable   = true;
+    };
+
+    betterdiscord = {
+      enable          = false;
+      installDiscord  = true;
+    };
+
+    # Element (Matrix) desktop client.  Homeserver is per-install config.
+    elementDesktop = {
+      enable           = false;
+      brand            = "Element";
+      disableCustomUrls= false;
+      homeserver = {
+        baseUrl    = "https://matrix.example.com";
+        serverName = "matrix.example.com";
+      };
+      identityServer = {
+        baseUrl = null;
+      };
+      autoLogin = {
+        # Element restores sessions automatically. SSO redirect for new installs only.
+        ssoRedirect = false;
+      };
+      extraConfig = {};
+    };
+
+    fastfetch = {
+      enable = false;
+    };
+
+    # Streambert — stream overlay / chat bot helper.
+    streambert = {
+      enable = false;
+    };
+
+    # Bambu Lab slicer delivery method.
+    bambulab = {
+      enable   = false;
+      provider = "flatpak";          # "appimage" | "flatpak"
+    };
+
+    # AAGL (Anime Game Launcher family).
     aagl = {
       enable = false;
       launchers = {
-        animeGame = false;
-        animeGames = false;
-        honkers = false;
-        honkersRailway = false;
-        sleepy = false;
-        wavey = false;
+        animeGame    = false;
+        animeGames   = false;
+        honkers      = false;
+        honkersRailway= false;
+        sleepy       = false;
+        wavey        = false;
       };
     };
-    autodeskFusion = {
-      enable = false;
-      installMode = "wine"; # "wine" | "wine-fix" | "proton"
-      gpuMode = "dxvk";     # "dxvk" | "opengl"
-      autoSetupOnLogin = false;
+
+    twintailLauncher = {
+      enable   = false;
+      provider = "flatpak";
     };
-    betterdiscord = {
-      enable = false;
-      installDiscord = true;
+
+    # Logout GUI for Hyprland (SUPER+SHIFT+E).
+    wlogout = {
+      enable = true;
     };
-    elementDesktop = {
-      enable = false;
-      brand = "Element";
-      homeserver.baseUrl = "https://matrix.example.com";
-      homeserver.serverName = "matrix.example.com";
+
+    # Noctalia shell initial config generator (run once to scaffold).
+    noctalia = {
+      initializeConfig = false;
     };
-    bambulab = {
-      enable = false;
-      provider = "flatpak"; # "appimage" | "flatpak"
-    };
-    wlogout.enable = true;
+
+    # Caelestia shell (Quickshell-based): channel, runtime, theming.
     caelestia = {
-      channel = "stable";      # "stable" | "dev"
-      quickshellRuntime = "wrapped"; # "wrapped" | "upstream"
+      # "stable" = flake input caelestia-shell
+      # "dev"    = flake input caelestia-shell-dev (latest main)
+      channel = "stable";
+
+      # "wrapped"  = shell-provided quickshell wrapper (default)
+      # "upstream" = channel-selected upstream quickshell directly
+      quickshellRuntime = "wrapped";
+
       theme = {
-        scheme = "catppuccin";
-        flavour = "mocha";
-        variant = "tonalspot";
-        mode = "dark"; # "light" | "dark" | null
+        scheme      = "catppuccin";
+        flavour     = "mocha";
+        variant     = "tonalspot";
+        mode        = "dark";        # "light" | "dark" | null
         smartScheme = false;
       };
     };
+
+    # "Double-click .exe" support via Bottles runner.
     windowsExe = {
-      enable = false;
-      bottleName = "Default";
-      runner = "kron4ek-wine-11.2-amd64";
-      autoBootstrapOnLogin = false;
+      enable            = false;
+      bottleName        = "Default";
+      environment       = "application";  # "application" | "gaming" | "custom"
+      runner            = "kron4ek-wine-11.2-amd64";
+      autoBootstrapOnLogin = true;
+      removeWarningPopup   = true;
+      setAsDefaultHandler  = true;
     };
+
+    # Declarative Windows-app installs via the Bottles manager.
     windowsApps = {
-      packages = [ ];
-      autoSetupOnLogin = false;
+      packages        = [];
+      autoSetupOnLogin= true;
     };
   };
 
-  # ---------------------------------------------------------------------------
-  # Gaming Defaults
-  # ---------------------------------------------------------------------------
+
+  # ==========================================================================
+  # 05 GAMING DEFAULTS
+  # ==========================================================================
+  # Role-style toggles.  These are defaults; a user can override in
+  # userSettings.<name>.gaming.*
+
   gaming = {
     openSourceGames = false;
   };
 
-  # ---------------------------------------------------------------------------
-  # Storage (system mounts)
-  # ---------------------------------------------------------------------------
-  # Host-specific device paths/UUIDs belong HERE in settings (mount data),
-  # or in profiles for boot-critical filesystems. Pick one convention.
+
+  # ==========================================================================
+  # 06 STORAGE
+  # ==========================================================================
+  # Declarative system-wide mounts (fstab entries via systemd-mounts).
+  # Keep device paths/UUIDs here — they are machine config, not module logic.
+
   storage = {
     systemMounts = [
+      # Example: secondary games disk (NTFS)
       # {
-      #   name = "games";
-      #   enable = true;
-      #   mountPoint = "/mnt/Games";
-      #   device = "/dev/disk/by-uuid/REPLACE-ME";
-      #   fsType = "ntfs3";
-      #   options = [ "rw" "umask=0002" "nofail" ];
-      #   gvfsShow = true;
-      #   gvfsName = "GAMES";
-      #   automount = false;
+      #   name               = "games";
+      #   enable             = true;
+      #   mountPoint         = "/mnt/Games";
+      #   device             = "/dev/disk/by-uuid/REPLACE-ME";
+      #   fsType             = "ntfs3";
+      #   options            = [ "rw" "umask=0002" "nofail" "prealloc" "noatime" ];
+      #   gvfsShow           = true;
+      #   gvfsName           = "GAMES";
+      #   automount          = false;
+      #   idleTimeout        = "5min";
+      #   preventRemount     = true;
+      #   forceDirtyNtfsMount= true;   # TEMP: disable after running chkdsk on Windows
+      #   lazyUnmountOnShutdown = false;
+      # }
+      # Example: shared data partition (XFS)
+      # {
+      #   name           = "data";
+      #   enable         = true;
+      #   mountPoint     = "/mnt/Data";
+      #   device         = "/dev/disk/by-uuid/REPLACE-ME";
+      #   fsType         = "xfs";
+      #   options        = [ "rw" "nofail" ];
+      #   group          = "users";
+      #   mode           = "2775";
+      #   aclEntries     = [ "group:users:rwx" "mask::rwx" ];
+      #   defaultAclEntries = [ "group:users:rwx" "mask::rwx" ];
+      #   gvfsShow       = true;
+      #   gvfsName       = "DATA";
+      #   automount      = true;
+      #   idleTimeout    = "5min";
+      #   preventRemount = false;
       # }
     ];
   };
 
-  # ---------------------------------------------------------------------------
-  # Networking
-  # ---------------------------------------------------------------------------
+
+  # ==========================================================================
+  # 07 NETWORKING
+  # ==========================================================================
+
   network = {
-    wifiManagerGui.enable = true;
-    wifi = {
-      powersave = false;
-      backend = "wpa_supplicant";
-      scanRandMacAddress = false;
-      secretsAgent = "nm-applet";
+    # Wi-Fi GUI (nm-applet / network-manager).
+    wifiManagerGui = {
+      enable           = true;
+      desktopEntry.enable = true;
     };
+
+    wifi = {
+      powersave           = false;
+      backend             = "wpa_supplicant";  # "wpa_supplicant" | "iwd"
+      scanRandMacAddress  = false;
+      secretsAgent        = "nm-applet";       # "nm-applet" | "wpa_supplicant"
+    };
+
+    # Tailscale mesh VPN.
     tailscale = {
       enable = false;
     };
+
+    # Local DNS forwarder / wildcard resolver (useful for dev domains).
     resolver = {
-      enable = false;
-      listenAddress = "127.0.0.1";
+      enable          = false;
+      listenAddress   = "127.0.0.1";
+      wildcardAddress = "127.0.0.1";
       upstreamServers = [ "1.1.1.1" "1.0.0.1" ];
-      wildcardDomains = [ ];
-      records = { };
+      wildcardDomains = [];
+      records         = {
+        # "api.local" = "127.0.0.1";
+      };
     };
+
+    # Prefer wired over Wi-Fi when both are available.
     routing.preferWired = {
-      enable = true;
-      ethernetRouteMetric = 100;
-      wifiRouteMetric = 600;
+      enable                    = true;
+      ethernetRouteMetric       = 100;
+      wifiRouteMetric           = 600;
+      ethernetAutoconnectPriority = 100;
+      wifiAutoconnectPriority   = 10;
     };
   };
 
-  # ---------------------------------------------------------------------------
-  # Hardware & Boot
-  # ---------------------------------------------------------------------------
+
+  # ==========================================================================
+  # 08 HARDWARE & BOOT
+  # ==========================================================================
+
   drivers = {
+    # Install linux-firmware (Wi-Fi / BT / GPU microcode).
     firmware = {
       enableRedistributable = true;
     };
+
+    # NVIDIA driver branch selection.
     nvidia = {
-      package = "production"; # "production" | " beta" | "legacy"
-      persistenced = true;
+      package        = "production";   # "production" | "stable" | "beta" | "legacy"
+      expectedVersion = null;           # Pin to exact evaluated version (optional)
+      # Persistence daemon keeps GPU state alive between CUDA workloads.
+      persistenced   = true;
       powerManagement = {
-        enable = true;
-        finegrained = false;
+        enable     = true;
+        finegrained = false;           # Only enable on laptops with runtime PM needs
       };
-      lact.enable = true;
+      # LACT — AMDGPU/NVIDIA monitoring & fan control GUI.
+      lact = {
+        enable = false;
+      };
     };
   };
 
+  # Plymouth boot splash.
   boot = {
     splash = {
-      enable = true;
-      theme = "cuts";
-      quietBoot = true;
-      highResolution = true;
+      enable          = true;
+      theme           = "cuts";       # "cuts" | "bgrt" | "spinner" | "script"
+      quietBoot       = true;
+      highResolution  = true;
     };
   };
 
+  # Journald persistence and retention.
   logging = {
     journal = {
-      persistent = true;
-      maxRetention = "14day";
-      systemMaxUse = "1G";
-      runtimeMaxUse = "256M";
-      compress = true;
+      persistent      = true;
+      maxRetention    = "14day";
+      systemMaxUse    = "1G";
+      runtimeMaxUse   = "256M";
+      compress        = true;
     };
   };
 
-  # ---------------------------------------------------------------------------
-  # Devices & Peripherals
-  # ---------------------------------------------------------------------------
+
+  # ==========================================================================
+  # 09 DEVICES & PERIPHERALS
+  # ==========================================================================
+
+  # SANE / scanner stack.
   scanning = {
-    enable = true;
-    useHplipBackend = true;
+    enable           = true;
+    useHplipBackend  = true;           # HP all-in-one backend
   };
 
+  # Audio stack.
   audio = {
-    backend = "pipewire"; # "pipewire" | "pulseaudio"
+    backend = "pipewire";              # "pipewire" (recommended) | "pulseaudio"
+    # Keep ALSA interfaces alive so USB audio devices don't disappear in the UI.
     preventInterfaceSuspend = true;
+
+    # Bluetooth audio codec selection.
     bluetooth = {
       enableHiFiCodecs = true;
-      enableMsbc = true;
+      enableMsbc       = true;
       codecs = [ "sbc" "sbc_xq" "aac" "aptx" "aptx_hd" "ldac" ];
     };
   };
 
-  # ---------------------------------------------------------------------------
-  # Developer Tooling
-  # ---------------------------------------------------------------------------
+
+  # ==========================================================================
+  # 10 DEVELOPER TOOLING
+  # ==========================================================================
+  # Dev-facing global behavior. Service backends live in modules;
+  # account and workflow policy lives here.
+
   dev = {
     enable = true;
+
+    # Docker daemon configuration.
     docker = {
       autoPrune = true;
+      # Avoid Docker's default 172.17.0.0/16 range (collides with guest Wi-Fi).
       addressPools = [
         { base = "10.66.0.0/16"; size = 24; }
       ];
     };
+
+    # nix-ld: run dynamically-linked binaries without LD_LIBRARYPATH hacks.
     nixLd = {
       enable = true;
     };
+
+    # Python dev stack.
     python = {
-      enable = true;
-      versionManager = "mise"; # "mise" | "none"
-      installUv = true;
+      enable            = true;
+      versionManager    = "mise";       # "mise" | "none"
+      installUv         = true;
     };
+
+    # Extra dev packages (aggregated into the dev user bundle).
     androidStudio = false;
-    wvkbd = false;
+    wvkbd         = false;            # Wayland on-screen keyboard
+
+    # Virtualisation stack.
     virtualisation = {
-      enable = false;
-      vagrant = false;
-      qemu = false;
+      enable         = true;
+      vagrant        = true;
+      vagrantLibvirt = true;           # declarative libvirt plugin wiring
+      qemu           = true;
     };
+
+    # AI CLI tooling (Codex, Gemini, Claude Code, Opencode, Kilo Code, ...).
     ai = {
-      installScope = "system"; # "system" | "user"
+      # "system" = install as system packages (all users see them)
+      # "user"   = let Home Manager handle installation per user
+      installScope = "system";
+
       codex = {
-        enable = false;
-        provider = "upstream"; # "upstream" | "compat"
-        vscode = true;
+        enable    = false;
+        provider  = "upstream";         # "upstream" | "compat"
+        vscode    = true;               # Install VS Code extension + config
         mcp = {
-          nixos = true;
-          hyprland = true;
+          # MCP server integrations for Codex.
+          nixos   = true;
+          hyprland= true;
           lsp = {
-            enable = true;
-            languages = [ "nix" "rust" "python" "typescript" "go" ];
+            enable     = true;
+            languages  = [ "nix" "rust" "python" "typescript" "go" ];
           };
         };
       };
-      ncp = false;
-      kiloCode = false;
-      caveman = false;
-      opencode = false;
+
+      ncp    = false;   # @portel/ncp  — unified MCP host
+      kiloCode = false; # @kilocode/cli
+      caveman  = false; # Agent Skill (co-pilot/codex/claude compatible)
+      opencode = false; # Terminal coding agent
       claudeCode = false;
-      gemini = false;
-      hermes = false;
-      mcpRemotes = { };
+      gemini   = false;
+      geminiDesktopEntry = true;
+      hermes   = false;   # Hermes Agent CLI
+      # Remote MCP server endpoints (name = url).
+      mcpRemotes = {};
     };
   };
 
-  # ---------------------------------------------------------------------------
-  # Global Escape Hatches
-  # ---------------------------------------------------------------------------
+
+  # ==========================================================================
+  # 11 GLOBAL ESCAPE HATCHES
+  # ==========================================================================
+  # Small overrides for edge cases.  Not the place for normal feature wiring.
+
   custom = {
-    systemPackages = [ ];
+    # Extra packages appended to the system-wide software set.
+    systemPackages = [];
+
+    # Extra sysctl parameters. Numeric duplicates resolve by taking the
+    # higher value.
     sysctl = {
-      # "kernel.sched_bore" = 1;
+      # Keep BORE scheduler enabled on supported kernels.
+      "kernel.sched_bore" = 1;
     };
   };
 
-  # ---------------------------------------------------------------------------
-  # Desktop, WM & Theming
-  # ---------------------------------------------------------------------------
-  wms = [ ]; # Extra WM modules to install globally
+
+  # ==========================================================================
+  # 12 DESKTOP, WM & THEMING
+  # ==========================================================================
+
+  # Additional WM modules to install globally.  The effective WM set is
+  # settings.wms PLUS every userSettings.<name>.defaultWMS value.
+  wms = [];
+
+  # Base colour-scheme identifier used by GTK/Qt/portal theming.
   theme = "catppuccin";
-  colorSchemePreference = "dark"; # "light" | "dark"
+
+  # Global light/dark preference exported to portal settings so Chromium,
+  # Electron and GTK apps pick it up automatically.
+  colorSchemePreference = "dark";      # "light" | "dark"
+
+  # System icon theme for GTK/Qt/Quickshell app-discovery.
   iconTheme = {
-    enable = true;
-    package = "colloid"; # "colloid" | "papirus" | "adwaita" | "breeze"
-    name = "Colloid-Dark";
+    enable  = true;
+    package = "colloid";                # "colloid" | "papirus" | "adwaita" | "breeze"
+    name    = "Colloid-Dark";           # e.g. "Papirus-Dark", "Adwaita"
   };
 
+  # -------------------------------------------------------------------------
+  # Hyprland Session Configuration
+  # -------------------------------------------------------------------------
   hyprland = {
+    # Use UWSM (Unified Wayland Session Manager) for reliable app lifecycle.
     useUWSM = true;
-    appExecBackend = "auto"; # "auto" | "app2unit" | "uwsm"
+
     sessionEnv = {
+      # Qt platform theme shared across env files and desktop Qt module.
       qtPlatformTheme = "hyprqt6engine"; # "hyprqt6engine" | "qtengine" | "qt6ct" | "qt5ct" | null
+      # systemd app2unit slice assignment.
       app2unitSlices = "a=app-graphical.slice b=background-graphical.slice s=session-graphical.slice";
-      extra = { };
+      extra = {};
     };
-    layoutToggleBind = "$mainMod CTRL, BackSpace";
+
+    # Command wrapper for Hyprland app exec keybinds/launchers.
+    # "auto" prefers app2unit for speed, then UWSM app dispatch.
+    appExecBackend = "auto";            # "auto" | "app2unit" | "uwsm"
+
+    # Bind for keyboard-layout toggle.  null = disabled.
+    layoutToggleBind   = "$mainMod CTRL, BackSpace";
+
+    # Bind for the quickshell-overview (caelestia/dank-material).
     overviewToggleBind = "$mainMod, TAB";
+
+    # Monitor configuration tools.
     monitorTools = {
-      default = "nwg-displays"; # "hyprdynamicmonitors" | "nwg-displays"
-      installHyprdynamicmonitors = false;
-      installNwgDisplays = true;
-      autoStart = true;
+      default                   = "nwg-displays";  # "hyprdynamicmonitors" | "nwg-displays"
+      installHyprdynamicmonitors= false;
+      installNwgDisplays        = true;
+      autoStart                 = true;
     };
+
     debug = {
-      # Keep false with "dank-material-shell" to avoid package collisions.
+      # Install raw nixpkgs quickshell for manual testing.
+      # KEEP FALSE when a user shell is "dank-material-shell" (collision guard).
       installRawQuickshell = false;
+
       keybindDiagnostics = {
-        enable = false;
+        enable       = false;
         delaySeconds = 8;
-        logDir = "\${XDG_STATE_HOME:-$HOME/.local/state}/hyprland/diagnostics";
+        logDir       = "\${XDG_STATE_HOME:-$HOME/.local/state}/hyprland/diagnostics";
       };
     };
+
+    # Headless virtual outputs (used by Sunshine streaming).
+    # Uncomment and define outputs when backend = "hyprland-headless".
+    headlessOutputs = [];
+
+    # Initial on/off state for physical connectors at Hyprland startup.
+    # Each entry: { name = "DP-1"; enabledByDefault = true; }
+    initialOutputStates = [];
   };
 
+  # -------------------------------------------------------------------------
+  # Sunshine Game Streaming
+  # -------------------------------------------------------------------------
   sunshine = {
     disableLockScreenDuringStream = true;
+
     displayTarget = {
-      enable = false;
-      backend = "hyprland-headless"; # "hyprland-headless" | "physical-output"
-      outputName = "SUNSHINE-HEADLESS";
-      appName = "Adaptive Display";
-      capture = "auto"; # "auto" | "wlr" | "kms" | "x11" | "nvfbc"
+      enable     = false;
+      backend    = "hyprland-headless";  # "hyprland-headless" | "physical-output"
+      outputName = "SUNSHINE-HEADLESS";  # Must match a headlessOutputs or connector name
+      appName    = "Adaptive Display";
+      capture    = "wlr";                # "auto" | "wlr" | "kms" | "x11" | "nvfbc"
       resolutions = [
         { width = 1920; height = 1080; }
-        { width = 1280; height = 720; }
+        { width = 1600;  height = 900;  }
+        { width = 1280;  height = 720;  }
       ];
-      fps = [ 60 ];
-    };
-    virtualDisplay = {
-      enable = false;
+      fps = [ 60 120 ];
     };
   };
 
+  # -------------------------------------------------------------------------
+  # Dank-Material Shell / DMS Greeter Configuration
+  # -------------------------------------------------------------------------
   dms = {
-    mode = "integrated"; # "integrated" | "separate"
-    startup.mode = "systemd"; # "systemd" | "exec-once"
+    # "integrated" = fully Nix-managed (dms-start / dms-stop only)
+    # "separate"   = manual install/uninstall script flow
+    mode = "integrated";
+
+    startup = {
+      # "systemd"    = start via programs.dank-material-shell.systemd service
+      # "exec-once"  = start via Hyprland exec-once (legacy)
+      mode = "systemd";
+    };
+
     install = {
       flakeRef = "github:AvengeMedia/DankMaterialShell";
-      dgopRef = "github:AvengeMedia/dgop";
+      dgopRef  = "github:AvengeMedia/dgop";
       cliVersion = "0.2.3";
     };
+
     wallpaper = {
-      wallpaperPath = "/run/current-system/sw/share/j0nix/wallpapers/wallhaven-21d3r9.jpg";
-      wallpaperFillMode = "PreserveAspectCrop";
-      monitorWallpapers = { };
+      wallpaperPath     = "/run/current-system/sw/share/j0nix/wallpapers/default.jpg";
+      wallpaperFillMode = "PreserveAspectCrop";  # "PreserveAspectCrop" | "PreserveAspectFit" | "Stretch"
+      # monitorWallpapers.DP-1 = "/path/to/monitor1.jpg";
+      monitorWallpapers = {};
     };
+
     workspaces = {
-      count = 10;
-      showOccupiedOnly = false;
+      count            = 10;            # 1..10
+      showOccupiedOnly = false;         # true = bar only shows occupied workspaces
     };
+
     overview = {
-      enable = true;
+      enable    = true;                 # quickshell-overview
       autostart = true;
     };
   };
 
-  displayManager = "greetd"; # "greetd" | "sddm" | "gdm"
+  # -------------------------------------------------------------------------
+  # Display Manager & Greeter
+  # -------------------------------------------------------------------------
+  # Supported: "greetd" | "sddm" | "gdm"
+  displayManager = "greetd";
+
   greetd = {
-    greeter = "qmlgreet"; # "tuigreet" | "regreet" | "qmlgreet" | "dms-greeter"
-    regreetCompositor = "cage"; # "cage" | "hyprland"
+    # Supported: "tuigreet" | "regreet" | "qmlgreet" | "dms-greeter"
+    greeter = "qmlgreet";
+
+    # Compositor for regreet greeter (ignored for other greeters).
+    regreetCompositor = "cage";         # "cage" | "hyprland"
+
     qmlgreet = {
+      # Match the auto-wm-session.desktop display name to avoid fallback.
       defaultSession = "Auto (User Default)";
       colorSchemePath = null;
       backgroundImage = null;
-      iconTheme = null;
-      font = "";
-      fontSize = 10;
-      showAvatars = true;
+      iconTheme       = null;
+      font            = "";
+      fontSize        = 10;
+      showAvatars     = true;
     };
   };
 
-  # ---------------------------------------------------------------------------
-  # Per-User Overrides
-  # ---------------------------------------------------------------------------
-  # Add one entry per user. The username is the attribute name.
-  # Only specify differences from global defaults above.
+
+  # ==========================================================================
+  # 13 PER-USER OVERRIDES
+  # ==========================================================================
+  # Add only differences here.  Global defaults above should be the main
+  # source of truth for shared behaviour.
+  #
+  # Every attribute name under userSettings becomes a system user.
+  # Roles drive which user-role modules (user-roles/home/) are imported.
+  # Available roles (extend in user-roles/):
+  #   "ai-work" | "desktop-basics" | "developer" | "gaming"
+  #   "network-performance" | "office" | "remote-work" | "streaming"
+  #   "3d-creation" | "3d-printing" | "video-editing"
+
   userSettings = {
-    "your-user" = {
-      name = "Your Name";
-      email = "you@example.com";
-      shell = "zsh"; # "zsh" | "fish"
-      defaultWMS = "hyprland"; # "hyprland" | "gnome" | "niri" | "mangowc"
-      wmShell = "none"; # prod-tested: "caelestia-shell" | experimental: "ags" / "dank-material-shell" / "noctalia-shell" | "none"
-      editors = [ "neovim" ];
+    # -----------------------------------------------------------------------
+    # Primary user — replace "alice" with your username.
+    # -----------------------------------------------------------------------
+    alice = {
+      name  = "Alice";
+      email = "alice@example.com";
+      shell = "zsh";                    # "zsh" | "fish"
+
+      # Optional: reference a SOPS secret for the initial password hash.
+      # passwordSecret = {
+      #   sopsFile = ./secrets/users/alice.yaml;
+      #   key = "password";
+      # };
+      passwordSecret = {};
+
+      # Default window manager for this user.
+      # Supported: "hyprland" | "gnome" | "mangowc" | "niri"
+      defaultWMS = "hyprland";
+
+      # Hyprland shell layer.
+      # Supported:
+      #   "caelestia-shell"   — prod-tested daily driver
+      #   "ags"               — experimental
+      #   "dank-material-shell" — experimental
+      #   "noctalia-shell"    — experimental
+      #   "none"              — bare Hyprland, no shell layer
+      wmShell = "caelestia-shell";
+
+      # Hyprland per-user extras.
+      hyprland = {
+        minimizer = {
+          enable    = false;             # experimental: window minimize
+          variant   = "denis";           # "denis" | "0rteip"
+          orteip = {
+            appId = "keepassxc";
+          };
+        };
+      };
+
+      # Editor modules to enable for this user.
+      editors = [ "neovim" "vscode" ];
+
+      # Browser modules.
       browsers = [ "chromium" ];
+
+      # File manager modules.
       fileManagers = [ "nautilus" ];
+
+      # Override the global file manager for this user.
       preferredFileManager = "nautilus";
-      extraSoftware = [ ];
+
+      # Extra packages injected into this user's home packages.
+      extraSoftware = [];
+
+      # Per-user program overrides.
       programs = {
-        elementDesktop.enable = false;
-        keepassxc.enable = false;
-        syncthing.enable = false;
+        elementDesktop = {
+          enable = false;
+        };
+
+        twintailLauncher = {
+          enable = false;
+        };
+
+        # KeepassXC password manager integration.
+        keepassxc = {
+          enable          = false;
+          autoStart       = false;
+          startMinimized  = true;
+          # Absolute path to the primary .kdbx database.
+          databasePath    = null;
+          # SOPS secret name for the optional key file.
+          keyFileSecretName = null;
+          keyFileTargetName = "startup.key";
+          # Workspace / minimizer wiring.
+          workspace = {
+            enable     = true;
+            mode       = "special-workspace";  # "special-workspace" | "minimizer"
+            name       = "passwords";
+            toggleBind = "$mainMod SHIFT, p";
+          };
+          autoUnlock = {
+            # "strict"     = keyring only, no SOPS fallback
+            # "balanced"   = keyring + SOPS if keyring empty
+            # "convenient" = SOPS if available, else interactive
+            # "full-auto"  = auto retry + SOPS if keyring fails
+            mode          = "strict";
+            keyringEntry  = "keepassxc/main";
+            # SOPS secret name for the database passphrase.
+            sopsPasswordSecret = null;
+          };
+        };
+
+        # Local LLM inference via Ollama.
+        ollama = {
+          enable          = false;
+          host            = "127.0.0.1:11434";
+          modelsPath      = "~/AI/models/ollama";
+          autoSyncModels  = true;
+          syncDelay       = "5min";
+          syncTimeout     = "30min";
+          # Model references (format: "repo/name:tag").
+          models = [];
+          environment = {};
+        };
+
+        # File synchronisation.
+        syncthing = {
+          enable           = false;
+          configDir        = null;         # default: ~/.config/syncthing
+          dataDir          = null;         # default: ~/Sync
+          guiAddress       = "127.0.0.1:8384";
+          # SOPS secret name for the GUI admin password.
+          guiPasswordSecretName = null;
+          guiPasswordFile  = null;
+          openDefaultPorts = true;
+          overrideDevices  = false;
+          overrideFolders  = false;
+          options          = {};
+          devices          = {};
+          folders          = {};
+        };
       };
-      secrets = {
-        age.keyFile = "/home/your-user/.config/sops/age/keys.txt";
-        defaultSopsFile = null;
-        files = { };
-        sshKeys = { };
-        gpgKeys = { };
-      };
+
+      # Per-user storage mounts (Samba/CIFS).
       storage = {
-        sambaShares = [ ];
+        sambaShares = [
+          # {
+          #   name         = "nas-media";
+          #   mode         = "user";         # "system" (fstab) | "user" (rclone)
+          #   host         = "nas.local";
+          #   share        = "Media";
+          #   username     = "alice";
+          #   secretName   = "samba-nas-media";  # SOPS secret under secrets.files
+          #   mountAlias   = "nas-media";
+          #   autoMount    = true;
+          # }
+        ];
       };
+
+      # SOPS-managed secrets for this user.
+      secrets = {
+        age = {
+          # User AGE key file (separate from the system host key).
+          keyFile = "/home/alice/.config/sops/age/keys.txt";
+        };
+        # defaultSopsFile = ./secrets/users/alice.yaml;
+        defaultSopsFile = null;
+
+        # Decrypted file mappings (deployed to ~/.secrets/).
+        files = {};
+
+        # SSH key pairs (decrypted and deployed to ~/.ssh/).
+        sshKeys = {
+          # github = {
+          #   key           = "ssh/id_ed25519_github";
+          #   passphraseKey  = "ssh_passphrases/id_ed25519_github";
+          #   mode           = "0400";
+          #   targetName     = "id_ed25519_github";
+          #   publicKeyFile  = ./public/users/alice/ssh/id_ed25519_github.pub;
+          # };
+        };
+
+        # GPG keys (decrypted and imported into ~/.gnupg/).
+        gpgKeys = {
+          # primary = {
+          #   key           = "gpg/primary/private";
+          #   passphraseKey  = "gpg/primary/passphrase";
+          #   fingerprint    = "AABBCCDDEEFF00112233445566778899AABBCCDD";
+          #   keygrip        = "AABBCCDDEEFF00112233445566778899AABBCCDD";
+          #   mode           = "0400";
+          #   passphraseMode = "0400";
+          # };
+        };
+      };
+
+      # Per-user dev overrides.
       dev = {
-        docker.enable = false;
-        ai.enable = false;
+        docker = {
+          enable = true;                   # Adds user to docker group
+        };
+        ai = {
+          enable = true;                   # User receives AI CLI tooling
+        };
         git = {
-          enable = true;
-          defaultBranch = "main";
+          enable         = true;
+          defaultBranch  = "main";
+          # Per-host git identity overrides (path conditional includes).
           hostProfiles = {
-            github = {
-              userName = "your-username";
-              userEmail = "you@example.com";
-            };
+            # github = {
+            #   userName  = "MyGitHubUser";
+            #   userEmail = "me@users.noreply.github.com";
+            # };
           };
         };
         ssh = {
-          enable = true;
-          addKeysToAgent = "yes";
-          agent = {
-            enable = true;
-            provider = "openssh"; # "openssh" | "gnome-keyring" | "none"
-          };
+          enable           = true;
+          addKeysToAgent   = "yes";        # "yes" | "ask" | "confirm" | "no"
+          agent.provider   = "gnome-keyring";  # "openssh" | "gnome-keyring" | "none"
+          keyring.enable   = true;
+          # SSH host definitions (deployed to ~/.ssh/config).
           hosts = {
-            github = {
-              host = "github.com";
-              user = "git";
-              identityFile = "~/.ssh/id_ed25519";
-              identitiesOnly = true;
-            };
+            # github = {
+            #   host          = "github.com";
+            #   user          = "git";
+            #   identityFile  = "~/.ssh/id_ed25519";
+            #   identitiesOnly = true;
+            # };
           };
         };
+        # GPG signing identities.
         gpg = {
-          enable = false;
-          keys = { };
+          enable = true;
+          keys = {
+            # primary = {
+            #   key   = "AABBCCDDEEFF00112233445566778899AABBCCDD";
+            #   emails = [ "alice@example.com" ];
+            #   signByDefault = true;
+            # };
+          };
+          gitSigning = {
+            enable         = true;
+            signByDefault  = true;
+          };
+          sshAgent = {
+            enable  = true;
+            keyName = "primary";
+          };
         };
       };
+
+      # Role list drives which user-role modules are imported.
       roles = [
         "desktop-basics"
         "developer"
       ];
     };
+
+    # -----------------------------------------------------------------------
+    # Secondary user example (uncomment and adapt if needed).
+    # -----------------------------------------------------------------------
+    # xin = {
+    #   name  = "Xin";
+    #   email = "xin@localhost";
+    #   shell = "zsh";
+    #   passwordSecret = {};
+    #   defaultWMS = "gnome";
+    #   wmShell = "none";
+    #   editors = [ "neovim" ];
+    #   browsers = [ "chromium" ];
+    #   fileManagers = [ "nautilus" ];
+    #   roles = [
+    #     "desktop-basics"
+    #     "gaming"
+    #   ];
+    # };
   };
 }
