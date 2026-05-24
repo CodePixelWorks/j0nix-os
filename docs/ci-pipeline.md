@@ -103,17 +103,17 @@ All variables use the `PUBLIC_` prefix for namespacing. Those listed without
 
 | Variable | In `.drone.star` | Type | Default | Description |
 |----------|-------------------|------|---------|-------------|
-| `PUBLIC_GITHUB_REWRITE_EMAILS` | `from_secret` | Secret | `jonas,j0nix` | Comma-separated list of email substrings. Commits whose original `GIT_AUTHOR_EMAIL` contains any substring are rewritten |
+| `PUBLIC_GITHUB_REWRITE_EMAILS` | `from_secret` | Secret | *(empty)* | Comma-separated list of exact email addresses. Commits whose original `GIT_AUTHOR_EMAIL` matches any entry exactly are rewritten |
 | `PUBLIC_GITHUB_REWRITE_NAMES` | `from_secret` | Secret | *(empty)* | Same for `GIT_AUTHOR_NAME`. Disabled by default |
 | `PUBLIC_SANITIZE_AUTHOR_REGEX` | *(not wired)* | Legacy | `^(jonas\|j0nix)` | **DEPRECATED**. Use `PUBLIC_GITHUB_REWRITE_EMAILS` instead. Still supported as a fallback in `scripts/lib/mirror-sanitize.sh` |
 
-**Input format:** comma-separated substrings. No regex, no escaping needed.
+**Input format:** comma-separated full email addresses. No regex, no escaping needed.
 
 ```
-jonas,j0nix,codepixelstudio
+me@example.com,you@other.org,old@domain.net
 ```
 
-Each entry becomes a glob pattern (`*jonas*`, `*j0nix*`, …) matched via
+Each entry must match the entire author email **exactly** (case-insensitive).
 bash `case/esac`. This is injection-safe: the input is never evaluated.
 
 ### Cutoff & History Control
@@ -146,7 +146,7 @@ git operations.
 
 | Value | Behaviour |
 |-------|-----------|
-| `selective` | **Default**. Only rewrite authors matching `PUBLIC_GITHUB_REWRITE_EMAILS` / `NAMES` |
+| `selective` | **Default**. Rewrite authors whose email/name exactly matches `PUBLIC_GITHUB_REWRITE_EMAILS` / `NAMES` |
 | `rewrite_all` | Rewrite **every** author to the mirror bot identity |
 | `preserve` | Keep original identity for **all** commits |
 
@@ -189,9 +189,9 @@ diverged. Run a **full sync** (`public_mirror_mode=full`) to reconcile.
 
 ### External contributor commits show as "j0nix mirror bot"
 
-Check `public_github_rewrite_emails`. It might be too broad (e.g. matching
-generic substrings like `@` or `.com`). Use specific substrings like
-`jonas,j0nix,codepixelstudio`.
+Check `public_github_rewrite_emails`. It might be too broad. Use exact email addresses
+like `me@example.com,you@other.org`. Generic substrings like `@` or `.com` will match
+too many commits.
 
 ### Safety: empty rewrite list
 

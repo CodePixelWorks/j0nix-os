@@ -30,10 +30,9 @@ MS_SANITIZE_NAME_PATTERNS="${MS_SANITIZE_NAME_PATTERNS:-}"
 # Legacy fallback: if the old single-regex variable is still set, convert it
 MS_SANITIZE_MATCH_REGEX="${MS_SANITIZE_MATCH_REGEX:-}"
 
-# --- Build glob-style case patterns from comma-separated substrings ---
-#   "jonas,j0nix,codepixelstudio"  → "*jonas*|*j0nix*|*codepixelstudio*"
-#   "jonas"                        → "*jonas*"
-#   ""                             → "___NO_MATCH_SENTINEL___" (never matches)
+# --- Build exact-match patterns from comma-separated email addresses ---
+#   "me@example.com,you@domain.org" → "me@example.com|you@domain.org|..."
+#   ""                              → "___NO_MATCH_SENTINEL___" (never matches)
 ms_build_patterns() {
     local input="$1"
     if [ -z "$input" ]; then
@@ -46,7 +45,7 @@ ms_build_patterns() {
         item="${item#"${item%%[![:space:]]*}"}"
         item="${item%"${item##*[![:space:]]}"}"
         [ -z "$item" ] && continue
-        result="${result:+${result}|}*${item}*"
+        result="${result:+${result}|}${item}"
     done
     if [ -z "$result" ]; then
         result="___NO_MATCH_SENTINEL___"
@@ -55,16 +54,28 @@ ms_build_patterns() {
 }
 
 # ============================================================================
-# ms_should_match_patterns -- return 0 if the value matches any glob pattern.
+# ms_should_match_patterns -- return 0 if the value matches any pattern.
 #
-# Usage: ms_should_match_patterns "value" "*foo*|*bar*"
+# Patterns is a pipe-separated list of exact strings built by ms_build_patterns.
+# Each element in the list is compared as a separate pattern.
+#
+# Usage: ms_should_match_patterns "value" "foo|bar"
 # ============================================================================
 ms_should_match_patterns() {
     local value="$1"
-    local patterns="$2"
-    case "$value" in
-        $patterns) return 0 ;;
-    esac
+    local patterns_str="$2"
+
+    # Never match on placeholder sentinel
+    [ "$patterns_str" = "___NO_MATCH_SENTINEL___" ] && return 1
+
+    local p
+    IFS='|'
+    for p in $patterns_str; do
+        [ -z "$p" ] && continue
+        case "$value" in
+            $p) return 0 ;;
+        esac
+    done
     return 1
 }
 
