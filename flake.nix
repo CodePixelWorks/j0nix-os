@@ -168,7 +168,15 @@
         if builtins.pathExists (baseDir + "/settings.nix") then
           baseDir + "/settings.nix"
         else
-          baseDir + "/settings.nix.example";
+          throw ''
+            settings.nix is required but was not found in the evaluated flake source.
+
+            This usually means the flake was evaluated from a git snapshot that does not
+            include your local ignored settings.nix file.
+
+            Use:
+              nixos-rebuild switch --flake path:${toString baseDir}#<hostname>
+          '';
 
     in
     {
