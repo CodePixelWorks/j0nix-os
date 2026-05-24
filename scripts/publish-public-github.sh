@@ -11,12 +11,12 @@ set -euo pipefail
 #   PUBLIC_GITHUB_PRIVATE_KEY    — SSH key for git push (fallback when PAT absent).
 #   PUBLIC_GITHUB_COMMIT_NAME    — Author/committer name for rewritten history.
 #   PUBLIC_GITHUB_COMMIT_EMAIL   — Author/committer email for rewritten history.
-#   PUBLIC_GITHUB_REWRITE_EMAILS   — Comma-separated list of email substrings.
-#                                      Commits whose original author email
-#                                      contains any substring get rewritten.
-#                                      Default: jonas,j0nix                  (from_secret)
-#   PUBLIC_GITHUB_REWRITE_EMAILS_FALLBACK — Fallback when secret unset.
-#   PUBLIC_GITHUB_REWRITE_NAMES    — Optional. Same behavior for author names.
+#   PUBLIC_GITHUB_REWRITE_EMAILS   -- Comma-separated list of exact email
+#                                      addresses to match for selective author
+#                                      rewrite (e.g. "a@x.com,b@y.de").
+#                                      Default: empty (no rewrite)         (from_secret)
+#   PUBLIC_GITHUB_REWRITE_EMAILS_FALLBACK -- Fallback when secret unset.
+#   PUBLIC_GITHUB_REWRITE_NAMES    -- Optional. Same for exact author names.
 #                                      Disabled by default.                  (from_secret)
 #   PUBLIC_GITHUB_REWRITE_NAMES_FALLBACK — Fallback when secret unset.
 #   PUBLIC_CUTOFF_COMMIT         — Optional. Commits BEFORE this hash are
@@ -37,13 +37,13 @@ branch="${2:-main}"
 
 commit_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
-rewrite_emails_input="${PUBLIC_GITHUB_REWRITE_EMAILS:-${PUBLIC_GITHUB_REWRITE_EMAILS_FALLBACK:-jonas,j0nix}}"
+rewrite_emails_input="${PUBLIC_GITHUB_REWRITE_EMAILS:-${PUBLIC_GITHUB_REWRITE_EMAILS_FALLBACK:-}}"
 rewrite_names_input="${PUBLIC_GITHUB_REWRITE_NAMES:-${PUBLIC_GITHUB_REWRITE_NAMES_FALLBACK:-}}"
 
-# --- Build glob-style case patterns from comma-separated substrings ---
-#   "jonas,j0nix,codepixelstudio"  → "*jonas*|*j0nix*|*codepixelstudio*"
-#   "jonas"                        → "*jonas*"
-#   ""                             → "___NO_MATCH___" (never matches)
+# --- Build exact-match patterns from comma-separated email addresses ---
+#   "me@x.com,you@y.de"  → "me@x.com|you@y.de"
+#   "me@x.com"           → "me@x.com"
+#   ""                   → "___NO_MATCH_SENTINEL___" (never matches)
 _build_patterns() {
     local input="$1"
     if [ -z "$input" ]; then
@@ -56,7 +56,7 @@ _build_patterns() {
         item="${item#"${item%%[![:space:]]*}"}"
         item="${item%"${item##*[![:space:]]}"}"
         [ -z "$item" ] && continue
-        result="${result:+${result}|}*${item}*"
+        result="${result:+${result}|}${item}"
     done
     if [ -z "$result" ]; then
         result="___NO_MATCH_SENTINEL___"
@@ -158,15 +158,32 @@ git remote remove origin 2>/dev/null || true
 
 env_filter_path="$(mktemp -t env_filter.XXXXXX)"
 cat > "$env_filter_path" <<ENVFILTER
-match_email=0
-match_name=0
-case "\$GIT_AUTHOR_EMAIL" in
-    $rewrite_email_patterns) match_email=1 ;;
-esac
-case "\$GIT_AUTHOR_NAME" in
-    $rewrite_name_patterns) match_name=1 ;;
-esac
-if [ "\$match_email" -eq 1 ] || [ "\$match_name" -eq 1 ]; then
+rewrite_email_list='$rewrite_email_patterns'
+rewrite_name_list='$rewrite_name_patterns'
+should_rewrite=0
+
+_check_match() {
+    local value="\$1"
+    local list="\$2"
+    [ -z "\$list" ] && return 1
+    [ "\$list" = "___NO_MATCH_SENTINEL___" ] && return 1
+    local p
+    IFS='|'
+    for p in \$list; do
+        [ -z "\$p" ] && continue
+        [ "\$value" = "\$p" ] && return 0
+    done
+    return 1
+}
+
+if _check_match "\$GIT_AUTHOR_EMAIL" "\$rewrite_email_list"; then
+    should_rewrite=1
+fi
+if _check_match "\$GIT_AUTHOR_NAME" "\$rewrite_name_list"; then
+    should_rewrite=1
+fi
+
+if [ "\$should_rewrite" -eq 1 ]; then
     export GIT_AUTHOR_NAME='$commit_name'
     export GIT_AUTHOR_EMAIL='$commit_email'
     export GIT_COMMITTER_NAME='$commit_name'
