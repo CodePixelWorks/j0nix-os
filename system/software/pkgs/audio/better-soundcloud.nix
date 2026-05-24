@@ -10,16 +10,16 @@
 
 buildNpmPackage rec {
   pname = "bettersoundcloud";
-  version = "0.6.0";
+  version = "0.7.1";
 
   src = fetchFromGitHub {
     owner = "AlirezaKJ";
     repo = "BetterSoundCloud";
     rev = "V${version}";
-    hash = "sha256-tFJgpAsqh4N2wTyrXGjIzJYxMDfjDpq5ncl3aqlltG8=";
+    hash = "sha256-DF3DFbVR5osAAczCd46EDvZspmJGWs3cc37bPymYQwQ=";
   };
 
-  npmDepsHash = "sha256-Gemcva/Yq7/a4q2DP2PQOurNg6mEqhr0c3EWcubNuLQ=";
+  npmDepsHash = "sha256-Xj+NpXJloa+xVLVMQ3ScSBDpLCUApddr+jcUU2xLHXU=";
 
   forceGitDeps = true;
 
