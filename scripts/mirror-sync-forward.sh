@@ -26,8 +26,12 @@
 #                                     PUBLIC_GITHUB_COMMIT_EMAIL.
 #   PUBLIC_GITHUB_SIGNING_PASSPHRASE -- Passphrase for the GPG signing key above.
 #                                     Required when the exported key is protected.
-#   PUBLIC_SANITIZE_AUTHOR_REGEX  -- Regex to match authors that should be
-#                                     rewritten (default: ^(jonas|j0nix)).
+#   PUBLIC_GITHUB_REWRITE_EMAILS  -- Comma-separated list of email substrings
+#                                      to match for selective author rewrite.
+#                                      Default: jonas,j0nix
+#   PUBLIC_GITHUB_REWRITE_NAMES   -- Optional. Same for author names.
+#                                      Disabled by default.
+#   PUBLIC_SANITIZE_AUTHOR_REGEX  -- DEPRECATED. Use PUBLIC_GITHUB_REWRITE_EMAILS.
 #   PUBLIC_GITHUB_IDENTITY_MODE   -- Identity rewrite policy:
 #                                     selective  -> rewrite authors matching regex (default)
 #                                     rewrite_all -> rewrite every author to bot
@@ -61,7 +65,8 @@ tag="${PUBLIC_SYNC_TAG:-last-synced-from-gitea}"
 cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-${PUBLIC_CUTOFF_COMMIT_FALLBACK:-}}"
 commit_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
-sanitize_regex="${PUBLIC_SANITIZE_AUTHOR_REGEX:-^(jonas|j0nix)}"
+rewrite_emails="${PUBLIC_GITHUB_REWRITE_EMAILS:-jonas,j0nix}"
+rewrite_names="${PUBLIC_GITHUB_REWRITE_NAMES:-}"
 identity_mode="${PUBLIC_GITHUB_IDENTITY_MODE:-selective}"
 
 repo_root="$(git rev-parse --show-toplevel)"
@@ -104,12 +109,15 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
 fi
 
 # --- load shared sanitisation engine ----------------------------------------
-export MS_SANITIZE_AUTHOR_NAME="$commit_name"
-export MS_SANITIZE_AUTHOR_EMAIL="$commit_email"
-export MS_SANITIZE_MATCH_REGEX="$sanitize_regex"
 # shellcheck source=scripts/lib/mirror-sanitize.sh
 source "$repo_root/scripts/lib/mirror-sanitize.sh"
 ms_init "$repo_root"
+
+# Build glob patterns and inject into the shared engine
+MS_SANITIZE_AUTHOR_NAME="$commit_name"
+MS_SANITIZE_AUTHOR_EMAIL="$commit_email"
+MS_SANITIZE_EMAIL_PATTERNS="$(ms_build_patterns "$rewrite_emails")"
+MS_SANITIZE_NAME_PATTERNS="$(ms_build_patterns "$rewrite_names")"
 
 printf '%s\n' "Identity mode: $identity_mode"
 
