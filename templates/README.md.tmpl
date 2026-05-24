@@ -148,7 +148,7 @@ Key categories available:
 | Dev | `settings.dev.docker`, `settings.dev.codex` | Docker, AI CLI toggles |
 | Gaming | `j0nix.desktop.gaming.*` | Steam, Proton, performance, controllers, launchers |
 | Sysctl | `settings.sysctlProfiles.*` | Gaming, dev, network tuning profiles |
-| WM Shell | `settings.userSettings.<name>.wmShell` | `ags`, [`caelestia-shell`](https://github.com/caelestia-dots/shell), [`dank-material-shell`](https://github.com/AvengeMedia/DankMaterialShell), `noctalia-shell`, `none` |
+| WM Shell | `settings.userSettings.<name>.wmShell` | `ags` (experimental), [`caelestia-shell`](https://github.com/caelestia-dots/shell) (**prod-tested**), [`dank-material-shell`](https://github.com/AvengeMedia/DankMaterialShell) (experimental), `noctalia-shell` (experimental), `none` |
 
 See `settings.nix.example` for a fully commented reference covering every category.
 
@@ -173,7 +173,7 @@ Functions available: `renderMonitorRule`, `parseMonitorRule`, `normalizeMonitor`
 ```nix
 settings.userSettings.Jonas = {
   # legacy alias also supported: hyprlandShell
-  wmShell = "noctalia-shell";  # or "ags", "dank-material-shell", "none"
+  wmShell = "noctalia-shell";  # prod-tested: "caelestia-shell" | experimental: "ags", "dank-material-shell", "noctalia-shell" | "none"
 };
 ```
 
