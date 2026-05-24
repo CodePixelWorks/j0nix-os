@@ -43,7 +43,8 @@ ms_build_patterns() {
     local result="" item
     IFS=','
     for item in $input; do
-        item=$(printf '%s' "$item" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        item="${item#"${item%%[![:space:]]*}"}"
+        item="${item%"${item##*[![:space:]]}"}"
         [ -z "$item" ] && continue
         result="${result:+${result}|}*${item}*"
     done
