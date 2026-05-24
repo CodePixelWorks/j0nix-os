@@ -16,11 +16,16 @@
 #   PUBLIC_GITHUB_COMMIT_NAME     -- Author name for sanitised commits.
 #   PUBLIC_GITHUB_COMMIT_EMAIL    -- Author email for sanitised commits.
 #   PUBLIC_GITHUB_SIGNING_KEY     -- GPG private key (ASCII-armored) for signing
-#                                     mirrored commits.  If set, all rewritten
-#                                     commits are GPG-signed; the public key must
-#                                     be registered at the GitHub account that
-#                                     owns PUBLIC_GITHUB_COMMIT_EMAIL.  Omit to
-#                                     keep commits unsigned.
+#                                     mirrored commits.  If the key has a
+#                                     passphrase, also set PUBLIC_GITHUB_SIGNING_
+#                                     PASSPHRASE below.  The passphrase is
+#                                     consumed at startup and then scrubbed from
+#                                     memory; the key runs passphrase-less in the
+#                                     container.  Register the matching public key
+#                                     at the GitHub account that owns
+#                                     PUBLIC_GITHUB_COMMIT_EMAIL.
+#   PUBLIC_GITHUB_SIGNING_PASSPHRASE -- Passphrase for the GPG signing key above.
+#                                     Required when the exported key is protected.
 #   PUBLIC_SANITIZE_AUTHOR_REGEX  -- Regex to match authors that should be
 #                                     rewritten (default: ^(jonas|j0nix)).
 #   PUBLIC_GITHUB_IDENTITY_MODE   -- Identity rewrite policy:
@@ -68,9 +73,29 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
     gpg_dir="$(mktemp -d -t mirror_gpg.XXXXXX)"
     chmod 700 "$gpg_dir"
     export GNUPGHOME="$gpg_dir"
-    printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | gpg --batch --import 2>/dev/null
+
+    # Import: with passphrase if provided, otherwise bare import
+    if [ -n "${PUBLIC_GITHUB_SIGNING_PASSPHRASE:-}" ]; then
+        printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | \
+            gpg --batch --pinentry-mode loopback \
+                --passphrase "$PUBLIC_GITHUB_SIGNING_PASSPHRASE" \
+                --import 2>/dev/null
+    else
+        printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | gpg --batch --import 2>/dev/null
+    fi
+
     gpg_key_id="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^sec/{print $5}' | head -n1)"
+
     if [ -n "$gpg_key_id" ]; then
+        # Remove passphrase so signing is headless in CI
+        if [ -n "${PUBLIC_GITHUB_SIGNING_PASSPHRASE:-}" ]; then
+            printf '%s\n' "Removing passphrase from GPG key (in-memory only)..."
+            printf 'passwd\n%s\n\n\nsave\n' "$PUBLIC_GITHUB_SIGNING_PASSPHRASE" | \
+                gpg --command-fd 0 --pinentry-mode loopback \
+                    --edit-key "$gpg_key_id" 2>/dev/null || true
+            # Scrub passphrase from environment
+            unset PUBLIC_GITHUB_SIGNING_PASSPHRASE
+        fi
         printf '%s\n' "GPG signing configured (key ${gpg_key_id:0:16}...)"
         git config --global user.signingkey "$gpg_key_id"
     else
