@@ -24,8 +24,12 @@
 #   PUBLIC_GITHUB_PRIVATE_KEY        -- SSH key fallback.
 #   PUBLIC_SYNC_TAG                  -- Tag tracking last sync on GitHub
 #                                       (default: last-synced-from-gitea).
-#   PUBLIC_SANITIZE_AUTHOR_REGEX     -- Regex matching "your" authors to skip.
-#                                       Default: ^(jonas|j0nix)
+#   PUBLIC_GITHUB_REWRITE_EMAILS     -- Comma-separated list of email substrings
+#                                         to match "your" authors to skip.
+#                                         Default: jonas,j0nix
+#   PUBLIC_GITHUB_REWRITE_NAMES      -- Optional. Same for author names.
+#                                         Disabled by default.
+#   PUBLIC_SANITIZE_AUTHOR_REGEX     -- DEPRECATED. Use PUBLIC_GITHUB_REWRITE_EMAILS.
 
 set -euo pipefail
 
@@ -35,16 +39,20 @@ branch="${2:-main}"
 tag="${PUBLIC_SYNC_TAG:-last-synced-from-gitea}"
 bot_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 bot_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
-sanitize_regex="${PUBLIC_SANITIZE_AUTHOR_REGEX:-^(jonas|j0nix)}"
+rewrite_emails="${PUBLIC_GITHUB_REWRITE_EMAILS:-jonas,j0nix}"
+rewrite_names="${PUBLIC_GITHUB_REWRITE_NAMES:-}"
 repo_root="$(git rev-parse --show-toplevel)"
 
 # --- load shared sanitisation engine -----------------------------------------
-export MS_SANITIZE_AUTHOR_NAME="${bot_name}"
-export MS_SANITIZE_AUTHOR_EMAIL="${bot_email}"
-export MS_SANITIZE_MATCH_REGEX="$sanitize_regex"
 # shellcheck source=scripts/lib/mirror-sanitize.sh
 source "$repo_root/scripts/lib/mirror-sanitize.sh"
 ms_init "$repo_root"
+
+# Build glob patterns and inject into the shared engine
+MS_SANITIZE_AUTHOR_NAME="$bot_name"
+MS_SANITIZE_AUTHOR_EMAIL="$bot_email"
+MS_SANITIZE_EMAIL_PATTERNS="$(ms_build_patterns "$rewrite_emails")"
+MS_SANITIZE_NAME_PATTERNS="$(ms_build_patterns "$rewrite_names")"
 
 # --- gpg signing setup (optional) --------------------------------------------
 gpg_key_id=""
