@@ -35,6 +35,9 @@ secrets/.backups/
 /r.sh
 /RESUME.sh
 
+# Machine-local settings (per-user secrets, personal paths)
+settings.nix
+
 # Optional local-only overrides for downstream mirrors
 settings.local.nix
 profiles/desktop/details.local.nix
