@@ -176,11 +176,11 @@ lib.mkIf enabled {
     $DRY_RUN_CMD ${codexMcpSync}/bin/codex-mcp-sync
   '';
 
-  xdg.configFile."codex/mcp-remotes.json".text = lib.mkIf (mcpRemotes != { }) (
-    builtins.toJSON {
+  xdg.configFile."codex/mcp-remotes.json" = lib.mkIf (mcpRemotes != { }) {
+    text = builtins.toJSON {
       inherit mcpRemotes;
-    }
-  );
+    };
+  };
 
   xdg.desktopEntries.gemini-cli = lib.mkIf (geminiEnabled && (ai.geminiDesktopEntry or true)) {
     name = "Gemini CLI";
