@@ -29,6 +29,8 @@ branch="${2:-main}"
 
 commit_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
+rewrite_regex="${PUBLIC_GITHUB_REWRITE_REGEX:-^(jonas|j0nix)}"
+
 cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-${PUBLIC_CUTOFF_COMMIT_FALLBACK:-}}"
 force_push="${PUBLIC_GITHUB_FORCE_PUSH:-true}"
 
@@ -120,10 +122,15 @@ git remote remove origin 2>/dev/null || true
 
 env_filter_path="$(mktemp -t env_filter.XXXXXX)"
 cat > "$env_filter_path" <<ENVFILTER
-export GIT_AUTHOR_NAME='$commit_name'
-export GIT_AUTHOR_EMAIL='$commit_email'
-export GIT_COMMITTER_NAME='$commit_name'
-export GIT_COMMITTER_EMAIL='$commit_email'
+ORIG_NAME="$GIT_AUTHOR_NAME"
+ORIG_EMAIL="$GIT_AUTHOR_EMAIL"
+if printf '%s\n' "$ORIG_NAME" | grep -qiE '$rewrite_regex' 2>/dev/null || \
+   printf '%s\n' "$ORIG_EMAIL" | grep -qiE '$rewrite_regex' 2>/dev/null; then
+    export GIT_AUTHOR_NAME='$commit_name'
+    export GIT_AUTHOR_EMAIL='$commit_email'
+    export GIT_COMMITTER_NAME='$commit_name'
+    export GIT_COMMITTER_EMAIL='$commit_email'
+fi
 ENVFILTER
 
 tree_filter_path="$(mktemp -t tree_filter.XXXXXX)"
