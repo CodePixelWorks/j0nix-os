@@ -11,11 +11,12 @@ set -euo pipefail
 #   PUBLIC_GITHUB_PRIVATE_KEY    — SSH key for git push (fallback when PAT absent).
 #   PUBLIC_GITHUB_COMMIT_NAME    — Author/committer name for rewritten history.
 #   PUBLIC_GITHUB_COMMIT_EMAIL   — Author/committer email for rewritten history.
-#   PUBLIC_GITHUB_REWRITE_EMAIL_REGEX — Regex for email-based selective rewrite.
-#                                       Default: ^(jonas|j0nix)  (from_secret)
+#   PUBLIC_GITHUB_REWRITE_EMAIL_REGEX — Email matching for selective author rewrite.
+#                                       Comma-list (default: jonas,j0nix) or explicit
+#                                       regex (^ prefix).                     (from_secret)
 #   PUBLIC_GITHUB_REWRITE_EMAIL_REGEX_FALLBACK — Fallback when secret unset.
-#   PUBLIC_GITHUB_REWRITE_NAME_REGEX  — Optional. Regex for name-based matching.
-#                                       Disabled by default.               (from_secret)
+#   PUBLIC_GITHUB_REWRITE_NAME_REGEX  — Optional. Name-based matching. Disabled
+#                                       by default. Same syntax as above.     (from_secret)
 #   PUBLIC_GITHUB_REWRITE_NAME_REGEX_FALLBACK — Fallback when secret unset.
 #   PUBLIC_CUTOFF_COMMIT         — Optional. Commits BEFORE this hash are
 #                                    removed entirely from mirror history.
@@ -35,8 +36,26 @@ branch="${2:-main}"
 
 commit_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
-rewrite_email_regex="${PUBLIC_GITHUB_REWRITE_EMAIL_REGEX:-${PUBLIC_GITHUB_REWRITE_EMAIL_REGEX_FALLBACK:-^(jonas|j0nix)}}"
-rewrite_name_regex="${PUBLIC_GITHUB_REWRITE_NAME_REGEX:-${PUBLIC_GITHUB_REWRITE_NAME_REGEX_FALLBACK:-}}"
+rewrite_email_input="${PUBLIC_GITHUB_REWRITE_EMAIL_REGEX:-${PUBLIC_GITHUB_REWRITE_EMAIL_REGEX_FALLBACK:-jonas,j0nix}}"
+rewrite_name_input="${PUBLIC_GITHUB_REWRITE_NAME_REGEX:-${PUBLIC_GITHUB_REWRITE_NAME_REGEX_FALLBACK:-}}"
+
+# --- Convert user-friendly input (comma-list or explicit regex) to safe regex ---
+#   "jonas,j0nix,codepixelstudio"  → "^(jonas|j0nix|codepixelstudio)"
+#   "^jonas|j0nix"                 → "^jonas|j0nix"  (left as-is)
+#   "jonas"                        → "^jonas$"
+#   ""                             → ""              (disabled)
+_input_to_regex() {
+    local input="$1"
+    case "$input" in
+        "")  echo ""; return ;;
+        ^*)  echo "$input"; return ;;
+        *,*) printf '^(%s)\n' "$(printf '%s' "$input" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed 's/[[:space:]]*,[[:space:]]*/|/g')"; return ;;
+        *)   printf '^%s$\n' "$input"; return ;;
+    esac
+}
+
+rewrite_email_regex="$(_input_to_regex "$rewrite_email_input")"
+rewrite_name_regex="$(_input_to_regex "$rewrite_name_input")"
 
 cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-${PUBLIC_CUTOFF_COMMIT_FALLBACK:-}}"
 force_push="${PUBLIC_GITHUB_FORCE_PUSH:-true}"
