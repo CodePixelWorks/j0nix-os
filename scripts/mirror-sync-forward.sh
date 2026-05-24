@@ -180,6 +180,16 @@ fi
 
 printf '%s\n' "=== ${#new_commits[@]} new commit(s) to sync ==="
 
+# --- dedup index: existing GitHub commits (prevents re-exporting imports) ---
+printf '%s\n' "Building GitHub commit index..."
+declare -A github_keys
+while IFS= read -r hash; do
+    [ -z "$hash" ] && continue
+    key="$(git log --format='%s|%an|%ae|%ad' -1 "$hash" 2>/dev/null || true)"
+    [ -n "$key" ] && github_keys["$key"]=1
+done < <(git log --first-parent --format='%H' "${sync_base}..${github_head}" 2>/dev/null || true)
+printf '%s\n' "  indexed ${#github_keys[@]} GitHub commits"
+
 # --- prepare branch for incremental export ----------------------------------
 # We build a linear chain of new sanitised commits on top of github_head.
 # For each Gitea commit we create one mirror commit.
@@ -197,6 +207,7 @@ git reset --hard
 total="${#new_commits[@]}"
 current=0
 failed=0
+skipped_dup=0
 
 for entry in "${new_commits[@]}"; do
     current=$((current + 1))
@@ -212,6 +223,14 @@ for entry in "${new_commits[@]}"; do
     author_email="$(git log -1 --format='%ae' "$commit_hash")"
     committer_name="$(git log -1 --format='%cn' "$commit_hash")"
     committer_email="$(git log -1 --format='%ce' "$commit_hash")"
+
+    # --- deduplication: skip if this exact commit is already on GitHub ---
+    dup_key="$commit_msg|$author_name|$author_email|$commit_date"
+    if [ "${github_keys[$dup_key]:-}" = "1" ]; then
+        printf '%s\n' "    SKIP: already present on GitHub (imported via backward-sync)"
+        skipped_dup=$((skipped_dup + 1))
+        continue
+    fi
 
     # attempt cherry-pick (apply patch, do not commit)
     if ! git cherry-pick --no-commit "$commit_hash" 2>/dev/null; then
@@ -331,11 +350,12 @@ fi
 
 # --- summary ----------------------------------------------------------------
 printf '\n%s\n' "=== sync complete ==="
-printf '%s\n' "  synced:      $((total - failed))"
-printf '%s\n' "  skipped:     $failed"
-printf '%s\n' "  github head: ${github_head:0:12}"
-printf '%s\n' "  new head:    ${new_head:0:12}"
+printf '%s\n' "  synced:       $((total - failed - skipped_dup))"
+printf '%s\n' "  skipped:      $skipped_dup"
+printf '%s\n' "  failed:       $failed"
+printf '%s\n' "  github head:  ${github_head:0:12}"
+printf '%s\n' "  new head:     ${new_head:0:12}"
 
-[ -n "$gpg_key_id" ] && printf '%s\n' "  gpg signing: enabled"
+[ -n "$gpg_key_id" ] && printf '%s\n' "  gpg signing:  enabled"
 
 trap - EXIT INT TERM
