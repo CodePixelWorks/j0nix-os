@@ -428,7 +428,7 @@
       email = "you@example.com";
       shell = "zsh"; # "zsh" | "fish"
       defaultWMS = "hyprland"; # "hyprland" | "gnome" | "niri" | "mangowc"
-      wmShell = "none"; # "ags" | "dank-material-shell" | "noctalia-shell" | "caelestia-shell" | "none"
+      wmShell = "none"; # prod-tested: "caelestia-shell" | experimental: "ags" / "dank-material-shell" / "noctalia-shell" | "none"
       editors = [ "neovim" ];
       browsers = [ "chromium" ];
       fileManagers = [ "nautilus" ];
