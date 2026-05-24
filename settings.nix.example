@@ -732,7 +732,7 @@ in
       #   sopsFile = ./secrets/users/alice.yaml;
       #   key = "password";
       # };
-      passwordSecret = {};
+      passwordSecret = null;
 
       # Default window manager for this user.
       # Supported: "hyprland" | "gnome" | "mangowc" | "niri"
