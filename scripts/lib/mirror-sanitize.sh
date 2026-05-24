@@ -117,16 +117,7 @@ ms_apply_tree_filter() {
         # --- strip control files ---
         rm -f .mirror-blacklist .mirror-root-whitelist
 
-        # --- strip + template substitution ---
-        rm -f .sops.yaml settings.nix profiles/desktop/details.nix profiles/desktop/hardware-configuration.nix
-
-        if [ -d secrets/hosts ]; then
-            find secrets/hosts -mindepth 1 -maxdepth 1 -type f -delete
-        fi
-        if [ -d secrets/users ]; then
-            find secrets/users -mindepth 1 -maxdepth 1 -type f -delete
-        fi
-
+        # --- template substitution ---
         cp -f settings.nix.example settings.nix 2>/dev/null || true
         cp -f profiles/desktop/details.nix.example profiles/desktop/details.nix 2>/dev/null || true
         cp -f profiles/desktop/hardware-configuration.nix.example profiles/desktop/hardware-configuration.nix 2>/dev/null || true
@@ -139,6 +130,65 @@ ms_apply_tree_filter() {
             cp -f "$repo_root/README.md.public" README.md 2>/dev/null || true
         fi
     )
+}
+
+# ============================================================================
+# ms_sensitive_files_list -- list of file patterns that must never be
+#     modified by external PRs in backward sync.
+#
+# Reads from .mirror-blacklist and adds hardcoded sensitive files.
+# ============================================================================
+ms_sensitive_files_list() {
+    local repo_root="${SANITIZE_REPO_ROOT:-}"
+    local patterns=""
+
+    # Hardcoded sensitive files (exact paths, parent dirs)
+    patterns="settings.nix
+.sops.yaml
+profiles/*/details.nix
+profiles/*/hardware-configuration.nix
+secrets/
+.mirror-blacklist
+.mirror-root-whitelist"
+
+    # Add .mirror-blacklist entries
+    if [ -f "$repo_root/.mirror-blacklist" ]; then
+        while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            case "$line" in \#*) continue ;; esac
+            patterns="$patterns
+$line"
+        done < "$repo_root/.mirror-blacklist"
+    fi
+
+    printf '%s\n' "$patterns" | sort -u
+}
+
+# ============================================================================
+# ms_commit_is_safe -- check if a commit (by hash) only touches safe files.
+#
+# Returns 0 (safe) or 1 (touches sensitive files + lists them to stderr).
+# Usage: ms_commit_is_safe <commit_hash>
+# ============================================================================
+ms_commit_is_safe() {
+    local commit="${1:?ms_commit_is_safe: commit hash required}"
+    local sensitive=""
+    local bad=""
+
+    # Build grep pattern from sensitive list
+    sensitive="$(ms_sensitive_files_list | sed '/^$/d' | sed 's|/|\\/|g' | tr '\n' '|' | sed 's/|$//')"
+    [ -n "$sensitive" ] || return 0  # nothing is sensitive
+
+    bad="$(git diff-tree --no-commit-id --name-only -r "$commit" 2>/dev/null | grep -iE "^($sensitive)" || true)"
+
+    if [ -n "$bad" ]; then
+        printf '%s\n' "SENSITIVE: $commit touches:" >&2
+        printf '%s\n' "$bad" | while IFS= read -r f; do
+            printf '  - %s\n' "$f" >&2
+        done
+        return 1
+    fi
+    return 0
 }
 
 # ============================================================================
