@@ -19,7 +19,7 @@ buildNpmPackage rec {
     hash = "sha256-DF3DFbVR5osAAczCd46EDvZspmJGWs3cc37bPymYQwQ=";
   };
 
-  npmDepsHash = "sha256-Xj+NpXJloa+xVLVMQ3ScSBDpLCUApddr+jcUU2xLHXU=";
+  npmDepsHash = "sha256-fYrENCKpBN9IX9P7+xu+jabRakilTk4KI7hq9WkZ4m8=";
   npmDepsFetcherVersion = 2;
 
   forceGitDeps = true;
