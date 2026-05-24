@@ -147,12 +147,16 @@ nix flake lock --update-input nixpkgs
 - `user/gaming/`: user gaming tools and launchers
 
 ### Supported Hyprland Shell Modes
+
 For `settings.userSettings.<name>.wmShell` (legacy: `hyprlandShell`):
-- `ags`
-- `caelestia-shell`
-- `dank-material-shell`
-- `noctalia-shell`
-- `none`
+
+| Shell | Status | Notes |
+|-------|--------|-------|
+| `caelestia-shell` | **prod-tested** | Daily driver on Jonas-PC |
+| `ags` | experimental | Testers wanted — open an issue if you try it |
+| `dank-material-shell` | experimental | Testers wanted — open an issue if you try it |
+| `noctalia-shell` | experimental | Testers wanted — open an issue if you try it |
+| `none` | stable | No shell layer; bare Hyprland |
 
 Debug toggle:
 - `settings.hyprland.debug.installRawQuickshell`
@@ -266,7 +270,7 @@ Add root files to `.mirror-root-whitelist` AND `.gitignore` if they should safel
 
 ### Switch WM shell layer
 1. Update `settings.userSettings.<name>.wmShell` (or legacy `hyprlandShell` inside that user block).
-2. Use one of: `ags`, `dank-material-shell`, `noctalia-shell`, `none`.
+2. Use one of: `caelestia-shell` (prod-tested), `ags`, `dank-material-shell`, `noctalia-shell`, `none`.
 3. Rebuild.
 
 ### Extend dev tooling
