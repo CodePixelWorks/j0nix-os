@@ -24,7 +24,48 @@ __MIRROR_SANITIZE_SOURCED=1
 # ============================================================================
 MS_SANITIZE_AUTHOR_NAME="${MS_SANITIZE_AUTHOR_NAME:-j0nix mirror bot}"
 MS_SANITIZE_AUTHOR_EMAIL="${MS_SANITIZE_AUTHOR_EMAIL:-mirror@example.invalid}"
-MS_SANITIZE_MATCH_REGEX="${MS_SANITIZE_MATCH_REGEX:-^(jonas|j0nix)}"
+# New variables (pattern strings built by ms_build_patterns from comma-lists)
+MS_SANITIZE_EMAIL_PATTERNS="${MS_SANITIZE_EMAIL_PATTERNS:-}"
+MS_SANITIZE_NAME_PATTERNS="${MS_SANITIZE_NAME_PATTERNS:-}"
+# Legacy fallback: if the old single-regex variable is still set, convert it
+MS_SANITIZE_MATCH_REGEX="${MS_SANITIZE_MATCH_REGEX:-}"
+
+# --- Build glob-style case patterns from comma-separated substrings ---
+#   "jonas,j0nix,codepixelstudio"  → "*jonas*|*j0nix*|*codepixelstudio*"
+#   "jonas"                        → "*jonas*"
+#   ""                             → "___NO_MATCH_SENTINEL___" (never matches)
+ms_build_patterns() {
+    local input="$1"
+    if [ -z "$input" ]; then
+        echo "___NO_MATCH_SENTINEL___"
+        return
+    fi
+    local result="" item
+    IFS=','
+    for item in $input; do
+        item=$(printf '%s' "$item" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        [ -z "$item" ] && continue
+        result="${result:+${result}|}*${item}*"
+    done
+    if [ -z "$result" ]; then
+        result="___NO_MATCH_SENTINEL___"
+    fi
+    echo "$result"
+}
+
+# ============================================================================
+# ms_should_match_patterns -- return 0 if the value matches any glob pattern.
+#
+# Usage: ms_should_match_patterns "value" "*foo*|*bar*"
+# ============================================================================
+ms_should_match_patterns() {
+    local value="$1"
+    local patterns="$2"
+    case "$value" in
+        $patterns) return 0 ;;
+    esac
+    return 1
+}
 
 # ============================================================================
 # Init -- validate repo root, preload control files.
@@ -44,15 +85,29 @@ ms_init() {
 # ============================================================================
 # ms_should_sanitize_author -- return 0 if this author should be rewritten.
 #
-# Policy: Only rewrite authors that match the configured regex (default:
-#     jonas / j0nix).  External contributors (Dependabot, GitHub Actions,
-#     or manual PR merges) keep their original identity.
+# Supports two input modes:
+#   1. New: EMAIL_PATTERNS / NAME_PATTERNS set via ms_build_patterns from
+#      comma-separated substrings.
+#   2. Legacy: single MS_SANITIZE_MATCH_REGEX variable (regex via grep).
+#
+# If neither is configured, returns 1 (sanitize nothing = safety).
 # ============================================================================
 ms_should_sanitize_author() {
     local name="${1:-}"
     local email="${2:-}"
 
-    # Empty regex = sanitize nothing (safety)
+    # --- New mode: separate email/name pattern lists ---
+    if [ -n "$MS_SANITIZE_EMAIL_PATTERNS" ] || [ -n "$MS_SANITIZE_NAME_PATTERNS" ]; then
+        if [ -n "$MS_SANITIZE_EMAIL_PATTERNS" ] && ms_should_match_patterns "$email" "$MS_SANITIZE_EMAIL_PATTERNS"; then
+            return 0
+        fi
+        if [ -n "$MS_SANITIZE_NAME_PATTERNS" ] && ms_should_match_patterns "$name" "$MS_SANITIZE_NAME_PATTERNS"; then
+            return 0
+        fi
+        return 1
+    fi
+
+    # --- Legacy mode: single regex via grep ---
     [ -n "$MS_SANITIZE_MATCH_REGEX" ] || return 1
 
     if printf '%s\n' "$name" | grep -qiE "$MS_SANITIZE_MATCH_REGEX" 2>/dev/null; then
