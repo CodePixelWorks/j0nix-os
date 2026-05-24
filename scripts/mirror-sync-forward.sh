@@ -33,10 +33,12 @@
 #                                     PUBLIC_GITHUB_COMMIT_EMAIL.
 #   PUBLIC_GITHUB_SIGNING_PASSPHRASE -- Passphrase for the GPG signing key above.
 #                                     Required when the exported key is protected.
-#   PUBLIC_GITHUB_REWRITE_EMAILS  -- Comma-separated list of email substrings
+#   PUBLIC_GITHUB_REWRITE_EMAILS  -- Comma-separated list of exact email addresses
 #                                      to match for selective author rewrite.
-#                                      Default: jonas,j0nix
-#   PUBLIC_GITHUB_REWRITE_NAMES   -- Optional. Same for author names.
+#                                      E.g. "me@example.com,you@other.org"
+#                                      Default: empty (no rewrite)
+#   PUBLIC_GITHUB_REWRITE_NAMES   -- Optional. Same for author names (full names,
+#                                      not substrings; e.g. "Jonas Tschoche").
 #                                      Disabled by default.
 #   PUBLIC_SANITIZE_AUTHOR_REGEX  -- DEPRECATED. Use PUBLIC_GITHUB_REWRITE_EMAILS.
 #   PUBLIC_GITHUB_IDENTITY_MODE   -- Identity rewrite policy:
@@ -74,7 +76,7 @@ commit_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 commit_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
 committer_name="${PUBLIC_GITHUB_COMMITTER_NAME:-$commit_name}"
 committer_email="${PUBLIC_GITHUB_COMMITTER_EMAIL:-$commit_email}"
-rewrite_emails="${PUBLIC_GITHUB_REWRITE_EMAILS:-jonas,j0nix}"
+rewrite_emails="${PUBLIC_GITHUB_REWRITE_EMAILS:-}"
 rewrite_names="${PUBLIC_GITHUB_REWRITE_NAMES:-}"
 identity_mode="${PUBLIC_GITHUB_IDENTITY_MODE:-selective}"
 
