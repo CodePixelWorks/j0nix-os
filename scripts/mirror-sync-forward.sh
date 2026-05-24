@@ -305,7 +305,7 @@ for entry in "${new_commits[@]}"; do
     fi
 
     if [ "$should_rewrite" -eq 1 ]; then
-        # sanitise: rewrite author/committer to mirror bot, preserve date
+        # sanitise: rewrite author + committer to mirror bot, preserve date
         GIT_AUTHOR_DATE="$commit_date" \
         GIT_COMMITTER_DATE="$commit_date" \
         GIT_AUTHOR_NAME="$commit_name" \
