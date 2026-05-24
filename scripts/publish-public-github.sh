@@ -120,10 +120,10 @@ git remote remove origin 2>/dev/null || true
 
 env_filter_path="$(mktemp -t env_filter.XXXXXX)"
 cat > "$env_filter_path" <<ENVFILTER
-export GIT_AUTHOR_NAME='***'
-export GIT_AUTHOR_EMAIL='***'
-export GIT_COMMITTER_NAME='***'
-export GIT_COMMITTER_EMAIL='***'
+export GIT_AUTHOR_NAME='$commit_name'
+export GIT_AUTHOR_EMAIL='$commit_email'
+export GIT_COMMITTER_NAME='$commit_name'
+export GIT_COMMITTER_EMAIL='$commit_email'
 ENVFILTER
 
 tree_filter_path="$(mktemp -t tree_filter.XXXXXX)"
