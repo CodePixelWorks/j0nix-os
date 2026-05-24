@@ -24,10 +24,11 @@
 #   PUBLIC_GITHUB_PRIVATE_KEY        -- SSH key fallback.
 #   PUBLIC_SYNC_TAG                  -- Tag tracking last sync on GitHub
 #                                       (default: last-synced-from-gitea).
-#   PUBLIC_GITHUB_REWRITE_EMAILS     -- Comma-separated list of email substrings
-#                                         to match "your" authors to skip.
-#                                         Default: jonas,j0nix
-#   PUBLIC_GITHUB_REWRITE_NAMES      -- Optional. Same for author names.
+#   PUBLIC_GITHUB_REWRITE_EMAILS     -- Comma-separated list of exact email
+#                                         addresses to match for selective author
+#                                         rewrite (e.g. "a@x.com,b@y.de").
+#                                         Default: empty (no rewrite)
+#   PUBLIC_GITHUB_REWRITE_NAMES      -- Optional. Same for exact author names.
 #                                         Disabled by default.
 #   PUBLIC_SANITIZE_AUTHOR_REGEX     -- DEPRECATED. Use PUBLIC_GITHUB_REWRITE_EMAILS.
 
@@ -39,7 +40,7 @@ branch="${2:-main}"
 tag="${PUBLIC_SYNC_TAG:-last-synced-from-gitea}"
 bot_name="${PUBLIC_GITHUB_COMMIT_NAME:-j0nix mirror bot}"
 bot_email="${PUBLIC_GITHUB_COMMIT_EMAIL:-mirror@example.invalid}"
-rewrite_emails="${PUBLIC_GITHUB_REWRITE_EMAILS:-jonas,j0nix}"
+rewrite_emails="${PUBLIC_GITHUB_REWRITE_EMAILS:-}"
 rewrite_names="${PUBLIC_GITHUB_REWRITE_NAMES:-}"
 repo_root="$(git rev-parse --show-toplevel)"
 
