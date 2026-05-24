@@ -8,25 +8,37 @@ let
   useZsh = builtins.elem "zsh" resolvedShells;
   useFish = builtins.elem "fish" resolvedShells;
   userSettings = settings.userSettings or { };
-  mkUserPasswordSecret = username:
+  resolvePasswordSecret = username:
     let
       userCfg = userSettings.${username} or { };
       userSecretsCfg = userCfg.secrets or { };
       passwordSecret = userCfg.passwordSecret or null;
+      resolvedSopsFile =
+        if passwordSecret == null then
+          null
+        else
+          passwordSecret.sopsFile or (userSecretsCfg.defaultSopsFile or settings.secrets.defaultUserSopsFile or null);
     in
-    lib.optionalAttrs (passwordSecret != null) {
+    {
+      inherit passwordSecret resolvedSopsFile;
+    };
+  mkUserPasswordSecret = username:
+    let
+      resolved = resolvePasswordSecret username;
+    in
+    lib.optionalAttrs (resolved.passwordSecret != null && resolved.resolvedSopsFile != null) {
       "${username}-password" = {
-        key = passwordSecret.key or "hashedPassword";
-        sopsFile = passwordSecret.sopsFile or (userSecretsCfg.defaultSopsFile or settings.secrets.defaultUserSopsFile or null);
+        key = resolved.passwordSecret.key or "hashedPassword";
+        sopsFile = resolved.resolvedSopsFile;
         neededForUsers = true;
       };
     };
   passwordSecrets = lib.foldl' (acc: username: acc // mkUserPasswordSecret username) { } cfg.users;
   userHasPasswordFile = username:
     let
-      userCfg = userSettings.${username} or { };
+      resolved = resolvePasswordSecret username;
     in
-    (userCfg.passwordSecret or null) != null;
+    resolved.passwordSecret != null && resolved.resolvedSopsFile != null;
   hasDeclarativePasswordSecrets = lib.any userHasPasswordFile cfg.users;
 in
 {
