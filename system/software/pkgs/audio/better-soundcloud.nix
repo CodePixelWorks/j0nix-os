@@ -20,6 +20,7 @@ buildNpmPackage rec {
   };
 
   npmDepsHash = "sha256-Xj+NpXJloa+xVLVMQ3ScSBDpLCUApddr+jcUU2xLHXU=";
+  npmDepsFetcherVersion = 2;
 
   forceGitDeps = true;
 
