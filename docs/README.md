@@ -9,7 +9,8 @@ For agent coding rules and commit policy, see [`AGENTS.md`](../AGENTS.md) in the
 | Doc | Audience | Topic |
 |-----|----------|-------|
 | [architecture.md](./architecture.md) | Contributors, agents | Flake graph, module layers, settings resolution, multi-user model |
-| [startup-flow.md](./startup-flow.md) | Contributors, debuggers | WM startup order: DM → compositor → shell → apps |
+| [ci-pipeline.md](./ci-pipeline.md) | DevOps, maintainers | Drone CI mirror pipeline, environment variables, sync modes |
+| [startup-flow.md](./startup-flow.md) | Contributors, debuggers | WM startup order: DM -> compositor -> shell -> apps |
 | [qmlgreet.md](./qmlgreet.md) | Users, contributors | QMLGreet greeter config, theming inputs, compositor paths |
 | [dms.md](./dms.md) | Users | Dank Material Shell wallpaper, startup mode, workspace config |
 | [keybinds.md](./keybinds.md) | Users | Current keybind reference (default: caelestia-shell) |
