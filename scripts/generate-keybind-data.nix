@@ -14,7 +14,7 @@ let
   # ---------------------------------------------------------------------------
   # Load keybind lib helpers
   # ---------------------------------------------------------------------------
-  keybindLib = import (repoRoot + "/user/wm/hyprland/config/keybinds/lib.nix") { inherit lib; };
+  keybindLib = import (repoRoot + "/nix/user/wm/hyprland/config/keybinds/lib.nix") { inherit lib; };
 
   # ---------------------------------------------------------------------------
   # Mock dependencies for core.nix evaluation
@@ -53,7 +53,7 @@ let
   # ---------------------------------------------------------------------------
   # Evaluate core binds
   # ---------------------------------------------------------------------------
-  coreModule = import (repoRoot + "/user/wm/hyprland/config/keybinds/core.nix") {
+  coreModule = import (repoRoot + "/nix/user/wm/hyprland/config/keybinds/core.nix") {
     inherit lib homeBinDir appExec preferredTerminalCmd keybindHelpCommand;
     inherit layoutToggleBind overviewToggleBind dmsOverviewEnabled;
     inherit keepassEnabled keepassWorkspaceEnable keepassToggleBind;
@@ -78,7 +78,7 @@ let
   # ---------------------------------------------------------------------------
   # Evaluate shell binds
   # ---------------------------------------------------------------------------
-  shellModule = import (repoRoot + "/user/wm/hyprland/config/keybinds/shells.nix") {
+  shellModule = import (repoRoot + "/nix/user/wm/hyprland/config/keybinds/shells.nix") {
     launcherAppExec = x: x;
     settings = { preferredBrowser = "chromium"; preferredEditor = "nvim"; };
     preferredFileManager = "nautilus";

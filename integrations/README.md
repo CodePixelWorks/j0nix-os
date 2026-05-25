@@ -17,7 +17,7 @@ Each integration is a standalone unit with its own `flake.nix`, providing packag
    - `overlays.default` for package overrides
    - `homeManagerModules.default` and/or `nixosModules.default` for system config
 3. Add an `inputs.<name>` entry in the root `flake.nix` pointing to `path:./integrations/<name>`.
-4. Wire the overlay into `system/lib/flake/overlays.nix` or import modules directly in the relevant `system/` / `user/` modules.
+4. Wire the overlay into `nix/system/lib/flake/overlays.nix` or import modules directly in the relevant `nix/system/` / `nix/user/` modules.
 
 ## Why vendored instead of flake inputs?
 

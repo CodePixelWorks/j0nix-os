@@ -2,7 +2,7 @@
 
 This repo configures Dank Material Shell (DMS) via:
 - `settings.nix` (`settings.dms.*`)
-- `user/wm/hyprland/shells/dank-material-shell/default.nix`
+- `nix/user/wm/hyprland/shells/dank-material-shell/default.nix`
 
 ## Wallpaper Defaults
 
