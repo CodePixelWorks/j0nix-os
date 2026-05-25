@@ -270,8 +270,7 @@ rm -f .sops.yaml.example
 cp -f '${repo_root}/README.md.public' README.md 2>/dev/null || true
 TREEFILTER
 
-# Always run --parent-filter: strip cutoff parent if set, otherwise passthrough.
-parent_filter_cmd="cat"
+parent_filter_args=()
 if [ -n "$cutoff_commit" ]; then
     # --parent-filter removes the cutoff commit as parent from the first
     # rewritten commit after the cutoff, creating a new root = clean history.
@@ -285,34 +284,41 @@ if [ -n "$cutoff_commit" ]; then
     cat > "$parent_filter_script" <<'PFSCRIPT'
 #!/usr/bin/env bash
 cutoff_sha="PFSCRIPT_CUTOFF"
-set -- $(cat)
+read -r raw_line || raw_line=""
+set -- $raw_line
+
+# filter-branch passes a rev-list --parents style line:
+#   <commit> <parent1> <parent2> ...
+# commit-tree expects:
+#   -p <parent1> -p <parent2> ...
+#
+# Skip the commit itself and rebuild the parent flags explicitly.
+if [ $# -gt 0 ]; then
+    shift
+fi
+
 result=""
-while [ $# -ge 2 ]; do
-    if [ "$1" != "-p" ]; then
-        result="$result $1"
+while [ $# -gt 0 ]; do
+    if [ "$1" = "$cutoff_sha" ]; then
         shift
         continue
     fi
-    if [ "$2" = "$cutoff_sha" ]; then
-        shift 2
-        continue
-    fi
-    result="$result -p $2"
-    shift 2
+    result="$result -p $1"
+    shift
 done
 printf '%s\n' "${result# }"
 PFSCRIPT
     # shellcheck disable=SC2016
     sed -i "s/PFSCRIPT_CUTOFF/${cutoff_commit}/g" "$parent_filter_script"
     chmod +x "$parent_filter_script"
-    parent_filter_cmd="$parent_filter_script"
+    parent_filter_args=(--parent-filter "$parent_filter_script")
 fi
 
 export FILTER_BRANCH_SQUELCH_WARNING=1
 
 git filter-branch \
     --force \
-    --parent-filter "$parent_filter_cmd" \
+    "${parent_filter_args[@]}" \
     --env-filter "source '$env_filter_path'" \
     --tree-filter "source '$tree_filter_path'" \
     --prune-empty \
