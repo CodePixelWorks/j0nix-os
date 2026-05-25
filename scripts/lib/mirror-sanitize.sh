@@ -188,6 +188,13 @@ ms_apply_tree_filter() {
         # --- strip control files ---
         rm -f .mirror-blacklist .mirror-root-whitelist
 
+        if [ -d secrets/hosts ]; then
+            find secrets/hosts -mindepth 1 -maxdepth 1 -type f ! -name '*.example' -delete
+        fi
+        if [ -d secrets/users ]; then
+            find secrets/users -mindepth 1 -maxdepth 1 -type f ! -name '*.example' -delete
+        fi
+
         # --- inject public README ---
         if [ -f "$repo_root/README.md.public" ]; then
             cp -f "$repo_root/README.md.public" README.md 2>/dev/null || true
