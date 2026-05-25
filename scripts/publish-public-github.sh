@@ -193,12 +193,16 @@ _check_match() {
     local list="\$2"
     [ -z "\$list" ] && return 1
     [ "\$list" = "___NO_MATCH_SENTINEL___" ] && return 1
-    local p
+    local p old_ifs="\$IFS"
     IFS='|'
     for p in \$list; do
         [ -z "\$p" ] && continue
-        [ "\$value" = "\$p" ] && return 0
+        if [ "\$value" = "\$p" ]; then
+            IFS="\$old_ifs"
+            return 0
+        fi
     done
+    IFS="\$old_ifs"
     return 1
 }
 
