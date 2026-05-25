@@ -430,8 +430,12 @@ in
 
   # SANE / scanner stack.
   scanning = {
-    enable           = true;
-    useHplipBackend  = true;           # HP all-in-one backend
+    enable            = true;
+    enableNetBackend  = true;          # Probe remote scanners via the SANE net backend
+    useAirscanBackend = true;          # Preferred for modern network HP/AirScan devices
+    useHplipBackend   = true;          # Optional HP all-in-one backend
+    networkHosts      = [ "172.17.0.3" ]; # Replace with your scanner/printer IP
+    openFirewall      = true;          # Needed for some network scanner discovery flows
   };
 
   # Audio stack.
