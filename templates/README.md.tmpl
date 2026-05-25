@@ -59,12 +59,11 @@ cd ~/j0nix-os
 ```bash
 cp settings.nix.example settings.nix
 cp profiles/desktop/details.nix.example profiles/desktop/details.nix
-cp profiles/desktop/hardware-configuration.nix.example profiles/desktop/hardware-configuration.nix
 cp .sops.yaml.example .sops.yaml
 ```
 
 > [!NOTE]
-> `settings.nix`, `details.nix`, `hardware-configuration.nix`, and `.sops.yaml` are tracked in the private source repo so the flake can build immediately after cloning. In the public mirror they are replaced by their `.example` templates via the mirror filter — copy the templates first if you are working from the public mirror.
+> `settings.nix`, `details.nix`, `hardware-configuration.nix`, and `.sops.yaml` are tracked in the private source repo so the flake can build immediately after cloning. In the public mirror, use the shipped `.example` templates where available and generate `hardware-configuration.nix` locally before evaluating the flake.
 
 ### 3. Edit your hardware and identity
 

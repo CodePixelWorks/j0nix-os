@@ -10,7 +10,12 @@ Main desktop profile for `j0nix-os`.
 - `details.nix.example`: public starter copy of the profile metadata
 - `secrets.nix`: profile-scoped system secret defaults (merged into settings.secrets)
 - `hardware-configuration.nix`: hardware-generated baseline
-- `hardware-configuration.nix.example`: public starter placeholder for new machines
+
+Generate `hardware-configuration.nix` locally on the target machine:
+
+```bash
+sudo nixos-generate-config --show-hardware-config > profiles/desktop/hardware-configuration.nix
+```
 
 ## Key Settings Hooks
 
