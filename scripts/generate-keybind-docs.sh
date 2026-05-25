@@ -37,7 +37,7 @@ mkdir -p "$(dirname "$OUTFILE")"
   cat <<'HEADER'
 # Keybind Reference
 
-Auto-generated from `user/wm/hyprland/config/keybinds/`.
+Auto-generated from `nix/user/wm/hyprland/config/keybinds/`.
 
 > [!NOTE]
 > `$mainMod` = `SUPER` (Windows key). Some binds may vary by selected shell.
