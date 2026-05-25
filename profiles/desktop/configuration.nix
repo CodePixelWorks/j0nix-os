@@ -6,7 +6,7 @@
   ...
 }:
 let
-  resolveEnabledWms = import ../../system/lib/enabled-wms.nix { inherit lib; };
+  resolveEnabledWms = import ../../nix/system/lib/enabled-wms.nix { inherit lib; };
   enabledWms = resolveEnabledWms settings;
   hardwareConfigurationFile =
     if builtins.pathExists ./hardware-configuration.nix then
@@ -42,32 +42,32 @@ in
     ./modules/thermal.nix
     ./modules/drivers.nix
     ./modules/support-drivers.nix
-    ../../system/apps
-    ../../system/software
-    ../../user-roles/system
-    ../../system/accounts
-    ../../system/binfmt
-    ../../system/audio
-    ../../system/boot
-    ../../system/locale
-    ../../system/fonts
-    ../../system/logging
+    ../../nix/system/apps
+    ../../nix/system/software
+    ../../nix/roles/system
+    ../../nix/system/accounts
+    ../../nix/system/binfmt
+    ../../nix/system/audio
+    ../../nix/system/boot
+    ../../nix/system/locale
+    ../../nix/system/fonts
+    ../../nix/system/logging
 
-    ../../system/printing
-    ../../system/scanning
-    ../../system/kernel
-    ../../system/nix
-    ../../system/network
-    ../../system/security
-    ../../system/storage
-    ../../system/virtualisation
-    ../../system/drivers
-    ../../system/drivers/support.nix
-    ../../system/dev
-    ../../system/tuning
-    ../../system/gaming
+    ../../nix/system/printing
+    ../../nix/system/scanning
+    ../../nix/system/kernel
+    ../../nix/system/nix
+    ../../nix/system/network
+    ../../nix/system/security
+    ../../nix/system/storage
+    ../../nix/system/virtualisation
+    ../../nix/system/drivers
+    ../../nix/system/drivers/support.nix
+    ../../nix/system/dev
+    ../../nix/system/tuning
+    ../../nix/system/gaming
   ]
-  ++ (map (wm: ../../system/wm/${wm}.nix) enabledWms);
+  ++ (map (wm: ../../nix/system/wm/${wm}.nix) enabledWms);
 
   boot = {
     # boot policy (tmp/loader/resume/swap) is defined via `j0nix.desktop.boot`

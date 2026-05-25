@@ -172,7 +172,7 @@ flowchart LR
 
 ## Driver Stack
 
-Drivers are controlled centrally via `settings.drivers.*` and applied in `system/drivers/*`.
+Drivers are controlled centrally via `settings.drivers.*` and applied in `nix/system/drivers/*`.
 
 ```mermaid
 flowchart TD
@@ -187,14 +187,14 @@ flowchart TD
 ## Key Extension Points
 
 - Add a new desktop module:
-  - `system/wm/<name>.nix`
-  - `user/wm/<name>/default.nix` (optional)
+  - `nix/system/wm/<name>.nix`
+  - `nix/user/wm/<name>/default.nix` (optional)
 - Add a new Hyprland shell:
-  - `user/wm/hyprland/shells/<shell>/default.nix`
+  - `nix/user/wm/hyprland/shells/<shell>/default.nix`
   - expose name via `userSettings.<name>.wmShell` (legacy alias: `hyprlandShell`)
 - Add a new feature domain:
-  - `system/<domain>/...`
-  - `user/<domain>/...`
+  - `nix/system/<domain>/...`
+  - `nix/user/<domain>/...`
   - toggle from `settings.nix`
 
 ## Operational Notes

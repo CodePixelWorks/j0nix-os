@@ -4,14 +4,14 @@ This repo supports `qmlgreet` as a first-class `greetd` greeter.
 
 ## Where It Is Defined
 
-- Package: `system/software/pkgs/greetd/qmlgreet.nix`
+- Package: `nix/system/software/pkgs/greetd/qmlgreet.nix`
 - Maui deps:
-  - `system/software/pkgs/maui/mauiman4.nix`
-  - `system/software/pkgs/maui/mauikit4.nix`
+  - `nix/system/software/pkgs/maui/mauiman4.nix`
+  - `nix/system/software/pkgs/maui/mauikit4.nix`
 - Overlay wiring: `flake.nix` (`pkgs.qmlgreet`, `pkgs.mauikit4`, `pkgs.mauiman4`)
-- Greetd contract: `system/wm/display-manager/contract.nix`
-- Greetd command variants: `system/wm/display-manager/greetd/variants.nix`
-- Hyprland runtime wiring: `system/wm/hyprland.nix`
+- Greetd contract: `nix/system/wm/display-manager/contract.nix`
+- Greetd command variants: `nix/system/wm/display-manager/greetd/variants.nix`
+- Hyprland runtime wiring: `nix/system/wm/hyprland.nix`
 
 ## Settings Contract
 
