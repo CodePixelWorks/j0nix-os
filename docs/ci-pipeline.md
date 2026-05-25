@@ -160,7 +160,7 @@ git operations.
    env vars in `.drone.star` — no secret needed
 
 Cutoff input rule:
-`PUBLIC_CUTOFF_COMMIT` must resolve to exactly one commit hash/ref after trimming whitespace. If the secret accidentally contains multiple hashes, newlines, or extra tokens, the forward sync scripts now fail early with a clear error instead of reaching a later git rewrite failure.
+`PUBLIC_CUTOFF_COMMIT` should resolve to exactly one commit hash/ref after trimming whitespace. If the secret contains multiple hashes, newlines, or another invalid value, the forward sync scripts emit a warning and ignore the cutoff instead of failing the mirror run.
 
 ### Minimal Required Secrets
 
