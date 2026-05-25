@@ -10,6 +10,7 @@
     ./keepassxc
     ./kitty
     ./streambert
+    ./sunshine
     ./twintail-launcher
     ./windows-apps
     ./windows-exe

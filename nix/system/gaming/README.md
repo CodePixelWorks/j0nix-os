@@ -39,6 +39,9 @@ Per-user launchers and helpers belong in `nix/user/gaming/`.
 - The old `j0nix.desktop.gaming.streaming.sunshine.virtualDisplay` block still works as a legacy fallback, but `settings.sunshine.displayTarget` overrides it.
 - The configured Sunshine display target stays disabled by default at Hyprland startup. Sunshine `prep-cmd` activates the selected target only for the lifetime of the stream, and `undo` / `postStop` disable it again.
 - On this NVIDIA setup, the module uses `pkgs.sunshine.override { cudaSupport = true; }` so the nixpkgs package enables CUDA support and adds the driver runtime path needed for NVENC libraries such as `libnvidia-encode.so.1`.
+- Sunshine Web UI credentials are managed per user under `settings.userSettings.<name>.programs.sunshine.webUi`, because the service itself runs in the user session.
+- `sunshine-reset-creds --prompt` interactively sets a new Sunshine Web UI password for the configured username.
+- If `passwordSecretName` points at a per-user SOPS secret such as `sunshine/web_password`, Home Manager reapplies that password automatically on each switch.
 - For the physical-output dummy-plug path, this host currently opts into `capture = "kms"` to prefer the direct DRM capture path on the dedicated stream output. `wlr` remains available as the fallback when the Wayland path is the better choice for a given regression.
 - When Sunshine capture is left at `auto` on Hyprland, the module now resolves that to `wlr` so Wayland streaming stays on the wlroots capture path instead of drifting back to KMS.
 - Sunshine-launched apps inherit a no-vblank/no-VRR environment (`__GL_SYNC_TO_VBLANK=0`, `__GL_GSYNC_ALLOWED=0`, `__GL_VRR_ALLOWED=0`, `vblank_mode=0`) so driver-level sync does not add another pacing layer on the host. In-game VSync or other explicit frame limiters still need to be disabled separately.
