@@ -629,6 +629,8 @@ in
   # -------------------------------------------------------------------------
   sunshine = {
     disableLockScreenDuringStream = true;
+    # Output/capture tuning lives here because it is host-facing.
+    # Sunshine Web UI credentials belong under userSettings.<name>.programs.sunshine.webUi.
 
     displayTarget = {
       enable     = false;
@@ -816,6 +818,15 @@ in
           };
         };
 
+        sunshine = {
+          webUi = {
+            enable = false;
+            username = "alice";
+            passwordSecretName = "sunshine-web-password";
+            autoApply = true;
+          };
+        };
+
         # Local LLM inference via Ollama.
         ollama = {
           enable          = false;
@@ -873,7 +884,12 @@ in
         defaultSopsFile = null;
 
         # Decrypted file mappings (deployed to ~/.secrets/).
-        files = {};
+        files = {
+          # sunshine-web-password = {
+          #   key = "sunshine/web_password";
+          #   mode = "0400";
+          # };
+        };
 
         # SSH key pairs (decrypted and deployed to ~/.ssh/).
         sshKeys = {
