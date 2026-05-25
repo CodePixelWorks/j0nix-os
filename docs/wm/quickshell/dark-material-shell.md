@@ -1,6 +1,6 @@
 # DMS Configuration Notes
 
-This repo configures Dank Material Shell (DMS) via:
+This repo configures Dark Material Shell (DMS) via:
 - `settings.nix` (`settings.dms.*`)
 - `nix/user/wm/hyprland/shells/dank-material-shell/default.nix`
 
@@ -20,9 +20,9 @@ dms.wallpaper = {
 ```
 
 These values are written once to:
-- `~/.local/state/DankMaterialShell/session.json`
+- `~/.local/state/DarkMaterialShell/session.json`
 
-This keeps `~/.local/state/DankMaterialShell/session.json` user-editable:
+This keeps `~/.local/state/DarkMaterialShell/session.json` user-editable:
 - defaults are applied only when the file does not exist
 - later UI/manual changes are not forced back on activation
 
@@ -49,4 +49,4 @@ dms.workspaces = {
 ```
 
 - `count`: creates Hyprland binds for `SUPER+1..0` and `SUPER+SHIFT+1..0`
-- `showOccupiedOnly`: seeded once in `~/.config/DankMaterialShell/settings.json`
+- `showOccupiedOnly`: seeded once in `~/.config/DarkMaterialShell/settings.json`
