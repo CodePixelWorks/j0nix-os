@@ -12,7 +12,14 @@ let
     if builtins.pathExists ./hardware-configuration.nix then
       ./hardware-configuration.nix
     else
-      ./hardware-configuration.nix.example;
+      throw ''
+        profiles/desktop/hardware-configuration.nix is required for this host profile.
+
+        hardware-configuration.nix.example is only a template and is never imported automatically.
+
+        Generate it with:
+          sudo nixos-generate-config --show-hardware-config > profiles/desktop/hardware-configuration.nix
+      '';
 in
 {
   imports = [
