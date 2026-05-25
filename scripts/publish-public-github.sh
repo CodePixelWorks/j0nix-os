@@ -72,6 +72,31 @@ force_push="${PUBLIC_GITHUB_FORCE_PUSH:-true}"
 
 repo_root="$(git rev-parse --show-toplevel)"
 
+normalize_cutoff_commit() {
+    local raw="${1:-}"
+    raw="${raw#"${raw%%[![:space:]]*}"}"
+    raw="${raw%"${raw##*[![:space:]]}"}"
+
+    [ -n "$raw" ] || return 0
+
+    # Reject accidental multi-line or space-separated secret values early.
+    # A cutoff must always resolve to exactly one commit-ish.
+    set -- $raw
+    if [ "$#" -ne 1 ]; then
+        printf '%s\n' "ERROR: PUBLIC_CUTOFF_COMMIT must contain exactly one commit hash/ref, got: $raw" >&2
+        exit 1
+    fi
+
+    if ! git -C "$repo_root" rev-parse --verify "${1}^{commit}" >/dev/null 2>&1; then
+        printf '%s\n' "ERROR: PUBLIC_CUTOFF_COMMIT does not resolve to a valid commit: $1" >&2
+        exit 1
+    fi
+
+    printf '%s\n' "$1"
+}
+
+cutoff_commit="$(normalize_cutoff_commit "$cutoff_commit")"
+
 # ---------------------------------------------------------------------------
 # 1. Auth method: PAT (HTTPS) preferred; SSH fallback.
 # ---------------------------------------------------------------------------
