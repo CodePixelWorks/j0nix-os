@@ -882,7 +882,7 @@ in
           #   passphraseKey  = "ssh_passphrases/id_ed25519_github";
           #   mode           = "0400";
           #   targetName     = "id_ed25519_github";
-          #   publicKeyFile  = ./public/users/alice/ssh/id_ed25519_github.pub;
+          #   publicKeyFile  = ./secrets/secrets/public/users/alice/ssh/id_ed25519_github.pub;
           # };
         };
 
