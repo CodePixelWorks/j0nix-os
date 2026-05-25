@@ -274,6 +274,24 @@ let
       launch_on_workspace 3 '${launcherAppExec "${preferredTerminalCmd} btop"}'
     fi
   '';
+  hyprlandWindowedModeScript = pkgs.writeShellScriptBin "wm-windowed-mode" ''
+    hyprctl_bin="${hyprctlExec}"
+    [ -x "$hyprctl_bin" ] || exit 0
+
+    # Leave fullscreen/maximized modes first so the next steps apply cleanly.
+    "$hyprctl_bin" dispatch fullscreen 0 >/dev/null 2>&1 || true
+    "$hyprctl_bin" dispatch fullscreen 1 >/dev/null 2>&1 || true
+
+    # Enter floating mode if the active window is still tiled.
+    floating="$("$hyprctl_bin" activewindow -j 2>/dev/null | ${pkgs.jq}/bin/jq -r '.floating // false' 2>/dev/null || echo false)"
+    if [ "$floating" != "true" ]; then
+      "$hyprctl_bin" dispatch togglefloating >/dev/null 2>&1 || true
+    fi
+
+    # Use a comfortable centered window size for a manual "windowed mode".
+    "$hyprctl_bin" dispatch resizeactive exact 1400 920 >/dev/null 2>&1 || true
+    "$hyprctl_bin" dispatch centerwindow 1 >/dev/null 2>&1 || true
+  '';
   hyprlandKeybindDiagnosticsStartupScript = pkgs.writeShellScriptBin "wm-hypr-keybind-diagnostics-startup" ''
     ${homeBinDir}/wm-hypr-keybind-dump --phase=login-initial
     sleep ${toString keybindDiagnosticsDelaySeconds}
@@ -415,6 +433,7 @@ in
       slurp
       swappy
       playerctl
+      hyprlandWindowedModeScript
     ]
     ++ lib.optionals keybindDiagnosticsEnable [
       keybindDiagnosticsScript
