@@ -712,8 +712,8 @@ in
   # source of truth for shared behaviour.
   #
   # Every attribute name under userSettings becomes a system user.
-  # Roles drive which user-role modules (user-roles/home/) are imported.
-  # Available roles (extend in user-roles/):
+  # Roles drive which user-role modules (nix/roles/home/) are imported.
+  # Available roles (extend in nix/roles/):
   #   "ai-work" | "desktop-basics" | "developer" | "gaming"
   #   "network-performance" | "office" | "remote-work" | "streaming"
   #   "3d-creation" | "3d-printing" | "video-editing"
