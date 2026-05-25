@@ -159,6 +159,9 @@ git operations.
 3. The `*_FALLBACK` variables (like `public_cutoff_commit_fallback`) are plain
    env vars in `.drone.star` — no secret needed
 
+Cutoff input rule:
+`PUBLIC_CUTOFF_COMMIT` must resolve to exactly one commit hash/ref after trimming whitespace. If the secret accidentally contains multiple hashes, newlines, or extra tokens, the forward sync scripts now fail early with a clear error instead of reaching a later git rewrite failure.
+
 ### Minimal Required Secrets
 
 For a working forward sync you need at least:
