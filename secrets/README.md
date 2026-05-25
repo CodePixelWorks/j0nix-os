@@ -1,137 +1,130 @@
-# SOPS-NIX Backup & Recovery Guide
+# Secrets
 
-The private repo may keep encrypted secret files as the source-of-truth setup.
-The public GitHub mirror generated from it excludes those payloads and ships
-only templates and documentation needed to recreate the secrets locally.
+Public quickstart for the `secrets/` tree used by `sops-nix`.
 
-## Critical Files to Backup
+What stays in the public mirror:
+- `.sops.yaml.example`
+- `secrets/hosts/example-host.yaml.example`
+- `secrets/users/example-user.yaml.example`
 
-### 1. Host Age Key
-**Path:** `/var/lib/sops-nix/key.txt`
+What does **not** stay in the public mirror:
+- real encrypted host payloads
+- real encrypted user payloads
+- backup material and private helper scripts
 
-Systemd service decrypts host secrets. Lose this = reinstall or manual secret recovery.
+## Layout
+
+```text
+secrets/
+  hosts/
+    example-host.yaml.example
+    <hostname>.yaml
+  users/
+    example-user.yaml.example
+    <username>.yaml
+```
+
+Use:
+- `secrets/hosts/<hostname>.yaml` for machine-scoped secrets
+- `secrets/users/<username>.yaml` for user-scoped secrets
+
+## 1. Create age keys
+
+Host key:
 
 ```bash
-# Backup
-sudo cat /var/lib/sops-nix/key.txt > host-key-backup.txt
-
-# Restore on new machine
 sudo install -d -m 700 /var/lib/sops-nix
-sudo install -m 600 host-key-backup.txt /var/lib/sops-nix/key.txt
+sudo age-keygen -o /var/lib/sops-nix/key.txt
+sudo chmod 600 /var/lib/sops-nix/key.txt
+sudo age-keygen -y /var/lib/sops-nix/key.txt
 ```
 
-### 2. User Age Key
-**Path:** `~/.config/sops/age/keys.txt`
+User key:
 
-Your personal key for user secrets. Lose this = re-encrypt all user secrets with new key.
-
-```bash
-# Backup
-cp ~/.config/sops/age/keys.txt user-key-backup.txt
-
-# Restore on new machine
-install -d -m 700 ~/.config/sops/age
-install -m 600 user-key-backup.txt ~/.config/sops/age/keys.txt
-```
-
-### 3. Repository Files
-- `.sops.yaml` - key recipients and rules
-- `secrets/` - encrypted secret files
-- `settings.nix` - secret references
-
-## New Machine Rollout
-
-### Step 1: Install NixOS
-Standard installation. Host key can be:
-- **Option A:** Copy existing `/var/lib/sops-nix/key.txt` from backup
-- **Option B:** Generate new key, re-encrypt all secrets
-
-### Step 2: Copy User Key
 ```bash
 install -d -m 700 ~/.config/sops/age
-install -m 600 /path/to/backup/keys.txt ~/.config/sops/age/keys.txt
+age-keygen -o ~/.config/sops/age/keys.txt
+chmod 600 ~/.config/sops/age/keys.txt
+age-keygen -y ~/.config/sops/age/keys.txt
 ```
 
-### Step 3: Clone Repository
+## 2. Create live files from templates
+
 ```bash
-git clone <repo> ~/j0nix-os
-cd ~/j0nix-os
+cp .sops.yaml.example .sops.yaml
+cp secrets/hosts/example-host.yaml.example secrets/hosts/Jonas-PC.yaml
+cp secrets/users/example-user.yaml.example secrets/users/jonas.yaml
 ```
 
-### Step 4: Verify Decryption Works
+Adjust the filenames to your real host and user names.
+
+## 3. Edit `.sops.yaml`
+
+Set the real `age1...` recipients for your host and user keys.
+
+```yaml
+creation_rules:
+  - path_regex: secrets/hosts/.*\.ya?ml$
+    age:
+      - age1replace-with-your-host-recipient
+  - path_regex: secrets/users/.*\.ya?ml$
+    age:
+      - age1replace-with-your-user-recipient
+```
+
+## 4. Edit and encrypt the secret payloads in place
+
 ```bash
-# Test host secrets
-sudo sops -d secrets/hosts/Jonas-PC.yaml
-
-# Test user secrets  
-sops -d secrets/users/jonas.yaml
+sops secrets/hosts/Jonas-PC.yaml
+sops secrets/users/jonas.yaml
 ```
 
-### Step 5: Rebuild System
+Typical host payloads:
+- Wi-Fi credentials
+- VPN or Tailscale auth keys
+- machine-local service tokens
+
+Typical user payloads:
+- SSH private keys
+- GitHub or GitLab tokens
+- app credentials
+
+## 5. Verify decryption
+
+```bash
+sudo sops -d secrets/hosts/Jonas-PC.yaml >/dev/null
+sops -d secrets/users/jonas.yaml >/dev/null
+```
+
+## 6. Rebuild
+
 ```bash
 sudo nixos-rebuild switch --flake .#<hostname>
 ```
 
-## User Passwords via SOPS
+## Password hash example
 
-### Create Password Hash
+Generate a password hash:
+
 ```bash
-# Generate hash (method: sha-512)
-mkpasswd -m sha-512
-
-# Or use yescrypt (modern, recommended)
 mkpasswd -m yescrypt
 ```
 
-### Structure in secrets/users.yaml
+Then store it in the user secret file, for example:
+
 ```yaml
 users:
   jonas:
-    hashedPassword: "<hash-from-mkpasswd>"
+    hashedPassword: "$y$..."
 ```
 
-### Reference in settings.nix
-```nix
-users.users.jonas = {
-  hashedPasswordFile = config.sops.secrets.jonas-password.path;
-};
-```
+## Backup guidance
 
-## Key Rotation
+Back up these files out of band:
+- `/var/lib/sops-nix/key.txt`
+- `~/.config/sops/age/keys.txt`
+- `.sops.yaml`
+- your real `secrets/hosts/*.yaml`
+- your real `secrets/users/*.yaml`
 
-### Rotate User Key
-1. Generate new key: `age-keygen -o ~/.config/sops/age/keys.txt.new`
-2. Add both old+new to `.sops.yaml` recipients
-3. Re-encrypt: `sops rotate -i secrets/users/*.yaml`
-4. Remove old key from `.sops.yaml`
-5. Replace key file: `mv keys.txt.new keys.txt`
-
-### Rotate Host Key
-1. Generate new key on host
-2. Add both keys to `.sops.yaml`
-3. Re-encrypt host secrets
-4. Remove old key
-5. Update `/var/lib/sops-nix/key.txt`
-
-## Troubleshooting
-
-### "0 successful groups required, got 0"
-Key missing or wrong recipient. Run:
-```bash
-./secrets/scripts/sops-autofix-decrypt.sh
-```
-
-### "Could not decrypt with AES_GCM"
-SOPS file corrupted or key renamed incorrectly. Restore from backup or re-create.
-
-### Forgot User Key
-1. If host key also recipient: decrypt with host key, re-encrypt with new user key
-2. If not: secrets lost, recreate from source
-
-## Security Notes
-
-- **Never commit plaintext keys**
-- **Backup keys offline** (password manager, encrypted USB)
-- **Host key = root access to all system secrets**
-- **User key = access to that user's secrets only**
-- **Rotation:** do user keys yearly, host keys on compromise suspicion
+If you lose the keys, you will need to re-encrypt or recreate the secret payloads.
