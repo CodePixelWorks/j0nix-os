@@ -12,7 +12,7 @@
       baseDir = ./.;
       lib = nixpkgs.lib;
 
-      overlays = import (baseDir + "/system/lib/flake/overlays.nix") {
+      overlays = import (baseDir + "/nix/system/lib/flake/overlays.nix") {
         inherit baseDir inputs nixpkgs;
       };
 
@@ -66,11 +66,11 @@
 
           userOverrides = settings.userSettings or { };
 
-          mkUserSettings = import (baseDir + "/system/lib/settings/mk-user-settings.nix") {
+          mkUserSettings = import (baseDir + "/nix/system/lib/settings/mk-user-settings.nix") {
             inherit baseDir baseSettings lib pkgs profileDetails userOverrides;
           };
 
-          mkHomeModules = import (baseDir + "/system/lib/home/mk-home-modules.nix") {
+          mkHomeModules = import (baseDir + "/nix/system/lib/home/mk-home-modules.nix") {
             inherit baseDir lib profileDir;
           };
 
