@@ -16,16 +16,16 @@
     discovery.enable = true;
 
     printers = [
-      #{
-      ##  name = "HP-OfficeJet-5220";
-      #  location = "LAN";
-      #  description = "HP OfficeJet 5220";
-      #  deviceUri = "ipp://172.17.0.3/ipp/print";
-      #  # IPP Everywhere is generally the most robust choice over network IPP.
-      #  model = "everywhere";
-      #}
+      {
+        name = "HP-OfficeJet-5200";
+        location = "LAN";
+        description = "HP OfficeJet 5200 series";
+        deviceUri = "ipp://172.17.0.3/ipp/print";
+        # Prefer a stable direct IPP queue instead of transient dnssd-discovered queues.
+        model = "everywhere";
+      }
     ];
 
-    defaultPrinter = "HP-OfficeJet-5220";
+    defaultPrinter = "HP-OfficeJet-5200";
   };
 }
