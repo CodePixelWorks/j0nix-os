@@ -22,6 +22,7 @@ Primary goals:
 5. System scripts must have a single clear authority, high-quality input/output handling, and no overlapping side effects with other scripts.
 6. User-facing outputs from scripts and tooling must be written in English and kept localization-friendly so multilingual usage remains possible.
 7. **Regenerate `README.md` via `make readme` after any change to `templates/README.md.tmpl` or when the README content would otherwise diverge.** The pre-commit hook enforces this — do not bypass it.
+8. `.example` files are templates only. Never import or evaluate them as silent fallbacks in the flake, profiles, or modules; if a required real file is missing, fail with a clear error message instead.
 
 ## Agent Workflow (Required)
 
