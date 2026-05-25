@@ -44,6 +44,15 @@ rewrite_emails="${PUBLIC_GITHUB_REWRITE_EMAILS:-}"
 rewrite_names="${PUBLIC_GITHUB_REWRITE_NAMES:-}"
 repo_root="$(git rev-parse --show-toplevel)"
 
+print_public_signing_key() {
+    local key_id="${1:-}"
+    [ -n "$key_id" ] || return 0
+
+    printf '%s\n' "GPG public key (ASCII-armored):"
+    gpg --armor --export "$key_id"
+    printf '%s\n' ""
+}
+
 # --- load shared sanitisation engine -----------------------------------------
 # shellcheck source=scripts/lib/mirror-sanitize.sh
 source "$repo_root/scripts/lib/mirror-sanitize.sh"
@@ -66,6 +75,7 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
     gpg_key_id="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^sec/{print $5}' | head -n1)"
     if [ -n "$gpg_key_id" ]; then
         printf '%s\n' "GPG signing configured (key ${gpg_key_id:0:16}...)"
+        print_public_signing_key "$gpg_key_id"
         git config --global user.signingkey "$gpg_key_id"
     else
         printf '%s\n' "WARN: could not import GPG signing key" >&2
