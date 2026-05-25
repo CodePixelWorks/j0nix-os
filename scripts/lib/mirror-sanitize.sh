@@ -188,12 +188,6 @@ ms_apply_tree_filter() {
         # --- strip control files ---
         rm -f .mirror-blacklist .mirror-root-whitelist
 
-        # --- template substitution ---
-        cp -f "$repo_root/settings.nix.example" settings.nix 2>/dev/null || true
-        cp -f "$repo_root/profiles/desktop/details.nix.example" profiles/desktop/details.nix 2>/dev/null || true
-        cp -f "$repo_root/profiles/desktop/hardware-configuration.nix.example" profiles/desktop/hardware-configuration.nix 2>/dev/null || true
-        cp -f "$repo_root/.sops.yaml.example" .sops.yaml 2>/dev/null || true
-
         # --- inject public README ---
         if [ -f "$repo_root/README.md.public" ]; then
             cp -f "$repo_root/README.md.public" README.md 2>/dev/null || true
