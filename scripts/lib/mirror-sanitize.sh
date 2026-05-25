@@ -68,14 +68,18 @@ ms_should_match_patterns() {
     # Never match on placeholder sentinel
     [ "$patterns_str" = "___NO_MATCH_SENTINEL___" ] && return 1
 
-    local p
+    local p old_ifs="$IFS"
     IFS='|'
     for p in $patterns_str; do
         [ -z "$p" ] && continue
         case "$value" in
-            $p) return 0 ;;
+            $p)
+                IFS="$old_ifs"
+                return 0
+                ;;
         esac
     done
+    IFS="$old_ifs"
     return 1
 }
 
