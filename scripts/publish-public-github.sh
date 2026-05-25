@@ -80,16 +80,17 @@ normalize_cutoff_commit() {
     [ -n "$raw" ] || return 0
 
     # Reject accidental multi-line or space-separated secret values early.
-    # A cutoff must always resolve to exactly one commit-ish.
+    # If the configured cutoff is malformed, warn and ignore it instead of
+    # breaking the whole mirror publish run.
     set -- $raw
     if [ "$#" -ne 1 ]; then
-        printf '%s\n' "ERROR: PUBLIC_CUTOFF_COMMIT must contain exactly one commit hash/ref, got: $raw" >&2
-        exit 1
+        printf '%s\n' "WARN: PUBLIC_CUTOFF_COMMIT must contain exactly one commit hash/ref; ignoring invalid value: $raw" >&2
+        return 0
     fi
 
     if ! git -C "$repo_root" rev-parse --verify "${1}^{commit}" >/dev/null 2>&1; then
-        printf '%s\n' "ERROR: PUBLIC_CUTOFF_COMMIT does not resolve to a valid commit: $1" >&2
-        exit 1
+        printf '%s\n' "WARN: PUBLIC_CUTOFF_COMMIT does not resolve to a valid commit; ignoring value: $1" >&2
+        return 0
     fi
 
     printf '%s\n' "$1"
