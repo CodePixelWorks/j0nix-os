@@ -278,13 +278,31 @@ if [ -n "$cutoff_commit" ]; then
     # git-filter-branch runs filters in a minimal subshell where `sed`
     # may not be available (observed in nixos/nix:2.26.1 containers).
     # We write a tiny standalone bash script instead of relying on sed.
+    # parent-filter removes the cutoff commit as parent, creating a new root.
+    # git-filter-branch passes space-separated -p <sha> tokens on one line.
     parent_filter_script="$(mktemp -t parent_filter.XXXXXX)"
+    cat > "$parent_filter_script" <<'PFSCRIPT'
+#!/usr/bin/env bash
+cutoff_sha="PFSCRIPT_CUTOFF"
+set -- $(cat)
+result=""
+while [ $# -ge 2 ]; do
+    if [ "$1" != "-p" ]; then
+        result="$result $1"
+        shift
+        continue
+    fi
+    if [ "$2" = "$cutoff_sha" ]; then
+        shift 2
+        continue
+    fi
+    result="$result -p $2"
+    shift 2
+done
+printf '%s\n' "${result# }"
+PFSCRIPT
     # shellcheck disable=SC2016
-    printf '%s\n' "#!/usr/bin/env bash" \
-              "while IFS= read -r line; do" \
-              "    line=\"\${line//-p ${cutoff_commit}/}\"" \
-              "    printf '%s\n' \"\$line\"" \
-              "done" > "$parent_filter_script"
+    sed -i "s/PFSCRIPT_CUTOFF/${cutoff_commit}/g" "$parent_filter_script"
     chmod +x "$parent_filter_script"
     parent_filter_cmd="$parent_filter_script"
 fi
