@@ -29,15 +29,13 @@ cd /tmp/j0nix-public
 
 # Inspect the template files kept in the mirror
 find . -maxdepth 2 -name '*.example' | sort
-
-# Publish (if you have push access)
-./scripts/publish-public-github.sh
 ```
 
 The export script:
 - Removes `settings.nix`, `.sops.yaml`, host/user secret files
 - Keeps the `.example` templates such as `settings.nix.example` and `.sops.yaml.example`
-- Leaves host templates like `details.nix.example` and `hardware-configuration.nix.example` in place
+- Leaves `details.nix.example` in place for host metadata
+- Requires `profiles/desktop/hardware-configuration.nix` to be generated locally with `nixos-generate-config`
 - Keeps all system modules, user modules, docs, and scripts""",
     },
     "public": {
