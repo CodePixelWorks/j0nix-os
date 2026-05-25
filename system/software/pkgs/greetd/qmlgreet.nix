@@ -15,13 +15,13 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "qmlgreet";
-  version = "unstable-2026-03-08";
+  version = "0.1.6";
 
   src = fetchFromGitHub {
     owner = "Nitrux";
     repo = "qmlgreet";
-    rev = "8a870dd17742e18d5571a690b9c7f2b8166dbbc5";
-    hash = "sha256-lAXE8a8OhMz1SrobRb0ICTF77bQHEYv2ya+S4HC8gs0=";
+    rev = finalAttrs.version;
+    hash = "sha256-B3H/ts58SpUG6172MIaD3g6MCYQd0e5CXcav0M2QkpU=";
   };
 
   nativeBuildInputs = [
