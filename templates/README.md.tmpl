@@ -63,6 +63,9 @@ cp profiles/desktop/hardware-configuration.nix.example profiles/desktop/hardware
 cp .sops.yaml.example .sops.yaml
 ```
 
+> [!NOTE]
+> `settings.nix`, `details.nix`, `hardware-configuration.nix`, and `.sops.yaml` are listed in `.gitignore` so machine-local changes never show up as dirty. They are not tracked by Git — only the `.example` templates are.
+
 ### 3. Edit your hardware and identity
 
 ```bash
