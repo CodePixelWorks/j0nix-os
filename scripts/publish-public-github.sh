@@ -293,10 +293,10 @@ rm -f .mirror-blacklist .mirror-root-whitelist
 
 rm -f .sops.yaml settings.nix profiles/desktop/details.nix profiles/desktop/hardware-configuration.nix
 if [ -d secrets/hosts ]; then
-    find secrets/hosts -mindepth 1 -maxdepth 1 -type f -delete
+    find secrets/hosts -mindepth 1 -maxdepth 1 -type f ! -name '*.example' -delete
 fi
 if [ -d secrets/users ]; then
-    find secrets/users -mindepth 1 -maxdepth 1 -type f -delete
+    find secrets/users -mindepth 1 -maxdepth 1 -type f ! -name '*.example' -delete
 fi
 
 cp -f '${repo_root}/README.md.public' README.md 2>/dev/null || true
