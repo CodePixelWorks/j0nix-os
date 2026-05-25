@@ -4,7 +4,7 @@ This document describes how `j0nix-os` is structured, how settings flow through 
 
 Related deep dives:
 
-- [QMLGreet Integration](./qmlgreet.md)
+- [QMLGreet Integration](./wm/qmlgreet.md)
 
 ## Design Goals
 

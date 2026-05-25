@@ -8,14 +8,27 @@ For agent coding rules and commit policy, see [`AGENTS.md`](../AGENTS.md) in the
 
 | Doc | Audience | Topic |
 |-----|----------|-------|
-| [architecture.md](./architecture.md) | Contributors, agents | Flake graph, module layers, settings resolution, multi-user model |
-| [ci-pipeline.md](./ci-pipeline.md) | DevOps, maintainers | Drone CI mirror pipeline, environment variables, sync modes |
-| [startup-flow.md](./startup-flow.md) | Contributors, debuggers | WM startup order: DM -> compositor -> shell -> apps |
-| [qmlgreet.md](./qmlgreet.md) | Users, contributors | QMLGreet greeter config, theming inputs, compositor paths |
-| [dms.md](./dms.md) | Users | Dank Material Shell wallpaper, startup mode, workspace config |
-| [keybinds.md](./keybinds.md) | Users | Current keybind reference (default: caelestia-shell) |
-| [caelestia.md](./caelestia.md) | Debuggers | Keybind regression runbook: isolation matrix, diagnostics, fix strategy |
-| [secrets.md](./secrets.md) | Users | SOPS-nix quickstart: host key, user key, `.sops.yaml`, SSH secrets |
+### Desktop / Window Manager
+
+| Doc | Audience | Topic |
+|-----|----------|-------|
+| [qmlgreet.md](./wm/qmlgreet.md) | Users, contributors | QMLGreet greeter config, theming inputs, compositor paths |
+| [dms.md](./wm/dms.md) | Users | Dank Material Shell wallpaper, startup mode, workspace config |
+| [keybinds.md](./wm/keybinds.md) | Users | Current keybind reference (default: caelestia-shell) |
+| [caelestia.md](./wm/caelestia.md) | Debuggers | Keybind regression runbook |
+| [startup-flow.md](./wm/startup-flow.md) | Contributors, debuggers | WM startup order: DM -> compositor -> shell -> apps |
+
+### DevOps / CI
+
+| Doc | Audience | Topic |
+|-----|----------|-------|
+| [ci-pipeline.md](./devops/ci-pipeline.md) | DevOps, maintainers | Drone CI mirror pipeline, environment variables, sync modes |
+
+### Operations / Security
+
+| Doc | Audience | Topic |
+|-----|----------|-------|
+| [secrets.md](./operations/secrets.md) | Users | SOPS-nix quickstart: host key, user key, `.sops.yaml`, SSH secrets |
 
 ## Per-Directory READMEs
 
