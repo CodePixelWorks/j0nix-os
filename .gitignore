@@ -35,11 +35,6 @@ secrets/.backups/
 /r.sh
 /RESUME.sh
 
-# Machine-local settings (per-user secrets, personal paths)
-# NOTE: settings.nix, details.nix, hardware-configuration.nix and .sops.yaml
-# are tracked in the private source repo so Nix can see them. In the public
-# mirror they are replaced by their .example templates via the mirror filter.
-
 # Optional local-only overrides for downstream mirrors
 settings.local.nix
 profiles/desktop/details.local.nix
