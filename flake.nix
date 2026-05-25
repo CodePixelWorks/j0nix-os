@@ -32,7 +32,14 @@
             if builtins.pathExists (profileDir + "/details.nix") then
               profileDir + "/details.nix"
             else
-              profileDir + "/details.nix.example";
+              throw ''
+                ${profileName}: profiles/${profileName}/details.nix is required for flake evaluation.
+
+                The matching .example file is only a template and is never imported automatically.
+
+                Create it from:
+                  cp profiles/${profileName}/details.nix.example profiles/${profileName}/details.nix
+              '';
           profileDetails = import profileDetailsFile { };
           profileMeta = profileDetails;
           profileSecrets = import (profileDir + "/secrets.nix");
