@@ -26,7 +26,7 @@ Display Manager (greetd/sddm/gdm)
 
 ## App Launch Backend Policy
 
-Shared helper: `system/lib/app-exec-policy.nix`
+Shared helper: `nix/system/lib/app-exec-policy.nix`
 
 Input:
 - `settings.hyprland.useUWSM`

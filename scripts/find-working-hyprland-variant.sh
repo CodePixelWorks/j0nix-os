@@ -78,10 +78,10 @@ ORIG_HEAD="$(git -C "$ROOT" rev-parse HEAD)"
 
 TARGET_PATHS=(
   settings.nix
-  system/wm/hyprland.nix
-  user/wm/hyprland/default.nix
-  user/wm/shell-launcher.nix
-  user/wm/hyprland/shells/caelestia-shell/default.nix
+  nix/system/wm/hyprland.nix
+  nix/user/wm/hyprland/default.nix
+  nix/user/wm/shell-launcher.nix
+  nix/user/wm/hyprland/shells/caelestia-shell/default.nix
 )
 
 mapfile -t COMMITS < <(

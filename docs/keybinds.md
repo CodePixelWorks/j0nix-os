@@ -5,7 +5,7 @@ This document summarizes the current commonly used Hyprland keybinds for the def
 Scope:
 
 - Current default user flow with `wmShell = "caelestia-shell"`
-- Hyprland core binds from `user/wm/hyprland/config/keybinds.nix`
+- Hyprland core binds from `nix/user/wm/hyprland/config/keybinds.nix`
 - Current monitor bindings from `settings.nix`
 
 Notes:
@@ -180,7 +180,7 @@ These are commands rather than direct keybinds:
 
 Primary sources:
 
-- `user/wm/hyprland/config/keybinds.nix`
-- `user/wm/hyprland/default.nix`
-- `user/wm/hyprland/README.md`
+- `nix/user/wm/hyprland/config/keybinds.nix`
+- `nix/user/wm/hyprland/default.nix`
+- `nix/user/wm/hyprland/README.md`
 - `settings.nix`
