@@ -299,11 +299,6 @@ if [ -d secrets/users ]; then
     find secrets/users -mindepth 1 -maxdepth 1 -type f -delete
 fi
 
-cp -f '${repo_root}/settings.nix.example' settings.nix 2>/dev/null || true
-cp -f '${repo_root}/profiles/desktop/details.nix.example' profiles/desktop/details.nix 2>/dev/null || true
-cp -f '${repo_root}/profiles/desktop/hardware-configuration.nix.example' profiles/desktop/hardware-configuration.nix 2>/dev/null || true
-cp -f '${repo_root}/.sops.yaml.example' .sops.yaml 2>/dev/null || true
-
 cp -f '${repo_root}/README.md.public' README.md 2>/dev/null || true
 TREEFILTER
 
