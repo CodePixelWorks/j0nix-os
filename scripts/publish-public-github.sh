@@ -25,6 +25,8 @@ set -euo pipefail
 #   PUBLIC_GITHUB_FORCE_PUSH     — "true" (default) to force-push + force-push tags.
 #                                    Set to "false" to push non-destructively.
 #                                    Disabling force may fail if history diverged.
+#   PUBLIC_GITHUB_SIGNING_KEY    — Optional GPG private key for diagnostics in CI.
+#   PUBLIC_GITHUB_SIGNING_PASSPHRASE — Optional passphrase for the signing key above.
 #   PUBLIC_SOURCE_URL             — Optional, recorded in metadata.
 #
 # Rewrites every commit since the cutoff (or all commits if no cutoff):
@@ -146,11 +148,21 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
     gpg_dir="$(mktemp -d -t mirror_gpg.XXXXXX)"
     chmod 700 "$gpg_dir"
     export GNUPGHOME="$gpg_dir"
-    printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | gpg --batch --import 2>/dev/null
+
+    if [ -n "${PUBLIC_GITHUB_SIGNING_PASSPHRASE:-}" ]; then
+        printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | \
+            gpg --batch --pinentry-mode loopback \
+                --passphrase "$PUBLIC_GITHUB_SIGNING_PASSPHRASE" \
+                --import 2>/dev/null
+    else
+        printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | gpg --batch --import 2>/dev/null
+    fi
+
     gpg_key_id="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^sec/{print $5}' | head -n1)"
     if [ -n "$gpg_key_id" ]; then
         printf '%s\n' "GPG signing key loaded for diagnostics (key ${gpg_key_id:0:16}...)"
         print_public_signing_key "$gpg_key_id"
+        unset PUBLIC_GITHUB_SIGNING_PASSPHRASE
     else
         printf '%s\n' "WARN: could not import GPG signing key" >&2
     fi
