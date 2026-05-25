@@ -358,7 +358,7 @@ If the private key is passphrase-protected, set the public key explicitly on the
 sshKeys.jonas-pixel-und-code = {
   key = "ssh/id_ed25519_jonas-pixel-und-code";
   targetName = "id_ed25519_jonas-pixel-und-code";
-  publicKeyFile = ./public/users/jonas/ssh/id_ed25519_jonas-pixel-und-code.pub;
+  publicKeyFile = ./secrets/public/users/jonas/ssh/id_ed25519_jonas-pixel-und-code.pub;
   # Optional for passphrase-protected keys:
   # passphraseKey = "ssh_passphrases/id_ed25519_jonas-pixel-und-code";
 };
@@ -376,7 +376,7 @@ secret-backed passphrase.
 
 Recommended location for repo-tracked public keys:
 
-- `public/users/jonas/ssh/`
+- `secrets/public/users/jonas/ssh/`
 
 Without `publicKey` or `publicKeyFile`, Home Manager falls back to `ssh-keygen -y`.
 If that fails, the existing `.pub` file is preserved instead of being overwritten with an empty file.
