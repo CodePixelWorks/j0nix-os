@@ -42,10 +42,10 @@ for path in "${remove_paths[@]}"; do
 done
 
 if [ -d "$tmp_dir/secrets/hosts" ]; then
-  find "$tmp_dir/secrets/hosts" -mindepth 1 -maxdepth 1 -type f -delete
+  find "$tmp_dir/secrets/hosts" -mindepth 1 -maxdepth 1 -type f ! -name '*.example' -delete
 fi
 if [ -d "$tmp_dir/secrets/users" ]; then
-  find "$tmp_dir/secrets/users" -mindepth 1 -maxdepth 1 -type f -delete
+  find "$tmp_dir/secrets/users" -mindepth 1 -maxdepth 1 -type f ! -name '*.example' -delete
 fi
 rm -rf "$tmp_dir/secrets/.backups"
 
