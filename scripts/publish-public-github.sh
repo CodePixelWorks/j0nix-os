@@ -256,10 +256,10 @@ if [ -n "$cutoff_commit" ]; then
     parent_filter_script="$(mktemp -t parent_filter.XXXXXX)"
     # shellcheck disable=SC2016
     printf '%s\n' "#!/usr/bin/env bash" \
-                  "while IFS= read -r line; do" \
-                  "    line=\"\${line//-p ${cutoff_commit}/}\"" \
-                  "    printf '%s\\n' \"\$line\"" \
-                  "done" > "$parent_filter_script"
+              "while IFS= read -r line; do" \
+              "    line=\"\${line//-p ${cutoff_commit}/}\"" \
+              "    printf '%s\n' \"\$line\"" \
+              "done" > "$parent_filter_script"
     chmod +x "$parent_filter_script"
     parent_filter_cmd="$parent_filter_script"
 fi
