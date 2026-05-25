@@ -23,6 +23,7 @@ mkdir -p "$(dirname "$output_dir")"
 git -C "$repo_root" ls-files -co --exclude-standard -z | while IFS= read -r -d '' path; do
   case "$path" in .git|.git/*) continue ;; esac
   src="$repo_root/$path"
+  [ -e "$src" ] || continue
   dst="$tmp_dir/$path"
   mkdir -p "$(dirname "$dst")"
   cp -a "$src" "$dst"
