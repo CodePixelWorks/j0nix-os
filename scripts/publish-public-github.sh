@@ -72,6 +72,15 @@ force_push="${PUBLIC_GITHUB_FORCE_PUSH:-true}"
 
 repo_root="$(git rev-parse --show-toplevel)"
 
+print_public_signing_key() {
+    local key_id="${1:-}"
+    [ -n "$key_id" ] || return 0
+
+    printf '%s\n' "GPG public key (ASCII-armored):"
+    gpg --armor --export "$key_id"
+    printf '%s\n' ""
+}
+
 normalize_cutoff_commit() {
     local raw="${1:-}"
     raw="${raw#"${raw%%[![:space:]]*}"}"
@@ -103,6 +112,8 @@ cutoff_commit="$(normalize_cutoff_commit "$cutoff_commit")"
 # ---------------------------------------------------------------------------
 git_auth_remote="$remote_url"
 ssh_key_path=""
+gpg_key_id=""
+gpg_dir=""
 
 if [ -n "${PUBLIC_GITHUB_TOKEN:-}" ]; then
     # GitHub PAT auth: oauth2 as username, token as password.
@@ -131,6 +142,20 @@ else
     export GIT_SSH_COMMAND="$GIT_SSH_CMD"
 fi
 
+if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
+    gpg_dir="$(mktemp -d -t mirror_gpg.XXXXXX)"
+    chmod 700 "$gpg_dir"
+    export GNUPGHOME="$gpg_dir"
+    printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | gpg --batch --import 2>/dev/null
+    gpg_key_id="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^sec/{print $5}' | head -n1)"
+    if [ -n "$gpg_key_id" ]; then
+        printf '%s\n' "GPG signing key loaded for diagnostics (key ${gpg_key_id:0:16}...)"
+        print_public_signing_key "$gpg_key_id"
+    else
+        printf '%s\n' "WARN: could not import GPG signing key" >&2
+    fi
+fi
+
 # ---------------------------------------------------------------------------
 # 2. Clone source repo into a temporary workspace.
 # ---------------------------------------------------------------------------
@@ -146,6 +171,7 @@ cleanup() {
     rm -rf "$work_dir"
     rm -f "$readme_path"
     [ -n "$ssh_key_path" ] && rm -f "$ssh_key_path" 2>/dev/null || true
+    [ -n "$gpg_dir" ] && rm -rf "$gpg_dir" 2>/dev/null || true
     [ -n "${env_filter_path:-}" ] && rm -f "$env_filter_path" 2>/dev/null || true
     [ -n "${tree_filter_path:-}" ] && rm -f "$tree_filter_path" 2>/dev/null || true
     [ -n "${parent_filter_script:-}" ] && rm -f "$parent_filter_script" 2>/dev/null || true

@@ -82,6 +82,15 @@ identity_mode="${PUBLIC_GITHUB_IDENTITY_MODE:-selective}"
 
 repo_root="$(git rev-parse --show-toplevel)"
 
+print_public_signing_key() {
+    local key_id="${1:-}"
+    [ -n "$key_id" ] || return 0
+
+    printf '%s\n' "GPG public key (ASCII-armored):"
+    gpg --armor --export "$key_id"
+    printf '%s\n' ""
+}
+
 normalize_cutoff_commit() {
     local raw="${1:-}"
     raw="${raw#"${raw%%[![:space:]]*}"}"
@@ -136,6 +145,7 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
             unset PUBLIC_GITHUB_SIGNING_PASSPHRASE
         fi
         printf '%s\n' "GPG signing configured (key ${gpg_key_id:0:16}...)"
+        print_public_signing_key "$gpg_key_id"
         git config --global user.signingkey "$gpg_key_id"
     else
         printf '%s\n' "WARN: could not import GPG signing key" >&2
