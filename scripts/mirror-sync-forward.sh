@@ -82,6 +82,29 @@ identity_mode="${PUBLIC_GITHUB_IDENTITY_MODE:-selective}"
 
 repo_root="$(git rev-parse --show-toplevel)"
 
+normalize_cutoff_commit() {
+    local raw="${1:-}"
+    raw="${raw#"${raw%%[![:space:]]*}"}"
+    raw="${raw%"${raw##*[![:space:]]}"}"
+
+    [ -n "$raw" ] || return 0
+
+    set -- $raw
+    if [ "$#" -ne 1 ]; then
+        printf '%s\n' "ERROR: PUBLIC_CUTOFF_COMMIT must contain exactly one commit hash/ref, got: $raw" >&2
+        exit 1
+    fi
+
+    if ! git -C "$repo_root" rev-parse --verify "${1}^{commit}" >/dev/null 2>&1; then
+        printf '%s\n' "ERROR: PUBLIC_CUTOFF_COMMIT does not resolve to a valid commit: $1" >&2
+        exit 1
+    fi
+
+    printf '%s\n' "$1"
+}
+
+cutoff_commit="$(normalize_cutoff_commit "$cutoff_commit")"
+
 # --- gpg signing setup (before work_dir exists) -------------------------------
 gpg_key_id=""
 gpg_dir=""
