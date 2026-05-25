@@ -131,21 +131,21 @@ nix flake lock --update-input nixpkgs
 2. `mkNixosSystem` loads the profile directory (`profiles/<profileName>/`), merging `details.nix` and `secrets.nix` into the settings object.
 3. `mkUserSettings` applies per-user overrides from `settings.userSettings`.
 4. System profile `profiles/<profile>/configuration.nix` is built.
-5. Home Manager modules are composed per user from `user/*`, `profiles/`, and `user-roles/home/`.
+5. Home Manager modules are composed per user from `nix/user/*`, `profiles/`, and `nix/roles/home/`.
 6. WM shell layer is selected per user via `settings.userSettings.<name>.wmShell` (legacy alias: `hyprlandShell`).
 
 ### Key Directories
 - `settings.nix`: central settings, feature toggles, per-user overrides
 - `profiles/desktop/`: system + home profile entrypoints
-- `system/wm/`: display manager and system WM modules
-- `system/lib/`: reusable helper functions/generators for modules (no host/profile data)
-- `system/gaming/`: system gaming modules
-- `system/dev/`: system dev modules (Docker/BuildKit/Codex)
-- `system/tuning/sysctl/`: split sysctl profiles
-- `user/wm/hyprland/shells/`: user-selectable Hyprland shells
-- `user/editors/`: editor modules (VSCode, Neovim)
-- `user/dev/`: user dev toolchain + AI CLI integration
-- `user/gaming/`: user gaming tools and launchers
+- `nix/system/wm/`: display manager and system WM modules
+- `nix/system/lib/`: reusable helper functions/generators for modules (no host/profile data)
+- `nix/system/gaming/`: system gaming modules
+- `nix/system/dev/`: system dev modules (Docker/BuildKit/Codex)
+- `nix/system/tuning/sysctl/`: split sysctl profiles
+- `nix/user/wm/hyprland/shells/`: user-selectable Hyprland shells
+- `nix/user/editors/`: editor modules (VSCode, Neovim)
+- `nix/user/dev/`: user dev toolchain + AI CLI integration
+- `nix/user/gaming/`: user gaming tools and launchers
 
 ### Supported Hyprland Shell Modes
 
@@ -219,11 +219,11 @@ Controlled by:
 - Keep each system script responsible for one clear contract and one authoritative state path.
 - Make system scripts robust: explicit inputs, deterministic outputs, predictable cleanup, and no hidden cross-script coupling.
 - Keep `profiles/*/modules/` focused on theme/profile configuration (data + simple toggles), not heavy transformation logic.
-- Put reusable processing logic (generators, validations, mappers) into `system/*` modules and `system/lib/*` helpers.
+- Put reusable processing logic (generators, validations, mappers) into `nix/system/*` modules and `nix/system/lib/*` helpers.
 - **Profiles host-specific data; settings host-generic data.** Hardware IDs (resume UUIDs, USB device IDs, fan controllers), host-specific package versions (`nvidiaPackages.beta`), and per-host kernel blacklists belong in `profiles/`, never in `settings.nix`. `settings` is for feature toggles, cross-platform defaults, and user preferences that stay correct across different machines (e.g. enabling Docker, selecting a Hyprland shell, audio backend preference).
 - Prefer generic list/attr-driven models (e.g. declarative mount lists) over one-off `fooDisk*` variable trees.
 - Use append-style aggregation for extensible config snippets (e.g. `mkAfter` / list aggregation) so modules do not overwrite each other.
-- Keep kernel preset/config modules outside `profiles/` (e.g. under `system/`), and let profiles select/import them.
+- Keep kernel preset/config modules outside `profiles/` (e.g. under `nix/system/`), and let profiles select/import them.
 - When modules have software/package requirements, aggregate them into a central install list/module instead of scattering package additions; the aggregation path must deduplicate entries.
 - Prefer explicit assertions for invalid user settings.
 - Preserve backwards compatibility with sensible `or` defaults.
@@ -236,7 +236,7 @@ Controlled by:
 - Don’t ship user-facing script output in ad-hoc mixed languages; default to English and keep phrasing localization-friendly.
 - Don’t hardcode host-specific absolute paths.
 - Don’t duplicate package declarations across system/home modules without reason.
-- Don’t put host/profile-specific data into `system/lib/*`.
+- Don’t put host/profile-specific data into `nix/system/lib/*`.
 - Don’t put reusable logic helpers into `profiles/*`.
 - **Don’t move host-specific declarations into `settings.nix`.** Resume device UUIDs, kernel module blacklists, hardware-specific NVMe tunables, custom fan controller configs, and per-device GPU packages stay in their profile module. Thin-piping every profile to `settings` destroys the host/profile boundary and pollutes cross-platform settings with machine-local data.
 - Don’t introduce speculative features not requested.
@@ -275,15 +275,15 @@ Add root files to `.mirror-root-whitelist` AND `.gitignore` if they should safel
 3. Rebuild.
 
 ### Extend dev tooling
-1. Add system-level components in `system/dev/default.nix`.
-2. Add user-level tools in `user/dev/default.nix`.
+1. Add system-level components in `nix/system/dev/default.nix`.
+2. Add user-level tools in `nix/user/dev/default.nix`.
 3. Gate new features behind `settings.dev.*` toggles.
 
 ## Troubleshooting
 
 ### Unknown WM shell assertion
 - Check `settings.userSettings.<name>.wmShell` spelling.
-- Ensure matching module exists in `user/wm/hyprland/shells/`.
+- Ensure matching module exists in `nix/user/wm/hyprland/shells/`.
 
 ### Docker permission issues
 - Ensure Docker is enabled in `settings.userSettings.<name>.dev.docker.enable`.

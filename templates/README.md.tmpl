@@ -36,7 +36,7 @@ j0nix-os gives you:
 - **Secret-Safe** — SOPS-nix integration with per-user and per-host encrypted secrets
 - **Gaming Ready** — Steam, performance kernels, Sunshine streaming, controller drivers, launchers
 - **Dev Ready** — Docker, BuildKit, AI CLI agents, configurable Git identities per host
-- **Declarative Monitors** — typed monitor configuration via `system/lib/monitor.nix`
+- **Declarative Monitors** — typed monitor configuration via `nix/system/lib/monitor.nix`
 - **Hyprland Shells** — [Caelestia](https://github.com/caelestia-dots/shell), [Dank Material Shell](https://github.com/AvengeMedia/DankMaterialShell), Noctalia, and AGS — switchable per user
 
 $screenshots_section
@@ -156,7 +156,7 @@ See `settings.nix.example` for a fully commented reference covering every catego
 
 ### Monitor configuration (`details.nix`)
 
-Monitor configs use the typed `monitorLib` API from `system/lib/monitor.nix`:
+Monitor configs use the typed `monitorLib` API from `nix/system/lib/monitor.nix`:
 
 ```nix
 { ... }:
@@ -262,19 +262,19 @@ sudo nixos-rebuild build --flake .#Jonas-PC --show-trace
 │       ├── details.nix
 │       ├── hardware-configuration.nix
 │       └── modules/       # Thin-pipe modules importing from system/
-├── system/
+├── nix/system/
 │   ├── lib/               # Reusable helpers (monitor.nix, mk-user-settings.nix)
 │   ├── wm/                # Display manager, WM modules (Hyprland, GNOME, Niri)
 │   ├── gaming/            # Steam, Sunshine, performance, controllers
 │   ├── dev/               # Docker, nix-ld, Codex
 │   ├── drivers/           # GPU drivers (NVIDIA, AMD, Intel)
 │   └── ...
-├── user/                  # Home-manager modules per category
+├── nix/user/                  # Home-manager modules per category
 │   ├── wm/hyprland/       # Hyprland shells (ags, caelestia, dank-material, noctalia)
 │   ├── editors/           # VSCode, Neovim
 │   ├── dev/               # AI CLI, GPG, SSH
 │   └── gaming/            # Launchers, tools
-├── user-roles/            # Role bundles (gaming, developer, streaming, etc.)
+├── nix/roles/            # Role bundles (gaming, developer, streaming, etc.)
 ├── themes/                # Theme definitions (Catppuccin)
 ├── docs/                  # Architecture and setup docs
 ├── scripts/               # Export, publish, maintenance scripts

@@ -1,8 +1,8 @@
 { ... }:
 {
   imports = [
-    ../../user/desktop
-    ../../user/gaming
-    ../../user/storage
+    ../../nix/user/desktop
+    ../../nix/user/gaming
+    ../../nix/user/storage
   ];
 }
