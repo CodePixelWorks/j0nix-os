@@ -59,6 +59,7 @@ in
   coreBinds = [
     "$mainMod, q, killactive,"
     "$mainMod, t, togglefloating,"
+    "$mainMod SHIFT, t, exec, ${homeBinDir}/wm-windowed-mode"
     "$mainMod, apostrophe, exec, ${keybindHelpCommand}"
     "$mainMod CTRL, k, exec, wm-screen-keyboard-toggle"
     "$mainMod, f, fullscreen, 0"          # true fullscreen (hides shell/waybar)
