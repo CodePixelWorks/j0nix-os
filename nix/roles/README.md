@@ -1,0 +1,34 @@
+# User Roles
+
+Role modules are workload/purpose-oriented building blocks (e.g. `gaming`, `developer`, `office`, `remote-work`, `streaming`, `video-editing`, `3d-creation`).
+
+## Naming
+
+- Use English `kebab-case` role names.
+- Prefer purpose/workflow names over tool names (e.g. `video-editing` instead of `davinci`).
+- Keep host/hardware concerns in `profiles/*`, not roles.
+
+- `nix/roles/system/*.nix`: system-side role effects (sysctl fragments, system packages, services)
+- `nix/roles/home/*.nix`: Home Manager role effects (home packages, user config)
+
+Users can enable multiple roles via `settings.userSettings.<name>.roles = [ ... ];`.
+
+Recommended modern baseline roles:
+- `desktop-basics`
+- `developer`
+- `ai-work`
+- `gaming`
+- `network-performance`
+- `office`
+- `remote-work`
+- `streaming`
+- `video-editing`
+- `3d-creation`
+- `3d-printing`
+
+Roles should append into central aggregators (e.g. `j0nix.software.*`, `j0nix.user.software.*`, `j0nix.desktop.sysctl.extraFragments`) instead of writing directly to final package/sysctl outputs.
+
+Example split:
+- `desktop-basics` owns general day-to-day applications such as a GUI text editor, archive manager, PDF/image viewer, calculator and basic disk-management tooling
+- `network-performance` owns shared TCP/sysctl throughput/latency tuning
+- `gaming` and `remote-work` can stay purpose-focused and only add workload-specific deltas

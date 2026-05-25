@@ -25,9 +25,9 @@ These give context for their local scope and should stay close to the code:
 |-----------|--------|
 | `profiles/` | `profiles/README.md` — Profile composition overview |
 | `profiles/desktop/` | `profiles/desktop/README.md` — Desktop profile entrypoints |
-| `system/` | `system/README.md` — System module categories |
-| `system/wm/` | `system/wm/README.md` — Display manager + WM integration |
-| `system/gaming/` | `system/gaming/README.md` — Gaming stack reference |
-| `user/` | `user/README.md` — Home Manager module categories |
-| `user-roles/` | `user-roles/README.md` — Role naming and composition rules |
+| `nix/system/` | `nix/system/README.md` — System module categories |
+| `nix/system/wm/` | `nix/system/wm/README.md` — Display manager + WM integration |
+| `nix/system/gaming/` | `nix/system/gaming/README.md` — Gaming stack reference |
+| `nix/user/` | `nix/user/README.md` — Home Manager module categories |
+| `nix/roles/` | `nix/roles/README.md` — Role naming and composition rules |
 | `themes/` | `themes/README.md` — Theme contract |
