@@ -18,6 +18,8 @@
 #
 # Environment:
 #   PUBLIC_GITHUB_SIGNING_KEY        -- GPG private key for signing (optional).
+#   PUBLIC_GITHUB_SIGNING_PASSPHRASE -- Passphrase for the GPG signing key
+#                                        above (optional, when protected).
 #   PUBLIC_GITHUB_COMMIT_NAME        -- Mirror bot name (to skip bot commits).
 #   PUBLIC_GITHUB_COMMIT_EMAIL       -- Mirror bot email (to skip bot commits).
 #   PUBLIC_GITHUB_TOKEN              -- GitHub PAT (HTTPS auth).
@@ -71,9 +73,25 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
     gpg_dir="$(mktemp -d -t mirror_gpg.XXXXXX)"
     chmod 700 "$gpg_dir"
     export GNUPGHOME="$gpg_dir"
-    printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | gpg --batch --import 2>/dev/null
+
+    if [ -n "${PUBLIC_GITHUB_SIGNING_PASSPHRASE:-}" ]; then
+        printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | \
+            gpg --batch --pinentry-mode loopback \
+                --passphrase "$PUBLIC_GITHUB_SIGNING_PASSPHRASE" \
+                --import 2>/dev/null
+    else
+        printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | gpg --batch --import 2>/dev/null
+    fi
+
     gpg_key_id="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^sec/{print $5}' | head -n1)"
     if [ -n "$gpg_key_id" ]; then
+        if [ -n "${PUBLIC_GITHUB_SIGNING_PASSPHRASE:-}" ]; then
+            printf '%s\n' "Removing passphrase from GPG key (in-memory only)..."
+            printf 'passwd\n%s\n\n\nsave\n' "$PUBLIC_GITHUB_SIGNING_PASSPHRASE" | \
+                gpg --command-fd 0 --pinentry-mode loopback \
+                    --edit-key "$gpg_key_id" 2>/dev/null || true
+            unset PUBLIC_GITHUB_SIGNING_PASSPHRASE
+        fi
         printf '%s\n' "GPG signing configured (key ${gpg_key_id:0:16}...)"
         print_public_signing_key "$gpg_key_id"
         git config --global user.signingkey "$gpg_key_id"
