@@ -5,8 +5,8 @@
   ...
 }:
 let
-  polkitRules = import ../../../system/lib/polkit-rules.nix { inherit lib; };
-  storageHelpers = import ../../../system/lib/storage-helpers.nix { inherit lib; };
+  polkitRules = import ../../../nix/system/lib/polkit-rules.nix { inherit lib; };
+  storageHelpers = import ../../../nix/system/lib/storage-helpers.nix { inherit lib; };
   usersGroupGid =
     if
       (config.users.groups ? users)
