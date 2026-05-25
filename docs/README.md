@@ -15,7 +15,7 @@ For agent coding rules and commit policy, see [`AGENTS.md`](../AGENTS.md) in the
 | [qmlgreet.md](./wm/qmlgreet.md) | Users, contributors | QMLGreet greeter config, theming inputs, compositor paths |
 | [dark-material-shell.md](./wm/quickshell/dark-material-shell.md) | Users | Dark Material Shell wallpaper, startup mode, workspace config |
 | [keybinds.md](./wm/keybinds.md) | Users | Current keybind reference (default: caelestia-shell) |
-| [caelestia.md](./wm/caelestia.md) | Debuggers | Keybind regression runbook |
+| [caelestia.md](./wm/quickshell/caelestia.md) | Debuggers | Keybind regression runbook |
 | [startup-flow.md](./wm/startup-flow.md) | Contributors, debuggers | WM startup order: DM -> compositor -> shell -> apps |
 
 ### DevOps / CI
