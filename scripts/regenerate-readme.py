@@ -27,8 +27,8 @@ SCOPE_CONFIGS = {
 ./scripts/export-public-github.sh /tmp/j0nix-public
 cd /tmp/j0nix-public
 
-# Validate the export
-nix flake check --no-build
+# Inspect the template files kept in the mirror
+find . -maxdepth 2 -name '*.example' | sort
 
 # Publish (if you have push access)
 ./scripts/publish-public-github.sh
@@ -36,8 +36,8 @@ nix flake check --no-build
 
 The export script:
 - Removes `settings.nix`, `.sops.yaml`, host/user secret files
-- Replaces `settings.nix` with `settings.nix.example`
-- Replaces `details.nix` and `hardware-configuration.nix` with their `.example` templates
+- Keeps the `.example` templates such as `settings.nix.example` and `.sops.yaml.example`
+- Leaves host templates like `details.nix.example` and `hardware-configuration.nix.example` in place
 - Keeps all system modules, user modules, docs, and scripts""",
     },
     "public": {

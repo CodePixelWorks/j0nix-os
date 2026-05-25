@@ -36,7 +36,7 @@ Selectable via the `public_mirror_mode` plain env / secret.
   entire history if no cutoff is set)
 - Strips files listed in `.mirror-blacklist`
 - Strips root files not listed in `.mirror-root-whitelist` (safety net)
-- Replaces sensitive files with `.example` templates
+- Removes sensitive live files while keeping the public `.example` templates
 - Injects the public-facing `README.md.public` into every commit
 - Rewrites commit author/committer identity **selectively**
 - **Force-pushes** branch + tags to GitHub
