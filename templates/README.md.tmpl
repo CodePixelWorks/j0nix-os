@@ -37,7 +37,7 @@ j0nix-os gives you:
 - **Gaming Ready** — Steam, performance kernels, Sunshine streaming, controller drivers, launchers
 - **Dev Ready** — Docker, BuildKit, AI CLI agents, configurable Git identities per host
 - **Declarative Monitors** — typed monitor configuration via `nix/system/lib/monitor.nix`
-- **Hyprland Shells** — [Caelestia](https://github.com/caelestia-dots/shell), [Dank Material Shell](https://github.com/AvengeMedia/DankMaterialShell), Noctalia, and AGS — switchable per user
+- **Hyprland Shells** — [Caelestia](https://github.com/caelestia-dots/shell), [Dark Material Shell](https://github.com/AvengeMedia/DarkMaterialShell), Noctalia, and AGS — switchable per user
 
 $screenshots_section
 ---
@@ -150,7 +150,7 @@ Key categories available:
 | Dev | `settings.dev.docker`, `settings.dev.codex` | Docker, AI CLI toggles |
 | Gaming | `j0nix.desktop.gaming.*` | Steam, Proton, performance, controllers, launchers |
 | Sysctl | `settings.sysctlProfiles.*` | Gaming, dev, network tuning profiles |
-| WM Shell | `settings.userSettings.<name>.wmShell` | `ags` (experimental), [`caelestia-shell`](https://github.com/caelestia-dots/shell) (**prod-tested**), [`dank-material-shell`](https://github.com/AvengeMedia/DankMaterialShell) (experimental), `noctalia-shell` (experimental), `none` |
+| WM Shell | `settings.userSettings.<name>.wmShell` | `ags` (experimental), [`caelestia-shell`](https://github.com/caelestia-dots/shell) (**prod-tested**), [`dank-material-shell`](https://github.com/AvengeMedia/DarkMaterialShell) (experimental), `noctalia-shell` (experimental), `none` |
 
 See `settings.nix.example` for a fully commented reference covering every category.
 
@@ -241,7 +241,7 @@ sudo nixos-rebuild build --flake .#Jonas-PC --show-trace
 |-----|-------|
 | [AGENTS.md](AGENTS.md) | Agent coding rules, commit policy, architecture decisions |
 | [docs/architecture.md](docs/architecture.md) | Deep dive into module composition and config flow |
-| [docs/dms.md](docs/dms.md) | Dank Material Shell setup and management |
+| [docs/wm/quickshell/dark-material-shell.md](docs/wm/quickshell/dark-material-shell.md) | Dark Material Shell setup and management |
 | [docs/startup-flow.md](docs/startup-flow.md) | How WM startup works (display manager → shell → apps) |
 | [docs/qmlgreet.md](docs/qmlgreet.md) | QMLGreet greeter configuration and theming |
 | [docs/keybinds.md](docs/keybinds.md) | Current keybind reference (caelestia-shell default) |
