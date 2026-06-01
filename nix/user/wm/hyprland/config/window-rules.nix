@@ -240,6 +240,15 @@ let
       center = true;
     }
     {
+      name = "float-wine-mono-installer";
+      match = {
+        class = "^(control\\.exe)$";
+        title = "^(Wine-Mono-Installation)$";
+      };
+      float = true;
+      center = true;
+    }
+    {
       name = "float-naps2-secondary-dialogs";
       match = {
         class = "^(naps2)$";
