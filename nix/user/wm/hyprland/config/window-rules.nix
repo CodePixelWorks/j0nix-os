@@ -255,6 +255,7 @@ let
         title = "^(CapCut)$";
       };
       float = true;
+      size = [ "70%" "80%" ];
       center = true;
     }
     {
