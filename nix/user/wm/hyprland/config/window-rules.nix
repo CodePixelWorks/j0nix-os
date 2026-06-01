@@ -249,6 +249,15 @@ let
       center = true;
     }
     {
+      name = "float-capcut-main-window";
+      match = {
+        class = "^(capcut_5_7_0_2112_capcutpc_0_creatortool\\.exe)$";
+        title = "^(CapCut)$";
+      };
+      float = true;
+      center = true;
+    }
+    {
       name = "float-naps2-secondary-dialogs";
       match = {
         class = "^(naps2)$";
