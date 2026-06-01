@@ -177,15 +177,6 @@ let
       initialOutputStateToMonitorSpec sunshineDisplayTargetInitialState
     else
       "";
-  sunshineDisplayTargetDisableOtherMonitorNames = map (output: output.name or "") (
-    builtins.filter (
-      output:
-      let
-        name = output.name or "";
-      in
-      name != "" && name != sunshineDisplayTargetOutputName
-    ) configuredPhysicalOutputStates
-  );
   defaultTargetMode =
     if sunshineDisplayTargetConfig != null then
       sunshineDisplayTargetConfig.mode or "2880x1800@60"
@@ -525,12 +516,14 @@ let
       move_workspace_to_target "$active_workspace"
     fi
 
-    ${lib.concatStringsSep "\n    " (
-      map (
-        name:
-        "apply_monitor_disabled ${lib.escapeShellArg name}"
-      ) sunshineDisplayTargetDisableOtherMonitorNames
-    )}
+    "$hyprctl_bin" -j monitors all | "$jq_bin" -r --arg target_name "$target_name" '
+      .[]
+      | select((.name // "") != "" and (.name != $target_name))
+      | .name
+    ' | while IFS= read -r monitor_name; do
+      [ -n "$monitor_name" ] || continue
+      apply_monitor_disabled "$monitor_name"
+    done
     apply_monitor_enabled "$target_name" "$mode" "$stream_position" "$target_scale"
     "$hyprctl_bin" dispatch focusmonitor "$target_name" >/dev/null 2>&1 || true
     if command -v wm-shell-restart-detached >/dev/null 2>&1; then
