@@ -107,6 +107,20 @@ normalize_cutoff_commit() {
     printf '%s\n' "$1"
 }
 
+# Run sed, pulling it from nixpkgs if the host doesn't have it.
+# Required in minimal CI containers (e.g. nixos/nix:2.26.1) where sed may
+# be absent but Nix is available.
+run_sed() {
+    if command -v sed >/dev/null 2>&1; then
+        command sed "$@"
+    elif command -v nix >/dev/null 2>&1; then
+        nix run nixpkgs#gnused -- sed "$@"
+    else
+        printf '%s\n' "ERROR: sed not found and nix not available" >&2
+        exit 1
+    fi
+}
+
 cutoff_commit="$(normalize_cutoff_commit "$cutoff_commit")"
 
 # ---------------------------------------------------------------------------
@@ -212,7 +226,7 @@ else
 fi
 
 # Strip any embedded auth tokens so they never leak into the published tree.
-sed -i 's|https://oauth2:[^@]*@github.com|https://github.com|g' "$readme_path" 2>/dev/null || true
+run_sed -i 's|https://oauth2:[^@]*@github.com|https://github.com|g' "$readme_path" 2>/dev/null || true
 
 git remote remove origin 2>/dev/null || true
 
@@ -316,8 +330,8 @@ else
     git commit-tree "$@"
 fi
 COMMITFILTER
-sed -i "s|REPLACE_MIRROR_EMAIL|${commit_email}|g" "$commit_filter_path"
-sed -i "s|REPLACE_GPG_KEY_ID|${gpg_key_id}|g" "$commit_filter_path"
+run_sed -i "s|REPLACE_MIRROR_EMAIL|${commit_email}|g" "$commit_filter_path"
+run_sed -i "s|REPLACE_GPG_KEY_ID|${gpg_key_id}|g" "$commit_filter_path"
 chmod +x "$commit_filter_path"
 
 parent_filter_args=()
@@ -359,7 +373,7 @@ done
 printf '%s\n' "${result# }"
 PFSCRIPT
     # shellcheck disable=SC2016
-    sed -i "s/PFSCRIPT_CUTOFF/${cutoff_commit}/g" "$parent_filter_script"
+    run_sed -i "s/PFSCRIPT_CUTOFF/${cutoff_commit}/g" "$parent_filter_script"
     chmod +x "$parent_filter_script"
     parent_filter_args=(--parent-filter "$parent_filter_script")
 fi
