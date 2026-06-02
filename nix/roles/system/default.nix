@@ -22,6 +22,7 @@ let
     "gaming"
     "network-performance"
     "office"
+    "photo-editing"
     "remote-work"
     "video-editing"
   ];
