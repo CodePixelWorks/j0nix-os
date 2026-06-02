@@ -177,6 +177,7 @@ readme_path="$repo_root/README.md.public"
 # Temp path placeholders (set below)
 env_filter_path=""
 tree_filter_path=""
+commit_filter_path=""
 parent_filter_script=""
 
 cleanup() {
@@ -186,6 +187,7 @@ cleanup() {
     [ -n "$gpg_dir" ] && rm -rf "$gpg_dir" 2>/dev/null || true
     [ -n "${env_filter_path:-}" ] && rm -f "$env_filter_path" 2>/dev/null || true
     [ -n "${tree_filter_path:-}" ] && rm -f "$tree_filter_path" 2>/dev/null || true
+    [ -n "${commit_filter_path:-}" ] && rm -f "$commit_filter_path" 2>/dev/null || true
     [ -n "${parent_filter_script:-}" ] && rm -f "$parent_filter_script" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
@@ -302,6 +304,22 @@ fi
 cp -f '${repo_root}/README.md.public' README.md 2>/dev/null || true
 TREEFILTER
 
+commit_filter_path="$(mktemp -t commit_filter.XXXXXX)"
+cat > "$commit_filter_path" <<'COMMITFILTER'
+#!/usr/bin/env bash
+mirror_email="REPLACE_MIRROR_EMAIL"
+gpg_key="REPLACE_GPG_KEY_ID"
+
+if [ "$GIT_AUTHOR_EMAIL" = "$mirror_email" ] && [ -n "$gpg_key" ]; then
+    git commit-tree --gpg-sign="$gpg_key" "$@"
+else
+    git commit-tree "$@"
+fi
+COMMITFILTER
+sed -i "s|REPLACE_MIRROR_EMAIL|${commit_email}|g" "$commit_filter_path"
+sed -i "s|REPLACE_GPG_KEY_ID|${gpg_key_id}|g" "$commit_filter_path"
+chmod +x "$commit_filter_path"
+
 parent_filter_args=()
 if [ -n "$cutoff_commit" ]; then
     # --parent-filter removes the cutoff commit as parent from the first
@@ -353,6 +371,7 @@ git filter-branch \
     "${parent_filter_args[@]}" \
     --env-filter "source '$env_filter_path'" \
     --tree-filter "source '$tree_filter_path'" \
+    --commit-filter "$commit_filter_path" \
     --prune-empty \
     --tag-name-filter cat \
     -- --all
