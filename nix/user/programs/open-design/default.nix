@@ -17,7 +17,7 @@ let
     else
       pkgs.writeShellScriptBin "od" ''
         export OD_DATA_DIR="''${OD_DATA_DIR:-$HOME/.od}"
-        exec ${lib.getExe openDesignPackage} "$@"
+        exec ${lib.getExe openDesignPackage} --no-open "$@"
       '';
 in
 lib.mkIf enabled {
