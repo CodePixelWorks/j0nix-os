@@ -172,6 +172,10 @@ in
       installDiscord  = true;
     };
 
+    openDesign = {
+      enable = false;
+    };
+
     # Element (Matrix) desktop client.  Homeserver is per-install config.
     elementDesktop = {
       enable           = false;

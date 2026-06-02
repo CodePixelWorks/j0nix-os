@@ -9,6 +9,7 @@
     ./fastfetch
     ./keepassxc
     ./kitty
+    ./open-design
     ./streambert
     ./sunshine
     ./twintail-launcher

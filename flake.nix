@@ -252,6 +252,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    open-design = {
+      url = "github:nexu-io/open-design/main";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
+
     mcp-language-server-src = {
       url = "github:isaacphi/mcp-language-server";
       flake = false;
