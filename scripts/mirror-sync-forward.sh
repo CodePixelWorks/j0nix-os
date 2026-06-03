@@ -112,12 +112,36 @@ normalize_cutoff_commit() {
     printf '%s\n' "$1"
 }
 
+ensure_gpg_available() {
+    if command -v gpg >/dev/null 2>&1; then
+        return 0
+    fi
+    if ! command -v nix >/dev/null 2>&1; then
+        printf '%s\n' "ERROR: gpg not found and nix not available" >&2
+        exit 127
+    fi
+
+    local gnupg_path
+    if ! gnupg_path="$(nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths nixpkgs#gnupg 2>/dev/null)"; then
+        printf '%s\n' "ERROR: could not make gnupg available through nix" >&2
+        exit 127
+    fi
+
+    export PATH="$gnupg_path/bin:$PATH"
+    if ! command -v gpg >/dev/null 2>&1; then
+        printf '%s\n' "ERROR: gnupg was installed but gpg is still not on PATH" >&2
+        exit 127
+    fi
+}
+
 cutoff_commit="$(normalize_cutoff_commit "$cutoff_commit")"
 
 # --- gpg signing setup (before work_dir exists) -------------------------------
 gpg_key_id=""
 gpg_dir=""
 if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
+    ensure_gpg_available
+
     gpg_dir="$(mktemp -d -t mirror_gpg.XXXXXX)"
     chmod 700 "$gpg_dir"
     export GNUPGHOME="$gpg_dir"
