@@ -114,7 +114,7 @@ run_sed() {
     if command -v sed >/dev/null 2>&1; then
         command sed "$@"
     elif command -v nix >/dev/null 2>&1; then
-        nix run nixpkgs#gnused -- sed "$@"
+        nix --extra-experimental-features 'nix-command flakes' run nixpkgs#gnused -- sed "$@"
     else
         printf '%s\n' "ERROR: sed not found and nix not available" >&2
         exit 1
