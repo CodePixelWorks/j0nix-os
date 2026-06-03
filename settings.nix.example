@@ -468,6 +468,8 @@ in
 
     # Docker daemon configuration.
     docker = {
+      # Custom data-root (e.g. external drive). null = use default /var/lib/docker.
+      dataRoot = null;
       autoPrune = true;
       # Avoid Docker's default 172.17.0.0/16 range (collides with guest Wi-Fi).
       addressPools = [
