@@ -320,19 +320,47 @@ TREEFILTER
 
 commit_filter_path="$(mktemp -t commit_filter.XXXXXX)"
 cat > "$commit_filter_path" <<'COMMITFILTER'
-#!/usr/bin/env bash
-mirror_email="REPLACE_MIRROR_EMAIL"
-gpg_key="REPLACE_GPG_KEY_ID"
+run_commit_filter() {
+    local tree_id="$1"
+    shift
+    local original_args=("$@")
 
-if [ "$GIT_AUTHOR_EMAIL" = "$mirror_email" ] && [ -n "$gpg_key" ]; then
-    git commit-tree --gpg-sign="$gpg_key" "$@"
-else
-    git commit-tree "$@"
-fi
+    local parents=()
+    while [ $# -gt 0 ]; do
+        if [ "$1" = "-p" ] && [ $# -ge 2 ]; then
+            parents+=("$2")
+            shift 2
+        else
+            shift
+        fi
+    done
+
+    # Prune empty single-parent commits (same tree as parent).
+    # This replaces --prune-empty, which git-filter-branch forbids
+    # when --commit-filter is active.
+    if [ ${#parents[@]} -eq 1 ]; then
+        local parent_tree
+        parent_tree=$(git rev-parse "${parents[0]}^{tree}" 2>/dev/null) || parent_tree=""
+        if [ "$tree_id" = "$parent_tree" ]; then
+            map "${parents[0]}"
+            return 0
+        fi
+    fi
+
+    local mirror_email="REPLACE_MIRROR_EMAIL"
+    local gpg_key="REPLACE_GPG_KEY_ID"
+
+    if [ "$GIT_AUTHOR_EMAIL" = "$mirror_email" ] && [ -n "$gpg_key" ]; then
+        git commit-tree --gpg-sign="$gpg_key" "$tree_id" "${original_args[@]}"
+    else
+        git commit-tree "$tree_id" "${original_args[@]}"
+    fi
+}
+
+run_commit_filter "$@"
 COMMITFILTER
 run_sed -i "s#REPLACE_MIRROR_EMAIL#${commit_email}#g" "$commit_filter_path"
 run_sed -i "s#REPLACE_GPG_KEY_ID#${gpg_key_id}#g" "$commit_filter_path"
-chmod +x "$commit_filter_path"
 
 parent_filter_args=()
 if [ -n "$cutoff_commit" ]; then
@@ -385,8 +413,7 @@ git filter-branch \
     "${parent_filter_args[@]}" \
     --env-filter "source '$env_filter_path'" \
     --tree-filter "source '$tree_filter_path'" \
-    --commit-filter "$commit_filter_path" \
-    --prune-empty \
+    --commit-filter "source '$commit_filter_path'" \
     --tag-name-filter cat \
     -- --all
 
