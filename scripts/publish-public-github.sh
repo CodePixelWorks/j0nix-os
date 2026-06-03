@@ -206,7 +206,15 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
         printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | gpg --batch --import 2>/dev/null
     fi
 
-    gpg_key_id="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^sec/{print $5}' | head -n1)"
+    gpg_key_id=""
+    while IFS=: read -r f1 f2 f3 f4 f5 rest; do
+        if [ "$f1" = "sec" ]; then
+            gpg_key_id="$f5"
+            break
+        fi
+    done <<EOF
+$(gpg --list-secret-keys --with-colons 2>/dev/null)
+EOF
     if [ -n "$gpg_key_id" ]; then
         if [ -n "${PUBLIC_GITHUB_SIGNING_PASSPHRASE:-}" ]; then
             printf '%s\n' "Removing passphrase from GPG key (in-memory only)..."
