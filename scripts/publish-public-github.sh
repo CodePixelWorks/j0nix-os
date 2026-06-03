@@ -354,8 +354,13 @@ run_commit_filter() {
     local mirror_email="REPLACE_MIRROR_EMAIL"
     local gpg_key="${GIT_MIRROR_SIGNING_KEY:-}"
 
-    if [ "$GIT_AUTHOR_EMAIL" = "$mirror_email" ] && [ -n "$gpg_key" ]; then
-        git commit-tree --gpg-sign="$gpg_key" "$tree_id" "${original_args[@]}"
+    if [ -n "$gpg_key" ]; then
+        if gpg --list-secret-keys "$gpg_key" >/dev/null 2>/dev/null; then
+            git commit-tree --gpg-sign="$gpg_key" "$tree_id" "${original_args[@]}"
+        else
+            printf '%s\n' "[commit-filter] WARN: gpg key $gpg_key not found (GNUPGHOME=${GNUPGHOME:-})" >&2
+            git commit-tree "$tree_id" "${original_args[@]}"
+        fi
     else
         git commit-tree "$tree_id" "${original_args[@]}"
     fi
@@ -411,6 +416,23 @@ fi
 
 export FILTER_BRANCH_SQUELCH_WARNING=1
 
+# Pre-test GPG signing before rewrite.
+printf '%s\n' "--- GPG pre-test ---"
+if [ -n "${gpg_key_id}" ] && [ -n "${gpg_dir}" ] && [ -d "${gpg_dir}" ]; then
+    GNUPGHOME="${gpg_dir}" gpg --list-secret-keys "${gpg_key_id}" >/dev/null 2>/dev/null && \
+        printf '%s\n' "GPG pre-test: key ${gpg_key_id:0:16}... found in GNUPGHOME" || \
+        printf '%s\n' "GPG pre-test: key ${gpg_key_id:0:16}... NOT found"
+    # Direct signatures test.
+    if GNUPGHOME="${gpg_dir}" gpg --armor --detach-sign --local-user="${gpg_key_id}" --batch -o /dev/null -s /dev/null <<< "test body" 2>/dev/null; then
+        printf '%s\n' "GPG pre-test: direct sign succeeded"
+    else
+        printf '%s\n' "GPG pre-test: direct sign FAILED"
+    fi
+else
+    printf '%s\n' "GPG pre-test: no key loaded, skipping"
+fi
+printf '%s\n' "---"
+
 git filter-branch \
     --force \
     "${parent_filter_args[@]}" \
@@ -430,15 +452,13 @@ rm -rf .git/refs/original/
 #    already rewritten by the env-filter above.
 # ---------------------------------------------------------------------------
 printf '%s\n' "--- GPG signing diagnostics ---"
-last_sigs=$(git log --all --format='%H %G? %GS' -5)
+last_sigs=$(git log --all --format='%H|%G?|%GS' -5)
 printf '%s\n' "$last_sigs"
-unsigned_count=$(echo "$last_sigs" | grep -c ' N$' || echo "0")
-# grep -c can output multiple lines in edge cases; take the last.
-unsigned_count=$(printf '%s' "$unsigned_count" | tail -n1)
-if [ "$unsigned_count" -gt 0 ]; then
-    printf '%s\n' "WARN: $unsigned_count of last 5 rewritten commits lack GPG signature"
-else
+unsigned_count=$(printf '%s\n' "$last_sigs" | grep -c '|N|') || true
+if [ "${unsigned_count:-0}" = "0" ]; then
     printf '%s\n' "OK: all last 5 commits carry a GPG signature"
+else
+    printf '%s\n' "WARN: $unsigned_count of last 5 rewritten commits lack GPG signature"
 fi
 printf '%s\n' "---"
 
