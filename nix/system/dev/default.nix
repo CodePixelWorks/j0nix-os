@@ -11,6 +11,7 @@ let
   userOverrides = settings.userSettings or { };
   allUsers = builtins.attrNames userOverrides;
   dockerCfg = dev.docker or { };
+  dockerDataRoot = dockerCfg.dataRoot or null;
   dockerAddressPools = dockerCfg.addressPools or [ ];
   dockerUsers = lib.filter (
     name: ((((userOverrides.${name} or { }).dev or { }).docker or { }).enable or false)
@@ -138,7 +139,25 @@ in
       }
       // lib.optionalAttrs (dockerAddressPools != [ ]) {
         default-address-pools = dockerAddressPools;
+      }
+      // lib.optionalAttrs (dockerDataRoot != null) {
+        data-root = dockerDataRoot;
       };
+    };
+
+    systemd.services.docker = lib.mkIf (dockerEnabled && dockerDataRoot != null) {
+      after = [ "mnt-LinuxData.mount" ];
+      requires = [ "mnt-LinuxData.mount" ];
+      serviceConfig.ExecStartPre = [
+        (pkgs.writeShellScript "docker-data-root-check" ''
+          parent=$(dirname "${dockerDataRoot}")
+          if [ ! -d "$parent" ]; then
+            echo "ERROR: Docker data-root parent $parent is not available. External drive not mounted?"
+            exit 1
+          fi
+          ${pkgs.coreutils}/bin/mkdir -p "${dockerDataRoot}"
+        '')
+      ];
     };
 
     j0nix.desktop.virtualisation.libvirtd.enable = lib.mkIf virtualisationEnabled (lib.mkForce true);
