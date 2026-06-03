@@ -134,6 +134,7 @@ If configured, mirrored commits on GitHub appear **Verified**.
 |----------|-------------------|------|---------|-------------|
 | `PUBLIC_GITHUB_SIGNING_KEY` | `from_secret` | Secret | — | ASCII-armored GPG private key. Register the matching public key on GitHub |
 | `PUBLIC_GITHUB_SIGNING_PASSPHRASE` | `from_secret` | Secret | — | Passphrase for the signing key. Removed from memory after unlocking |
+| `PUBLIC_GITHUB_REQUIRE_SIGNING` | plain env | String | `true` | Fail the forward mirror pipeline when no signing key is loaded |
 
 The passphrase is consumed at container startup, the key is stripped of its
 passphrase in-memory, and the passphrase variable is then `unset` before any
@@ -186,6 +187,8 @@ diverged. Run a **full sync** (`public_mirror_mode=full`) to reconcile.
 
 - Ensure `public_github_signing_key` and `public_github_signing_passphrase`
   are set correctly
+- If the log says `GPG pre-test: no key loaded, skipping`, the
+  `public_github_signing_key` secret was not injected into the Drone step
 - Ensure the matching **public** key is registered on the GitHub account that
   owns `PUBLIC_GITHUB_COMMIT_EMAIL`
 - Check that the GitHub email address is verified
