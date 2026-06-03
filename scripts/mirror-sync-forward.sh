@@ -121,24 +121,25 @@ ensure_gpg_available() {
         exit 127
     fi
 
-    local gnupg_expr gnupg_paths gnupg_path
-    gnupg_expr='let flake = builtins.getFlake "path:'"$repo_root"'"; pkgs = import flake.inputs.nixpkgs { system = builtins.currentSystem; }; in pkgs.gnupg'
-    if ! gnupg_paths="$(nix --extra-experimental-features 'nix-command flakes' build --impure --no-link --print-out-paths --expr "$gnupg_expr" 2>/dev/null)"; then
+    local gpg_bin gpg_dir nix_output
+    if ! nix_output="$(nix --extra-experimental-features 'nix-command flakes' shell --inputs-from "$repo_root" nixpkgs#gnupg --command sh -c 'command -v gpg' 2>&1)"; then
         printf '%s\n' "ERROR: could not make gnupg available through nix" >&2
+        printf '%s\n' "$nix_output" >&2
         exit 127
     fi
 
-    while IFS= read -r gnupg_path; do
-        [ -n "$gnupg_path" ] || continue
-        if [ -x "$gnupg_path/bin/gpg" ]; then
-            export PATH="$gnupg_path/bin:$PATH"
-            git config --global gpg.program "$gnupg_path/bin/gpg"
+    while IFS= read -r gpg_bin; do
+        [ -n "$gpg_bin" ] || continue
+        if [ -x "$gpg_bin" ]; then
+            gpg_dir="${gpg_bin%/*}"
+            export PATH="$gpg_dir:$PATH"
+            git config --global gpg.program "$gpg_bin"
             return 0
         fi
-    done <<< "$gnupg_paths"
+    done <<< "$nix_output"
 
-    printf '%s\n' "ERROR: gnupg was installed but no output contains bin/gpg" >&2
-    printf '%s\n' "$gnupg_paths" >&2
+    printf '%s\n' "ERROR: gnupg shell did not report an executable gpg path" >&2
+    printf '%s\n' "$nix_output" >&2
     exit 127
 }
 
