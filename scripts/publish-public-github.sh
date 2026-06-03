@@ -415,13 +415,29 @@ git filter-branch \
     "${parent_filter_args[@]}" \
     --env-filter "source '$env_filter_path'" \
     --tree-filter "source '$tree_filter_path'" \
-    --commit-filter "source '$commit_filter_path'" \
+    --commit-filter ". '$commit_filter_path'" \
     --tag-name-filter cat \
     -- --all
 
 # filter-branch leaves refs in refs/original/ — drop them so they are
 # not accidentally pushed and do not bloat the clone.
 rm -rf .git/refs/original/
+
+# ---------------------------------------------------------------------------
+# 3b. GPG signing diagnostics.
+#    Only commit-hash and key-ID are printed; author/committer emails are
+#    already rewritten by the env-filter above.
+# ---------------------------------------------------------------------------
+printf '%s\n' "--- GPG signing diagnostics ---"
+last_sigs=$(git log --all --format='%H %G? %GS' -5)
+printf '%s\n' "$last_sigs"
+unsigned_count=$(printf '%s\n' "$last_sigs" | grep -c ' N$' || echo "0")
+if [ "$unsigned_count" -gt 0 ]; then
+    printf '%s\n' "WARN: $unsigned_count of last 5 rewritten commits lack GPG signature"
+else
+    printf '%s\n' "OK: all last 5 commits carry a GPG signature"
+fi
+printf '%s\n' "---"
 
 # ---------------------------------------------------------------------------
 # 4. Optional metadata at HEAD.
