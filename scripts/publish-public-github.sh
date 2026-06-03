@@ -273,6 +273,8 @@ if [ "\$should_rewrite" -eq 1 ]; then
     export GIT_COMMITTER_NAME='$commit_name'
     export GIT_COMMITTER_EMAIL='$commit_email'
 fi
+export GNUPGHOME='${gpg_dir:-}'
+export GIT_MIRROR_SIGNING_KEY='${gpg_key_id:-}'
 ENVFILTER
 
 tree_filter_path="$(mktemp -t tree_filter.XXXXXX)"
@@ -350,7 +352,7 @@ run_commit_filter() {
     fi
 
     local mirror_email="REPLACE_MIRROR_EMAIL"
-    local gpg_key="REPLACE_GPG_KEY_ID"
+    local gpg_key="${GIT_MIRROR_SIGNING_KEY:-}"
 
     if [ "$GIT_AUTHOR_EMAIL" = "$mirror_email" ] && [ -n "$gpg_key" ]; then
         git commit-tree --gpg-sign="$gpg_key" "$tree_id" "${original_args[@]}"
@@ -362,7 +364,6 @@ run_commit_filter() {
 run_commit_filter "$@"
 COMMITFILTER
 run_sed -i "s#REPLACE_MIRROR_EMAIL#${commit_email}#g" "$commit_filter_path"
-run_sed -i "s#REPLACE_GPG_KEY_ID#${gpg_key_id}#g" "$commit_filter_path"
 
 parent_filter_args=()
 if [ -n "$cutoff_commit" ]; then
@@ -431,7 +432,9 @@ rm -rf .git/refs/original/
 printf '%s\n' "--- GPG signing diagnostics ---"
 last_sigs=$(git log --all --format='%H %G? %GS' -5)
 printf '%s\n' "$last_sigs"
-unsigned_count=$(printf '%s\n' "$last_sigs" | grep -c ' N$' || echo "0")
+unsigned_count=$(echo "$last_sigs" | grep -c ' N$' || echo "0")
+# grep -c can output multiple lines in edge cases; take the last.
+unsigned_count=$(printf '%s' "$unsigned_count" | tail -n1)
 if [ "$unsigned_count" -gt 0 ]; then
     printf '%s\n' "WARN: $unsigned_count of last 5 rewritten commits lack GPG signature"
 else
