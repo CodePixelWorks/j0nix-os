@@ -325,26 +325,28 @@ run_commit_filter() {
     shift
     local original_args=("$@")
 
-    local parents=()
+    local parent_hashes=()
     while [ $# -gt 0 ]; do
         if [ "$1" = "-p" ] && [ $# -ge 2 ]; then
-            parents+=("$2")
+            parent_hashes+=("$2")
             shift 2
         else
             shift
         fi
     done
 
-    # Prune empty single-parent commits (same tree as parent).
+    # Prune empty commits (tree identical to any parent).
     # This replaces --prune-empty, which git-filter-branch forbids
     # when --commit-filter is active.
-    if [ ${#parents[@]} -eq 1 ]; then
-        local parent_tree
-        parent_tree=$(git rev-parse "${parents[0]}^{tree}" 2>/dev/null) || parent_tree=""
-        if [ "$tree_id" = "$parent_tree" ]; then
-            map "${parents[0]}"
-            return 0
-        fi
+    if [ -n "$tree_id" ]; then
+        for parent in "${parent_hashes[@]}"; do
+            local ptree
+            ptree=$(git rev-parse "$parent^{tree}" 2>/dev/null) || true
+            if [ "$tree_id" = "$ptree" ]; then
+                map "$parent"
+                return 0
+            fi
+        done
     fi
 
     local mirror_email="REPLACE_MIRROR_EMAIL"
