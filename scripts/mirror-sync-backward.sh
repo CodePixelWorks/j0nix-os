@@ -64,17 +64,24 @@ ensure_gpg_available() {
         exit 127
     fi
 
-    local gnupg_path
-    if ! gnupg_path="$(nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths nixpkgs#gnupg 2>/dev/null)"; then
+    local gnupg_paths gnupg_path
+    if ! gnupg_paths="$(nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths nixpkgs#gnupg 2>/dev/null)"; then
         printf '%s\n' "ERROR: could not make gnupg available through nix" >&2
         exit 127
     fi
 
-    export PATH="$gnupg_path/bin:$PATH"
-    if ! command -v gpg >/dev/null 2>&1; then
-        printf '%s\n' "ERROR: gnupg was installed but gpg is still not on PATH" >&2
-        exit 127
-    fi
+    while IFS= read -r gnupg_path; do
+        [ -n "$gnupg_path" ] || continue
+        if [ -x "$gnupg_path/bin/gpg" ]; then
+            export PATH="$gnupg_path/bin:$PATH"
+            git config --global gpg.program "$gnupg_path/bin/gpg"
+            return 0
+        fi
+    done <<< "$gnupg_paths"
+
+    printf '%s\n' "ERROR: gnupg was installed but no output contains bin/gpg" >&2
+    printf '%s\n' "$gnupg_paths" >&2
+    exit 127
 }
 
 # --- load shared sanitisation engine -----------------------------------------
