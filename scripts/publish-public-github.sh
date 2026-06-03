@@ -226,7 +226,7 @@ else
 fi
 
 # Strip any embedded auth tokens so they never leak into the published tree.
-run_sed -i 's|https://oauth2:[^@]*@github.com|https://github.com|g' "$readme_path" 2>/dev/null || true
+run_sed -i 's#https://oauth2:[^@]*@github\.com#https://github.com#g' "$readme_path" 2>/dev/null || true
 
 git remote remove origin 2>/dev/null || true
 
@@ -330,8 +330,8 @@ else
     git commit-tree "$@"
 fi
 COMMITFILTER
-run_sed -i "s|REPLACE_MIRROR_EMAIL|${commit_email}|g" "$commit_filter_path"
-run_sed -i "s|REPLACE_GPG_KEY_ID|${gpg_key_id}|g" "$commit_filter_path"
+run_sed -i "s#REPLACE_MIRROR_EMAIL#${commit_email}#g" "$commit_filter_path"
+run_sed -i "s#REPLACE_GPG_KEY_ID#${gpg_key_id}#g" "$commit_filter_path"
 chmod +x "$commit_filter_path"
 
 parent_filter_args=()
@@ -373,7 +373,7 @@ done
 printf '%s\n' "${result# }"
 PFSCRIPT
     # shellcheck disable=SC2016
-    run_sed -i "s/PFSCRIPT_CUTOFF/${cutoff_commit}/g" "$parent_filter_script"
+    run_sed -i "s#PFSCRIPT_CUTOFF#${cutoff_commit}#g" "$parent_filter_script"
     chmod +x "$parent_filter_script"
     parent_filter_args=(--parent-filter "$parent_filter_script")
 fi
