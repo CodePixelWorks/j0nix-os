@@ -2,6 +2,7 @@
   inputs,
   lib,
   pkgs,
+  utils,
   settings,
   ...
 }:
@@ -12,6 +13,19 @@ let
   allUsers = builtins.attrNames userOverrides;
   dockerCfg = dev.docker or { };
   dockerDataRoot = dockerCfg.dataRoot or null;
+  systemMounts = (settings.storage or { }).systemMounts or [ ];
+  isPathUnderMount = mountPoint: dataRoot:
+    let
+      mp = lib.removeSuffix "/" mountPoint;
+      dr = lib.removeSuffix "/" dataRoot;
+    in
+      dr == mp || lib.hasPrefix "${mp}/" dr;
+  parentMount = lib.findFirst (m: (m.enable or true) && isPathUnderMount m.mountPoint dockerDataRoot) null systemMounts;
+  parentMountUnit =
+    if parentMount != null && (parentMount.automount or false) then
+      "${utils.escapeSystemdPath (lib.removeSuffix "/" parentMount.mountPoint)}.mount"
+    else
+      null;
   dockerAddressPools = dockerCfg.addressPools or [ ];
   dockerUsers = lib.filter (
     name: ((((userOverrides.${name} or { }).dev or { }).docker or { }).enable or false)
@@ -146,8 +160,8 @@ in
     };
 
     systemd.services.docker = lib.mkIf (dockerEnabled && dockerDataRoot != null) {
-      after = [ "mnt-LinuxData.mount" ];
-      requires = [ "mnt-LinuxData.mount" ];
+      after = lib.optional (parentMountUnit != null) parentMountUnit;
+      requires = lib.optional (parentMountUnit != null) parentMountUnit;
       serviceConfig.ExecStartPre = [
         (pkgs.writeShellScript "docker-data-root-check" ''
           parent=$(dirname "${dockerDataRoot}")
