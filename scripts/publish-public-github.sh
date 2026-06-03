@@ -93,6 +93,7 @@ normalize_cutoff_commit() {
     # Reject accidental multi-line or space-separated secret values early.
     # If the configured cutoff is malformed, warn and ignore it instead of
     # breaking the whole mirror publish run.
+    # shellcheck disable=SC2086 # Intentional split to reject multi-token cutoff values.
     set -- $raw
     if [ "$#" -ne 1 ]; then
         printf '%s\n' "WARN: PUBLIC_CUTOFF_COMMIT must contain exactly one commit hash/ref; ignoring invalid value: $raw" >&2
@@ -174,13 +175,25 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
 
     gpg_key_id="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^sec/{print $5}' | head -n1)"
     if [ -n "$gpg_key_id" ]; then
-        printf '%s\n' "GPG signing key loaded for diagnostics (key ${gpg_key_id:0:16}...)"
+        if [ -n "${PUBLIC_GITHUB_SIGNING_PASSPHRASE:-}" ]; then
+            printf '%s\n' "Removing passphrase from GPG key (in-memory only)..."
+            printf 'passwd\n%s\n\n\nsave\n' "$PUBLIC_GITHUB_SIGNING_PASSPHRASE" | \
+                gpg --command-fd 0 --pinentry-mode loopback \
+                    --edit-key "$gpg_key_id" 2>/dev/null || true
+            unset PUBLIC_GITHUB_SIGNING_PASSPHRASE
+        fi
+        printf '%s\n' "GPG signing configured (key ${gpg_key_id:0:16}...)"
         print_public_signing_key "$gpg_key_id"
-        unset PUBLIC_GITHUB_SIGNING_PASSPHRASE
+        git config --global user.signingkey "$gpg_key_id"
     else
         printf '%s\n' "WARN: could not import GPG signing key" >&2
     fi
 fi
+
+if [ -n "$gpg_dir" ]; then
+    export GNUPGHOME="$gpg_dir"
+fi
+export GIT_MIRROR_SIGNING_KEY="${gpg_key_id:-}"
 
 # ---------------------------------------------------------------------------
 # 2. Clone source repo into a temporary workspace.
@@ -273,8 +286,6 @@ if [ "\$should_rewrite" -eq 1 ]; then
     export GIT_COMMITTER_NAME='$commit_name'
     export GIT_COMMITTER_EMAIL='$commit_email'
 fi
-export GNUPGHOME='${gpg_dir:-}'
-export GIT_MIRROR_SIGNING_KEY='${gpg_key_id:-}'
 ENVFILTER
 
 tree_filter_path="$(mktemp -t tree_filter.XXXXXX)"
@@ -355,12 +366,11 @@ run_commit_filter() {
     local gpg_key="${GIT_MIRROR_SIGNING_KEY:-}"
 
     if [ -n "$gpg_key" ]; then
-        if gpg --list-secret-keys "$gpg_key" >/dev/null 2>/dev/null; then
-            git commit-tree --gpg-sign="$gpg_key" "$tree_id" "${original_args[@]}"
-        else
-            printf '%s\n' "[commit-filter] WARN: gpg key $gpg_key not found (GNUPGHOME=${GNUPGHOME:-})" >&2
-            git commit-tree "$tree_id" "${original_args[@]}"
+        if ! gpg --list-secret-keys "$gpg_key" >/dev/null 2>/dev/null; then
+            printf '%s\n' "[commit-filter] ERROR: gpg key $gpg_key not found (GNUPGHOME=${GNUPGHOME:-})" >&2
+            return 1
         fi
+        git commit-tree --gpg-sign="$gpg_key" "$tree_id" "${original_args[@]}"
     else
         git commit-tree "$tree_id" "${original_args[@]}"
     fi
@@ -423,10 +433,11 @@ if [ -n "${gpg_key_id}" ] && [ -n "${gpg_dir}" ] && [ -d "${gpg_dir}" ]; then
         printf '%s\n' "GPG pre-test: key ${gpg_key_id:0:16}... found in GNUPGHOME" || \
         printf '%s\n' "GPG pre-test: key ${gpg_key_id:0:16}... NOT found"
     # Direct signatures test.
-    if GNUPGHOME="${gpg_dir}" gpg --armor --detach-sign --local-user="${gpg_key_id}" --batch -o /dev/null -s /dev/null <<< "test body" 2>/dev/null; then
+    if printf '%s\n' "test body" | GNUPGHOME="${gpg_dir}" gpg --armor --detach-sign --local-user="${gpg_key_id}" --batch -o /dev/null 2>/dev/null; then
         printf '%s\n' "GPG pre-test: direct sign succeeded"
     else
-        printf '%s\n' "GPG pre-test: direct sign FAILED"
+        printf '%s\n' "ERROR: GPG pre-test direct sign failed"
+        exit 1
     fi
 else
     printf '%s\n' "GPG pre-test: no key loaded, skipping"
@@ -459,6 +470,9 @@ if [ "${unsigned_count:-0}" = "0" ]; then
     printf '%s\n' "OK: all last 5 commits carry a GPG signature"
 else
     printf '%s\n' "WARN: $unsigned_count of last 5 rewritten commits lack GPG signature"
+    if [ -n "${gpg_key_id}" ]; then
+        exit 1
+    fi
 fi
 printf '%s\n' "---"
 
@@ -483,8 +497,15 @@ if [ -n "$cutoff_commit" ]; then
 EOF
     git add -A
     # Amend HEAD without changing commit date; preserve original timestamp.
-    GIT_COMMITTER_DATE="$(git log -1 --format=%cI)" \
-        git commit --amend --no-edit --reset-author || true
+    amend_args=(--amend --no-edit --reset-author)
+    if [ -n "$gpg_key_id" ]; then
+        amend_args+=(--gpg-sign="$gpg_key_id")
+    fi
+    if ! GIT_COMMITTER_DATE="$(git log -1 --format=%cI)" git commit "${amend_args[@]}"; then
+        if [ -n "$gpg_key_id" ]; then
+            exit 1
+        fi
+    fi
 fi
 
 # ---------------------------------------------------------------------------
