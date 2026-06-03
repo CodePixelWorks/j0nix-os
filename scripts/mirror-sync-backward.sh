@@ -64,8 +64,9 @@ ensure_gpg_available() {
         exit 127
     fi
 
-    local gnupg_paths gnupg_path
-    if ! gnupg_paths="$(nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths nixpkgs#gnupg 2>/dev/null)"; then
+    local gnupg_expr gnupg_paths gnupg_path
+    gnupg_expr='let flake = builtins.getFlake "path:'"$repo_root"'"; pkgs = import flake.inputs.nixpkgs { system = builtins.currentSystem; }; in pkgs.gnupg'
+    if ! gnupg_paths="$(nix --extra-experimental-features 'nix-command flakes' build --impure --no-link --print-out-paths --expr "$gnupg_expr" 2>/dev/null)"; then
         printf '%s\n' "ERROR: could not make gnupg available through nix" >&2
         exit 127
     fi
