@@ -55,6 +55,28 @@ print_public_signing_key() {
     printf '%s\n' ""
 }
 
+ensure_gpg_available() {
+    if command -v gpg >/dev/null 2>&1; then
+        return 0
+    fi
+    if ! command -v nix >/dev/null 2>&1; then
+        printf '%s\n' "ERROR: gpg not found and nix not available" >&2
+        exit 127
+    fi
+
+    local gnupg_path
+    if ! gnupg_path="$(nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths nixpkgs#gnupg 2>/dev/null)"; then
+        printf '%s\n' "ERROR: could not make gnupg available through nix" >&2
+        exit 127
+    fi
+
+    export PATH="$gnupg_path/bin:$PATH"
+    if ! command -v gpg >/dev/null 2>&1; then
+        printf '%s\n' "ERROR: gnupg was installed but gpg is still not on PATH" >&2
+        exit 127
+    fi
+}
+
 # --- load shared sanitisation engine -----------------------------------------
 # shellcheck source=scripts/lib/mirror-sanitize.sh
 source "$repo_root/scripts/lib/mirror-sanitize.sh"
@@ -70,6 +92,8 @@ MS_SANITIZE_NAME_PATTERNS="$(ms_build_patterns "$rewrite_names")"
 gpg_key_id=""
 gpg_dir=""
 if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
+    ensure_gpg_available
+
     gpg_dir="$(mktemp -d -t mirror_gpg.XXXXXX)"
     chmod 700 "$gpg_dir"
     export GNUPGHOME="$gpg_dir"
