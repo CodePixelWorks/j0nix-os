@@ -27,6 +27,7 @@ set -euo pipefail
 #                                    Disabling force may fail if history diverged.
 #   PUBLIC_GITHUB_SIGNING_KEY    — Optional GPG private key for diagnostics in CI.
 #   PUBLIC_GITHUB_SIGNING_PASSPHRASE — Optional passphrase for the signing key above.
+#   PUBLIC_GITHUB_REQUIRE_SIGNING — "true" to fail when no signing key is loaded.
 #   PUBLIC_SOURCE_URL             — Optional, recorded in metadata.
 #
 # Rewrites every commit since the cutoff (or all commits if no cutoff):
@@ -71,6 +72,7 @@ rewrite_name_patterns="$(_build_patterns "$rewrite_names_input")"
 
 cutoff_commit="${PUBLIC_CUTOFF_COMMIT:-${PUBLIC_CUTOFF_COMMIT_FALLBACK:-}}"
 force_push="${PUBLIC_GITHUB_FORCE_PUSH:-true}"
+require_signing="${PUBLIC_GITHUB_REQUIRE_SIGNING:-false}"
 
 repo_root="$(git rev-parse --show-toplevel)"
 
@@ -188,6 +190,12 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
     else
         printf '%s\n' "WARN: could not import GPG signing key" >&2
     fi
+fi
+
+if [ "$require_signing" = "true" ] && [ -z "$gpg_key_id" ]; then
+    printf '%s\n' "ERROR: PUBLIC_GITHUB_REQUIRE_SIGNING=true but no GPG signing key was loaded." >&2
+    printf '%s\n' "Ensure the Drone secret public_github_signing_key is available to this pipeline step." >&2
+    exit 1
 fi
 
 if [ -n "$gpg_dir" ]; then
