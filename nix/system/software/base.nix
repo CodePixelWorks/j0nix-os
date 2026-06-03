@@ -14,6 +14,7 @@
     psmisc
     htop
     btop
+    ncdu
     rsync
     zip
     unzip
