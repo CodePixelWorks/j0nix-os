@@ -45,6 +45,13 @@ let
     in
     if builtins.pathExists roleModule then roleModule else null;
 
+  mkProgramModule =
+    program:
+    let
+      path = baseDir + "/nix/user/programs/${program}";
+    in
+    if builtins.pathExists path then path else null;
+
   shellModule = baseDir + "/nix/user/shells/${userSettings.shell}.nix";
   resolvedShellModule =
     if builtins.pathExists shellModule then shellModule else baseDir + "/nix/user/shells/zsh.nix";
@@ -67,6 +74,17 @@ let
   missingRoleNames = lib.filter (role: (mkUserRoleHomeModule role) == null) roleNames;
   devModule = baseDir + "/nix/user/dev/default.nix";
   devEnabled = (userSettings.dev or { }).enable or true;
+  programNames = userSettings.homePrograms or null;
+  programModulePaths =
+    if programNames != null then
+      lib.filter (m: m != null) (map mkProgramModule programNames)
+    else
+      [ ];
+  missingProgramNames =
+    if programNames != null then
+      lib.filter (program: (mkProgramModule program) == null) programNames
+    else
+      [ ];
 in
 [
   (profileDir + "/home.nix")
@@ -75,7 +93,6 @@ in
   (baseDir + "/nix/user/security/secrets.nix")
   resolvedShellModule
   (baseDir + "/nix/user/session-default.nix")
-  (baseDir + "/nix/user/programs/default.nix")
   (
     { lib, ... }:
     {
@@ -101,6 +118,10 @@ in
           assertion = missingRoleNames == [ ];
           message = "Unknown user role(s) for ${userSettings.username}: ${lib.concatStringsSep ", " missingRoleNames}. Expected modules under user-roles/home/<role>.nix";
         }
+        {
+          assertion = missingProgramNames == [ ];
+          message = "Unknown program module(s) for ${userSettings.username}: ${lib.concatStringsSep ", " missingProgramNames}. Expected directories under nix/user/programs/";
+        }
       ]
       ++ lib.optional wmNeedsShell {
         assertion = wmShellExists;
@@ -116,4 +137,5 @@ in
 ++ browserModules
 ++ roleHomeModules
 ++ lib.optional (devEnabled && builtins.pathExists devModule) devModule
+++ (if programNames != null then programModulePaths else [ (baseDir + "/nix/user/programs/default.nix") ])
 ++ lib.optional (wmNeedsShell && wmShellExists) wmShellModule
