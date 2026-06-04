@@ -118,16 +118,33 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
 
     gpg_key_id="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^sec/{print $5}' | head -n1)"
     if [ -n "$gpg_key_id" ]; then
-        if [ -n "${PUBLIC_GITHUB_SIGNING_PASSPHRASE:-}" ]; then
-            printf '%s\n' "Removing passphrase from GPG key (in-memory only)..."
-            printf 'passwd\n%s\n\n\nsave\n' "$PUBLIC_GITHUB_SIGNING_PASSPHRASE" | \
-                gpg --command-fd 0 --pinentry-mode loopback \
-                    --edit-key "$gpg_key_id" 2>/dev/null || true
-            unset PUBLIC_GITHUB_SIGNING_PASSPHRASE
-        fi
         printf '%s\n' "GPG signing configured (key ${gpg_key_id:0:16}...)"
+
+        # Preserve passphrase in a scoped variable so git/gpg pipelines can
+        # sign headlessly without relying on fragile --edit-key removal.
+        mirror_gpg_passphrase="${PUBLIC_GITHUB_SIGNING_PASSPHRASE:-}"
+        if [ -n "$mirror_gpg_passphrase" ]; then
+            unset PUBLIC_GITHUB_SIGNING_PASSPHRASE
+            export MIRROR_GPG_PASSPHRASE="$mirror_gpg_passphrase"
+        fi
+
         print_public_signing_key "$gpg_key_id"
         git config --global user.signingkey "$gpg_key_id"
+
+        # gpg wrapper for headless signing. Git cherry-pick --gpg-sign calls gpg
+        # in non-batch mode; the wrapper injects passphrase so pinentry never
+        # blocks in CI.
+        gpg_wrapper="$gpg_dir/gpg-wrapper"
+        cat > "$gpg_wrapper" <<'GPGWRAP'
+#!/usr/bin/env bash
+if [ -n "${MIRROR_GPG_PASSPHRASE:-}" ]; then
+    exec gpg --pinentry-mode loopback --passphrase "$MIRROR_GPG_PASSPHRASE" "$@"
+else
+    exec gpg "$@"
+fi
+GPGWRAP
+        chmod +x "$gpg_wrapper"
+        git config --global gpg.program "$gpg_wrapper"
     else
         printf '%s\n' "WARN: could not import GPG signing key" >&2
     fi
