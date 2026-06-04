@@ -27,19 +27,7 @@ let
   geminiEnabled = ai.gemini or true;
   hermesEnabled = ai.hermes or true;
   mcpRemotes = ai.mcpRemotes or { };
-  hermesPackage =
-    let
-      system = pkgs.stdenv.hostPlatform.system;
-    in
-    if
-      (inputs ? hermes-agent)
-      && (inputs.hermes-agent ? packages)
-      && (inputs.hermes-agent.packages.${system} or null) != null
-      && (inputs.hermes-agent.packages.${system} ? default)
-    then
-      inputs.hermes-agent.packages.${system}.default
-    else
-      null;
+  hermesPackage = pkgs.hermes-agent-with-firecrawl or null;
   ncpPackage = pkgs.writeShellApplication {
     name = "ncp";
     runtimeInputs = [ pkgs.nodejs ];
