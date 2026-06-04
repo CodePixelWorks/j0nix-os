@@ -109,19 +109,7 @@ let
   geminiEnabled = ai.gemini or true;
   hasGeminiPackage = pkgs ? gemini-cli;
   hermesEnabled = ai.hermes or true;
-  hermesPackage =
-    let
-      system = pkgs.stdenv.hostPlatform.system;
-    in
-    if
-      (inputs ? hermes-agent)
-      && (inputs.hermes-agent ? packages)
-      && (inputs.hermes-agent.packages.${system} or null) != null
-      && (inputs.hermes-agent.packages.${system} ? default)
-    then
-      inputs.hermes-agent.packages.${system}.default
-    else
-      null;
+  hermesPackage = pkgs.hermes-agent-with-firecrawl or null;
   geminiLauncher = pkgs.writeShellScriptBin "gemini-launcher" ''
     KEY_FILE="$HOME/.gem.key"
 
