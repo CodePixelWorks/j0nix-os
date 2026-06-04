@@ -1,5 +1,7 @@
 { pkgs, ... }:
 {
+  imports = [ ../../user/programs/davinci-resolve ];
+
   j0nix.user.software.packages = with pkgs; [
     gpu-screen-recorder
     gpu-screen-recorder-gtk
