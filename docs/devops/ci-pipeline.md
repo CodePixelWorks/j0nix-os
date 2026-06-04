@@ -137,9 +137,9 @@ If configured, mirrored commits on GitHub appear **Verified**.
 | `PUBLIC_GITHUB_SIGNING_PUBKEY_URL` | `from_secret` | Secret | — | URL to the ASCII-armored **public** key. Pipeline fails if the fingerprint does not match the imported private key |
 | `PUBLIC_GITHUB_REQUIRE_SIGNING` | plain env | String | `true` | Fail the forward mirror pipeline when no signing key is loaded |
 
-The passphrase is consumed at container startup, the key is stripped of its
-passphrase in-memory, and the passphrase variable is then `unset` before any
-git operations.
+The passphrase is preserved in a scoped variable (`MIRROR_GPG_PASSPHRASE`) and
+injected into all `gpg` calls via a wrapper script. The original environment variable
+is `unset` before any git operations begin.
 
 When `PUBLIC_GITHUB_SIGNING_PUBKEY_URL` is set, the script downloads the public
 key, imports it into the temporary keyring, and compares its full fingerprint
