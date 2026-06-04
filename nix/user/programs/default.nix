@@ -6,7 +6,6 @@
     ./balena-etcher
     ./bambulab
     ./betterdiscord
-    ./davinci-resolve
     ./element-desktop
     ./fastfetch
     ./keepassxc
