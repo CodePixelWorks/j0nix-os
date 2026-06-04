@@ -3,6 +3,7 @@
   imports = [
     ./alacritty
     ./autodesk-fusion
+    ./balena-etcher
     ./bambulab
     ./betterdiscord
     ./element-desktop
