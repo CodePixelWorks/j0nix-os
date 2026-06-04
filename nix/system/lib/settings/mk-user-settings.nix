@@ -53,6 +53,7 @@ merged
   dev = lib.recursiveUpdate (baseSettings.dev or { }) userDevOverride;
   programs = lib.recursiveUpdate (baseSettings.programs or { }) userProgramOverride;
   hyprland = lib.recursiveUpdate (baseSettings.hyprland or { }) userHyprlandOverride;
+  homePrograms = merged.homePrograms or (merged.defaultHomePrograms or null);
   wmShell = merged.wmShell or (merged.hyprlandShell or (themeDetails.shell or "caelestia-shell"));
   hyprlandShell = merged.wmShell or (merged.hyprlandShell or (themeDetails.shell or "caelestia-shell"));
   defaultWMS = resolvedDefaultWMS;
