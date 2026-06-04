@@ -134,11 +134,16 @@ If configured, mirrored commits on GitHub appear **Verified**.
 |----------|-------------------|------|---------|-------------|
 | `PUBLIC_GITHUB_SIGNING_KEY` | `from_secret` | Secret | — | ASCII-armored GPG private key. Register the matching public key on GitHub |
 | `PUBLIC_GITHUB_SIGNING_PASSPHRASE` | `from_secret` | Secret | — | Passphrase for the signing key. Removed from memory after unlocking |
+| `PUBLIC_GITHUB_SIGNING_PUBKEY_URL` | `from_secret` | Secret | — | URL to the ASCII-armored **public** key. Pipeline fails if the fingerprint does not match the imported private key |
 | `PUBLIC_GITHUB_REQUIRE_SIGNING` | plain env | String | `true` | Fail the forward mirror pipeline when no signing key is loaded |
 
 The passphrase is consumed at container startup, the key is stripped of its
 passphrase in-memory, and the passphrase variable is then `unset` before any
 git operations.
+
+When `PUBLIC_GITHUB_SIGNING_PUBKEY_URL` is set, the script downloads the public
+key, imports it into the temporary keyring, and compares its full fingerprint
+with the imported private key. Any mismatch aborts the pipeline immediately.
 
 ### Identity Mode (Incremental Only)
 
