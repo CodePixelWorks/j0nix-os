@@ -180,6 +180,34 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
         printf '%s\n' "GPG signing configured (key ${gpg_key_id:0:16}...)"
         print_public_signing_key "$gpg_key_id"
         git config --global user.signingkey "$gpg_key_id"
+
+        # Verify downloaded public key belongs to the imported private key.
+        if [ -n "${PUBLIC_GITHUB_SIGNING_PUBKEY_URL:-}" ]; then
+            pubkey_temp="$(mktemp -t mirror_pubkey.XXXXXX)"
+            if curl -fsSL "$PUBLIC_GITHUB_SIGNING_PUBKEY_URL" -o "$pubkey_temp" 2>/dev/null; then
+                gpg --batch --import "$pubkey_temp" >/dev/null 2>&1 || true
+                rm -f "$pubkey_temp"
+
+                sec_fpr="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^fpr/{print $10; exit}')"
+                pub_fpr="$(gpg --list-keys --with-colons 2>/dev/null | awk -F: '/^fpr/{print $10; exit}')"
+
+                if [ -z "$sec_fpr" ] || [ -z "$pub_fpr" ]; then
+                    printf '%s\n' "ERROR: Could not determine GPG fingerprints for key verification" >&2
+                    exit 1
+                fi
+
+                if [ "$sec_fpr" != "$pub_fpr" ]; then
+                    printf '%s\n' "ERROR: Public key fingerprint (${pub_fpr:0:16}...) does not match private key fingerprint (${sec_fpr:0:16}...)" >&2
+                    printf '%s\n' "Check PUBLIC_GITHUB_SIGNING_PUBKEY_URL and PUBLIC_GITHUB_SIGNING_KEY are a matching pair." >&2
+                    exit 1
+                fi
+
+                printf '%s\n' "GPG public key verified: fingerprint ${sec_fpr:0:16}... matches"
+            else
+                printf '%s\n' "ERROR: Failed to download public key from ${PUBLIC_GITHUB_SIGNING_PUBKEY_URL}" >&2
+                exit 1
+            fi
+        fi
     else
         printf '%s\n' "WARN: could not import GPG signing key" >&2
     fi
