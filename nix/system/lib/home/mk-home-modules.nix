@@ -74,17 +74,9 @@ let
   missingRoleNames = lib.filter (role: (mkUserRoleHomeModule role) == null) roleNames;
   devModule = baseDir + "/nix/user/dev/default.nix";
   devEnabled = (userSettings.dev or { }).enable or true;
-  programNames = userSettings.homePrograms or null;
-  programModulePaths =
-    if programNames != null then
-      lib.filter (m: m != null) (map mkProgramModule programNames)
-    else
-      [ ];
-  missingProgramNames =
-    if programNames != null then
-      lib.filter (program: (mkProgramModule program) == null) programNames
-    else
-      [ ];
+  programNames = userSettings.homePrograms or [ ];
+  programModulePaths = lib.filter (m: m != null) (map mkProgramModule programNames);
+  missingProgramNames = lib.filter (program: (mkProgramModule program) == null) programNames;
 in
 [
   (profileDir + "/home.nix")
@@ -137,5 +129,5 @@ in
 ++ browserModules
 ++ roleHomeModules
 ++ lib.optional (devEnabled && builtins.pathExists devModule) devModule
-++ (if programNames != null then programModulePaths else [ (baseDir + "/nix/user/programs/default.nix") ])
+++ programModulePaths
 ++ lib.optional (wmNeedsShell && wmShellExists) wmShellModule
