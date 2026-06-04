@@ -481,13 +481,23 @@ if [ -n "${gpg_key_id}" ] && [ -n "${gpg_dir}" ] && [ -d "${gpg_dir}" ]; then
     GNUPGHOME="${gpg_dir}" gpg --list-secret-keys "${gpg_key_id}" >/dev/null 2>/dev/null && \
         printf '%s\n' "GPG pre-test: key ${gpg_key_id:0:16}... found in GNUPGHOME" || \
         printf '%s\n' "GPG pre-test: key ${gpg_key_id:0:16}... NOT found"
-    # Direct signatures test.
-    if printf '%s\n' "test body" | GNUPGHOME="${gpg_dir}" gpg --armor --detach-sign --local-user="${gpg_key_id}" --batch -o /dev/null 2>/dev/null; then
+    # Ensure gpg-agent is available inside the temp homedir before signing.
+    GNUPGHOME="${gpg_dir}" gpg-agent --daemon 2>/dev/null || true
+    # Direct signatures test with loopback so a remaining passphrase does not
+    # silently deadlock pinentry in a non-interactive context.
+    sign_stderr="$(mktemp -t gpg_sign_test.XXXXXX)"
+    if printf '%s\n' "test body" | GNUPGHOME="${gpg_dir}" gpg --armor --detach-sign \
+            --local-user="${gpg_key_id}" --batch --pinentry-mode loopback -o /dev/null 2>"$sign_stderr"; then
         printf '%s\n' "GPG pre-test: direct sign succeeded"
     else
         printf '%s\n' "ERROR: GPG pre-test direct sign failed"
+        printf '%s\n' "--- GPG stderr ---"
+        cat "$sign_stderr"
+        printf '%s\n' "---"
+        rm -f "$sign_stderr"
         exit 1
     fi
+    rm -f "$sign_stderr"
 else
     printf '%s\n' "GPG pre-test: no key loaded, skipping"
 fi
