@@ -41,6 +41,25 @@ let
     };
     streambert = final.callPackage (baseDir + "/nix/system/software/pkgs/streaming/streambert.nix") { };
     bambu-studio-appimage = final.callPackage (baseDir + "/nix/system/software/pkgs/printing/bambu-studio-appimage.nix") { };
+    firecrawl-py = final.python312Packages.callPackage (baseDir + "/nix/pkgs/firecrawl-py") { };
+    hermes-agent-with-firecrawl =
+      let
+        system = final.stdenv.hostPlatform.system;
+        hermesPkg =
+          if (inputs ? hermes-agent)
+             && (inputs.hermes-agent ? packages)
+             && (inputs.hermes-agent.packages.${system} or null) != null
+             && (inputs.hermes-agent.packages.${system} ? default)
+          then inputs.hermes-agent.packages.${system}.default
+          else null;
+      in
+      if hermesPkg != null then
+        final.callPackage (baseDir + "/nix/pkgs/hermes-agent-ext") {
+          hermesPackage = hermesPkg;
+          firecrawlPy = final.firecrawl-py;
+        }
+      else
+        null;
     hyprland-minimizer-orteip = prev.rustPlatform.buildRustPackage {
       pname = "hyprland_minimizer";
       version = "unstable";
