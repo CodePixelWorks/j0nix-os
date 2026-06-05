@@ -128,6 +128,7 @@ in
 {
   imports = [
     ./nix-ld.nix
+    ./qdrant.nix
   ];
 
   config = lib.mkIf enabled {
