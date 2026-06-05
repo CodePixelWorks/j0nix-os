@@ -129,6 +129,7 @@ in
   imports = [
     ./nix-ld.nix
     ./qdrant.nix
+    ./firecrawl.nix
   ];
 
   config = lib.mkIf enabled {
