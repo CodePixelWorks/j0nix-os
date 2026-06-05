@@ -42,6 +42,10 @@ let
     streambert = final.callPackage (baseDir + "/nix/system/software/pkgs/streaming/streambert.nix") { };
     bambu-studio-appimage = final.callPackage (baseDir + "/nix/system/software/pkgs/printing/bambu-studio-appimage.nix") { };
     firecrawl-py = final.python312Packages.callPackage (baseDir + "/nix/pkgs/firecrawl-py") { };
+    hermes-extra-python = final.callPackage (baseDir + "/nix/pkgs/hermes-extra-python") {
+      inherit (final) firecrawl-py;
+      inherit (final.python312Packages) qdrant-client;
+    };
     hermes-agent-with-firecrawl =
       let
         system = final.stdenv.hostPlatform.system;
@@ -56,7 +60,7 @@ let
       if hermesPkg != null then
         final.callPackage (baseDir + "/nix/pkgs/hermes-agent-ext") {
           hermesPackage = hermesPkg;
-          firecrawlPy = final.firecrawl-py;
+          hermesExtraPython = final.hermes-extra-python;
         }
       else
         null;
