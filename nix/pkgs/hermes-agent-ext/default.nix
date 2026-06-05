@@ -2,11 +2,11 @@
   stdenv,
   makeWrapper,
   hermesPackage,
-  firecrawlPy,
+  hermesExtraPython,
 }:
 
 stdenv.mkDerivation {
-  pname = "hermes-agent-firecrawl";
+  pname = "hermes-agent-ext";
   inherit (hermesPackage) version;
 
   nativeBuildInputs = [ makeWrapper ];
@@ -14,7 +14,6 @@ stdenv.mkDerivation {
   buildCommand = ''
     mkdir -p $out/bin $out/share $out/ui-tui
 
-    # Preserve bundled assets packaged by the original derivation.
     if [[ -d ${hermesPackage}/share ]]; then
       cp -r ${hermesPackage}/share/* $out/share/
     fi
@@ -22,12 +21,12 @@ stdenv.mkDerivation {
       cp -r ${hermesPackage}/ui-tui/* $out/ui-tui/
     fi
 
-    firecrawlSitePackages="${firecrawlPy}/lib/python3.12/site-packages"
+    extraSitePackages="${hermesExtraPython}/lib/python3.12/site-packages"
 
     for bin in hermes hermes-agent hermes-acp; do
       if [[ -e ${hermesPackage}/bin/$bin ]]; then
         makeWrapper ${hermesPackage}/bin/$bin $out/bin/$bin \
-            --prefix PYTHONPATH : "$firecrawlSitePackages"
+            --prefix PYTHONPATH : "$extraSitePackages"
       fi
     done
   '';
