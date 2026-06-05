@@ -130,6 +130,7 @@ in
     ./nix-ld.nix
     ./qdrant.nix
     ./firecrawl.nix
+    ./crw.nix
   ];
 
   config = lib.mkIf enabled {
