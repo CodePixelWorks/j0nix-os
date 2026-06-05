@@ -129,7 +129,6 @@ in
   imports = [
     ./nix-ld.nix
     ./qdrant.nix
-    ./firecrawl.nix
     ./crw.nix
   ];
 
