@@ -9,8 +9,19 @@
 let
   dev = settings.dev or { };
   enabled = dev.enable or true;
+  mkcertCfg = dev.mkcert or { };
+  mkcertDefaultEnable = mkcertCfg.enable or false;
+  firefoxEnterpriseRoots = mkcertCfg.firefoxEnterpriseRoots or true;
   userOverrides = settings.userSettings or { };
   allUsers = builtins.attrNames userOverrides;
+  mkcertUsers = lib.filter (
+    name:
+    let
+      userMkcert = ((((userOverrides.${name} or { }).dev or { }).mkcert or { }));
+    in
+    userMkcert.enable or mkcertDefaultEnable
+  ) allUsers;
+  mkcertEnabled = mkcertUsers != [ ];
   dockerCfg = dev.docker or { };
   dockerDataRoot = dockerCfg.dataRoot or null;
   systemMounts = (settings.storage or { }).systemMounts or [ ];
@@ -213,7 +224,21 @@ in
     services.gnome.gnome-keyring.enable =
       keyringEnable || (sshEnabled && sshAgentEnable && sshAgentProvider == "gnome-keyring");
 
+    programs.firefox.policies = lib.mkIf (mkcertEnabled && firefoxEnterpriseRoots) {
+      Certificates = {
+        ImportEnterpriseRoots = true;
+      };
+    };
+
     assertions = [
+      {
+        assertion = builtins.isBool mkcertDefaultEnable;
+        message = "settings.dev.mkcert.enable must be a boolean";
+      }
+      {
+        assertion = builtins.isBool firefoxEnterpriseRoots;
+        message = "settings.dev.mkcert.firefoxEnterpriseRoots must be a boolean";
+      }
       {
         assertion = codex.validProvider;
         message = codex.providerMessage;
