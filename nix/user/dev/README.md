@@ -14,6 +14,10 @@ Managed by global `settings.dev.*` defaults plus per-user `settings.userSettings
 Notable controls:
 - `settings.userSettings.<name>.dev.docker.enable`: opt the user into Docker access (`docker` group and shared daemon)
 - `settings.userSettings.<name>.dev.ai.enable`: opt the user into AI CLI tooling
+- `settings.userSettings.<name>.dev.mkcert.enable`: install `mkcert`, `nssTools`, and the repo-managed mkcert bootstrap for that user
+- `settings.dev.mkcert.autoInstall = true`: run `mkcert -install` automatically in the user session so the local development CA is trusted without a manual bootstrap step
+- `settings.dev.mkcert.caroot`: relative path below the home directory where the mkcert CA root/key pair is stored
+- `settings.dev.mkcert.trustStores`: pass `TRUST_STORES` to mkcert (supported values: `system`, `nss`, `java`)
 - `settings.userSettings.<name>.dev.git.*`: per-user git identity and per-host git identity overrides
 - `settings.userSettings.<name>.dev.git.hostProfiles.<name>.*`: per-host `userName`/`userEmail` overrides for git includes
 - `settings.userSettings.<name>.secrets.gpgKeys.<name>`: SOPS-backed GPG private key material that is imported automatically into `~/.gnupg` during Home Manager activation
@@ -38,6 +42,7 @@ Notable controls:
 - `settings.dev.virtualisation.vagrant = true`: install the `vagrant` CLI in the dev tool bundle
 - `settings.dev.virtualisation.vagrantLibvirt = true`: use the repo-packaged `vagrant` variant with declarative `vagrant-libvirt` system plugin wiring
 - `settings.dev.virtualisation.qemu = true`: install the `qemu` CLI in the dev tool bundle
+- `mkcert-bootstrap`: explicit helper to (re)install the mkcert local CA into the configured trust stores
 - `pyuse 3.12`: switch the global Python version through `mise`
 - `pylocal 3.12`: pin a project-local Python version through `mise`
 - `claude`: shell alias for `claude-code`
@@ -45,6 +50,7 @@ Notable controls:
 - Managed GPG keys are imported only when the encrypted source changes, so rebuilds stay quiet while key rotations still deploy automatically
 - Managed GPG passphrases use `gpg-preset-passphrase`, refresh all keygrips through a user systemd timer, and keep signing non-interactive while leaving the encrypted source in SOPS
 - The automatic loader waits for the `gcr` SSH socket and retries `ssh-add`, so key loading is resilient to slower desktop startup ordering
+- The mkcert user service exports a stable `CAROOT` in the home directory and re-runs `mkcert -install` on graphical session startup so Chromium-family browsers and the shared NSS DB trust the generated root CA
 - `settings.dev.ai.installScope`: install shared AI CLIs as `system` packages or per-user via Home Manager
 - `settings.dev.ai.codex.mcp.nixos`: install `mcp-nixos` and register it in `~/.codex/config.toml` as the `nixos` MCP server
 - `settings.dev.ai.codex.mcp.github`: install `github-mcp-server` and register it in `~/.codex/config.toml` as the `github` MCP server
