@@ -11,8 +11,11 @@ Notable controls:
 - `settings.dev.ai.caveman`: installs the shared `caveman` Agent Skill into the user skill directories used by Codex, Kilo Code, Claude Code, and compatible Agent Skills consumers
 
 Also manages:
+- `settings.dev.mkcert.*`: shared mkcert defaults, browser trust behavior, and the default trust-store targets for local development certificates
+- `settings.userSettings.<name>.dev.mkcert.enable`: opt the user into the mkcert CLI bundle and automatic local CA installation
 - SSH agent provider selection (`settings.userSettings.<name>.dev.ssh.agent.provider`)
 - OpenSSH agent startup (`provider = "openssh"`)
 - GNOME keyring service (`settings.userSettings.<name>.dev.ssh.keyring.enable` or `provider = "gnome-keyring"`)
 - Nix dynamic loader compatibility (`settings.dev.nixLd.enable`)
 - Dev virtualisation defaults (`settings.dev.virtualisation.*`) which can install `vagrant`/`qemu` in user dev bundles, optionally wire `vagrant-libvirt`, and enable the shared libvirt/QEMU host stack when requested
+- `programs.firefox.policies.Certificates.ImportEnterpriseRoots = true` when mkcert is enabled for at least one user and `settings.dev.mkcert.firefoxEnterpriseRoots = true`
