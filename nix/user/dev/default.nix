@@ -8,6 +8,16 @@
 let
   dev = settings.dev or { };
   enabled = dev.enable or true;
+  mkcertCfg = dev.mkcert or { };
+  mkcertEnabled = mkcertCfg.enable or false;
+  mkcertAutoInstall = mkcertCfg.autoInstall or true;
+  mkcertCaroot = mkcertCfg.caroot or ".local/share/mkcert";
+  mkcertTrustStores = mkcertCfg.trustStores or [
+    "system"
+    "nss"
+  ];
+  mkcertTrustedStoresArg = lib.concatStringsSep "," mkcertTrustStores;
+  mkcertCarootPath = "${config.home.homeDirectory}/${mkcertCaroot}";
   gitCfg = dev.git or { };
   gitEnabled = gitCfg.enable or true;
   gpgCfg = dev.gpg or { };
@@ -335,6 +345,13 @@ let
     fi
     exec ${pkgs.mise}/bin/mise use "python@$1"
   '';
+  mkcertSetupScript = pkgs.writeShellScriptBin "mkcert-bootstrap" ''
+    set -eu
+    export CAROOT=${lib.escapeShellArg mkcertCarootPath}
+    export TRUST_STORES=${lib.escapeShellArg mkcertTrustedStoresArg}
+    mkdir -p "$CAROOT"
+    exec ${pkgs.mkcert}/bin/mkcert -install
+  '';
 in
 {
   imports = [
@@ -373,6 +390,10 @@ in
       // lib.optionalAttrs sshEnabled {
         SSH_ASKPASS = guiSshAskpass;
         SUDO_ASKPASS = guiSshAskpass;
+      }
+      // lib.optionalAttrs mkcertEnabled {
+        CAROOT = mkcertCarootPath;
+        TRUST_STORES = mkcertTrustedStoresArg;
       }
       // (lib.optionalAttrs pythonVersionManagerEnabled {
         MISE_USE_TOML = "1";
@@ -442,6 +463,11 @@ in
         cargo
         rustc
       ])
+      ++ lib.optionals mkcertEnabled [
+        pkgs.mkcert
+        pkgs.nssTools
+        mkcertSetupScript
+      ]
       ++ lib.optionals pythonVersionManagerEnabled [
         pkgs.mise
         pythonUseScript
@@ -487,7 +513,44 @@ in
           };
         };
 
+    systemd.user.services.mkcert-install =
+      lib.mkIf (mkcertEnabled && mkcertAutoInstall)
+        {
+          Unit = {
+            Description = "Install the mkcert local development CA into trusted stores";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            Type = "oneshot";
+            Environment = [
+              "CAROOT=${mkcertCarootPath}"
+              "TRUST_STORES=${mkcertTrustedStoresArg}"
+            ];
+            ExecStart = "${lib.getExe mkcertSetupScript}";
+          };
+          Install = {
+            WantedBy = [ "graphical-session.target" ];
+          };
+        };
+
     assertions = [
+      {
+        assertion = builtins.isBool mkcertEnabled;
+        message = "settings.userSettings.<name>.dev.mkcert.enable must be a boolean";
+      }
+      {
+        assertion = builtins.isBool mkcertAutoInstall;
+        message = "settings.dev.mkcert.autoInstall must be a boolean";
+      }
+      {
+        assertion = builtins.isString mkcertCaroot && mkcertCaroot != "";
+        message = "settings.dev.mkcert.caroot must be a non-empty relative path";
+      }
+      {
+        assertion = builtins.all (store: builtins.elem store [ "system" "nss" "java" ]) mkcertTrustStores;
+        message = "settings.dev.mkcert.trustStores must only contain: system, nss, java";
+      }
       {
         assertion = (sshKeysWithPassphrases == { }) || sshAgentProvider == "gnome-keyring";
         message = "settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey requires settings.userSettings.<name>.dev.ssh.agent.provider = gnome-keyring for automatic keyring loading.";
