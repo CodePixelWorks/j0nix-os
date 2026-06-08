@@ -53,6 +53,7 @@ let
   };
 
   hasNautilus = builtins.elem "nautilus" configuredFileManagers;
+  hasDolphin = builtins.elem "dolphin" configuredFileManagers;
 
   preferredTerminalRaw = settings.preferredTerminal or null;
   terminalPackage =
@@ -147,7 +148,8 @@ in
     ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) (
       [ iconThemePackage ] ++ iconThemeFallbackPackages
     )
-    ++ lib.optionals hasNautilus [ nautilusAdminPackage ];
+    ++ lib.optionals hasNautilus [ nautilusAdminPackage ]
+    ++ lib.optionals hasDolphin [ pkgs.kdePackages.kio-admin ];
 
   home.file = lib.mkIf hasNautilus {
     ".local/share/nautilus-python/extensions/nautilus-admin.py".source = "${nautilusAdminPackage}/share/nautilus-python/extensions/nautilus-admin.py";
