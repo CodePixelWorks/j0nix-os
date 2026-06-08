@@ -58,7 +58,7 @@ in
 {
   coreBinds = [
     "$mainMod, q, killactive,"
-    "$mainMod, t, togglefloating,"
+    "$mainMod, t, exec, ${homeBinDir}/wm-toggle-float-resize"
     "$mainMod SHIFT, t, exec, ${homeBinDir}/wm-windowed-mode"
     "$mainMod, apostrophe, exec, ${keybindHelpCommand}"
     "$mainMod CTRL, k, exec, wm-screen-keyboard-toggle"
