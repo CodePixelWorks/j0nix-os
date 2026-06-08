@@ -289,7 +289,7 @@ let
     fi
 
     # Use a comfortable centered window size for a manual "windowed mode".
-    "$hyprctl_bin" dispatch resizeactive exact 1400 920 >/dev/null 2>&1 || true
+    "$hyprctl_bin" dispatch resizewindowpixel exact 1400 920 >/dev/null 2>&1 || true
     "$hyprctl_bin" dispatch centerwindow 1 >/dev/null 2>&1 || true
   '';
   hyprlandToggleFloatResizeScript = pkgs.writeShellScriptBin "wm-toggle-float-resize" ''
@@ -307,7 +307,7 @@ let
       if [ -n "$mon_w" ] && [ -n "$mon_h" ]; then
         w=$(( mon_w / 2 ))
         h=$(( mon_h / 2 ))
-        "$hyprctl_bin" dispatch resizeactive exact "$w" "$h" >/dev/null 2>&1 || true
+        "$hyprctl_bin" dispatch resizewindowpixel exact "$w" "$h" >/dev/null 2>&1 || true
       fi
       "$hyprctl_bin" dispatch centerwindow 1 >/dev/null 2>&1 || true
     fi
