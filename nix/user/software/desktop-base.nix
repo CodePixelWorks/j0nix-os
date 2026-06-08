@@ -41,6 +41,7 @@ let
     };
     nativeBuildInputs = [ pkgs.cmake pkgs.gettext ];
     cmakeFlags = [
+      "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
       "-DNAUTILUS_PATH=${lib.getExe' pkgs.nautilus "nautilus"}"
       "-DGEDIT_PATH=${pkgs.gedit}/bin/gedit"
     ];
