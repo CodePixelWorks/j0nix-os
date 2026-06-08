@@ -292,6 +292,26 @@ let
     "$hyprctl_bin" dispatch resizeactive exact 1400 920 >/dev/null 2>&1 || true
     "$hyprctl_bin" dispatch centerwindow 1 >/dev/null 2>&1 || true
   '';
+  hyprlandToggleFloatResizeScript = pkgs.writeShellScriptBin "wm-toggle-float-resize" ''
+    hyprctl_bin="${hyprctlExec}"
+    [ -x "$hyprctl_bin" ] || exit 0
+
+    # Toggle floating state
+    "$hyprctl_bin" dispatch togglefloating >/dev/null 2>&1 || true
+
+    # If the window is now floating, resize to 50% and center it
+    floating="$("$hyprctl_bin" activewindow -j 2>/dev/null | ${pkgs.jq}/bin/jq -r '.floating // false' 2>/dev/null || echo false)"
+    if [ "$floating" = "true" ]; then
+      mon_w="$("$hyprctl_bin" monitors -j 2>/dev/null | ${pkgs.jq}/bin/jq -r '.[] | select(.focused == true) | .width' 2>/dev/null || true)"
+      mon_h="$("$hyprctl_bin" monitors -j 2>/dev/null | ${pkgs.jq}/bin/jq -r '.[] | select(.focused == true) | .height' 2>/dev/null || true)"
+      if [ -n "$mon_w" ] && [ -n "$mon_h" ]; then
+        w=$(( mon_w / 2 ))
+        h=$(( mon_h / 2 ))
+        "$hyprctl_bin" dispatch resizeactive exact "$w" "$h" >/dev/null 2>&1 || true
+      fi
+      "$hyprctl_bin" dispatch centerwindow 1 >/dev/null 2>&1 || true
+    fi
+  '';
   hyprlandKeybindDiagnosticsStartupScript = pkgs.writeShellScriptBin "wm-hypr-keybind-diagnostics-startup" ''
     ${homeBinDir}/wm-hypr-keybind-dump --phase=login-initial
     sleep ${toString keybindDiagnosticsDelaySeconds}
@@ -434,6 +454,7 @@ in
       swappy
       playerctl
       hyprlandWindowedModeScript
+      hyprlandToggleFloatResizeScript
     ]
     ++ lib.optionals keybindDiagnosticsEnable [
       keybindDiagnosticsScript
