@@ -29,6 +29,30 @@ let
       null;
   fileManagerPackages = lib.filter (pkg: pkg != null) (map fileManagerPackage configuredFileManagers);
 
+  # Nautilus-admin extension: adds "Open as Administrator" / "Edit as Administrator" context menu items.
+  nautilusAdminPackage = pkgs.stdenvNoCC.mkDerivation rec {
+    pname = "nautilus-admin";
+    version = "1.1.9";
+    src = pkgs.fetchFromGitHub {
+      owner = "brunonova";
+      repo = "nautilus-admin";
+      rev = "v${version}";
+      sha256 = "0zgjd5rczpah3j075kdv2nlmbgzmxc02ha6nnv5i7x8dzdbn7638";
+    };
+    nativeBuildInputs = [ pkgs.cmake pkgs.gettext ];
+    cmakeFlags = [
+      "-DNAUTILUS_PATH=${lib.getExe' pkgs.nautilus "nautilus"}"
+      "-DGEDIT_PATH=${pkgs.gedit}/bin/gedit"
+    ];
+    postPatch = ''
+      substituteInPlace CMakeLists.txt \
+        --replace-fail 'DESTINATION /usr/share/nautilus-python/extensions' \
+                       "DESTINATION $out/share/nautilus-python/extensions"
+    '';
+  };
+
+  hasNautilus = builtins.elem "nautilus" configuredFileManagers;
+
   preferredTerminalRaw = settings.preferredTerminal or null;
   terminalPackage =
     name:
@@ -121,5 +145,10 @@ in
     ++ lib.optionals syncthingEnabled [ pkgs.syncthing ]
     ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) (
       [ iconThemePackage ] ++ iconThemeFallbackPackages
-    );
+    )
+    ++ lib.optionals hasNautilus [ nautilusAdminPackage ];
+
+  home.file = lib.mkIf hasNautilus {
+    ".local/share/nautilus-python/extensions/nautilus-admin.py".source = "${nautilusAdminPackage}/share/nautilus-python/extensions/nautilus-admin.py";
+  };
 }
