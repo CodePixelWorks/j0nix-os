@@ -600,7 +600,7 @@ let
 
         while [ "$attempts" -lt 50 ]; do
           if "$hyprctl_bin" -j activeworkspace >/dev/null 2>&1; then
-            "$hyprctl_bin" dispatch submap global >/dev/null 2>&1 || true
+            "$hyprctl_bin" dispatch 'hl.dsp.submap("global")' >/dev/null 2>&1 || true
             return 0
           fi
           attempts=$((attempts + 1))
