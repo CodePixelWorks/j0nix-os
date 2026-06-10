@@ -191,7 +191,7 @@ let
         PATH="$profile_bin:/run/current-system/sw/bin:${pkgs.coreutils}/bin:${pkgs.procps}/bin" \
         ${pkgs.bash}/bin/bash -lc '
           if command -v hyprctl >/dev/null 2>&1; then
-            hyprctl dispatch dpms on >/dev/null 2>&1 || true
+            hyprctl dispatch 'hl.dsp.dpms({state = "on"})' >/dev/null 2>&1 || true
             hyprctl reload >/dev/null 2>&1 || true
           fi
 
