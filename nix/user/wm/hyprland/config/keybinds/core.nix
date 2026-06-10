@@ -102,12 +102,12 @@ in
     "$mainMod CTRL, G, workspace, previous_per_monitor"
     "$mainMod, left, workspace, -1"
     "$mainMod, right, workspace, +1"
-    "$mainMod ALT, left, movetoworkspace, -1"
-    "$mainMod ALT, right, movetoworkspace, +1"
+    "$mainMod ALT, left, workspace, -1"
+    "$mainMod ALT, right, workspace, +1"
     "$mainMod, mouse_down, workspace, -1"
     "$mainMod, mouse_up, workspace, +1"
-    "$mainMod ALT, mouse_down, movetoworkspace, -1"
-    "$mainMod ALT, mouse_up, movetoworkspace, +1"
+    "$mainMod ALT, mouse_down, workspace, -1"
+    "$mainMod ALT, mouse_up, workspace, +1"
     "$mainMod CTRL, Backslash, centerwindow, 1"
 
     # Arrow-key focus (parallel to h/j/k/l)
