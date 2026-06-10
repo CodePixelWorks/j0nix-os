@@ -171,8 +171,8 @@ let
             if [ "${minimizerVariant}" = "0rteip" ]; then
               ${minimizerCommand} ${minimizerOrteipAppId} >/dev/null 2>&1 || true
             else
-              ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 || true
-              ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(org\\.keepassxc\\.KeePassXC)$" >/dev/null 2>&1 || true
+              ${pkgs.hyprland}/bin/hyprctl dispatch 'hl.dsp.focus({window = "class:^(KeePassXC)$"})' >/dev/null 2>&1 || true
+              ${pkgs.hyprland}/bin/hyprctl dispatch 'hl.dsp.focus({window = "class:^(org\\.keepassxc\\.KeePassXC)$"})' >/dev/null 2>&1 || true
               ${minimizerCommand} >/dev/null 2>&1 || true
             fi
             exit 0
@@ -183,7 +183,7 @@ let
     fi
 
     if [ "${if workspaceUsesSpecial then "1" else "0"}" = "1" ] && [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-      exec ${pkgs.hyprland}/bin/hyprctl dispatch exec "[workspace special:${workspaceName} silent] ${lib.getExe launchScript}"
+      exec ${pkgs.hyprland}/bin/hyprctl dispatch 'hl.dsp.exec_cmd("[workspace special:${workspaceName} silent] ${lib.getExe launchScript}")'
     fi
 
     exec ${lib.getExe launchScript}
@@ -234,7 +234,7 @@ let
 
     ensure_workspace_visible() {
       special_workspace_visible \
-        || "$hyprctl_bin" dispatch togglespecialworkspace ${lib.escapeShellArg workspaceName} >/dev/null 2>&1 \
+        || "$hyprctl_bin" dispatch 'hl.dsp.focus({workspace = "special:${workspaceName}"})' >/dev/null 2>&1 \
         || true
     }
 
@@ -253,8 +253,8 @@ let
     }
 
     focus_keepass() {
-      "$hyprctl_bin" dispatch focuswindow "class:^(KeePassXC)$" >/dev/null 2>&1 \
-        || "$hyprctl_bin" dispatch focuswindow "class:^(org\\.keepassxc\\.KeePassXC)$" >/dev/null 2>&1 \
+      "$hyprctl_bin" dispatch 'hl.dsp.focus({window = "class:^(KeePassXC)$"})' >/dev/null 2>&1 \
+        || "$hyprctl_bin" dispatch 'hl.dsp.focus({window = "class:^(org\\.keepassxc\\.KeePassXC)$"})' >/dev/null 2>&1 \
         || true
     }
 
@@ -301,7 +301,7 @@ let
       done
     fi
 
-    "$hyprctl_bin" dispatch togglespecialworkspace ${lib.escapeShellArg workspaceName} >/dev/null 2>&1 || true
+    "$hyprctl_bin" dispatch 'hl.dsp.focus({workspace = "special:${workspaceName}"})' >/dev/null 2>&1 || true
     focus_keepass
   '';
 
