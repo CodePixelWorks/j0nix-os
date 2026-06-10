@@ -170,7 +170,7 @@ let
         );
       in
       ''
-        exec = ${hyprctlExec} dispatch submap global
+        exec = ${hyprctlExec} dispatch 'hl.dsp.submap("global")'
         submap = global
         ${lib.concatStringsSep "\n" launcherLines}
         ${renderedLists}
