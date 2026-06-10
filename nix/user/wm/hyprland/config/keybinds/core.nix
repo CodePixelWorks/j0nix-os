@@ -77,8 +77,8 @@ in
     "CTRL ALT, Tab, changegroupactive, f"
     "CTRL SHIFT ALT, Tab, changegroupactive, b"
 
-    # Pin window (from Caelestia upstream)
-    "$mainMod SHIFT, p, pin"
+    # Pin window (from Caelestia upstream) — moved to avoid collision with keepassxc toggle
+    "$mainMod SHIFT, i, pin"
   ]
   ++ mainSplitBinds
   ++ keyboardLayoutToggleBind
