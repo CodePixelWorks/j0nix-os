@@ -7,7 +7,7 @@ let
     if useUWSM then
       "sleep 1; uwsm stop"
     else
-      "sleep 1; hyprctl dispatch exit";
+      "sleep 1; hyprctl dispatch 'hl.dsp.exit()'";
 in
 lib.mkIf enabled {
   j0nix.user.software.packages = [ pkgs.wlogout ];
