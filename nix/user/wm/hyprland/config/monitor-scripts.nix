@@ -576,7 +576,7 @@ let
       local target_monitor="$2"
       [ -n "$workspace_name" ] || return 0
       [ -n "$target_monitor" ] || return 0
-      "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name $target_monitor" >/dev/null 2>&1 || true
+      "$hyprctl_bin" dispatch 'hl.dsp.exec_cmd("hyprctl dispatch moveworkspacetomonitor '"$workspace_name"' '"$target_monitor"'")' >/dev/null 2>&1 || true
     }
 
     get_monitor_active_workspace() {
@@ -603,7 +603,7 @@ let
     focus_monitor() {
       local name="$1"
       [ -n "$name" ] || return 0
-      "$hyprctl_bin" dispatch focusmonitor "$name" >/dev/null 2>&1 || true
+      "$hyprctl_bin" dispatch 'hl.dsp.exec_cmd("hyprctl dispatch focusmonitor '"$name"'")' >/dev/null 2>&1 || true
     }
 
     activate_workspace_on_monitor() {
@@ -614,7 +614,7 @@ let
       [ -n "$workspace_name" ] || return 0
 
       focus_monitor "$monitor_name"
-      "$hyprctl_bin" dispatch workspace "$workspace_name" >/dev/null 2>&1 || true
+      "$hyprctl_bin" dispatch 'hl.dsp.focus({ workspace = "'"$workspace_name"'" })' >/dev/null 2>&1 || true
     }
 
     move_monitor_workspaces_to_target() {

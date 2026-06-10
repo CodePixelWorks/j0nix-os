@@ -495,7 +495,7 @@ let
     move_workspace_to_target() {
       local workspace_name="$1"
       [ -n "$workspace_name" ] || return 0
-      "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name $target_name" >/dev/null 2>&1 || true
+      "$hyprctl_bin" dispatch 'hl.dsp.exec_cmd("hyprctl dispatch moveworkspacetomonitor '"$workspace_name"' '"$target_name"'")' >/dev/null 2>&1 || true
     }
 
     active_workspace=""
@@ -525,7 +525,7 @@ let
       apply_monitor_disabled "$monitor_name"
     done
     apply_monitor_enabled "$target_name" "$mode" "$stream_position" "$target_scale"
-    "$hyprctl_bin" dispatch focusmonitor "$target_name" >/dev/null 2>&1 || true
+    "$hyprctl_bin" dispatch 'hl.dsp.exec_cmd("hyprctl dispatch focusmonitor '"$target_name"'")' >/dev/null 2>&1 || true
     if command -v wm-shell-restart-detached >/dev/null 2>&1; then
       wm-shell-restart-detached >/dev/null 2>&1 || true
     fi
@@ -614,7 +614,7 @@ EOF
       local monitor_name="$2"
       [ -n "$workspace_name" ] || return 0
       [ -n "$monitor_name" ] || return 0
-      "$hyprctl_bin" dispatch moveworkspacetomonitor "$workspace_name $monitor_name" >/dev/null 2>&1 || true
+      "$hyprctl_bin" dispatch 'hl.dsp.exec_cmd("hyprctl dispatch moveworkspacetomonitor '"$workspace_name"' '"$monitor_name"'")' >/dev/null 2>&1 || true
     }
 
     if [ -f "$workspace_state" ]; then
@@ -639,7 +639,7 @@ EOF
       apply_monitor_disabled "$target_name"
     fi
     if [ -n "$focused_monitor" ]; then
-      "$hyprctl_bin" dispatch focusmonitor "$focused_monitor" >/dev/null 2>&1 || true
+      "$hyprctl_bin" dispatch 'hl.dsp.exec_cmd("hyprctl dispatch focusmonitor '"$focused_monitor"'")' >/dev/null 2>&1 || true
     fi
     if command -v wm-shell-restart-detached >/dev/null 2>&1; then
       wm-shell-restart-detached >/dev/null 2>&1 || true
