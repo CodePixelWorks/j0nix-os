@@ -263,7 +263,7 @@ let
     launch_on_workspace() {
       workspace="$1"
       command="$2"
-      "$hyprctl_bin" dispatch exec "[workspace $workspace silent] $command" >/dev/null 2>&1 || true
+      "$hyprctl_bin" dispatch "hl.dsp.exec_cmd('[workspace '"$workspace"' silent] '"$command"')" >/dev/null 2>&1 || true
     }
 
     if ! ${pkgs.procps}/bin/pgrep -x firefox >/dev/null 2>&1; then

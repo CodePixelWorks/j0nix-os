@@ -97,7 +97,7 @@ in
         caelestia-shell)
           if [ -x "${hyprctlExec}" ]; then
             # Keep Caelestia keymaps alive across startup/restart paths.
-            ${hyprctlExec} dispatch submap global >/dev/null 2>&1 || true
+            ${hyprctlExec} dispatch 'hl.dsp.submap("global")' >/dev/null 2>&1 || true
           fi
           exec ${caelestiaStartCmd}
           ;;
@@ -519,9 +519,9 @@ in
       # Recover from stuck input/layer states before restarting the shell UI.
       if [ -x "${hyprctlExec}" ]; then
         if [ "${selectedShell}" = "caelestia-shell" ]; then
-          ${hyprctlExec} dispatch submap global >/dev/null 2>&1 || true
+          ${hyprctlExec} dispatch 'hl.dsp.submap("global")' >/dev/null 2>&1 || true
         else
-          ${hyprctlExec} dispatch submap reset >/dev/null 2>&1 || true
+          ${hyprctlExec} dispatch 'hl.dsp.submap("reset")' >/dev/null 2>&1 || true
         fi
       fi
       pkill fuzzel >/dev/null 2>&1 || true
