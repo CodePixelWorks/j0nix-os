@@ -276,40 +276,60 @@ let
   '';
   hyprlandWindowedModeScript = pkgs.writeShellScriptBin "wm-windowed-mode" ''
     hyprctl_bin="${hyprctlExec}"
+    jq_bin="${pkgs.jq}/bin/jq"
     [ -x "$hyprctl_bin" ] || exit 0
 
     # Leave fullscreen/maximized modes first so the next steps apply cleanly.
-    "$hyprctl_bin" dispatch fullscreen 0 >/dev/null 2>&1 || true
-    "$hyprctl_bin" dispatch fullscreen 1 >/dev/null 2>&1 || true
+    "$hyprctl_bin" dispatch 'hl.dsp.window.fullscreen({mode = "fullscreen", action = "toggle"})' >/dev/null 2>&1 || true
+    "$hyprctl_bin" dispatch 'hl.dsp.window.fullscreen({mode = "maximized", action = "toggle"})' >/dev/null 2>&1 || true
 
     # Enter floating mode if the active window is still tiled.
-    floating="$("$hyprctl_bin" activewindow -j 2>/dev/null | ${pkgs.jq}/bin/jq -r '.floating // false' 2>/dev/null || echo false)"
+    floating="$("$hyprctl_bin" activewindow -j 2>/dev/null | "$jq_bin" -r '.floating // false' 2>/dev/null || echo false)"
     if [ "$floating" != "true" ]; then
-      "$hyprctl_bin" dispatch togglefloating >/dev/null 2>&1 || true
+      "$hyprctl_bin" dispatch 'hl.dsp.window.float({action = "toggle"})' >/dev/null 2>&1 || true
+      sleep 0.1
     fi
 
     # Use a comfortable centered window size for a manual "windowed mode".
-    "$hyprctl_bin" dispatch resizewindowpixel exact 1400 920 >/dev/null 2>&1 || true
-    "$hyprctl_bin" dispatch centerwindow 1 >/dev/null 2>&1 || true
+    mon_w="$("$hyprctl_bin" monitors -j 2>/dev/null | "$jq_bin" -r '.[] | select(.focused == true) | .width' 2>/dev/null || true)"
+    mon_h="$("$hyprctl_bin" monitors -j 2>/dev/null | "$jq_bin" -r '.[] | select(.focused == true) | .height' 2>/dev/null || true)"
+    "$hyprctl_bin" dispatch 'hl.dsp.window.resize({x = 1400, y = 920})' >/dev/null 2>&1 || true
+    if [ -n "$mon_w" ] && [ -n "$mon_h" ]; then
+      win_w="$("$hyprctl_bin" activewindow -j 2>/dev/null | "$jq_bin" -r '.size[0] // 1400' 2>/dev/null || echo 1400)"
+      win_h="$("$hyprctl_bin" activewindow -j 2>/dev/null | "$jq_bin" -r '.size[1] // 920' 2>/dev/null || echo 920)"
+      if [ "$win_w" -gt 0 ] && [ "$win_h" -gt 0 ]; then
+        cx=$(( (mon_w - win_w) / 2 ))
+        cy=$(( (mon_h - win_h) / 2 ))
+        "$hyprctl_bin" dispatch 'hl.dsp.window.move({x = '"$cx"', y = '"$cy"'})' >/dev/null 2>&1 || true
+      fi
+    fi
   '';
   hyprlandToggleFloatResizeScript = pkgs.writeShellScriptBin "wm-toggle-float-resize" ''
     hyprctl_bin="${hyprctlExec}"
+    jq_bin="${pkgs.jq}/bin/jq"
     [ -x "$hyprctl_bin" ] || exit 0
 
-    # Toggle floating state
-    "$hyprctl_bin" dispatch togglefloating >/dev/null 2>&1 || true
+    # Toggle floating state (Hyprland 0.55+ Lua dispatch syntax)
+    "$hyprctl_bin" dispatch 'hl.dsp.window.float({action = "toggle"})' >/dev/null 2>&1 || true
 
     # If the window is now floating, resize to 50% and center it
-    floating="$("$hyprctl_bin" activewindow -j 2>/dev/null | ${pkgs.jq}/bin/jq -r '.floating // false' 2>/dev/null || echo false)"
+    floating="$("$hyprctl_bin" activewindow -j 2>/dev/null | "$jq_bin" -r '.floating // false' 2>/dev/null || echo false)"
     if [ "$floating" = "true" ]; then
-      mon_w="$("$hyprctl_bin" monitors -j 2>/dev/null | ${pkgs.jq}/bin/jq -r '.[] | select(.focused == true) | .width' 2>/dev/null || true)"
-      mon_h="$("$hyprctl_bin" monitors -j 2>/dev/null | ${pkgs.jq}/bin/jq -r '.[] | select(.focused == true) | .height' 2>/dev/null || true)"
+      mon_w="$("$hyprctl_bin" monitors -j 2>/dev/null | "$jq_bin" -r '.[] | select(.focused == true) | .width' 2>/dev/null || true)"
+      mon_h="$("$hyprctl_bin" monitors -j 2>/dev/null | "$jq_bin" -r '.[] | select(.focused == true) | .height' 2>/dev/null || true)"
       if [ -n "$mon_w" ] && [ -n "$mon_h" ]; then
         w=$(( mon_w / 2 ))
         h=$(( mon_h / 2 ))
-        "$hyprctl_bin" dispatch resizewindowpixel exact "$w" "$h" >/dev/null 2>&1 || true
+        "$hyprctl_bin" dispatch 'hl.dsp.window.resize({x = '"$w"', y = '"$h"'})' >/dev/null 2>&1 || true
+        # Center the window on the focused monitor
+        win_w="$("$hyprctl_bin" activewindow -j 2>/dev/null | "$jq_bin" -r '.size[0] // 0' 2>/dev/null || true)"
+        win_h="$("$hyprctl_bin" activewindow -j 2>/dev/null | "$jq_bin" -r '.size[1] // 0' 2>/dev/null || true)"
+        if [ -n "$win_w" ] && [ -n "$win_h" ] && [ "$win_w" -gt 0 ] && [ "$win_h" -gt 0 ]; then
+          cx=$(( (mon_w - win_w) / 2 ))
+          cy=$(( (mon_h - win_h) / 2 ))
+          "$hyprctl_bin" dispatch 'hl.dsp.window.move({x = '"$cx"', y = '"$cy"'})' >/dev/null 2>&1 || true
+        fi
       fi
-      "$hyprctl_bin" dispatch centerwindow 1 >/dev/null 2>&1 || true
     fi
   '';
   hyprlandKeybindDiagnosticsStartupScript = pkgs.writeShellScriptBin "wm-hypr-keybind-diagnostics-startup" ''
