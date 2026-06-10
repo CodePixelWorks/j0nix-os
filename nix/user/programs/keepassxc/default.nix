@@ -133,176 +133,110 @@ let
     exec ${keepassxcBin} "''${base_args[@]}"
   '';
 
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Startup script — launches KeePassXC on the configured workspace.
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   startupScript = pkgs.writeShellScriptBin "keepassxc-startup" ''
     set -eu
 
     export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
-    keepass_client_filter='
-      .[]
-      | select(
-          ((.class // "") | test("keepassxc"; "i"))
-          or ((.initialClass // "") | test("keepassxc"; "i"))
-        )
-    '
     lock_file="$XDG_RUNTIME_DIR/keepassxc-startup.lock"
     exec 9>"$lock_file"
     if ! ${pkgs.util-linux}/bin/flock -n 9; then
-      # Another startup/toggle path is already launching KeePassXC.
       exit 0
     fi
 
     has_client() {
       [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] \
-        && ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e "$keepass_client_filter" >/dev/null 2>&1
-    }
-
-    has_process() {
-      ${pkgs.procps}/bin/pgrep -u "$(${pkgs.coreutils}/bin/id -u)" -f '/keepassxc($| )|/.keepassxc-wrapped($| )' >/dev/null 2>&1
+        && ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e \
+          'any(.[]; (.class // "") | test("keepassxc"; "i"))' >/dev/null 2>&1
     }
 
     if has_client; then
       exit 0
     fi
 
-    if [ "${if workspaceUsesMinimizer && minimizerEnabled then "1" else "0"}" = "1" ]; then
-      (
-        for _ in $(seq 1 50); do
-          if ${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -e "$keepass_client_filter" >/dev/null 2>&1; then
-            if [ "${minimizerVariant}" = "0rteip" ]; then
-              ${minimizerCommand} ${minimizerOrteipAppId} >/dev/null 2>&1 || true
-            else
-              ${pkgs.hyprland}/bin/hyprctl dispatch 'hl.dsp.focus({window = "class:^(KeePassXC)$"})' >/dev/null 2>&1 || true
-              ${pkgs.hyprland}/bin/hyprctl dispatch 'hl.dsp.focus({window = "class:^(org\\.keepassxc\\.KeePassXC)$"})' >/dev/null 2>&1 || true
-              ${minimizerCommand} >/dev/null 2>&1 || true
-            fi
-            exit 0
-          fi
-          sleep 0.2
-        done
-      ) &
+    ${lib.optionalString workspaceUsesSpecial ''
+    if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+      exec ${pkgs.hyprland}/bin/hyprctl dispatch \
+        'hl.dsp.exec_cmd("[workspace special:${workspaceName} silent] ${lib.getExe launchScript}")'
     fi
+    ''}
 
-    if [ "${if workspaceUsesSpecial then "1" else "0"}" = "1" ] && [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-      exec ${pkgs.hyprland}/bin/hyprctl dispatch 'hl.dsp.exec_cmd("[workspace special:${workspaceName} silent] ${lib.getExe launchScript}")'
-    fi
+    ${lib.optionalString (workspaceUsesMinimizer && minimizerEnabled && minimizerVariant == "0rteip") ''
+    (
+      for _ in $(seq 1 50); do
+        if has_client; then
+          ${minimizerCommand} ${minimizerOrteipAppId} >/dev/null 2>&1 || true
+          exit 0
+        fi
+        sleep 0.2
+      done
+    ) &
+    ''}
 
     exec ${lib.getExe launchScript}
   '';
 
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Toggle script — show/hide or launch KeePassXC.
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   toggleScript = pkgs.writeShellScriptBin "keepassxc-toggle" ''
     set -eu
 
     hyprctl_bin="${pkgs.hyprland}/bin/hyprctl"
     jq_bin="${pkgs.jq}/bin/jq"
     startup_bin="${config.home.profileDirectory}/bin/keepassxc-startup"
-    pgrep_bin="${pkgs.procps}/bin/pgrep"
-    id_bin="${pkgs.coreutils}/bin/id"
-    keepass_client_filter='
-      .[]
-      | select(
-          ((.class // "") | test("keepassxc"; "i"))
-          or ((.initialClass // "") | test("keepassxc"; "i"))
-        )
-    '
-    locked_title_regex='^(KeePassXC|Unlock Database.*|Quick Unlock.*|Database Locked.*|Datenbank entsperren.*|Schnellentsperrung.*|Datenbank gesperrt.*)$'
-    database_title_regex='${lib.concatStringsSep "|" (lib.filter (value: value != "") [
-      (lib.escapeRegex databaseBasename)
-      (lib.escapeRegex databaseTitleHint)
-    ])}'
 
-    if [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    has_client() {
+      [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] \
+        && "$hyprctl_bin" clients -j | "$jq_bin" -e \
+          'any(.[]; (.class // "") | test("keepassxc"; "i"))' >/dev/null 2>&1
+    }
+
+    ${lib.optionalString workspaceUsesSpecial ''
+    special_visible() {
+      "$hyprctl_bin" monitors -j | "$jq_bin" -e \
+        'any(.[]; (.specialWorkspace.name // "") == "special:${workspaceName}")' >/dev/null 2>&1
+    }
+    ''}
+
+    # ── Minimizer mode — delegate entirely to the minimizer ──
+    ${lib.optionalString (workspaceEnable && workspaceMode == "minimizer" && minimizerEnabled) ''
+    if has_client; then
+      ${lib.optionalString (minimizerVariant == "0rteip") ''
+      exec ${minimizerCommand} ${minimizerOrteipAppId}
+      ''}
+      ${lib.optionalString (minimizerVariant != "0rteip") ''
+      exec ${minimizerCommand}
+      ''}
+    fi
+    exec "$startup_bin"
+    ''}
+
+    # ── Special-workspace or plain mode ──
+    if ! has_client; then
       exec "$startup_bin"
     fi
 
-    has_client() {
-      "$hyprctl_bin" clients -j | "$jq_bin" -e "$keepass_client_filter" >/dev/null 2>&1
-    }
+    ${lib.optionalString workspaceUsesSpecial ''
+    # Toggle special workspace visibility.
+    # Under Hyprland 0.55 togglespecialworkspace only works through exec_cmd.
+    "$hyprctl_bin" dispatch \
+      'hl.dsp.exec_cmd("hyprctl dispatch togglespecialworkspace ${workspaceName}")' >/dev/null 2>&1 || true
 
-    has_process() {
-      "$pgrep_bin" -u "$("$id_bin" -u)" -f '/keepassxc($| )|/.keepassxc-wrapped($| )' >/dev/null 2>&1
-    }
-
-    special_workspace_visible() {
-      "$hyprctl_bin" monitors -j | "$jq_bin" -e '
-        any(
-          .[];
-          ((.specialWorkspace.name // "") == "special:${workspaceName}")
-          or ((.specialWorkspace.name // "") == "${workspaceName}")
-        )
-      ' >/dev/null 2>&1
-    }
-
-    ensure_workspace_visible() {
-      special_workspace_visible \
-        || "$hyprctl_bin" dispatch 'hl.dsp.focus({workspace = "special:${workspaceName}"})' >/dev/null 2>&1 \
-        || true
-    }
-
-    client_title() {
-      "$hyprctl_bin" clients -j | "$jq_bin" -r "[ $keepass_client_filter ][0].title // \"\""
-    }
-
-    client_looks_locked() {
-      title="$(client_title)"
-      [ -n "$title" ] || return 1
-      printf '%s\n' "$title" | ${pkgs.gnugrep}/bin/grep -Eiq "$locked_title_regex" && return 0
-      if [ -n "$database_title_regex" ]; then
-        printf '%s\n' "$title" | ${pkgs.gnugrep}/bin/grep -Eiq "$database_title_regex" || return 0
-      fi
-      return 1
-    }
-
-    focus_keepass() {
-      "$hyprctl_bin" dispatch 'hl.dsp.focus({window = "class:^(KeePassXC)$"})' >/dev/null 2>&1 \
-        || "$hyprctl_bin" dispatch 'hl.dsp.focus({window = "class:^(org\\.keepassxc\\.KeePassXC)$"})' >/dev/null 2>&1 \
-        || true
-    }
-
-    restart_keepass() {
-      ${pkgs.procps}/bin/pkill -u "$("$id_bin" -u)" -f '/keepassxc($| )|/.keepassxc-wrapped($| )' >/dev/null 2>&1 || true
-      for _ in $(seq 1 50); do
-        has_process || break
-        sleep 0.1
-      done
-      "$startup_bin" >/dev/null 2>&1 &
-      for _ in $(seq 1 80); do
-        has_client && break
-        sleep 0.1
-      done
-    }
-
-    if [ "${if workspaceEnable && workspaceMode == "minimizer" then "1" else "0"}" = "1" ] && [ "${if minimizerEnabled then "1" else "0"}" = "1" ]; then
-      if [ "${minimizerVariant}" = "0rteip" ]; then
-        exec ${minimizerCommand} ${minimizerOrteipAppId}
-      else
-        exec ${minimizerCommand}
-      fi
+    if special_visible; then
+      # Focus the KeePassXC window now that the special workspace is visible
+      "$hyprctl_bin" dispatch \
+        'hl.dsp.exec_cmd("hyprctl dispatch focuswindow class:^org\.keepassxc\.KeePassXC$")' >/dev/null 2>&1 || true
     fi
+    ''}
 
-    if has_client && client_looks_locked; then
-      ensure_workspace_visible
-      restart_keepass
-      focus_keepass
-      exit 0
-    fi
-
-    if ! has_client && has_process; then
-      ensure_workspace_visible
-      restart_keepass
-      focus_keepass
-      exit 0
-    fi
-
-    if ! has_client; then
-      "$startup_bin" >/dev/null 2>&1 &
-      for _ in $(seq 1 80); do
-        has_client && break
-        sleep 0.1
-      done
-    fi
-
-    "$hyprctl_bin" dispatch 'hl.dsp.focus({workspace = "special:${workspaceName}"})' >/dev/null 2>&1 || true
-    focus_keepass
+    ${lib.optionalString (!workspaceUsesSpecial && !workspaceUsesMinimizer) ''
+    # No workspace management configured — just focus
+    "$hyprctl_bin" dispatch \
+      'hl.dsp.exec_cmd("hyprctl dispatch focuswindow class:^org\.keepassxc\.KeePassXC$")' >/dev/null 2>&1 || true
+    ''}
   '';
 
   doctorScript = pkgs.writeShellScriptBin "keepassxc-doctor" ''
