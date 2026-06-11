@@ -26,6 +26,7 @@
     usbutils
     ntfs3g
     xfsprogs
+    exfatprogs
     inetutils
     lsof
     lm_sensors
