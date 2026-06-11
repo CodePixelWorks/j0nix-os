@@ -39,16 +39,16 @@ let
   mkMainBind = modifiers: key: dispatcher: argument:
     "$mainMod${lib.optionalString (modifiers != "") " ${modifiers}"}, ${key}, ${dispatcher}, ${argument}";
 
-  # Focus binds: $mainMod + h/j/k/l → movefocus
+  # Focus binds: $mainMod + h/j/k/l -> movefocus
   mainFocusBinds = map (entry: mkMainBind "" entry.key "movefocus" entry.direction) directionalKeys;
 
-  # Move binds: $mainMod + ALT + h/j/k/l → movetoworkspace (directional)
-  mainMoveBinds = map (entry: mkMainBind "ALT" entry.key "movetoworkspace" entry.direction) directionalKeys;
+  # Move binds: $mainMod + SHIFT + h/j/k/l -> movewindow (directional)
+  mainMoveBinds = map (entry: mkMainBind "SHIFT" entry.key "movewindow" entry.direction) directionalKeys;
 
-  # Resize binds: $mainMod + ALT + h/j/k/l → resizeactive
+  # Resize binds: $mainMod + ALT + h/j/k/l -> resizeactive
   mainResizeBinds = map (entry: mkMainBind "ALT" entry.key "resizeactive" entry.resizeDelta) directionalKeys;
 
-  # Split binds: $mainMod + CTRL + h/j/k/l → preselect direction
+  # Split binds: $mainMod + CTRL + h/j/k/l -> preselect direction
   mainSplitBinds = map (entry: mkMainBind "CTRL" entry.key "layoutmsg" "preselect ${entry.direction}") directionalKeys;
 
   # Toggle binds (conditional)
@@ -100,14 +100,10 @@ in
   baseBind = [
     "$mainMod CTRL, Tab, workspace, previous_per_monitor"
     "$mainMod CTRL, G, workspace, previous_per_monitor"
-    "$mainMod, left, workspace, -1"
-    "$mainMod, right, workspace, +1"
     "$mainMod ALT, left, workspace, -1"
     "$mainMod ALT, right, workspace, +1"
     "$mainMod, mouse_down, workspace, -1"
     "$mainMod, mouse_up, workspace, +1"
-    "$mainMod ALT, mouse_down, workspace, -1"
-    "$mainMod ALT, mouse_up, workspace, +1"
     "$mainMod CTRL, Backslash, centerwindow, 1"
 
     # Arrow-key focus (parallel to h/j/k/l)
