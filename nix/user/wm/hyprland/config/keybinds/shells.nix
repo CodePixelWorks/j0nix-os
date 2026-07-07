@@ -1,6 +1,23 @@
 { launcherAppExec, settings, preferredFileManager }:
 {
   caelestia = {
+    # Core bind entries this shell claims ownership of.
+    # keybinds.nix filters these from the Core lists before merging,
+    # preventing duplicate/colliding entries (Hyprland last-wins).
+    overrides = [
+      { type = "bindl"; mods = ""; key = "XF86AudioPlay"; }
+      { type = "bindl"; mods = ""; key = "XF86AudioPause"; }
+      { type = "bindl"; mods = ""; key = "XF86AudioNext"; }
+      { type = "bindl"; mods = ""; key = "XF86AudioPrev"; }
+      { type = "bindl"; mods = ""; key = "XF86AudioStop"; }
+      { type = "bindl"; mods = ""; key = "XF86MonBrightnessUp"; }
+      { type = "bindl"; mods = ""; key = "XF86MonBrightnessDown"; }
+      { type = "bindl"; mods = ""; key = "Print"; }
+      { type = "bindl"; mods = ""; key = "XF86AudioMicMute"; }
+      { type = "bindl"; mods = ""; key = "XF86AudioMute"; }
+      { type = "bindle"; mods = ""; key = "XF86AudioRaiseVolume"; }
+      { type = "bindle"; mods = ""; key = "XF86AudioLowerVolume"; }
+    ];
     extraConfig = "";
     bindi = [ ];
     bind = [
