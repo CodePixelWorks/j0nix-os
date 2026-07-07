@@ -67,9 +67,34 @@ let
       };
 
   # ---------------------------------------------------------------------------
-  # Merge base + shell binds per type
+  # Shell overrides: entries the shell claims ownership of.
+  # Core binds matching (type, mods, key) are filtered before merge to
+  # prevent duplicate/colliding entries that rely on Hyprland last-wins.
   # ---------------------------------------------------------------------------
-  mergedBindList = key: (baseHyprKeybinds.${key} or [ ]) ++ (shellHyprKeybinds.${key} or [ ]);
+  shellOverrides = shellHyprKeybinds.overrides or [ ];
+
+  bindIdentity = entry:
+    let
+      parts = map trim (lib.splitString "," entry);
+    in
+    {
+      mods = if builtins.length parts > 0 then builtins.elemAt parts 0 else "";
+      key = if builtins.length parts > 1 then builtins.elemAt parts 1 else "";
+    };
+
+  isOverridden = type: entry:
+    let
+      id = bindIdentity entry;
+    in
+    lib.any (o: o.type == type && o.mods == id.mods && o.key == id.key) shellOverrides;
+
+  # ---------------------------------------------------------------------------
+  # Merge base + shell binds per type (Core entries overridden by shell
+  # are filtered out before appending shell entries).
+  # ---------------------------------------------------------------------------
+  mergedBindList = key:
+    (lib.filter (entry: !(isOverridden key entry)) (baseHyprKeybinds.${key} or [ ]))
+    ++ (shellHyprKeybinds.${key} or [ ]);
 
   renderBindLines =
     key: entries: lib.concatStringsSep "\n" (map (entry: "${key} = ${entry}") entries);
