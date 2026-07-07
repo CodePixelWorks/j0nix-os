@@ -117,6 +117,10 @@ in
     "$mainMod SHIFT, down, movewindow, d"
     "$mainMod SHIFT, left, movewindow, l"
     "$mainMod SHIFT, right, movewindow, r"
+
+    # Move window to adjacent workspace (left/right)
+    "$mainMod CTRL, left, movetoworkspace, -1"
+    "$mainMod CTRL, right, movetoworkspace, +1"
   ]
   ++ mainFocusBinds
   ++ mainMoveBinds
