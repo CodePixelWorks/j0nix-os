@@ -1,26 +1,14 @@
 {
+  buildNpmPackage,
   fetchFromGitHub,
-  importNpmLock,
-  runCommand,
   stdenv,
-  nodejs,
-  jq,
   electron,
   makeDesktopItem,
   copyDesktopItems,
   makeWrapper,
   lib,
 }:
-
-let
-  electronStub = runCommand "bettersoundcloud-electron-stub" { } ''
-    mkdir -p $out
-    cat > $out/package.json <<'EOF'
-    {"name":"electron","version":"41.1.1"}
-    EOF
-  '';
-in
-stdenv.mkDerivation rec {
+buildNpmPackage rec {
   pname = "bettersoundcloud";
   version = "0.7.1";
 
@@ -31,34 +19,16 @@ stdenv.mkDerivation rec {
     hash = "sha256-DF3DFbVR5osAAczCd46EDvZspmJGWs3cc37bPymYQwQ=";
   };
 
-  npmDeps = importNpmLock {
-    npmRoot = src;
-    packageSourceOverrides = {
-      "node_modules/electron" = fetchFromGitHub {
-        owner = "castlabs";
-        repo = "electron-releases";
-        rev = "f785b9dc477b1227e473c79a1c12fb9701c6eb1b";
-        hash = "sha256-sovL0uKQWX0Bh44CVnOOcZuQNcnHU3JmwKRmZUon6fA=";
-      };
-      "node_modules/@electron/node-gyp" = fetchFromGitHub {
-        owner = "electron";
-        repo = "node-gyp";
-        rev = "06b29aafb7708acef8b3669835c8a7857ebc92d2";
-        hash = "sha256-AzsnndqdhXYXRDj6+4BPKycXNDOl/gNZIyMw/+WjsVU=";
-      };
-    };
-  };
+  npmDepsHash = "sha256-oR2bMtRZ2qP63ElT/xcUvAln1GR7RK4IIRKKh+RIJj0=";
+  dontNpmBuild = true;
 
   # electron-forge tries to download electron binary during build; we provide it.
-  env.ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
-  env.npm_config_nodedir = "${nodejs}";
+  ELECTRON_SKIP_BINARY_DOWNLOAD = 1;
 
   nativeBuildInputs = [
-    nodejs
-    jq
-    copyDesktopItems
+    electron
     makeWrapper
-  ];
+  ] ++ lib.optionals stdenv.hostPlatform.isLinux [ copyDesktopItems ];
 
   desktopItems = [
     (makeDesktopItem {
@@ -76,103 +46,14 @@ stdenv.mkDerivation rec {
     })
   ];
 
-  configurePhase = ''
-    runHook preConfigure
-
-    export HOME="$TMPDIR"
-    npm config set offline true
-    npm config set progress false
-    npm config set fund false
-
-    cp --no-preserve=mode ${npmDeps}/package.json package.json
-    cp --no-preserve=mode ${npmDeps}/package-lock.json package-lock.json
-
-    tmp_package_json="$TMPDIR/package.json"
-    jq '
-      del(.devDependencies)
-      | .dependencies.electron = $electronStub
-    ' --arg electronStub "file:${electronStub}" package.json > "$tmp_package_json"
-    mv "$tmp_package_json" package.json
-
-    tmp_lockfile="$TMPDIR/package-lock.json"
-    jq '
-      del(.packages[""].devDependencies)
-      | del(.dependencies["@electron-forge/cli"])
-      | del(.dependencies["@electron-forge/maker-deb"])
-      | del(.dependencies["@electron-forge/maker-rpm"])
-      | del(.dependencies["@electron-forge/maker-squirrel"])
-      | del(.dependencies["@electron-forge/maker-wix"])
-      | del(.dependencies["@electron-forge/maker-zip"])
-      | del(.dependencies["@electron-forge/plugin-auto-unpack-natives"])
-      | del(.dependencies["@electron-forge/plugin-fuses"])
-      | del(.dependencies["@electron/fuses"])
-      | del(.dependencies.electron)
-      | del(.dependencies["electron-wix-msi"])
-      | del(.packages["node_modules/@electron-forge/cli"])
-      | del(.packages["node_modules/@electron-forge/maker-deb"])
-      | del(.packages["node_modules/@electron-forge/maker-rpm"])
-      | del(.packages["node_modules/@electron-forge/maker-squirrel"])
-      | del(.packages["node_modules/@electron-forge/maker-wix"])
-      | del(.packages["node_modules/@electron-forge/maker-zip"])
-      | del(.packages["node_modules/@electron-forge/plugin-auto-unpack-natives"])
-      | del(.packages["node_modules/@electron-forge/plugin-fuses"])
-      | del(.packages["node_modules/@electron/fuses"])
-      | del(.packages["node_modules/electron"])
-      | del(.packages["node_modules/electron-wix-msi"])
-      | .dependencies.electron = {
-          version: $electronStub,
-          resolved: $electronStub
-        }
-      | .packages["node_modules/electron"] = {
-          name: "electron",
-          version: "41.1.1",
-          resolved: $electronStub
-        }
-      | if .dependencies["@electron/node-gyp"] then
-          .dependencies["@electron/node-gyp"] |= (
-            .resolved = $nodeGypResolved
-            | .version = $nodeGypResolved
-            | del(.from)
-          )
-        else
-          .
-        end
-      | if .dependencies["@electron/node-gyp"] then
-          .dependencies["@electron/node-gyp"].resolved = $nodeGypResolved
-        else
-          .
-        end
-    ' --arg electronStub "file:${electronStub}" \
-      --arg nodeGypResolved "$(jq -r '.packages["node_modules/@electron/node-gyp"].resolved' package-lock.json)" \
-      package-lock.json > "$tmp_lockfile"
-    mv "$tmp_lockfile" package-lock.json
-
-    npm install --ignore-scripts --omit=dev
-    patchShebangs node_modules
-
-    runHook postConfigure
-  '';
-
-  dontBuild = true;
-
-  installPhase = ''
-    runHook preInstall
-
-    rm -f node_modules/electron
-    mkdir -p $out/share/bettersoundcloud
-    cp -r . $out/share/bettersoundcloud
-
+  postInstall = ''
     # Install icon
     install -Dm644 app/lib/assets/icon.png $out/share/icons/hicolor/256x256/apps/bettersoundcloud.png 2>/dev/null || \
     install -Dm644 app/lib/assets/icon.ico $out/share/icons/hicolor/256x256/apps/bettersoundcloud.png 2>/dev/null || true
 
-    # Create wrapper
-    mkdir -p $out/bin
-    makeWrapper ${electron}/bin/electron $out/bin/bettersoundcloud \
-      --add-flags $out/share/bettersoundcloud \
+    makeWrapper ${lib.getExe electron} $out/bin/${pname} \
+      --add-flags $out/lib/node_modules/${pname}/main.js \
       --set ELECTRON_FORCE_WINDOW_MENU_BAR 0
-
-    runHook postInstall
   '';
 
   meta = with lib; {
@@ -180,5 +61,6 @@ stdenv.mkDerivation rec {
     homepage = "https://github.com/AlirezaKJ/BetterSoundCloud";
     license = licenses.mit;
     platforms = platforms.linux;
+    mainProgram = pname;
   };
 }
