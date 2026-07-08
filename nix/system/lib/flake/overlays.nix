@@ -39,7 +39,6 @@ let
     vagrant-with-libvirt = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/vagrant-with-libvirt.nix") {
       nixpkgsSrc = nixpkgs.outPath;
     };
-    streambert = final.callPackage (baseDir + "/nix/system/software/pkgs/streaming/streambert.nix") { };
     bambu-studio-appimage = final.callPackage (baseDir + "/nix/system/software/pkgs/printing/bambu-studio-appimage.nix") { };
     firecrawl-py = final.python312Packages.callPackage (baseDir + "/nix/pkgs/firecrawl-py") { };
     hermes-extra-python = final.callPackage (baseDir + "/nix/pkgs/hermes-extra-python") {
