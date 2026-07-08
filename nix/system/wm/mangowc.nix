@@ -19,7 +19,7 @@ let
 
   selectedGreetdGreeter = dm.resolveGreetdGreeter settings;
 
-  mangoPkg = pkgs.mangowc;
+  mangoPkg = pkgs.mango;
   mangoExe = lib.getExe mangoPkg;
   mangoStart = lib.getExe ./common/start-mangowc.nix;
 

@@ -9,5 +9,5 @@ pkgs.writeShellScriptBin "start-mangowc" ''
     systemctl --user start graphical-session.target >/dev/null 2>&1 || true
   fi
 
-  exec ${lib.getExe pkgs.mangowc}
+  exec ${lib.getExe pkgs.mango}
 ''
