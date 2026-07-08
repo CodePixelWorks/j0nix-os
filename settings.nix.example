@@ -199,11 +199,6 @@ in
       enable = false;
     };
 
-    # Streambert — stream overlay / chat bot helper.
-    streambert = {
-      enable = false;
-    };
-
     # Bambu Lab slicer delivery method.
     bambulab = {
       enable   = false;
