@@ -42,14 +42,37 @@ let
           ln -s ${openDesignWebPackage} "$out/lib/open-design/apps/web/out"
         '';
       };
-  openDesignCli =
+  openDesignWrappedBin =
     if openDesignPackage == null then
       null
     else
-      pkgs.writeShellScriptBin "od" ''
+      pkgs.writeShellScriptBin "open-design" ''
         export OD_DATA_DIR="''${OD_DATA_DIR:-$HOME/.od}"
         exec ${lib.getExe' openDesignPackage "od"} "$@"
       '';
+  openDesignCli =
+    if openDesignWrappedBin == null then
+      null
+    else
+      pkgs.writeShellScriptBin "od" ''
+        exec ${lib.getExe' openDesignWrappedBin "open-design"} "$@"
+      '';
+  openDesignDesktopItem =
+    if openDesignWrappedBin == null || openDesignWebPackage == null then
+      null
+    else
+      pkgs.makeDesktopItem {
+        name = "open-design";
+        desktopName = "Open Design";
+        comment = "Start the local Open Design daemon and web UI";
+        exec = "open-design";
+        icon = "${openDesignWebPackage}/logo.svg";
+        terminal = false;
+        categories = [
+          "Graphics"
+          "Development"
+        ];
+      };
 in
 lib.mkIf enabled {
   assertions = [
@@ -63,5 +86,9 @@ lib.mkIf enabled {
     }
   ];
 
-  j0nix.user.software.packages = [ openDesignCli ];
+  j0nix.user.software.packages = lib.filter (pkg: pkg != null) [
+    openDesignWrappedBin
+    openDesignCli
+    openDesignDesktopItem
+  ];
 }
