@@ -48,7 +48,10 @@ let
     else
       pkgs.writeShellScriptBin "open-design" ''
         export OD_DATA_DIR="''${OD_DATA_DIR:-$HOME/.od}"
-        exec ${lib.getExe' openDesignPackage "od"} "$@"
+        export NODE_ENV=production
+        exec ${lib.getExe pkgs.nodejs} \
+          ${openDesignPackage}/lib/open-design/apps/daemon/dist/cli.js \
+          "$@"
       '';
   openDesignCli =
     if openDesignWrappedBin == null then
