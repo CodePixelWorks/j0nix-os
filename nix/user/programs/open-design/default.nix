@@ -34,14 +34,13 @@ let
     if openDesignDaemonPackage == null || openDesignWebPackage == null then
       null
     else
-      pkgs.symlinkJoin {
-        name = "open-design-with-web";
-        paths = [ openDesignDaemonPackage ];
-        postBuild = ''
-          mkdir -p "$out/lib/open-design/apps/web"
-          ln -s ${openDesignWebPackage} "$out/lib/open-design/apps/web/out"
-        '';
-      };
+      pkgs.runCommand "open-design-with-web" { } ''
+        mkdir -p "$out"
+        cp -a ${openDesignDaemonPackage}/. "$out"/
+        chmod -R u+w "$out"
+        mkdir -p "$out/lib/open-design/apps/web"
+        ln -s ${openDesignWebPackage} "$out/lib/open-design/apps/web/out"
+      '';
   openDesignWrappedBin =
     if openDesignPackage == null then
       null
