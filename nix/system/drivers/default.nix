@@ -21,7 +21,7 @@ in {
       enable = lib.mkOption { type = lib.types.bool; default = false; };
       open = lib.mkOption { type = lib.types.bool; default = false; };
       gsp = lib.mkOption { type = lib.types.bool; default = false; };
-      persistenced = lib.mkOption { type = lib.types.bool; default = true; };
+      persistenced = lib.mkOption { type = lib.types.bool; default = false; };
       powerManagement = {
         enable = lib.mkOption { type = lib.types.bool; default = false; };
         finegrained = lib.mkOption { type = lib.types.bool; default = false; };
