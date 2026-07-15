@@ -255,12 +255,8 @@ let
         title = "^(Passwort eingeben)$";
       };
       float = true;
-      fullscreen_state = [ 0 0 ];
-      suppress_event = [
-        "fullscreen"
-        "maximize"
-        "fullscreenoutput"
-      ];
+      fullscreen_state = "0 0";
+      suppress_event = "fullscreen maximize fullscreenoutput";
       size = [ "600" "260" ];
       center = true;
     }
