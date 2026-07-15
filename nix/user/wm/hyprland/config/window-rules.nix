@@ -249,6 +249,22 @@ let
       center = true;
     }
     {
+      name = "float-sse-password-dialog";
+      match = {
+        class = "^(sse\\.exe)$";
+        title = "^(Passwort eingeben)$";
+      };
+      float = true;
+      fullscreen_state = [ 0 0 ];
+      suppress_event = [
+        "fullscreen"
+        "maximize"
+        "fullscreenoutput"
+      ];
+      size = [ "600" "260" ];
+      center = true;
+    }
+    {
       name = "float-capcut-main-window";
       match = {
         class = "^(capcut_5_7_0_2112_capcutpc_0_creatortool\\.exe)$";
