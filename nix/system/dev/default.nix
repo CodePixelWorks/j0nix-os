@@ -141,6 +141,7 @@ in
     ./nix-ld.nix
     ./qdrant.nix
     ./crw.nix
+    ./ai-image-stack.nix
   ];
 
   config = lib.mkIf enabled {
