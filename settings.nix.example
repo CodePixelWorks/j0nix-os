@@ -525,6 +525,40 @@ in
       gemini   = false;
       geminiDesktopEntry = true;
       hermes   = false;   # Hermes Agent CLI
+      image = {
+        enable = false;    # ComfyUI, SwarmUI, InvokeAI image-generation stack
+        baseDir = "/mnt/LinuxData/ai";
+        modelsDir = "/mnt/LinuxData/ai/models/image";
+        outputsDir = "/mnt/LinuxData/ai/outputs";
+        inputsDir = "/mnt/LinuxData/ai/input";
+        workflowsDir = "/mnt/LinuxData/ai/workflows";
+        cacheDir = "/mnt/LinuxData/ai/cache";
+        stateDir = "/mnt/LinuxData/ai/state";
+        appsDir = "/mnt/LinuxData/ai/apps";
+        useNvidia = true;
+        uid = 1000;
+        gid = 100;
+        host = "127.0.0.1";
+        autoStart = false;
+        apps = {
+          comfyui = {
+            enable = true;
+            port = 8188;
+            image = "ghcr.io/ai-dock/comfyui:latest-cuda";
+          };
+          swarmui = {
+            enable = true;
+            port = 7801;
+            repo = "https://github.com/mcmonkeyprojects/SwarmUI.git";
+            ref = "master";
+          };
+          invoke = {
+            enable = true;
+            port = 9090;
+            image = "ghcr.io/invoke-ai/invokeai:latest";
+          };
+        };
+      };
       # Remote MCP server endpoints (name = url).
       mcpRemotes = {};
     };
