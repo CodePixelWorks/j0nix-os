@@ -1364,12 +1364,13 @@
         ]
       },
       "locked": {
-        "lastModified": 1783531778,
-        "narHash": "sha256-+Xerk1ZhcVU5MQDLOtCAHlpbeCfM9oOP7HAXlCIGhQM=",
-        "owner": "nexu-io",
-        "repo": "open-design",
-        "rev": "7d005a17c3674f44edaa489f26fe9a34e6c26487",
-        "type": "github"
+        "lastModified": 1784185063,
+        "narHash": "sha256-RXK718/fYtFTgIr3CgCc0hTe50SvpSmJHhlEGZ5q5D0=",
+        "ref": "refs/heads/main",
+        "rev": "265aa51630af0162ec1f8262fba4a8c8d3439123",
+        "revCount": 2872,
+        "type": "git",
+        "url": "https://github.com/nexu-io/open-design.git"
       },
       "original": {
         "owner": "nexu-io",
