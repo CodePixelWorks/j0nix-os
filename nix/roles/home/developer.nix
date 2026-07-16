@@ -10,6 +10,7 @@
     just
     direnv
     httpie
+    playwright-test
     zellij
   ];
 }
