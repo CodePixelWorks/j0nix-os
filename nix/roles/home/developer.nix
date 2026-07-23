@@ -9,8 +9,10 @@
     lazygit
     just
     direnv
+    gws
     httpie
     playwright-test
+    crush
     zellij
   ];
 }
