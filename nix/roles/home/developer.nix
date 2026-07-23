@@ -10,6 +10,7 @@
     just
     direnv
     gws
+    google-cloud-sdk
     httpie
     playwright-test
     crush
