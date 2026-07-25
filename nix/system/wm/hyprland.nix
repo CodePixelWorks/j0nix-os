@@ -189,16 +189,16 @@ let
         XDG_RUNTIME_DIR="$runtime_dir" \
         DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/bus" \
         PATH="$profile_bin:/run/current-system/sw/bin:${pkgs.coreutils}/bin:${pkgs.procps}/bin" \
-        ${pkgs.bash}/bin/bash -lc '
+        ${pkgs.bash}/bin/bash -lc "
           if command -v hyprctl >/dev/null 2>&1; then
-            hyprctl dispatch 'hl.dsp.dpms({state = "on"})' >/dev/null 2>&1 || true
+            hyprctl dispatch 'hl.dsp.dpms({state = \"on\"})' >/dev/null 2>&1 || true
             hyprctl reload >/dev/null 2>&1 || true
           fi
 
-          if [ -x "'"$profile_bin"'/wm-shell-restart-detached" ]; then
-            "'"$profile_bin"'/wm-shell-restart-detached" >/dev/null 2>&1 || true
+          if [ -x \"$profile_bin/wm-shell-restart-detached\" ]; then
+            \"$profile_bin/wm-shell-restart-detached\" >/dev/null 2>&1 || true
           fi
-        ' || true
+        " || true
     done
   '';
 
