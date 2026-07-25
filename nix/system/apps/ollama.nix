@@ -13,6 +13,7 @@ let
   host = ollamaCfg.host or null;
   modelsPath = ollamaCfg.modelsPath or null;
   models = ollamaCfg.models or [ ];
+  packageMode = ollamaCfg.package or "auto";
   autoSyncModels = ollamaCfg.autoSyncModels or true;
   syncDelay = ollamaCfg.syncDelay or "5min";
   syncTimeout = ollamaCfg.syncTimeout or "30min";
@@ -48,7 +49,11 @@ let
 in
 lib.mkIf enabled {
   services.ollama.enable = true;
-  services.ollama.package = lib.mkIf nvidiaEnabled pkgs.ollama-cuda;
+  services.ollama.package =
+    if packageMode == "cuda" || (packageMode == "auto" && nvidiaEnabled) then
+      pkgs.ollama-cuda
+    else
+      pkgs.ollama;
 
   systemd.services.ollama.serviceConfig.SupplementaryGroups = [ "users" ];
   systemd.services.ollama.serviceConfig.PermissionsStartOnly = lib.mkForce true;
@@ -109,6 +114,14 @@ lib.mkIf enabled {
     {
       assertion = builtins.isList models && lib.all builtins.isString models;
       message = "settings.userSettings.<name>.programs.ollama.models must be a list of model strings";
+    }
+    {
+      assertion = builtins.elem packageMode [
+        "auto"
+        "cuda"
+        "cpu"
+      ];
+      message = "settings.userSettings.<name>.programs.ollama.package must be one of: auto, cuda, cpu";
     }
     {
       assertion = builtins.isBool autoSyncModels;
