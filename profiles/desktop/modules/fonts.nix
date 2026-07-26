@@ -1,7 +1,7 @@
 { pkgs, settings, ... }:
 {
   j0nix.desktop.fonts.packages = [
-    pkgs.cantarell-fonts
+    pkgs.inter
     pkgs.noto-fonts
     pkgs.noto-fonts-color-emoji
     settings.themeDetails.fontPkg
