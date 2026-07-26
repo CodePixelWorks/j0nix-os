@@ -345,8 +345,8 @@ in
       color-scheme = if darkGtk then "prefer-dark" else "default";
       gtk-theme = gtkThemeName;
       icon-theme = iconThemeName;
-      font-name = "Cantarell 11";
-      document-font-name = "Cantarell 11";
+      font-name = "Inter 11";
+      document-font-name = "Inter 11";
       monospace-font-name = "JetBrainsMono Nerd Font 11";
     };
   };
