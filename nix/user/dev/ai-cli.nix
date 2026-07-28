@@ -24,7 +24,8 @@ let
   kiloCodeEnabled = ai.kiloCode or true;
   opencodeEnabled = ai.opencode or true;
   claudeCodeEnabled = ai.claudeCode or true;
-  geminiEnabled = ai.gemini or true;
+  antigravityEnabled = ai.antigravity or (ai.gemini or true);
+  antigravityDesktopEntry = ai.antigravityDesktopEntry or (ai.geminiDesktopEntry or true);
   hermesEnabled = ai.hermes or true;
   mcpRemotes = ai.mcpRemotes or { };
   hermesPackage = pkgs.hermes-agent-with-firecrawl or null;
@@ -44,6 +45,49 @@ let
   };
   opencodePackage = if builtins.hasAttr "opencode" pkgs then pkgs.opencode else null;
   claudeCodePackage = if builtins.hasAttr "claude-code" pkgs then pkgs."claude-code" else null;
+  antigravityInstaller = pkgs.writeShellApplication {
+    name = "antigravity-install";
+    runtimeInputs = [
+      pkgs.bash
+      pkgs.coreutils
+      pkgs.curl
+    ];
+    text = ''
+      target_dir="''${ANTIGRAVITY_INSTALL_DIR:-''${XDG_BIN_HOME:-$HOME/.local/bin}}"
+      tmp_dir="$(mktemp -d)"
+      trap 'rm -rf "$tmp_dir"' EXIT
+
+      install_script="$tmp_dir/install.sh"
+      curl -fsSL -o "$install_script" https://antigravity.google/cli/install.sh
+
+      if [ "$#" -eq 0 ]; then
+        set -- --dir "$target_dir"
+      fi
+
+      exec bash "$install_script" "$@"
+    '';
+  };
+  antigravityLauncher = pkgs.writeShellApplication {
+    name = "antigravity-launcher";
+    runtimeInputs = [ antigravityInstaller ];
+    text = ''
+      target_dir="''${ANTIGRAVITY_INSTALL_DIR:-''${XDG_BIN_HOME:-$HOME/.local/bin}}"
+      binary_path="$target_dir/agy"
+
+      if ! command -v agy >/dev/null 2>&1 && [ ! -x "$binary_path" ]; then
+        antigravity-install
+      fi
+
+      if command -v agy >/dev/null 2>&1; then
+        exec agy "$@"
+      elif [ -x "$binary_path" ]; then
+        exec "$binary_path" "$@"
+      else
+        echo "Antigravity CLI not found after installation"
+        exit 1
+      fi
+    '';
+  };
   codexMcpSync = pkgs.writeShellApplication {
     name = "codex-mcp-sync";
     runtimeInputs = [ pkgs.python3 ];
@@ -116,8 +160,6 @@ let
       PY
     '';
   };
-
-  hasGeminiPackage = pkgs ? gemini-cli;
 in
 lib.mkIf enabled {
   j0nix.user.software.packages =
@@ -138,22 +180,9 @@ lib.mkIf enabled {
     ++ lib.optionals (installScope == "user" && claudeCodeEnabled && claudeCodePackage != null) [
       claudeCodePackage
     ]
-    ++ lib.optionals (installScope == "user" && geminiEnabled && hasGeminiPackage) [ pkgs.gemini-cli ]
-    ++ lib.optionals (installScope == "user" && geminiEnabled) [
-      (pkgs.writeShellScriptBin "gemini-launcher" ''
-        KEY_FILE="$HOME/.gem.key"
-
-        if [ -f "$KEY_FILE" ]; then
-          export GEMINI_API_KEY="$(tr -d '\n' < "$KEY_FILE")"
-        fi
-
-        if command -v gemini >/dev/null 2>&1; then
-          exec gemini
-        else
-          echo "gemini CLI not found in PATH"
-          exit 1
-        fi
-      '')
+    ++ lib.optionals (installScope == "user" && antigravityEnabled) [
+      antigravityInstaller
+      antigravityLauncher
     ]
     ++ lib.optionals (installScope == "user" && hermesEnabled && hermesPackage != null) [
       hermesPackage
@@ -170,13 +199,12 @@ lib.mkIf enabled {
     };
   };
 
-  xdg.desktopEntries.gemini-cli = lib.mkIf (geminiEnabled && (ai.geminiDesktopEntry or true)) {
-    name = "Gemini CLI";
+  xdg.desktopEntries.antigravity-cli = lib.mkIf (antigravityEnabled && antigravityDesktopEntry) {
+    name = "Antigravity CLI";
     genericName = "AI Assistant Terminal";
-    comment = "Launch Gemini CLI in terminal";
-    exec = "${preferredTerminal} -e gemini-launcher";
-    # Use an absolute store path to avoid launcher/theme lookup misses in shell UIs.
-    icon = "${../../../icons/gemini-cli/gemini-cli.svg}";
+    comment = "Launch Antigravity CLI in terminal";
+    exec = "${preferredTerminal} -e antigravity-launcher";
+    icon = "utilities-terminal";
     terminal = false;
     type = "Application";
     categories = [
@@ -184,12 +212,6 @@ lib.mkIf enabled {
       "Utility"
     ];
   };
-
-  xdg.dataFile."icons/hicolor/scalable/apps/gemini-cli.svg" =
-    lib.mkIf (geminiEnabled && (ai.geminiDesktopEntry or true))
-      {
-        source = ../../../icons/gemini-cli/gemini-cli.svg;
-      };
 
   assertions = [
     {
@@ -227,10 +249,6 @@ lib.mkIf enabled {
     {
       assertion = (!claudeCodeEnabled) || claudeCodePackage != null;
       message = "settings.dev.ai.claudeCode=true but pkgs.\"claude-code\" is unavailable";
-    }
-    {
-      assertion = (!geminiEnabled) || hasGeminiPackage;
-      message = "settings.dev.ai.gemini=true but pkgs.gemini-cli is unavailable";
     }
     {
       assertion = (!hermesEnabled) || hermesPackage != null;
