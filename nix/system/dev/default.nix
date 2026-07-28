@@ -117,24 +117,52 @@ let
   };
   sshAgentEnable = sshAgent.enable or true;
   keyringEnable = sshUsersNeedingKeyring != [ ];
-  geminiEnabled = ai.gemini or true;
-  hasGeminiPackage = pkgs ? gemini-cli;
+  antigravityEnabled = ai.antigravity or (ai.gemini or true);
   hermesEnabled = ai.hermes or true;
   hermesPackage = pkgs.hermes-agent-with-firecrawl or null;
-  geminiLauncher = pkgs.writeShellScriptBin "gemini-launcher" ''
-    KEY_FILE="$HOME/.gem.key"
+  antigravityInstaller = pkgs.writeShellApplication {
+    name = "antigravity-install";
+    runtimeInputs = [
+      pkgs.bash
+      pkgs.coreutils
+      pkgs.curl
+    ];
+    text = ''
+      target_dir="''${ANTIGRAVITY_INSTALL_DIR:-''${XDG_BIN_HOME:-$HOME/.local/bin}}"
+      tmp_dir="$(mktemp -d)"
+      trap 'rm -rf "$tmp_dir"' EXIT
 
-    if [ -f "$KEY_FILE" ]; then
-      export GEMINI_API_KEY="$(tr -d '\n' < "$KEY_FILE")"
-    fi
+      install_script="$tmp_dir/install.sh"
+      curl -fsSL -o "$install_script" https://antigravity.google/cli/install.sh
 
-    if command -v gemini >/dev/null 2>&1; then
-      exec gemini
-    else
-      echo "gemini CLI not found in PATH"
-      exit 1
-    fi
-  '';
+      if [ "$#" -eq 0 ]; then
+        set -- --dir "$target_dir"
+      fi
+
+      exec bash "$install_script" "$@"
+    '';
+  };
+  antigravityLauncher = pkgs.writeShellApplication {
+    name = "antigravity-launcher";
+    runtimeInputs = [ antigravityInstaller ];
+    text = ''
+      target_dir="''${ANTIGRAVITY_INSTALL_DIR:-''${XDG_BIN_HOME:-$HOME/.local/bin}}"
+      binary_path="$target_dir/agy"
+
+      if ! command -v agy >/dev/null 2>&1 && [ ! -x "$binary_path" ]; then
+        antigravity-install
+      fi
+
+      if command -v agy >/dev/null 2>&1; then
+        exec agy "$@"
+      elif [ -x "$binary_path" ]; then
+        exec "$binary_path" "$@"
+      else
+        echo "Antigravity CLI not found after installation"
+        exit 1
+      fi
+    '';
+  };
 in
 {
   imports = [
@@ -207,9 +235,9 @@ in
       ++ lib.optionals (
         aiEnabled && aiInstallScope == "system" && claudeCodeEnabled && claudeCodePackage != null
       ) [ claudeCodePackage ]
-      ++ lib.optionals (aiEnabled && aiInstallScope == "system" && geminiEnabled && hasGeminiPackage) [
-        pkgs.gemini-cli
-        geminiLauncher
+      ++ lib.optionals (aiEnabled && aiInstallScope == "system" && antigravityEnabled) [
+        antigravityInstaller
+        antigravityLauncher
       ]
       ++ lib.optionals (
         aiEnabled && aiInstallScope == "system" && hermesEnabled && hermesPackage != null
@@ -294,10 +322,6 @@ in
       {
         assertion = builtins.length sshAgentProviders <= 1;
         message = "All enabled settings.userSettings.<name>.dev.ssh.agent.provider values must agree. Mixed SSH agent providers are not supported.";
-      }
-      {
-        assertion = (!aiEnabled) || (!geminiEnabled) || hasGeminiPackage;
-        message = "settings.dev.ai.gemini=true but pkgs.gemini-cli is unavailable";
       }
       {
         assertion = (!hermesEnabled) || hermesPackage != null;
