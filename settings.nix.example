@@ -496,7 +496,7 @@ in
       qemu           = true;
     };
 
-    # AI CLI tooling (Codex, Gemini, Claude Code, Opencode, Kilo Code, ...).
+    # AI CLI tooling (Codex, Antigravity, Claude Code, Opencode, Kilo Code, ...).
     ai = {
       # "system" = install as system packages (all users see them)
       # "user"   = let Home Manager handle installation per user
@@ -522,8 +522,10 @@ in
       caveman  = false; # Agent Skill (co-pilot/codex/claude compatible)
       opencode = false; # Terminal coding agent
       claudeCode = false;
-      gemini   = false;
-      geminiDesktopEntry = true;
+      antigravity = false; # Google Antigravity CLI launcher/installer
+      antigravityDesktopEntry = true;
+      gemini   = false; # legacy alias for antigravity
+      geminiDesktopEntry = true; # legacy alias for antigravityDesktopEntry
       hermes   = false;   # Hermes Agent CLI
       image = {
         enable = false;    # ComfyUI, SwarmUI, InvokeAI image-generation stack
