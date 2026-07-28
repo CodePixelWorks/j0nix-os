@@ -5,7 +5,7 @@ User-facing dev tooling modules.
 ## Files
 
 - `default.nix`: core dev CLI/tooling packages
-- `ai-cli.nix`: Codex/Gemini CLI integration
+- `ai-cli.nix`: Codex/Antigravity CLI integration
 
 ## Control
 
@@ -63,5 +63,8 @@ Notable controls:
 - `settings.dev.ai.kiloCode`: install the `kilocode` CLI (`@kilocode/cli@alpha`) in the shared AI tool scope and add the `kilocode.kilo-code` VS Code extension
 - `settings.dev.ai.caveman`: install the `caveman` Agent Skill into `~/.codex/skills`, `~/.kilo/skills`, `~/.claude/skills`, and `~/.agents/skills`
 - `settings.dev.ai.opencode`: install the `opencode` terminal coding agent in the shared AI tool scope
-- `settings.dev.ai.claudeCode`: install the `claude-code` CLI in the same AI tool scope as Codex/Gemini
+- `settings.dev.ai.claudeCode`: install the `claude-code` CLI in the same AI tool scope as Codex/Antigravity
+- `settings.dev.ai.antigravity`: install the Antigravity launcher and installer in the shared AI tool scope
+- `antigravity-install`: download and install the official Google Antigravity `agy` binary into `~/.local/bin` or `$ANTIGRAVITY_INSTALL_DIR`
+- `antigravity-launcher`: install `agy` on first launch if needed, then start the Antigravity CLI
 - The Codex MCP sync manages the repo-owned MCP blocks (`nixos`, `github`, `hyprland`, and any enabled `lsp-*` entries) without clobbering other Codex settings
