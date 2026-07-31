@@ -1,4 +1,10 @@
-{ config, lib, settings, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  settings,
+  ...
+}:
 let
   userOverrides = settings.userSettings or { };
   allUsers = builtins.attrNames userOverrides;
@@ -82,6 +88,8 @@ let
   folders = syncthingCfg.folders or { };
 in
 lib.mkIf enabled {
+  j0nix.software.systemPackages = [ pkgs.syncthing ];
+
   warnings = lib.optional
     (guiPasswordSecretName != null && !hasGuiPasswordSecret && (syncthingCfg.guiPasswordFile or null) == null)
     "Syncthing guiPasswordSecretName='${guiPasswordSecretName}' is neither defined in settings.secrets.system nor in settings.userSettings.${serviceUser}.secrets.files, and no guiPasswordFile is set.";
