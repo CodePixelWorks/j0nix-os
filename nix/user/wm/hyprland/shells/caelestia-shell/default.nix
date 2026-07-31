@@ -439,10 +439,37 @@ let
         export QT_ICON_THEME_NAME="${iconThemeName}"
         export QT_QUICK_CONTROLS_ICON_THEME_NAME="${iconThemeName}"
       ''}
+
+      build_xdg_data_overlay() {
+        local overlay_share app_overlay root app_dir src dst
+
+        overlay_share="$state_dir/xdg-data/share"
+        app_overlay="$overlay_share/applications"
+
+        rm -rf "$state_dir/xdg-data"
+        mkdir -p "$app_overlay"
+
+        for root in "$@"; do
+          app_dir="$root/applications"
+          if [ -d "$app_dir" ]; then
+            while IFS= read -r src; do
+              dst="$app_overlay/$(${coreutils}/bin/basename "$src")"
+              [ -e "$dst" ] || ln -s "$src" "$dst"
+            done < <(${pkgs.findutils}/bin/find -L "$app_dir" -maxdepth 1 -type f -name '*.desktop' -print 2>/dev/null | ${coreutils}/bin/sort)
+          fi
+        done
+
+        printf '%s' "$overlay_share"
+      }
+
       # Quickshell app icons are resolved through freedesktop icon lookup paths.
-      # UWSM/systemd user sessions can miss Home Manager profile paths here.
-      # Keep the list deduplicated to avoid repeated desktop-entry replacement churn.
+      # Present one merged applications root and icon-only roots so Quickshell
+      # can resolve all app icons without seeing duplicate desktop entries.
+      xdg_data_roots=()
+      xdg_data_icon_dirs=""
+      xdg_data_passthrough_dirs=""
       xdg_data_dirs=""
+      icon_root_index=0
       for d in ${
         lib.concatStringsSep " " (
           [
@@ -460,15 +487,38 @@ let
           ]
         )
       }; do
-        xdg_data_dirs="$(append_unique_colon_path "$xdg_data_dirs" "$d")"
+        xdg_data_roots+=("$d")
       done
       IFS=':'
       for d in ''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}; do
+        xdg_data_roots+=("$d")
+      done
+      unset IFS
+      xdg_data_overlay="$(build_xdg_data_overlay "''${xdg_data_roots[@]}")"
+      xdg_data_dirs="$(append_unique_colon_path "$xdg_data_dirs" "$xdg_data_overlay")"
+      for d in "''${xdg_data_roots[@]}"; do
+        if [ -d "$d/icons" ]; then
+          icon_root="$state_dir/xdg-data/icon-roots/$icon_root_index/share"
+          mkdir -p "$icon_root"
+          ln -s "$d/icons" "$icon_root/icons"
+          xdg_data_icon_dirs="$(append_unique_colon_path "$xdg_data_icon_dirs" "$icon_root")"
+          icon_root_index=$((icon_root_index + 1))
+        elif [ ! -d "$d/applications" ]; then
+          xdg_data_passthrough_dirs="$(append_unique_colon_path "$xdg_data_passthrough_dirs" "$d")"
+        fi
+      done
+      IFS=':'
+      for d in $xdg_data_icon_dirs; do
+        xdg_data_dirs="$(append_unique_colon_path "$xdg_data_dirs" "$d")"
+      done
+      unset IFS
+      IFS=':'
+      for d in $xdg_data_passthrough_dirs; do
         xdg_data_dirs="$(append_unique_colon_path "$xdg_data_dirs" "$d")"
       done
       unset IFS
       export XDG_DATA_DIRS="$xdg_data_dirs"
-      unset xdg_data_dirs d
+      unset xdg_data_dirs xdg_data_roots xdg_data_icon_dirs xdg_data_passthrough_dirs xdg_data_overlay icon_root_index icon_root d
 
       # Prefer the conservative render loop for shell stability on NVIDIA/QtQuick.
       export QSG_RENDER_LOOP="''${QSG_RENDER_LOOP:-basic}"
