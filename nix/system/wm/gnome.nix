@@ -19,7 +19,11 @@ in
     ];
 
     j0nix.software.systemPackages = [
+      pkgs.gnome-calculator
+      pkgs.gnome-console
       pkgs.gnome-control-center
+      pkgs.gnome-text-editor
+      pkgs.loupe
       pkgs.nautilus
     ];
   };
