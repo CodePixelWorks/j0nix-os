@@ -1,8 +1,22 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  settings ? { },
+  ...
+}:
 let
   cfg = config.j0nix.desktop.apps.flatpak;
   entries = lib.unique cfg.entries;
   entriesJson = pkgs.writeText "j0nix-flatpak-apps.json" (builtins.toJSON entries);
+  configuredUsers =
+    lib.mapAttrsToList
+      (name: userCfg: {
+        inherit name;
+        home = userCfg.home or "/home/${name}";
+      })
+      (settings.userSettings or { });
+  configuredUsersJson = pkgs.writeText "j0nix-flatpak-users.json" (builtins.toJSON configuredUsers);
   stateDir = "/var/lib/j0nix/flatpak";
   trackedFile = "${stateDir}/tracked-apps";
   desiredFile = "${stateDir}/desired-apps";
@@ -45,6 +59,33 @@ let
         ${pkgs.flatpak}/bin/flatpak uninstall --system --noninteractive --delete-data "$ref" || true
       fi
     done < ${trackedFile}
+
+    ${pkgs.jq}/bin/jq -r '.[] | [.name, .home] | @tsv' ${configuredUsersJson} | \
+    while IFS=$'\t' read -r username home; do
+      [ -n "$username" ] || continue
+      [ -n "$home" ] || continue
+      ${pkgs.getent}/bin/getent passwd "$username" >/dev/null || continue
+      [ -d "$home/.local/share/flatpak" ] || continue
+
+      while IFS= read -r ref; do
+        [ -n "$ref" ] || continue
+        if ${pkgs.util-linux}/bin/runuser -u "$username" -- \
+          ${pkgs.coreutils}/bin/env \
+            HOME="$home" \
+            XDG_DATA_HOME="$home/.local/share" \
+            XDG_CONFIG_HOME="$home/.config" \
+            XDG_CACHE_HOME="$home/.cache" \
+            ${pkgs.flatpak}/bin/flatpak info --user "$ref" >/dev/null 2>&1; then
+          ${pkgs.util-linux}/bin/runuser -u "$username" -- \
+            ${pkgs.coreutils}/bin/env \
+              HOME="$home" \
+              XDG_DATA_HOME="$home/.local/share" \
+              XDG_CONFIG_HOME="$home/.config" \
+              XDG_CACHE_HOME="$home/.cache" \
+              ${pkgs.flatpak}/bin/flatpak uninstall --user --noninteractive "$ref" || true
+        fi
+      done < ${desiredFile}
+    done
 
     ${pkgs.coreutils}/bin/cp ${desiredFile} ${trackedFile}
   '';
