@@ -16,7 +16,7 @@ let
     if bottleEnvironment == "application" then "Application"
     else if bottleEnvironment == "gaming" then "Gaming"
     else "Custom";
-  bottleTemplateVersion = "j0nix-default-bottle-v2";
+  bottleTemplateVersion = "j0nix-default-bottle-v3";
 
   bottleTemplateConfig = {
     Arch = "win64";
@@ -41,7 +41,6 @@ let
       "TERM"
       "TZ"
       "USER"
-      "WAYLAND_DISPLAY"
       "XAUTHORITY"
       "XDG_RUNTIME_DIR"
     ];
@@ -234,10 +233,14 @@ let
       }
 
       if [ -d "$bottle_dir" ]; then
+        current_template_version=""
         if [ -f "$template_marker" ]; then
+          current_template_version="$(${pkgs.coreutils}/bin/cat "$template_marker" 2>/dev/null || true)"
+        fi
+        if [ "$current_template_version" = ${lib.escapeShellArg bottleTemplateVersion} ]; then
           exit 0
         fi
-        echo "Migrating existing Bottles bottle '$bottle_name' to j0nix template baseline"
+        echo "Migrating existing Bottles bottle '$bottle_name' to j0nix template baseline ${bottleTemplateVersion}"
         migrate_existing_bottle
         exit 0
       fi
@@ -258,10 +261,9 @@ let
         exit 0
       fi
 
-      echo "error: Bottles konnte die Bottle '$bottle_name' nicht anlegen." >&2
-      echo "Grund meist: fehlende Bottles-Komponenten (Runner/DXVK/VKD3D)." >&2
-      echo "Bitte einmal Bottles GUI starten und Komponenten installieren," >&2
-      echo "danach erneut ausfuehren." >&2
+      echo "error: Bottles could not create bottle '$bottle_name'." >&2
+      echo "Common cause: missing Bottles components (runner/DXVK/VKD3D)." >&2
+      echo "Open the Bottles GUI once, install the required components, then retry." >&2
       exit 1
     '';
   };
@@ -281,13 +283,21 @@ let
       shift || true
 
       if [ ! -e "$target" ]; then
-        echo "error: Datei nicht gefunden: $target" >&2
+        echo "error: file not found: $target" >&2
         exit 1
       fi
 
       target="$(${pkgs.coreutils}/bin/readlink -f "$target")"
       bottle_name="''${WINEXE_BOTTLE_NAME:-${bottleName}}"
       winexe-prefix-init
+      if [ -z "''${DISPLAY:-}" ]; then
+        echo "error: DISPLAY is not set; Windows EXE support requires Xwayland for clipboard interoperability." >&2
+        exit 1
+      fi
+      export GDK_BACKEND=x11
+      export QT_QPA_PLATFORM=xcb
+      export SDL_VIDEODRIVER=x11
+      unset WAYLAND_DISPLAY
       exec bottles-cli run --bottle "$bottle_name" --executable "$target" "$@"
     '';
   };
@@ -298,7 +308,7 @@ let
     text = ''
       set -eu
       if ! winexe-prefix-init; then
-        echo "warning: windows-exe bootstrap skipped (Bottle/Komponenten fehlen)." >&2
+        echo "warning: windows-exe bootstrap skipped (Bottle components are missing)." >&2
       fi
       exit 0
     '';
