@@ -1,6 +1,20 @@
-{ config, lib, options, ... }:
+{ config, lib, options, osConfig ? null, ... }:
 let
   cfg = config.j0nix.user.software;
+  systemPackages =
+    if osConfig != null && osConfig ? j0nix && osConfig.j0nix ? software then
+      osConfig.j0nix.software.systemPackages or [ ]
+    else
+      [ ];
+  packageKey =
+    pkg:
+    if lib.isDerivation pkg then
+      pkg.drvPath or (pkg.outPath or (toString pkg))
+    else
+      toString pkg;
+  systemPackageKeys = map packageKey systemPackages;
+  homePackagesWithoutSystemDuplicates =
+    lib.filter (pkg: !(builtins.elem (packageKey pkg) systemPackageKeys)) cfg.packages;
   repoRoot = lib.removeSuffix "/user/software" (toString ./.);
   localModuleDefinitions =
     lib.filter
@@ -51,7 +65,7 @@ in
   };
 
   config = {
-    home.packages = lib.mkAfter (lib.unique cfg.packages);
+    home.packages = lib.mkAfter (lib.unique homePackagesWithoutSystemDuplicates);
     assertions = [
       {
         assertion = disallowedHomePackagesDefinitions == [ ];
