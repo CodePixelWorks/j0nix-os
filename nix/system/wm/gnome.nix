@@ -20,6 +20,7 @@ in
 
     j0nix.software.systemPackages = [
       pkgs.gnome-control-center
+      pkgs.nautilus
     ];
   };
 }
