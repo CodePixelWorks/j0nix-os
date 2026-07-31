@@ -226,10 +226,6 @@ let
     "Material Symbols Sharp"
   ];
   materialIconFontAllowedJson = builtins.toJSON materialIconFontAllowed;
-  launcherHiddenApps = [
-    "org.gnome.Nautilus"
-  ];
-  launcherHiddenAppsJson = builtins.toJSON launcherHiddenApps;
   seededCaelestiaConfig = {
     appearance = {
       font = {
@@ -291,7 +287,6 @@ let
           command = [ "${homeBinDir}/keepassxc-toggle" ];
         }
       ];
-      hiddenApps = launcherHiddenApps;
     };
     session = {
       commands = {
@@ -506,8 +501,7 @@ let
         --argjson keepassSpecialWorkspaceEnabled ${
           if keepassSpecialWorkspaceEnabled then "true" else "false"
         } \
-        --argjson allowedFonts '${materialIconFontAllowedJson}' \
-        --argjson launcherHiddenApps '${launcherHiddenAppsJson}' '
+        --argjson allowedFonts '${materialIconFontAllowedJson}' '
           def as_num($default):
             if type == "number" then . else $default end;
           def clamp($min; $max):
@@ -530,12 +524,6 @@ let
               .
             end
           | .launcher = (.launcher // {})
-          | .launcher.hiddenApps = (
-              (if ((.launcher.hiddenApps? | type) == "array") then .launcher.hiddenApps else [] end)
-              | reduce $launcherHiddenApps[] as $app (.;
-                  if index($app) then . else . + [$app] end
-                )
-            )
           | if ((.launcher.actions? | type) == "array") then
               .launcher.actions = (
                 .launcher.actions
@@ -1020,7 +1008,6 @@ in
               } \
               --arg defaultMaterial "${materialIconFontDefault}" \
               --argjson allowedMaterialFonts '${materialIconFontAllowedJson}' \
-              --argjson launcherHiddenApps '${launcherHiddenAppsJson}' \
               '
                 def as_num($default):
                   if type == "number" then . else $default end;
@@ -1045,12 +1032,6 @@ in
                     .
                   end
                 | .launcher = (.launcher // {})
-                | .launcher.hiddenApps = (
-                    (if ((.launcher.hiddenApps? | type) == "array") then .launcher.hiddenApps else [] end)
-                    | reduce $launcherHiddenApps[] as $app (.;
-                        if index($app) then . else . + [$app] end
-                      )
-                  )
                 | if ((.launcher.actions? | type) == "array") then
                     .launcher.actions = (
                       .launcher.actions
