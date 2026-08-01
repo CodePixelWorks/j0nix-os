@@ -5,6 +5,7 @@
 }:
 let
   sessionEnvCfg = hyprlandCfg.sessionEnv or { };
+  stylixEnabled = ((settings.stylix or { }).enable or false);
   sessionEnvBase = {
     QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
     QT_AUTO_SCREEN_SCALE_FACTOR = "1";
@@ -24,7 +25,7 @@ let
   };
   sessionEnv =
     sessionEnvBase
-    // lib.optionalAttrs ((sessionEnvCfg.qtPlatformTheme or null) != null) {
+    // lib.optionalAttrs (!stylixEnabled && (sessionEnvCfg.qtPlatformTheme or null) != null) {
       QT_QPA_PLATFORMTHEME = sessionEnvCfg.qtPlatformTheme;
     }
     // (sessionEnvCfg.extra or { });
