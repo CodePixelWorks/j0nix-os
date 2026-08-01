@@ -1,6 +1,7 @@
 { config, lib, pkgs, settings, ... }:
 let
   iconThemeCfg = settings.iconTheme or { };
+  stylixEnabled = ((settings.stylix or { }).enable or false);
   iconThemeEnabled = iconThemeCfg.enable or true;
   iconThemeName = iconThemeCfg.name or "Papirus-Dark";
   iconThemePackageKey = iconThemeCfg.package or "papirus";
@@ -248,7 +249,7 @@ let
     ''}
   '';
 in
-{
+lib.mkIf (!stylixEnabled) {
   j0nix.user.software.packages = lib.unique (
     [ gtkThemePackage pkgs.xsettingsd ]
     ++ lib.optional (iconThemeEnabled && iconThemePackage != null) iconThemePackage
