@@ -51,6 +51,7 @@ in
     ../../nix/system/boot
     ../../nix/system/locale
     ../../nix/system/fonts
+    ../../nix/system/theme/stylix.nix
     ../../nix/system/logging
 
     ../../nix/system/printing
