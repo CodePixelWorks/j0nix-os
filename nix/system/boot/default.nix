@@ -126,8 +126,8 @@ in
 
     boot.plymouth = lib.mkIf cfg.splash.enable {
       enable = true;
-      theme = cfg.splash.theme;
-      themePackages = cfg.splash.themePackages;
+      theme = lib.mkDefault cfg.splash.theme;
+      themePackages = lib.mkDefault cfg.splash.themePackages;
     };
     boot.consoleLogLevel = lib.mkIf (cfg.splash.enable && cfg.splash.quietBoot) 3;
     boot.initrd.verbose = lib.mkIf (cfg.splash.enable && cfg.splash.quietBoot) false;
