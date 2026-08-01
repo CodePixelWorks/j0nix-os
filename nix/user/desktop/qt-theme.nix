@@ -1,5 +1,6 @@
 { lib, pkgs, settings, ... }:
 let
+  stylixEnabled = ((settings.stylix or { }).enable or false);
   hyprlandCfg = settings.hyprland or { };
   sessionEnvCfg = hyprlandCfg.sessionEnv or { };
   caelestiaThemeCfg = ((settings.programs or { }).caelestia or { }).theme or { };
@@ -35,7 +36,7 @@ let
       null;
   qtExtraPackages = lib.optionals useDarklyStyle [ pkgs.darkly-qt6 ];
 in
-{
+lib.mkIf (!stylixEnabled) {
   j0nix.user.software.packages =
     lib.optional (qtThemePackage != null) qtThemePackage
     ++ qtExtraPackages;
