@@ -16,7 +16,7 @@ let
     if bottleEnvironment == "application" then "Application"
     else if bottleEnvironment == "gaming" then "Gaming"
     else "Custom";
-  bottleTemplateVersion = "j0nix-default-bottle-v3";
+  bottleTemplateVersion = "j0nix-default-bottle-v4";
 
   bottleTemplateConfig = {
     Arch = "win64";
@@ -58,7 +58,6 @@ let
       dxvk_nvapi = false;
       fixme_logs = false;
       fsr = false;
-      fsr_quality_mode = "none";
       fsr_sharpening_strength = 2;
       fullscreen_capture = false;
       gamemode = false;
@@ -173,7 +172,7 @@ let
 
   bottleInitScript = pkgs.writeShellApplication {
     name = "winexe-prefix-init";
-    runtimeInputs = [ bottlesPkg pkgs.coreutils pkgs.gnugrep pkgs.gnused pkgs.yq-go ];
+    runtimeInputs = [ bottlesPkg pkgs.coreutils pkgs.findutils pkgs.gnugrep pkgs.gnused pkgs.yq-go ];
     text = ''
       set -eu
 
@@ -221,10 +220,27 @@ let
           fi
         fi
 
+        stop_runner_wineserver() {
+          runner="$1"
+          [ -n "$runner" ] || return 0
+          runner_wineserver="''${XDG_DATA_HOME:-$HOME/.local/share}/bottles/runners/$runner/bin/wineserver"
+          if [ -x "$runner_wineserver" ]; then
+            WINEPREFIX="$bottle_dir" "$runner_wineserver" -k >/dev/null 2>&1 || true
+          fi
+        }
+
+        current_runner="$(${pkgs.yq-go}/bin/yq -r '.Runner // ""' "$current_bottle_file" 2>/dev/null || true)"
+        stop_runner_wineserver "$current_runner"
+        stop_runner_wineserver "$effective_runner_name"
+        if [ -d "$bottle_dir/drive_c/windows" ]; then
+          ${pkgs.findutils}/bin/find "$bottle_dir/drive_c/windows" -type f ! -perm -u+w -exec chmod u+w {} +
+        fi
+
         materialize_template_file ${lib.escapeShellArg bottleMigrationSafeFieldsFile} "$tmp_safe"
         ${pkgs.yq-go}/bin/yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
           "$current_bottle_file" "$tmp_safe" >"$tmp_merged"
         mv "$tmp_merged" "$current_bottle_file"
+        ${pkgs.yq-go}/bin/yq eval 'del(.Parameters.fsr_quality_mode)' -i "$current_bottle_file"
 
         materialize_template_file ${lib.escapeShellArg bottleTemplateMetadataFile} "$current_template_file"
         printf '%s\n' "$timestamp" >"$bottle_dir/.update-timestamp"
