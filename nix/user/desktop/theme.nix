@@ -29,7 +29,12 @@ let
   gtkFlavour = caelestiaThemeCfg.flavour or "mocha";
   gtkMode = settings.colorSchemePreference or (caelestiaThemeCfg.mode or "dark");
   darkGtk = gtkMode != "light";
-  useCatppuccinGtk = gtkScheme == "catppuccin" && gtkFlavour == "mocha" && darkGtk;
+  catppuccinGtkPackage = builtins.tryEval pkgs.magnetic-catppuccin-gtk;
+  useCatppuccinGtk =
+    gtkScheme == "catppuccin"
+    && gtkFlavour == "mocha"
+    && darkGtk
+    && catppuccinGtkPackage.success;
   gtkThemeName =
     if useCatppuccinGtk then
       "Catppuccin-GTK-Mauve-Dark-Compact"
@@ -39,7 +44,7 @@ let
       "Adwaita";
   gtkThemePackage =
     if useCatppuccinGtk then
-      pkgs.magnetic-catppuccin-gtk.override {
+      catppuccinGtkPackage.value.override {
         accent = [ "mauve" ];
         shade = "dark";
         size = "compact";
