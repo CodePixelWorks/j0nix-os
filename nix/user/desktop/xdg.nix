@@ -8,6 +8,23 @@ let
   preferredFileManager =
     settings.preferredFileManager
     or (if configuredFileManagers != [ ] then builtins.head configuredFileManagers else "nautilus");
+  defaultWMS = settings.defaultWMS or "hyprland";
+  preferGnomeApps = defaultWMS == "gnome";
+  configuredBrowsers = settings.browsers or [ "chromium" ];
+  browserDesktopId = name:
+    if name == "chromium" then
+      "chromium.desktop"
+    else if name == "qutebrowser" then
+      "org.qutebrowser.qutebrowser.desktop"
+    else if name == "zen-browser" || name == "zen" then
+      "zen.desktop"
+    else
+      null;
+  browserDesktopIds =
+    let
+      resolved = lib.filter (entry: entry != null) (map browserDesktopId configuredBrowsers);
+    in
+    lib.unique (resolved ++ [ "chromium.desktop" ]);
   fileManagerDesktopId = name:
     if name == "nautilus" then
       "org.gnome.Nautilus.desktop"
@@ -20,6 +37,125 @@ let
     else
       null;
   preferredFileManagerDesktopId = fileManagerDesktopId preferredFileManager;
+  directoryDesktopIds =
+    let
+      preferred = lib.optional (preferredFileManagerDesktopId != null) preferredFileManagerDesktopId;
+      configured = lib.filter (entry: entry != null) (map fileManagerDesktopId configuredFileManagers);
+      fallback =
+        if preferGnomeApps then
+          [ "org.gnome.Nautilus.desktop" ]
+        else
+          [ "org.gnome.Nautilus.desktop" "org.kde.dolphin.desktop" ];
+    in
+    lib.unique (preferred ++ configured ++ fallback);
+  textDesktopIds = lib.unique (
+    if preferGnomeApps then
+      [ "org.gnome.TextEditor.desktop" "org.gnome.gedit.desktop" ]
+    else
+      [ "org.gnome.TextEditor.desktop" "code.desktop" "codium.desktop" ]
+  );
+  imageDesktopIds = lib.unique (
+    if preferGnomeApps then
+      [ "org.gnome.Loupe.desktop" "org.gimp.GIMP.desktop" "org.kde.krita.desktop" ]
+    else
+      [ "org.gnome.Loupe.desktop" "org.kde.krita.desktop" "org.gimp.GIMP.desktop" ]
+  );
+  pdfDesktopIds = lib.unique (
+    if preferGnomeApps then
+      [
+        "org.gnome.Papers.desktop"
+        "org.gnome.Evince.desktop"
+        "org.kde.okular.desktop"
+        "okularApplication_pdf.desktop"
+      ]
+    else
+      [
+        "org.kde.okular.desktop"
+        "okularApplication_pdf.desktop"
+        "org.gnome.Papers.desktop"
+        "org.gnome.Evince.desktop"
+      ]
+  );
+  archiveDesktopIds = [ "org.gnome.FileRoller.desktop" "org.kde.ark.desktop" ];
+  videoDesktopIds = [ "mpv.desktop" "org.gnome.Totem.desktop" ];
+  audioDesktopIds = [ "mpv.desktop" "org.gnome.Decibels.desktop" "org.gnome.Music.desktop" ];
+  imageMimeTypes = [
+    "image/avif"
+    "image/bmp"
+    "image/gif"
+    "image/heic"
+    "image/heif"
+    "image/jpeg"
+    "image/jxl"
+    "image/png"
+    "image/svg+xml"
+    "image/tiff"
+    "image/webp"
+    "image/x-xcf"
+  ];
+  textMimeTypes = [
+    "application/json"
+    "application/toml"
+    "application/x-yaml"
+    "application/xml"
+    "text/css"
+    "text/csv"
+    "text/markdown"
+    "text/plain"
+    "text/x-log"
+    "text/x-nix"
+    "text/x-python"
+    "text/x-shellscript"
+    "text/yaml"
+  ];
+  videoMimeTypes = [
+    "video/mp2t"
+    "video/mp4"
+    "video/mpeg"
+    "video/ogg"
+    "video/quicktime"
+    "video/webm"
+    "video/x-matroska"
+    "video/x-msvideo"
+  ];
+  audioMimeTypes = [
+    "audio/aac"
+    "audio/flac"
+    "audio/mpeg"
+    "audio/ogg"
+    "audio/wav"
+    "audio/webm"
+    "audio/x-matroska"
+  ];
+  archiveMimeTypes = [
+    "application/gzip"
+    "application/vnd.rar"
+    "application/x-7z-compressed"
+    "application/x-bzip2"
+    "application/x-compressed-tar"
+    "application/x-tar"
+    "application/zip"
+  ];
+  mimeDefaults =
+    {
+      "x-scheme-handler/http" = browserDesktopIds;
+      "x-scheme-handler/https" = browserDesktopIds;
+      "x-scheme-handler/flatpak+http" = [ "j0nix-flatpakref-handler.desktop" ];
+      "x-scheme-handler/flatpak+https" = [ "j0nix-flatpakref-handler.desktop" ];
+      "text/html" = browserDesktopIds;
+      "application/xhtml+xml" = browserDesktopIds;
+      "application/vnd.flatpak" = [ "j0nix-flatpakref-handler.desktop" ];
+      "application/vnd.flatpak.ref" = [ "j0nix-flatpakref-handler.desktop" ];
+      "application/vnd.flatpak.repo" = [ "j0nix-flatpakref-handler.desktop" ];
+      "application/pdf" = pdfDesktopIds;
+      "inode/directory" = directoryDesktopIds;
+      "x-scheme-handler/file" = directoryDesktopIds;
+    }
+    // lib.genAttrs imageMimeTypes (_: imageDesktopIds)
+    // lib.genAttrs textMimeTypes (_: textDesktopIds)
+    // lib.genAttrs videoMimeTypes (_: videoDesktopIds)
+    // lib.genAttrs audioMimeTypes (_: audioDesktopIds)
+    // lib.genAttrs archiveMimeTypes (_: archiveDesktopIds);
   # Krita ships many mime-specific launcher files (krita_png.desktop, ...).
   # Hide those helpers from "Open With" and keep only org.kde.krita.desktop visible.
   kritaMimeHelperDesktopEntries = [
@@ -86,23 +222,8 @@ in
   xdg.enable = true;
   xdg.mimeApps = {
     enable = true;
-    defaultApplications = {
-      "x-scheme-handler/http" = [ "chromium.desktop" ];
-      "x-scheme-handler/https" = [ "chromium.desktop" ];
-      "x-scheme-handler/flatpak+http" = [ "j0nix-flatpakref-handler.desktop" ];
-      "x-scheme-handler/flatpak+https" = [ "j0nix-flatpakref-handler.desktop" ];
-      "text/html" = [ "chromium.desktop" ];
-      "application/vnd.flatpak" = [ "j0nix-flatpakref-handler.desktop" ];
-      "application/vnd.flatpak.ref" = [ "j0nix-flatpakref-handler.desktop" ];
-      "application/vnd.flatpak.repo" = [ "j0nix-flatpakref-handler.desktop" ];
-      "application/pdf" = [
-        "org.kde.okular.desktop"
-        "okularApplication_pdf.desktop"
-      ];
-    } // lib.optionalAttrs (preferredFileManagerDesktopId != null) {
-      "inode/directory" = [ preferredFileManagerDesktopId ];
-      "x-scheme-handler/file" = [ preferredFileManagerDesktopId ];
-    };
+    associations.added = mimeDefaults;
+    defaultApplications = mimeDefaults;
   };
   xdg.userDirs = {
     enable = true;
