@@ -119,6 +119,32 @@ in
       };
     };
 
+    discovery.mdns = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable Avahi/mDNS service discovery for LAN services.";
+      };
+
+      openFirewall = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Open the firewall for mDNS discovery.";
+      };
+
+      nssmdns4 = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable IPv4 .local name resolution through Avahi.";
+      };
+
+      allowInterfaces = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Network interfaces Avahi may use. Empty keeps Avahi's default interface selection.";
+      };
+    };
+
     resolver = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -224,6 +250,12 @@ in
       }
     ];
     services.tailscale.enable = cfg.tailscale.enable;
+    services.avahi = lib.mkIf cfg.discovery.mdns.enable {
+      enable = true;
+      openFirewall = cfg.discovery.mdns.openFirewall;
+      nssmdns4 = cfg.discovery.mdns.nssmdns4;
+      allowInterfaces = lib.mkIf (cfg.discovery.mdns.allowInterfaces != [ ]) cfg.discovery.mdns.allowInterfaces;
+    };
     services.resolved.enable = resolverEnabled;
     services.resolved.settings = lib.mkIf resolverEnabled {
       Resolve = {
