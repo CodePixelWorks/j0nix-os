@@ -92,7 +92,9 @@ lib.mkIf enabled {
     lib.hm.dag.entryAfter [ "writeBoundary" ] (
       if autoApply && passwordSecretPath != null then
         ''
-          if ! ${lib.getExe resetScript} >/dev/null 2>&1; then
+          if ${lib.getExe resetScript} >/dev/null 2>&1; then
+            ${pkgs.systemd}/bin/systemctl --user try-restart sunshine.service >/dev/null 2>&1 || true
+          else
             echo "warning: failed to apply Sunshine Web UI credentials from secret '${passwordSecretName}'" >&2
           fi
         ''
