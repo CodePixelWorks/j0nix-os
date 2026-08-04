@@ -27,6 +27,8 @@ let
   sunshineNetworkPerf = sunshinePerf.network or { };
   sunshineNetworkPerfEnable = sunshineNetworkPerf.enable or true;
   sunshineNetworkPerfMode = sunshineNetworkPerf.mode or sunshinePerfMode;
+  sunshineNetworkSettings = (settings.sunshine or { }).network or { };
+  sunshinePacketSize = sunshineNetworkSettings.packetsize or 0;
   sunshineExtraGroups = lib.unique (
     lib.optionals sunshineAddRenderGroup [ "render" ] ++ lib.optionals sunshineAddInputGroup [ "input" ]
   );
@@ -743,6 +745,9 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
         # Enable hardware NVENC encoding
         encoder = "nvenc";
       }
+      // lib.optionalAttrs (sunshinePacketSize != 0) {
+        packetsize = sunshinePacketSize;
+      }
       // lib.optionalAttrs sunshineDisplayTargetEnabled (
         lib.optionalAttrs (sunshineDisplayTargetCapture != null) {
           capture = sunshineDisplayTargetCapture;
@@ -833,6 +838,10 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     {
       assertion = builtins.isBool sunshineNetworkPerfEnable;
       message = "j0nix.desktop.gaming.streaming.sunshine.performance.network.enable must be a boolean";
+    }
+    {
+      assertion = sunshinePacketSize == 0 || (sunshinePacketSize >= 200 && sunshinePacketSize <= 65535);
+      message = "settings.sunshine.network.packetsize must be 0 or between 200 and 65535.";
     }
     {
       assertion = builtins.elem sunshineNetworkPerfMode [
