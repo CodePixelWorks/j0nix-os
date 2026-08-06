@@ -16,28 +16,19 @@ let
     "--ignore-gpu-blocklist"
     "--enable-zero-copy"
   ];
-  chromiumPackage =
-    if nvidiaEnabled then
-      pkgs.symlinkJoin {
-        name = "chromium-nvidia-vaapi";
-        paths = [ pkgs.chromium ];
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          wrapProgram "$out/bin/chromium" \
-            --set LIBVA_DRIVER_NAME nvidia \
-            --set NVD_BACKEND direct \
-            --set GBM_BACKEND nvidia-drm \
-            --set __GLX_VENDOR_LIBRARY_NAME nvidia
-        '';
-      }
-    else
-      pkgs.chromium;
 in
 {
   programs.chromium = {
     enable = true;
-    package = chromiumPackage;
+    package = pkgs.chromium;
     commandLineArgs = chromiumBaseFlags;
+  };
+
+  home.sessionVariables = lib.mkIf nvidiaEnabled {
+    LIBVA_DRIVER_NAME = "nvidia";
+    NVD_BACKEND = "direct";
+    GBM_BACKEND = "nvidia-drm";
+    __GLX_VENDOR_LIBRARY_NAME = "nvidia";
   };
 
   j0nix.user.software.packages = lib.optionals nvidiaEnabled [
