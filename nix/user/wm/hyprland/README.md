@@ -91,7 +91,7 @@ Current scaffold coverage:
 Current shell migration status:
 
 - `caelestia-shell`: active Lua overlay present, including the global submap bootstrap
-- `dank-material-shell`: temporarily marked broken during the Lua migration
+- `dank-material-shell`: selectable again; Hyprland config stays Lua-native and DMS runtime state is managed by the shell module
 - other shells: no dedicated Lua overlay yet
 
 ## Session Environment
