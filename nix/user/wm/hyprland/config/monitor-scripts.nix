@@ -37,7 +37,7 @@ let
     lock_file="$state_dir/runtime-monitors.lock"
 
     usage() {
-      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list|discover|enable-discovered|suggest|prompt-new|sync-live|sync-defaults|watch> [output-name]" >&2
+      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list|discover|doctor|enable-discovered|suggest|prompt-new|sync-live|sync-defaults|watch> [output-name]" >&2
       exit 2
     }
 
@@ -404,6 +404,239 @@ let
             position="$(unknown_monitor_position "$(get_unknown_monitor_json "$name")")"
             printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$state" "$description" "$(printf '%s' "$mode" | sed 's/Hz$//')" "$position"
           done
+    }
+
+    run_monitor_doctor() {
+      local live_json declared_json errors warnings missing_count unknown_count handoff_count
+      local duplicates_count stale_match_count known_live_count
+
+      if ! live_json="$("$hyprctl_bin" -j monitors all 2>/dev/null)"; then
+        echo "ERROR: Hyprland monitor state is unavailable."
+        echo "Hint: run this inside an active Hyprland session."
+        return 1
+      fi
+
+      declared_json="$(
+        "$jq_bin" -n \
+          --slurpfile initial "$initial_states_json" \
+          --slurpfile toggleable "$outputs_json" \
+          --slurpfile bindings "$bindings_json" \
+          --slurpfile headless "$headless_outputs_json" '
+            def source_entries($source; $items):
+              ($items[0] // [])
+              | map(select((.name // "") != "") | . + { source: $source });
+
+            (
+              source_entries("initial", $initial)
+              + source_entries("toggleable", $toggleable)
+              + source_entries("binding", $bindings)
+              + source_entries("headless", $headless)
+            ) as $entries
+            | ($entries | map(.name) | unique) as $names
+            | $names
+            | map(
+                . as $name
+                | ($entries | map(select(.name == $name))) as $matches
+                | {
+                    name: $name,
+                    sources: ($matches | map(.source) | unique),
+                    descriptions: ($matches | map(.description // "") | map(select(. != "")) | unique),
+                    bindIndices: ($matches | map(.bindIndex // null) | map(select(. != null)) | unique),
+                    isHeadless: (($headless[0] // []) | any(.name == $name)),
+                    enabledByDefault: (
+                      $matches
+                      | map(select(has("enabledByDefault")) | .enabledByDefault)
+                      | if length == 0 then null else .[0] end
+                    ),
+                    handoffTargets: (
+                      $matches
+                      | map(.workspaceHandoff.targetMonitor? // "")
+                      | map(select(. != ""))
+                      | unique
+                    )
+                  }
+              )
+          '
+      )"
+
+      errors=0
+      warnings=0
+
+      echo "Monitor doctor"
+      echo
+      echo "Live outputs:"
+      printf '%s' "$live_json" | "$jq_bin" -r '
+        if length == 0 then
+          "  - none"
+        else
+          .[]
+          | "  - \(.name) [\(if (.disabled // false) then "disabled" else "active" end)] \(.description // ([.make // "", .model // ""] | map(select(. != "")) | join(" ")))"
+        end
+      '
+      echo
+      echo "Declared outputs:"
+      printf '%s' "$declared_json" | "$jq_bin" -r '
+        if length == 0 then
+          "  - none"
+        else
+          .[]
+          | "  - \(.name) sources=\(.sources | join(","))\(if .isHeadless then " headless=true" else "" end)"
+        end
+      '
+      echo
+
+      missing_count="$(
+        "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" '
+          [
+            $declared[]
+            | select(.isHeadless == false)
+            | . as $declaredOutput
+            | select(($live | any(.name == $declaredOutput.name)) | not)
+          ] | length
+        '
+      )"
+      if [ "$missing_count" -gt 0 ]; then
+        errors=$((errors + missing_count))
+        echo "ERROR: Declared physical outputs are missing from Hyprland:"
+        "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" -r '
+          $declared[]
+          | select(.isHeadless == false)
+          | . as $declaredOutput
+          | select(($live | any(.name == $declaredOutput.name)) | not)
+          | "  - \(.name) sources=\(.sources | join(","))"
+        '
+        echo "Hint: connector names can change across boots/GPU topology. Update the declaration or migrate this output to a stable match-based monitor id."
+        echo
+      fi
+
+      stale_match_count="$(
+        "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" '
+          [
+            $declared[]
+            | select(.isHeadless == false)
+            | . as $declaredOutput
+            | select(($live | any(.name == $declaredOutput.name)) | not)
+            | . as $declaredOutput
+            | $declaredOutput.descriptions[]
+            | select(. != "")
+            | . as $description
+            | $live[]
+            | select((.description // "") == $description and (.name // "") != $declaredOutput.name)
+            | { declared: $declaredOutput.name, live: .name, description: $description }
+          ] | length
+        '
+      )"
+      if [ "$stale_match_count" -gt 0 ]; then
+        warnings=$((warnings + stale_match_count))
+        echo "WARN: Possible stale connector names with matching descriptions:"
+        "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" -r '
+          $declared[]
+          | select(.isHeadless == false)
+          | . as $declaredOutput
+          | select(($live | any(.name == $declaredOutput.name)) | not)
+          | . as $declaredOutput
+          | $declaredOutput.descriptions[]
+          | select(. != "")
+          | . as $description
+          | $live[]
+          | select((.description // "") == $description and (.name // "") != $declaredOutput.name)
+          | "  - declared \($declaredOutput.name), live \(.name), description=\($description)"
+        '
+        echo
+      fi
+
+      unknown_count="$(
+        "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" '
+          [
+            $live[]
+            | select((.disabled // false) == false)
+            | select((.name // "") != "")
+            | . as $liveOutput
+            | select(($declared | any(.name == $liveOutput.name)) | not)
+          ] | length
+        '
+      )"
+      if [ "$unknown_count" -gt 0 ]; then
+        warnings=$((warnings + unknown_count))
+        echo "WARN: Active live outputs are not declared:"
+        "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" -r '
+          $live[]
+          | select((.disabled // false) == false)
+          | select((.name // "") != "")
+          | . as $liveOutput
+          | select(($declared | any(.name == $liveOutput.name)) | not)
+          | "  - \(.name) \(.description // ([.make // "", .model // ""] | map(select(. != "")) | join(" ")))"
+        '
+        echo "Hint: use wm-monitor-suggest <output-name> for a declarative snippet."
+        echo
+      fi
+
+      handoff_count="$(
+        "$jq_bin" -n --argjson declared "$declared_json" '
+          [
+            $declared[]
+            | . as $source
+            | $source.handoffTargets[]
+            | . as $target
+            | select(($declared | any(.name == $target)) | not)
+            | { source: $source.name, target: $target }
+          ] | length
+        '
+      )"
+      if [ "$handoff_count" -gt 0 ]; then
+        errors=$((errors + handoff_count))
+        echo "ERROR: Workspace handoff targets are not declared:"
+        "$jq_bin" -n --argjson declared "$declared_json" -r '
+          $declared[]
+          | . as $source
+          | $source.handoffTargets[]
+          | . as $target
+          | select(($declared | any(.name == $target)) | not)
+          | "  - \($source.name) -> \($target)"
+        '
+        echo
+      fi
+
+      duplicates_count="$(
+        "$jq_bin" -n --argjson declared "$declared_json" '
+          [
+            $declared
+            | map(.bindIndices[])
+            | group_by(.)
+            | map(select(length > 1))
+            | .[]
+          ] | length
+        '
+      )"
+      if [ "$duplicates_count" -gt 0 ]; then
+        errors=$((errors + duplicates_count))
+        echo "ERROR: Duplicate monitor bind indices:"
+        "$jq_bin" -n --argjson declared "$declared_json" -r '
+          ($declared | map({ name, bindIndices }) | map(select((.bindIndices | length) > 0))) as $withBinds
+          | ($withBinds | map(.bindIndices[]) | group_by(.) | map(select(length > 1)) | map(.[0]))[]
+          | . as $idx
+          | "  - \($idx): \($withBinds | map(select(.bindIndices | index($idx)) | .name) | join(", "))"
+        '
+        echo
+      fi
+
+      known_live_count="$(
+        "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" '
+          [
+            $declared[]
+            | . as $declaredOutput
+            | select(($live | any(.name == $declaredOutput.name)))
+          ] | length
+        '
+      )"
+
+      if [ "$errors" -eq 0 ] && [ "$warnings" -eq 0 ]; then
+        echo "OK: monitor declarations match the current Hyprland output set."
+      else
+        echo "Summary: $errors error(s), $warnings warning(s), $known_live_count declared output(s) visible."
+      fi
+
+      [ "$errors" -eq 0 ]
     }
 
     enable_unknown_monitor() {
@@ -854,6 +1087,10 @@ let
         monitor_list
         exit 0
         ;;
+      doctor)
+        run_monitor_doctor
+        exit $?
+        ;;
       sync-live)
         sync_runtime_monitor_overrides
         exit 0
@@ -957,6 +1194,7 @@ in
   monitorFocusedWorkspacesToScript = pkgs.writeShellScriptBin "wm-monitor-focused-workspaces-to" ''exec ${lib.getExe monitorStateScript} focused-workspaces-to "$@"'';
   monitorListScript = pkgs.writeShellScriptBin "wm-monitor-list" ''exec ${lib.getExe monitorStateScript} list "$@"'';
   monitorDiscoverScript = pkgs.writeShellScriptBin "wm-monitor-discover" ''exec ${lib.getExe monitorStateScript} discover "$@"'';
+  monitorDoctorScript = pkgs.writeShellScriptBin "wm-monitor-doctor" ''exec ${lib.getExe monitorStateScript} doctor "$@"'';
   monitorSuggestScript = pkgs.writeShellScriptBin "wm-monitor-suggest" ''exec ${lib.getExe monitorStateScript} suggest "$@"'';
   monitorNewDialogScript = pkgs.writeShellScriptBin "wm-monitor-new-dialog" ''exec ${lib.getExe monitorStateScript} prompt-new "$@"'';
   monitorDebugScript = pkgs.writeShellScriptBin "wm-monitor-debug" ''
