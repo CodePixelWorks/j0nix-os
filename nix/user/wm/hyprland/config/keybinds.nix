@@ -32,17 +32,28 @@ let
   # Core keybinds (navigation, window management, media, etc)
   # ---------------------------------------------------------------------------
   coreBindsModule = import ./keybinds/core.nix {
-    inherit lib homeBinDir appExec preferredTerminalCmd keybindHelpCommand;
+    inherit
+      lib
+      homeBinDir
+      appExec
+      preferredTerminalCmd
+      keybindHelpCommand
+      ;
     inherit layoutToggleBind overviewToggleBind dmsOverviewEnabled;
     inherit keepassEnabled keepassWorkspaceEnable keepassToggleBind;
-    inherit minimizerEnabled minimizerToggleBind minimizerRestoreBind minimizerMenuBind;
+    inherit
+      minimizerEnabled
+      minimizerToggleBind
+      minimizerRestoreBind
+      minimizerMenuBind
+      ;
     inherit minimizerToggleCommand minimizerRestoreCommand minimizerMenuCommand;
     inherit keybindDiagnosticsEnable toggleableOutputBindLines;
     inherit workspaceSwitchBinds workspaceMoveBinds;
   };
 
   baseHyprKeybinds = {
-    bind  = coreBindsModule.baseBind;
+    bind = coreBindsModule.baseBind;
     binde = coreBindsModule.baseBinde;
     bindm = coreBindsModule.baseBindm;
     bindl = coreBindsModule.baseBindl;
@@ -73,7 +84,8 @@ let
   # ---------------------------------------------------------------------------
   shellOverrides = shellHyprKeybinds.overrides or [ ];
 
-  bindIdentity = entry:
+  bindIdentity =
+    entry:
     let
       parts = map trim (lib.splitString "," entry);
     in
@@ -82,7 +94,8 @@ let
       key = if builtins.length parts > 1 then builtins.elemAt parts 1 else "";
     };
 
-  isOverridden = type: entry:
+  isOverridden =
+    type: entry:
     let
       id = bindIdentity entry;
     in
@@ -92,7 +105,8 @@ let
   # Merge base + shell binds per type (Core entries overridden by shell
   # are filtered out before appending shell entries).
   # ---------------------------------------------------------------------------
-  mergedBindList = key:
+  mergedBindList =
+    key:
     (lib.filter (entry: !(isOverridden key entry)) (baseHyprKeybinds.${key} or [ ]))
     ++ (shellHyprKeybinds.${key} or [ ]);
 
@@ -103,17 +117,32 @@ let
   # Bind type metadata (for documentation/analysis, not rendering)
   # ---------------------------------------------------------------------------
   bindFlagsByType = {
-    bind  = { };
-    bindi = { ignore_mods = true; };
-    bindin = { ignore_mods = true; non_consuming = true; };
-    binde = { repeating = true; };
-    bindl = { locked = true; };
-    bindle = { locked = true; repeating = true; };
-    bindr = { release = true; };
-    bindm = { mouse = true; };
+    bind = { };
+    bindi = {
+      ignore_mods = true;
+    };
+    bindin = {
+      ignore_mods = true;
+      non_consuming = true;
+    };
+    binde = {
+      repeating = true;
+    };
+    bindl = {
+      locked = true;
+    };
+    bindle = {
+      locked = true;
+      repeating = true;
+    };
+    bindr = {
+      release = true;
+    };
+    bindm = {
+      mouse = true;
+    };
   };
 
-  hasValue = value: value != null && value != "";
   trim = lib.strings.trim;
 
   parseBindEntry =
@@ -134,7 +163,12 @@ let
     in
     {
       type = bindType;
-      inherit mods key dispatcher argument;
+      inherit
+        mods
+        key
+        dispatcher
+        argument
+        ;
       flags = bindFlagsByType.${bindType} or { };
       raw = entry;
     };
@@ -145,7 +179,7 @@ let
   # Effective bind lists (what gets rendered to Hyprland config)
   # ---------------------------------------------------------------------------
   effectiveBindLists = {
-    bind  = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ mergedBindList "bind";
+    bind = coreBinds ++ workspaceSwitchBinds ++ workspaceMoveBinds ++ mergedBindList "bind";
     bindi = mergedBindList "bindi";
     bindin = mergedBindList "bindin";
     binde = mergedBindList "binde";
@@ -161,8 +195,7 @@ let
   structuredBindLists = lib.mapAttrs parseBindList effectiveBindLists;
   structuredBinds = lib.concatLists (lib.attrValues structuredBindLists);
   structuredLuaGlobalBinds = if isCaelestiaShell then [ ] else structuredBinds;
-  structuredLuaShellBinds =
-    if isCaelestiaShell then structuredBinds else [ ];
+  structuredLuaShellBinds = if isCaelestiaShell then structuredBinds else [ ];
 
   # ---------------------------------------------------------------------------
   # Caelestia submap config
@@ -184,7 +217,7 @@ let
         ];
         renderedLists = lib.concatStringsSep "\n" (
           lib.filter (s: s != "") [
-            (renderBindLines "bind"  effectiveBindLists.bind)
+            (renderBindLines "bind" effectiveBindLists.bind)
             (renderBindLines "bindi" effectiveBindLists.bindi)
             (renderBindLines "binde" effectiveBindLists.binde)
             (renderBindLines "bindl" effectiveBindLists.bindl)

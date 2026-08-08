@@ -1522,7 +1522,7 @@ in
     ${hyprctlExec} -j monitors all || true
     echo
     echo "== Startup monitor defaults =="
-    cat ${lib.escapeShellArg "${homeDirectory}/.config/hypr/conf.d/10-monitors.conf"} || true
+    cat ${lib.escapeShellArg "${homeDirectory}/.config/hypr/j0nix/monitors.lua"} || true
     echo
     echo "== Runtime monitor overrides =="
     cat ${lib.escapeShellArg hyprlandRuntimeMonitorConfigPath} || true
