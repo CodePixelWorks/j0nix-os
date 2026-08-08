@@ -104,6 +104,27 @@ let
       "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' "$bindings_json" >/dev/null 2>&1
     }
 
+    read_hyprctl_json() {
+      local result rc
+
+      for _ in $(seq 1 5); do
+        set +e
+        result="$("$hyprctl_bin" "$@" 2>&1)"
+        rc=$?
+        set -e
+
+        if [ "$rc" -eq 0 ] && printf '%s' "$result" | "$jq_bin" -e . >/dev/null 2>&1; then
+          printf '%s\n' "$result"
+          return 0
+        fi
+
+        sleep 0.1
+      done
+
+      printf '%s\n' "$result" >&2
+      return 1
+    }
+
     require_output_name() {
       [ -n "$output_name" ] || usage
     }
@@ -407,10 +428,10 @@ let
     }
 
     run_monitor_doctor() {
-      local live_json declared_json errors warnings missing_count unknown_count handoff_count
+      local live_json declared_json errors warnings missing_count optional_missing_count unknown_count handoff_count
       local duplicates_count stale_match_count known_live_count
 
-      if ! live_json="$("$hyprctl_bin" -j monitors all 2>/dev/null)"; then
+      if ! live_json="$(read_hyprctl_json -j monitors all)"; then
         echo "ERROR: Hyprland monitor state is unavailable."
         echo "Hint: run this inside an active Hyprland session."
         return 1
@@ -427,10 +448,10 @@ let
               | map(select((.name // "") != "") | . + { source: $source });
 
             (
-              source_entries("initial", $initial)
-              + source_entries("toggleable", $toggleable)
-              + source_entries("binding", $bindings)
-              + source_entries("headless", $headless)
+              source_entries("initial"; $initial)
+              + source_entries("toggleable"; $toggleable)
+              + source_entries("binding"; $bindings)
+              + source_entries("headless"; $headless)
             ) as $entries
             | ($entries | map(.name) | unique) as $names
             | $names
@@ -440,7 +461,12 @@ let
                 | {
                     name: $name,
                     sources: ($matches | map(.source) | unique),
-                    descriptions: ($matches | map(.description // "") | map(select(. != "")) | unique),
+                    descriptions: (
+                      $matches
+                      | map(.description // "", .match.description // "")
+                      | map(select(. != ""))
+                      | unique
+                    ),
                     bindIndices: ($matches | map(.bindIndex // null) | map(select(. != null)) | unique),
                     isHeadless: (($headless[0] // []) | any(.name == $name)),
                     enabledByDefault: (
@@ -490,6 +516,7 @@ let
           [
             $declared[]
             | select(.isHeadless == false)
+            | select(.enabledByDefault != false)
             | . as $declaredOutput
             | select(($live | any(.name == $declaredOutput.name)) | not)
           ] | length
@@ -497,10 +524,11 @@ let
       )"
       if [ "$missing_count" -gt 0 ]; then
         errors=$((errors + missing_count))
-        echo "ERROR: Declared physical outputs are missing from Hyprland:"
+        echo "ERROR: Enabled physical outputs are missing from Hyprland:"
         "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" -r '
           $declared[]
           | select(.isHeadless == false)
+          | select(.enabledByDefault != false)
           | . as $declaredOutput
           | select(($live | any(.name == $declaredOutput.name)) | not)
           | "  - \(.name) sources=\(.sources | join(","))"
@@ -509,11 +537,36 @@ let
         echo
       fi
 
+      optional_missing_count="$(
+        "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" '
+          [
+            $declared[]
+            | select(.isHeadless == false)
+            | select(.enabledByDefault == false)
+            | . as $declaredOutput
+            | select(($live | any(.name == $declaredOutput.name)) | not)
+          ] | length
+        '
+      )"
+      if [ "$optional_missing_count" -gt 0 ]; then
+        echo "INFO: Disabled-by-default physical outputs are not currently present:"
+        "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" -r '
+          $declared[]
+          | select(.isHeadless == false)
+          | select(.enabledByDefault == false)
+          | . as $declaredOutput
+          | select(($live | any(.name == $declaredOutput.name)) | not)
+          | "  - \(.name) sources=\(.sources | join(","))"
+        '
+        echo
+      fi
+
       stale_match_count="$(
         "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" '
           [
             $declared[]
             | select(.isHeadless == false)
+            | select(.enabledByDefault != false)
             | . as $declaredOutput
             | select(($live | any(.name == $declaredOutput.name)) | not)
             | . as $declaredOutput
@@ -532,6 +585,7 @@ let
         "$jq_bin" -n --argjson live "$live_json" --argjson declared "$declared_json" -r '
           $declared[]
           | select(.isHeadless == false)
+          | select(.enabledByDefault != false)
           | . as $declaredOutput
           | select(($live | any(.name == $declaredOutput.name)) | not)
           | . as $declaredOutput
