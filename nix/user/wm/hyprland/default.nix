@@ -99,6 +99,7 @@ let
     outputBindingNames
     outputBindingIndices
     outputBindingsJson
+    profileMonitorRulesBase
     toggleableOutputs
     toggleableOutputNames
     toggleableOutputsJson
@@ -398,7 +399,7 @@ let
   filteredProfileDetails = profileDetails // {
     hyprlandMonitors = builtins.filter (
       line: !(builtins.elem (monitorNameFromLine line) managedConfigMonitorNames)
-    ) (profileDetails.hyprlandMonitors or [ ]);
+    ) profileMonitorRulesBase;
   };
   hyprlandFragments = import ./config/fragments.nix {
     inherit

@@ -61,8 +61,21 @@ let
   sunshineDisplayTargetIsHeadless = sunshineDisplayTargetBackend == "hyprland-headless";
   sunshineDisplayTargetIsPhysical = sunshineDisplayTargetBackend == "physical-output";
   profileDetails = settings.profileDetails or { };
+  profileUnifiedOutputs = profileDetails.hyprlandOutputs or [ ];
   profileHeadlessOutput = profileDetails.hyprlandSunshineHeadlessOutput or null;
-  profileInitialOutputStatesBase = profileDetails.hyprlandInitialOutputStatesBase or [ ];
+  profileInitialOutputStatesBase =
+    if profileDetails ? hyprlandInitialOutputStatesBase then
+      profileDetails.hyprlandInitialOutputStatesBase
+    else
+      map
+        (output: {
+          inherit (output) name;
+          enabledByDefault = output.enabledByDefault or true;
+          mode = output.mode or "preferred";
+          position = output.position or "auto";
+          scale = output.scale or 1;
+        })
+        profileUnifiedOutputs;
   sunshineUsesWaylandCapture =
     sunshineDisplayTargetEnabled
     && (

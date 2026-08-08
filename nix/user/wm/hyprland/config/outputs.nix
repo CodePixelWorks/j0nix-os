@@ -7,11 +7,60 @@
   sunshineUsesPhysicalOutput,
 }:
 let
+  profileUnifiedOutputs = profileDetails.hyprlandOutputs or [ ];
+  profileOutputsWithBindIndex = builtins.filter (
+    output: (output.outputBinding or (output.toggleable or false)) && (output ? bindIndex)
+  ) profileUnifiedOutputs;
+  profileMonitorRulesBase =
+    if profileDetails ? hyprlandMonitors then
+      profileDetails.hyprlandMonitors
+    else
+      map
+        (output: {
+          output = output.name;
+          mode = output.mode or "preferred";
+          position = output.position or "auto";
+          scale = output.scale or 1;
+        })
+        (builtins.filter (output: output.monitorRule or true) profileUnifiedOutputs);
   profileHeadlessOutput = profileDetails.hyprlandSunshineHeadlessOutput or null;
   profilePhysicalOutput = profileDetails.hyprlandSunshinePhysicalOutput or null;
-  profileOutputBindingsBase = profileDetails.hyprlandOutputBindingsBase or [ ];
-  profileInitialOutputStatesBase = profileDetails.hyprlandInitialOutputStatesBase or [ ];
-  profileToggleableOutputsBase = profileDetails.hyprlandToggleableOutputsBase or [ ];
+  profileOutputBindingsBase =
+    if profileDetails ? hyprlandOutputBindingsBase then
+      profileDetails.hyprlandOutputBindingsBase
+    else
+      map
+        (output:
+          builtins.removeAttrs output [
+            "id"
+            "mode"
+            "position"
+            "scale"
+            "enabledByDefault"
+            "focusOnEnable"
+            "monitorRule"
+            "toggleable"
+            "workspaceHandoff"
+          ])
+        profileOutputsWithBindIndex;
+  profileInitialOutputStatesBase =
+    if profileDetails ? hyprlandInitialOutputStatesBase then
+      profileDetails.hyprlandInitialOutputStatesBase
+    else
+      map
+        (output: {
+          inherit (output) name;
+          enabledByDefault = output.enabledByDefault or true;
+          mode = output.mode or "preferred";
+          position = output.position or "auto";
+          scale = output.scale or 1;
+        })
+        profileUnifiedOutputs;
+  profileToggleableOutputsBase =
+    if profileDetails ? hyprlandToggleableOutputsBase then
+      profileDetails.hyprlandToggleableOutputsBase
+    else
+      builtins.filter (output: output.toggleable or false) profileUnifiedOutputs;
 
   headlessOutputs =
     if hyprlandCfg ? headlessOutputs then
@@ -139,6 +188,7 @@ in
   );
 
   inherit initialOutputStates initialOutputStateNames;
+  inherit profileMonitorRulesBase;
   initialOutputStatesJson = pkgs.writeText "hyprland-initial-output-states.json" (
     builtins.toJSON initialOutputStates
   );
