@@ -48,13 +48,17 @@ let
       profileDetails.hyprlandInitialOutputStatesBase
     else
       map
-        (output: {
-          inherit (output) name;
-          enabledByDefault = output.enabledByDefault or true;
-          mode = output.mode or "preferred";
-          position = output.position or "auto";
-          scale = output.scale or 1;
-        })
+        (output:
+          {
+            inherit (output) name;
+            enabledByDefault = output.enabledByDefault or true;
+            mode = output.mode or "preferred";
+            position = output.position or "auto";
+            scale = output.scale or 1;
+          }
+          // lib.optionalAttrs (output ? id) { inherit (output) id; }
+          // lib.optionalAttrs (output ? description) { inherit (output) description; }
+          // lib.optionalAttrs (output ? match) { inherit (output) match; })
         profileUnifiedOutputs;
   profileToggleableOutputsBase =
     if profileDetails ? hyprlandToggleableOutputsBase then
