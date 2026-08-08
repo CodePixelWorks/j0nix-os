@@ -13,7 +13,6 @@ let
   isDmsShell = selectedShell == "dank-material-shell";
   dmsSettings = settings.dms or { };
   dmsWorkspaceSettings = dmsSettings.workspaces or { };
-  hyprDmsDir = "${config.home.homeDirectory}/.config/hypr/dms";
   useUWSM = (settings.hyprland or { }).useUWSM or true;
   appExecBackend = (settings.hyprland or { }).appExecBackend or "auto";
   launcherPolicy = import ../../../system/lib/app-exec-policy.nix {
@@ -74,7 +73,6 @@ let
   inherit (sessionEnvModule)
     sessionEnv
     sessionEnvCfg
-    sessionEnvLines
     importSessionEnvArgs
     uwsmEnvText
     ;
@@ -89,7 +87,6 @@ let
     inherit sunshineUsesHeadlessOutput sunshineUsesPhysicalOutput;
   };
   inherit (outputs)
-    headlessOutputs
     headlessOutputNames
     headlessOutputsJson
     initialOutputStates
@@ -118,7 +115,6 @@ let
   inherit (keybindDiag)
     keybindDiagnosticsEnable
     keybindDiagnosticsDelaySeconds
-    keybindDiagnosticsLogDir
     keybindDiagnosticsProbeScript
     keybindDiagnosticsScript
     ;
@@ -127,14 +123,9 @@ let
   inherit (minimizer)
     minimizerEnabled
     minimizerVariant
-    minimizerIsDenis
-    minimizerIsOrteip
     minimizerPackage
-    minimizerDefaultCommand
     minimizerCommand
-    minimizerOrteipCfg
     minimizerOrteipAppId
-    minimizerBinds
     minimizerToggleBind
     minimizerRestoreBind
     minimizerMenuBind
@@ -194,11 +185,7 @@ let
   dmsOverviewSettings = dmsSettings.overview or { };
   dmsOverviewEnabled = dmsOverviewSettings.enable or false;
   dmsOverviewAutostart = dmsOverviewSettings.autostart or false;
-  userHyprShellOverridesDir = "${config.home.homeDirectory}/.config/hypr/shell-overrides/${selectedShell}";
-  userHyprConfigPath = "${userHyprShellOverridesDir}/user-overrides.lua";
-  mainHyprConfigDir = "${config.home.homeDirectory}/.config/hypr/conf.d";
   hyprlandRuntimeMonitorConfigPath = "${config.home.homeDirectory}/.config/hypr/j0nix/runtime-monitors.lua";
-  shellGeneratedConfigDir = "${config.home.homeDirectory}/.config/hypr/shells/${selectedShell}/generated";
   hyprlandWindowRules = import ./config/window-rules.nix { inherit lib; };
   hyprlandKeybinds = import ./config/keybinds.nix {
     inherit
@@ -365,16 +352,15 @@ let
     monitorNewDialogScript
     monitorDebugScript
     ;
-  hyprlandStartupCommands =
-    [
-      (lib.getExe importSessionEnvScript)
-      (lib.getExe startGraphicalSessionTargetScript)
-      (lib.getExe' pkgs.awww "awww-daemon")
-      (lib.getExe hyprlandStartupAppsScript)
-    ]
-    ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
-    ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "${homeBinDir}/wm-overview-start" ]
-    ++ lib.optionals keybindDiagnosticsEnable [ (lib.getExe hyprlandKeybindDiagnosticsStartupScript) ];
+  hyprlandStartupCommands = [
+    (lib.getExe importSessionEnvScript)
+    (lib.getExe startGraphicalSessionTargetScript)
+    (lib.getExe' pkgs.awww "awww-daemon")
+    (lib.getExe hyprlandStartupAppsScript)
+  ]
+  ++ lib.optionals (shellStartupCommand != null) [ shellStartupCommand ]
+  ++ lib.optionals (dmsOverviewEnabled && dmsOverviewAutostart) [ "${homeBinDir}/wm-overview-start" ]
+  ++ lib.optionals keybindDiagnosticsEnable [ (lib.getExe hyprlandKeybindDiagnosticsStartupScript) ];
   initialOutputStateToMonitorLine =
     output:
     let
@@ -401,37 +387,6 @@ let
       line: !(builtins.elem (monitorNameFromLine line) managedConfigMonitorNames)
     ) profileMonitorRulesBase;
   };
-  hyprlandFragments = import ./config/fragments.nix {
-    inherit
-      lib
-      settings
-      ;
-    profileDetails = filteredProfileDetails;
-    inherit
-      isCaelestiaShell
-      isDmsShell
-      hyprDmsDir
-      hyprlandWindowRules
-      hyprlandKeybinds
-      shellStartupCommand
-      dmsOverviewEnabled
-      dmsOverviewAutostart
-      homeBinDir
-      sessionEnvLines
-      keybindDiagnosticsEnable
-      ;
-    mainConfigDir = mainHyprConfigDir;
-    shellConfigDir = shellGeneratedConfigDir;
-    sessionEnvImportCommand = lib.getExe importSessionEnvScript;
-    startGraphicalSessionTargetCommand = lib.getExe startGraphicalSessionTargetScript;
-    swwwDaemonCommand = lib.getExe' pkgs.awww "awww-daemon";
-    startupAppsCommand = lib.getExe hyprlandStartupAppsScript;
-    keybindDiagnosticsStartupCommand = lib.getExe hyprlandKeybindDiagnosticsStartupScript;
-    managedMonitorLines = managedConfigMonitorLines;
-  };
-  hyprlandFragmentFiles = lib.mapAttrs' (
-    path: text: lib.nameValuePair path { inherit text; }
-  ) hyprlandFragments.files;
   hyprlandLuaFragments = import ./config/lua-fragments.nix {
     inherit
       lib
