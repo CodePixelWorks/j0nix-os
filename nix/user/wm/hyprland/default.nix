@@ -531,10 +531,6 @@ in
 
   assertions = [
     {
-      assertion = !isDmsShell;
-      message = "settings.userSettings.<name>.wmShell=dank-material-shell is temporarily marked broken during the Hyprland Lua migration. Use caelestia-shell.";
-    }
-    {
       assertion = !(installRawQuickshell && isDmsShell);
       message = "settings.hyprland.debug.installRawQuickshell conflicts with hyprlandShell=dank-material-shell (quickshell package collision).";
     }
