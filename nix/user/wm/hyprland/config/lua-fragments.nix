@@ -338,7 +338,8 @@ let
   shellLua =
     if selectedShell == "dank-material-shell" then
       ''
-        error("dank-material-shell is temporarily marked broken during the Hyprland Lua migration. Use caelestia-shell.")
+        -- Dank Material Shell runs as a Quickshell process and manages its own runtime state.
+        -- Keep Hyprland integration Lua-native here; do not source legacy Hyprlang snippets.
       ''
     else
       caelestiaShellLua;
