@@ -503,6 +503,19 @@ let
       fi
     fi
 
+    "$coreutils_bin"/mkdir -p "$state_dir"
+    if wm_monitor_bin="$(command -v wm-monitor 2>/dev/null)"; then
+      ${lib.optionalString sunshineDisableLockScreenDuringStream ''
+        : > "$lockscreen_disable_marker"
+        ${pkgs.procps}/bin/pkill -x hyprlock >/dev/null 2>&1 || true
+      ''}
+      "$wm_monitor_bin" transaction-begin sunshine "$target_name" "$mode" "$stream_position" "$target_scale"
+      if command -v wm-shell-restart-detached >/dev/null 2>&1; then
+        wm-shell-restart-detached >/dev/null 2>&1 || true
+      fi
+      exit 0
+    fi
+
     if [ "$target_backend" = "hyprland-headless" ]; then
       if ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$target_name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
         "$hyprctl_bin" output create headless "$target_name" >/dev/null 2>&1 || true
@@ -515,7 +528,6 @@ let
       fi
     fi
 
-    "$coreutils_bin"/mkdir -p "$state_dir"
     snapshot_monitors
     apply_monitor_enabled "$target_name" "$mode" "$staging_position" "$target_scale"
     ${lib.optionalString sunshineDisableLockScreenDuringStream ''
@@ -585,6 +597,15 @@ let
     lockscreen_disable_marker="$state_dir/disable-lock-screen"
 
     if [ -z "$target_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ]; then
+      exit 0
+    fi
+
+    if wm_monitor_bin="$(command -v wm-monitor 2>/dev/null)"; then
+      "$wm_monitor_bin" transaction-end sunshine "$target_name" || true
+      if command -v wm-shell-restart-detached >/dev/null 2>&1; then
+        wm-shell-restart-detached >/dev/null 2>&1 || true
+      fi
+      "$coreutils_bin"/rm -f "$lockscreen_disable_marker"
       exit 0
     fi
 
