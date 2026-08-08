@@ -117,7 +117,7 @@ in
       ]
       ++ lib.optional wmNeedsShell {
         assertion = wmShellExists;
-        message = "Unknown wmShell '${userSettings.wmShell}'. Valid examples: ags, caelestia-shell, noctalia-shell, none. dank-material-shell is temporarily broken during the Hyprland Lua migration.";
+        message = "Unknown wmShell '${userSettings.wmShell}'. Valid examples: ags, caelestia-shell, dank-material-shell, noctalia-shell, none.";
       };
     }
   )
