@@ -33,7 +33,7 @@ Portal routing on Hyprland is intentionally split:
 The module now composes keybinds from:
 
 - `nix/user/wm/hyprland/config/keybinds.nix` (base + shell-specific bind maps)
-- `nix/user/wm/hyprland/config/fragments.nix` (Hyprland fragment rendering + section layout)
+- `nix/user/wm/hyprland/config/lua-fragments.nix` (Hyprland Lua rendering + section layout)
 - `nix/user/wm/hyprland/default.nix` (wiring + startup)
 
 Window rules are split into:

@@ -11,7 +11,6 @@
   useUWSM,
 }:
 let
-  trim = lib.strings.trim;
   selectedShell = settings.wmShell or (settings.hyprlandShell or "caelestia-shell");
 
   luaValue =
@@ -25,7 +24,9 @@ let
     else if builtins.isList value then
       "{ " + lib.concatStringsSep ", " (map luaValue value) + " }"
     else if builtins.isAttrs value then
-      "{ " + lib.concatStringsSep ", " (lib.mapAttrsToList (name: child: "${name} = ${luaValue child}") value) + " }"
+      "{ "
+      + lib.concatStringsSep ", " (lib.mapAttrsToList (name: child: "${name} = ${luaValue child}") value)
+      + " }"
     else if value == null then
       "nil"
     else
@@ -34,14 +35,20 @@ let
   renderLuaConfig = attrs: "hl.config(${luaValue attrs})";
   renderLuaEnv = name: value: "hl.env(${builtins.toJSON name}, ${builtins.toJSON (toString value)})";
   renderExec = command: "  hl.exec_cmd(${builtins.toJSON command})";
-  renderWindowRule = rule:
+  renderWindowRule =
+    rule:
     let
       body = {
         match = rule.match or { };
-      } // builtins.removeAttrs rule [ "match" "name" ];
+      }
+      // builtins.removeAttrs rule [
+        "match"
+        "name"
+      ];
     in
     "hl.window_rule(${luaValue body})";
-  renderBindFlags = flags:
+  renderBindFlags =
+    flags:
     if flags == { } then
       null
     else
@@ -67,12 +74,14 @@ let
         in
         if part == "$mainMod" then
           "SUPER"
-        else if builtins.elem upper [
-          "SUPER"
-          "SHIFT"
-          "CTRL"
-          "ALT"
-        ] then
+        else if
+          builtins.elem upper [
+            "SUPER"
+            "SHIFT"
+            "CTRL"
+            "ALT"
+          ]
+        then
           upper
         else
           part;
@@ -82,10 +91,7 @@ let
       suffix = lib.concatStringsSep " + " suffixSegments;
     in
     if usesMainMod then
-      if suffix == "" then
-        "mainMod"
-      else
-        "mainMod .. \" + " + suffix + "\""
+      if suffix == "" then "mainMod" else "mainMod .. \" + " + suffix + "\""
     else
       builtins.toJSON suffix;
   renderRawDispatchCommand =
@@ -130,26 +136,24 @@ let
       "hl.dsp.exit()"
     else
       "hl.dsp.exec_cmd(${builtins.toJSON (renderRawDispatchCommand bind)})";
-  renderBind = bind:
+  renderBind =
+    bind:
     let
       keysExpr = renderBindKeys bind;
       dispatcherExpr = renderBindDispatcher bind;
       flagsExpr = renderBindFlags (bind.flags or { });
-      args =
-        [
-          keysExpr
-          dispatcherExpr
-        ]
-        ++ lib.optionals (flagsExpr != null) [ flagsExpr ];
+      args = [
+        keysExpr
+        dispatcherExpr
+      ]
+      ++ lib.optionals (flagsExpr != null) [ flagsExpr ];
     in
     "hl.bind(" + lib.concatStringsSep ", " args + ")";
-  renderIndentedBind = bind: "  " + renderBind bind;
   bindUsesMainMod =
     bind:
-    builtins.any (
-      part:
-      part == "$mainMod" || lib.toUpper part == "SUPER"
-    ) (builtins.filter (part: part != "") (lib.splitString " " (bind.mods or "")));
+    builtins.any (part: part == "$mainMod" || lib.toUpper part == "SUPER") (
+      builtins.filter (part: part != "") (lib.splitString " " (bind.mods or ""))
+    );
   bindIsModOnlyLauncher =
     bind:
     let
@@ -160,18 +164,20 @@ let
     bind:
     let
       interruptBind = bind // {
-        flags = (builtins.removeAttrs (bind.flags or { }) [
-          "click"
-          "drag"
-          "long_press"
-          "mouse"
-          "release"
-          "repeating"
-        ]) // {
-          ignore_mods = true;
-          non_consuming = true;
-          submap_universal = true;
-        };
+        flags =
+          (builtins.removeAttrs (bind.flags or { }) [
+            "click"
+            "drag"
+            "long_press"
+            "mouse"
+            "release"
+            "repeating"
+          ])
+          // {
+            ignore_mods = true;
+            non_consuming = true;
+            submap_universal = true;
+          };
       };
       flagsExpr = renderBindFlags interruptBind.flags;
     in
@@ -182,7 +188,8 @@ let
       flagsExpr
     ]
     + ")";
-  renderUniversalIndentedBind = bind:
+  renderUniversalIndentedBind =
+    bind:
     "  "
     + renderBind (
       bind
@@ -193,16 +200,14 @@ let
       }
     );
 
-  rawDispatchCommandWithArgument = command:
-    if lib.strings.hasPrefix "hyprctl " command then
-      command
-    else
-      "hyprctl dispatch -- ${command}";
-
   monitorLib = import ../../../../system/lib/monitor.nix { inherit lib; };
 
-  staticMonitorEntries = builtins.filter (e: e != null) (map monitorLib.normalizeMonitor (profileDetails.hyprlandMonitors or [ ]));
-  allMonitorEntries = staticMonitorEntries ++ builtins.filter (e: e != null) (map monitorLib.normalizeMonitor managedMonitorLines);
+  staticMonitorEntries = builtins.filter (e: e != null) (
+    map monitorLib.normalizeMonitor (profileDetails.hyprlandMonitors or [ ])
+  );
+  allMonitorEntries =
+    staticMonitorEntries
+    ++ builtins.filter (e: e != null) (map monitorLib.normalizeMonitor managedMonitorLines);
 
   inputConfig = {
     input = {
@@ -285,9 +290,22 @@ let
     map (
       monitor:
       if monitor ? disabled then
-        "hl.monitor(${luaValue { output = monitor.output; disabled = true; }})"
+        "hl.monitor(${
+          luaValue {
+            output = monitor.output;
+            disabled = true;
+          }
+        })"
       else
-        "hl.monitor(${luaValue { output = monitor.output; disabled = false; mode = monitor.mode; position = monitor.position; scale = monitor.scale; }})"
+        "hl.monitor(${
+          luaValue {
+            output = monitor.output;
+            disabled = false;
+            mode = monitor.mode;
+            position = monitor.position;
+            scale = monitor.scale;
+          }
+        })"
     ) allMonitorEntries
   );
   windowRuleLua = lib.concatStringsSep "\n" (map renderWindowRule hyprlandWindowRules.structured);
@@ -309,7 +327,9 @@ let
         hl.bind("SUPER + SUPER_L", hl.dsp.global("caelestia:launcher"), { release = true, ignore_mods = true, submap_universal = true })
 
         hl.define_submap("global", function()
-        ${lib.concatStringsSep "\n" (map renderUniversalIndentedBind hyprlandKeybinds.structuredLuaShellBinds)}
+        ${lib.concatStringsSep "\n" (
+          map renderUniversalIndentedBind hyprlandKeybinds.structuredLuaShellBinds
+        )}
         ${caelestiaLauncherInterruptLua}
         end)
       ''
