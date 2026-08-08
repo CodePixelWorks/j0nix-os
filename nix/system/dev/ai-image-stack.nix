@@ -302,24 +302,27 @@ let
   ++ map (subdir: "${modelsDir}/${subdir}") modelSubdirs;
 in
 lib.mkIf enabled {
-  virtualisation.docker.enable = true;
-  virtualisation.oci-containers.backend = lib.mkDefault "docker";
+  virtualisation = {
+    docker.enable = true;
+    oci-containers = {
+      backend = lib.mkDefault "docker";
+      containers = lib.mapAttrs' (
+        name: app:
+        lib.nameValuePair "ai-${name}" {
+          inherit (app)
+            image
+            autoStart
+            volumes
+            extraOptions
+            ;
+          ports = [ (mkPort app) ];
+          environment = commonEnv // app.environment;
+        }
+      ) enabledOciApps;
+    };
+  };
 
   hardware.nvidia-container-toolkit.enable = lib.mkIf useNvidia true;
-
-  virtualisation.oci-containers.containers = lib.mapAttrs' (
-    name: app:
-    lib.nameValuePair "ai-${name}" {
-      inherit (app)
-        image
-        autoStart
-        volumes
-        extraOptions
-        ;
-      ports = [ (mkPort app) ];
-      environment = commonEnv // app.environment;
-    }
-  ) enabledOciApps;
 
   systemd.services = {
     ai-image-stack-prepare = {
