@@ -37,7 +37,7 @@ let
     lock_file="$state_dir/runtime-monitors.lock"
 
     usage() {
-      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list|discover|doctor|enable-discovered|suggest|prompt-new|sync-live|sync-defaults|watch> [output-name]" >&2
+      echo "usage: wm-monitor <on|off|toggle|restore|status|workspace-to|focused-workspaces-to|list|discover|doctor|transaction-begin|transaction-end|enable-discovered|suggest|prompt-new|sync-live|sync-defaults|watch> [output-name]" >&2
       exit 2
     }
 
@@ -68,6 +68,10 @@ let
 
     state_prefix() {
       printf '%s/%s' "$state_dir" "$(sanitize_name "$1")"
+    }
+
+    transaction_dir() {
+      printf '%s/transactions/%s' "$state_dir" "$(sanitize_name "$1")"
     }
 
     load_output_config() {
@@ -1247,6 +1251,139 @@ let
       done
     }
 
+    transaction_begin() {
+      local transaction_name="$1"
+      local target_key="$2"
+      local target_mode="$3"
+      local target_position="$4"
+      local target_scale="$5"
+      local tx_dir target_json target_monitor active_workspace focused_monitor
+
+      [ -n "$transaction_name" ] || usage
+      [ -n "$target_key" ] || usage
+      target_json="$(load_output_config "$target_key" 2>/dev/null || load_output_binding "$target_key" 2>/dev/null || true)"
+      if [ -z "$target_json" ]; then
+        echo "Unknown transaction target output: $target_key" >&2
+        exit 1
+      fi
+      target_monitor="$(resolve_output_name "$target_json")"
+      [ -n "$target_monitor" ] || exit 1
+      tx_dir="$(transaction_dir "$transaction_name")"
+      mkdir -p "$tx_dir"
+
+      if output_is_headless "$target_monitor"; then
+        ensure_headless_output "$target_monitor"
+      fi
+
+      live_monitors_all_json | "$jq_bin" -r --arg target "$target_monitor" '
+        .[]
+        | select((.name // "") != "" and .name != $target)
+        | if (.disabled // false) then
+            [.name, "disable", "", ""] | @tsv
+          else
+            [
+              .name,
+              (((.width // 0) | tostring) + "x" + ((.height // 0) | tostring) + "@" + ((.refreshRate // 60) | tostring)),
+              (((.x // 0) | tostring) + "x" + ((.y // 0) | tostring)),
+              ((.scale // 1) | tostring)
+            ] | @tsv
+          end
+      ' >"$tx_dir/monitors.tsv.tmp"
+      mv -f "$tx_dir/monitors.tsv.tmp" "$tx_dir/monitors.tsv"
+
+      "$hyprctl_bin" -j workspaces \
+        | "$jq_bin" -r '.[] | select((.name // "") != "" and (.monitor // "") != "") | [.name, .monitor] | @tsv' >"$tx_dir/workspaces.tsv.tmp"
+      mv -f "$tx_dir/workspaces.tsv.tmp" "$tx_dir/workspaces.tsv"
+      "$hyprctl_bin" -j activeworkspace | "$jq_bin" -r '.name // empty' >"$tx_dir/active-workspace"
+      focused_monitor="$(get_focused_monitor || true)"
+      printf '%s\n' "$focused_monitor" >"$tx_dir/focused-monitor"
+
+      apply_monitor_enabled "$target_monitor" "$target_mode" "$target_position" "$target_scale"
+      wait_for_output_state "$target_monitor" active
+
+      active_workspace="$(cat "$tx_dir/active-workspace" 2>/dev/null || true)"
+      if [ -f "$tx_dir/workspaces.tsv" ]; then
+        while IFS=$'\t' read -r workspace_name monitor_name; do
+          [ -n "$workspace_name" ] || continue
+          [ "$workspace_name" = "$active_workspace" ] && continue
+          [ "$monitor_name" = "$target_monitor" ] && continue
+          move_workspace "$workspace_name" "$target_monitor"
+        done <"$tx_dir/workspaces.tsv"
+      fi
+      if [ -n "$active_workspace" ]; then
+        move_workspace "$active_workspace" "$target_monitor"
+      fi
+
+      if [ -f "$tx_dir/monitors.tsv" ]; then
+        while IFS=$'\t' read -r monitor_name _mode _position _scale; do
+          [ -n "$monitor_name" ] || continue
+          apply_monitor_disabled "$monitor_name"
+        done <"$tx_dir/monitors.tsv"
+      fi
+
+      apply_monitor_enabled "$target_monitor" "$target_mode" "$target_position" "$target_scale"
+      focus_monitor "$target_monitor"
+      sync_runtime_monitor_overrides
+    }
+
+    transaction_end() {
+      local transaction_name="$1"
+      local target_key="''${2:-}"
+      local tx_dir target_json target_monitor active_workspace focused_monitor
+      local monitor_name monitor_mode monitor_position monitor_scale
+
+      [ -n "$transaction_name" ] || usage
+      tx_dir="$(transaction_dir "$transaction_name")"
+
+      if [ -f "$tx_dir/monitors.tsv" ]; then
+        while IFS=$'\t' read -r monitor_name monitor_mode monitor_position monitor_scale; do
+          [ -n "$monitor_name" ] || continue
+          if [ "$monitor_mode" = "disable" ]; then
+            apply_monitor_disabled "$monitor_name"
+          else
+            apply_monitor_enabled "$monitor_name" "$monitor_mode" "$monitor_position" "$monitor_scale"
+          fi
+        done <"$tx_dir/monitors.tsv"
+      fi
+
+      sleep 0.2
+      active_workspace="$(cat "$tx_dir/active-workspace" 2>/dev/null || true)"
+      if [ -f "$tx_dir/workspaces.tsv" ]; then
+        while IFS=$'\t' read -r workspace_name monitor_name; do
+          [ -n "$workspace_name" ] || continue
+          [ "$workspace_name" = "$active_workspace" ] && continue
+          move_workspace "$workspace_name" "$monitor_name"
+        done <"$tx_dir/workspaces.tsv"
+
+        if [ -n "$active_workspace" ]; then
+          while IFS=$'\t' read -r workspace_name monitor_name; do
+            [ "$workspace_name" = "$active_workspace" ] || continue
+            move_workspace "$workspace_name" "$monitor_name"
+            break
+          done <"$tx_dir/workspaces.tsv"
+        fi
+      fi
+
+      if [ -n "$target_key" ]; then
+        target_json="$(load_output_config "$target_key" 2>/dev/null || load_output_binding "$target_key" 2>/dev/null || true)"
+        if [ -n "$target_json" ]; then
+          target_monitor="$(resolve_output_name "$target_json")"
+          if [ "$(get_output_field "$target_json" 'if (.enabledByDefault == false) then "0" else "1" end')" = "1" ]; then
+            enable_output "$target_json" "$target_monitor" "$(state_prefix "$(output_state_key "$target_json")")"
+          else
+            apply_monitor_disabled "$target_monitor"
+          fi
+        fi
+      fi
+
+      focused_monitor="$(cat "$tx_dir/focused-monitor" 2>/dev/null || true)"
+      if [ -n "$focused_monitor" ]; then
+        focus_monitor "$focused_monitor"
+      fi
+      rm -rf "$tx_dir"
+      sync_runtime_monitor_overrides
+    }
+
     case "$command" in
       list)
         monitor_list
@@ -1255,6 +1392,14 @@ let
       doctor)
         run_monitor_doctor
         exit $?
+        ;;
+      transaction-begin)
+        transaction_begin "''${2:-}" "''${3:-}" "''${4:-preferred}" "''${5:-auto}" "''${6:-1}"
+        exit 0
+        ;;
+      transaction-end)
+        transaction_end "''${2:-}" "''${3:-}"
+        exit 0
         ;;
       sync-live)
         sync_runtime_monitor_overrides
