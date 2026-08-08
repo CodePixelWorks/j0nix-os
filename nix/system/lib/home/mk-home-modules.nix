@@ -108,7 +108,7 @@ in
         }
         {
           assertion = missingRoleNames == [ ];
-          message = "Unknown user role(s) for ${userSettings.username}: ${lib.concatStringsSep ", " missingRoleNames}. Expected modules under user-roles/home/<role>.nix";
+          message = "Unknown user role(s) for ${userSettings.username}: ${lib.concatStringsSep ", " missingRoleNames}. Expected modules under nix/roles/home/<role>.nix";
         }
         {
           assertion = missingProgramNames == [ ];
