@@ -32,7 +32,6 @@ let
 in
 {
   inherit sessionEnvCfg sessionEnv;
-  sessionEnvLines = lib.mapAttrsToList (name: value: "env = ${name},${toString value}") sessionEnv;
   importedSessionEnvNames = builtins.attrNames sessionEnv;
   importSessionEnvArgs = lib.concatStringsSep " \\\n        " (
     map lib.escapeShellArg (builtins.attrNames sessionEnv)
