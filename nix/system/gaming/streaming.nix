@@ -386,6 +386,7 @@ let
     workspace_state="$state_dir/headless-workspaces.tsv"
     active_state="$state_dir/headless-active-workspace"
     focused_monitor_state="$state_dir/headless-focused-monitor"
+    monitor_state="$state_dir/headless-monitors.tsv"
     lockscreen_disable_marker="$state_dir/disable-lock-screen"
 
     if [ -z "$target_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ] || [ ! -x "$jq_bin" ]; then
@@ -419,6 +420,24 @@ let
 
     apply_monitor_disabled() {
       "$hyprctl_bin" eval "$(render_monitor_disabled "$1")" >/dev/null 2>&1 || true
+    }
+
+    snapshot_monitors() {
+      "$hyprctl_bin" -j monitors all | "$jq_bin" -r --arg target_name "$target_name" '
+        .[]
+        | select((.name // "") != "" and (.name != $target_name))
+        | if (.disabled // false) then
+            [.name, "disable", "", ""] | @tsv
+          else
+            [
+              .name,
+              (((.width // 0) | tostring) + "x" + ((.height // 0) | tostring) + "@" + ((.refreshRate // 60) | tostring)),
+              (((.x // 0) | tostring) + "x" + ((.y // 0) | tostring)),
+              ((.scale // 1) | tostring)
+            ] | @tsv
+          end
+      ' > "$monitor_state.tmp"
+      "$coreutils_bin"/mv "$monitor_state.tmp" "$monitor_state"
     }
 
     width="''${SUNSHINE_CLIENT_WIDTH:-}"
@@ -483,8 +502,9 @@ let
       fi
     fi
 
-    apply_monitor_enabled "$target_name" "$mode" "$staging_position" "$target_scale"
     "$coreutils_bin"/mkdir -p "$state_dir"
+    snapshot_monitors
+    apply_monitor_enabled "$target_name" "$mode" "$staging_position" "$target_scale"
     ${lib.optionalString sunshineDisableLockScreenDuringStream ''
       : > "$lockscreen_disable_marker"
       ${pkgs.procps}/bin/pkill -x hyprlock >/dev/null 2>&1 || true
@@ -548,6 +568,7 @@ let
     workspace_state="$state_dir/headless-workspaces.tsv"
     active_state="$state_dir/headless-active-workspace"
     focused_monitor_state="$state_dir/headless-focused-monitor"
+    monitor_state="$state_dir/headless-monitors.tsv"
     lockscreen_disable_marker="$state_dir/disable-lock-screen"
 
     if [ -z "$target_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ]; then
@@ -583,12 +604,12 @@ let
       "$hyprctl_bin" eval "$(render_monitor_disabled "$1")" >/dev/null 2>&1 || true
     }
 
-    apply_monitor_spec() {
-      local spec="$1"
-      local name mode position scale
-      IFS=, read -r name mode position scale <<EOF
-$spec
-EOF
+    apply_monitor_state() {
+      local name="$1"
+      local mode="$2"
+      local position="$3"
+      local scale="$4"
+      [ -n "$name" ] || return 0
       if [ "$mode" = "disable" ]; then
         apply_monitor_disabled "$name"
       else
@@ -596,11 +617,35 @@ EOF
       fi
     }
 
-    ${lib.concatStringsSep "\n    " (
-      map (spec: "apply_monitor_spec ${lib.escapeShellArg spec}") (
-        map initialOutputStateToMonitorSpec configuredPhysicalOutputStates
-      )
-    )}
+    restore_monitor_layout() {
+      if [ -f "$monitor_state" ]; then
+        while IFS=$'\t' read -r name mode position scale; do
+          apply_monitor_state "$name" "$mode" "$position" "$scale"
+        done < "$monitor_state"
+      else
+        ${lib.concatStringsSep "\n        " (
+          map
+            (
+              output:
+              let
+                name = output.name or "";
+                enabledByDefault = output.enabledByDefault or true;
+                mode = output.mode or "preferred";
+                position = output.position or "auto";
+                scale = toString (output.scale or 1);
+              in
+              if enabledByDefault then
+                "apply_monitor_state ${lib.escapeShellArg name} ${lib.escapeShellArg mode} ${lib.escapeShellArg position} ${lib.escapeShellArg scale}"
+              else
+                "apply_monitor_state ${lib.escapeShellArg name} disable '' ''"
+            )
+            configuredPhysicalOutputStates
+        )}
+      fi
+    }
+
+    restore_monitor_layout
+    sleep 0.2
 
     active_workspace=""
     if [ -f "$active_state" ]; then
@@ -636,7 +681,10 @@ EOF
     fi
 
     if [ -n "$target_default_spec" ]; then
-      apply_monitor_spec "$target_default_spec"
+      IFS=, read -r name mode position scale <<EOF
+$target_default_spec
+EOF
+      apply_monitor_state "$name" "$mode" "$position" "$scale"
     else
       apply_monitor_disabled "$target_name"
     fi
@@ -646,7 +694,7 @@ EOF
     if command -v wm-shell-restart-detached >/dev/null 2>&1; then
       wm-shell-restart-detached >/dev/null 2>&1 || true
     fi
-    "$coreutils_bin"/rm -f "$workspace_state" "$active_state" "$focused_monitor_state" "$lockscreen_disable_marker"
+    "$coreutils_bin"/rm -f "$workspace_state" "$active_state" "$focused_monitor_state" "$monitor_state" "$lockscreen_disable_marker"
   '';
   sunshineDisplayPrepCommand = lib.getExe sunshineDisplayPrepScript;
   sunshineDisplayUndoCommand = lib.getExe sunshineDisplayUndoScript;
