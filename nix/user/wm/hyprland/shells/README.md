@@ -32,4 +32,4 @@ For `dank-material-shell`, behavior is controlled by `settings.dms.mode`:
 Current status:
 
 - `caelestia-shell` is the active migration target and remains supported.
-- `dank-material-shell` is temporarily marked broken during the Hyprland Lua migration and should not be selected for user sessions.
+- `dank-material-shell` is selectable again. Its Hyprland integration stays Lua-native; the shell module manages writable DMS runtime state and start/stop helpers.
