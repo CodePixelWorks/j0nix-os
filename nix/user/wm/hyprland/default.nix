@@ -359,6 +359,7 @@ let
     monitorFocusedWorkspacesToScript
     monitorListScript
     monitorDiscoverScript
+    monitorDoctorScript
     monitorSuggestScript
     monitorNewDialogScript
     monitorDebugScript
@@ -491,6 +492,7 @@ in
       monitorFocusedWorkspacesToScript
       monitorListScript
       monitorDiscoverScript
+      monitorDoctorScript
       monitorSuggestScript
       monitorNewDialogScript
       monitorDebugScript
