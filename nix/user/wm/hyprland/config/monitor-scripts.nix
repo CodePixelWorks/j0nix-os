@@ -72,12 +72,12 @@ let
 
     load_output_config() {
       local name="$1"
-      "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name)' "$outputs_json"
+      "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name or (.id // "") == $name)' "$outputs_json"
     }
 
     load_output_binding() {
       local name="$1"
-      "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name)' "$bindings_json"
+      "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name or (.id // "") == $name)' "$bindings_json"
     }
 
     output_is_headless() {
@@ -88,10 +88,10 @@ let
     ensure_headless_output() {
       local name="$1"
       output_is_headless "$name" || return 0
-      if ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
+      if ! live_monitors_all_json | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
         "$hyprctl_bin" output create headless "$name" >/dev/null 2>&1 || true
         for _ in $(seq 1 50); do
-          if "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
+          if live_monitors_all_json | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
             break
           fi
           sleep 0.1
@@ -133,6 +133,80 @@ let
       local output_json="$1"
       local query="$2"
       printf '%s' "$output_json" | "$jq_bin" -r "$query"
+    }
+
+    output_state_key() {
+      local output_json="$1"
+      printf '%s' "$output_json" | "$jq_bin" -r '.id // .name // empty'
+    }
+
+    live_monitors_all_json() {
+      read_hyprctl_json -j monitors all
+    }
+
+    live_monitors_json() {
+      read_hyprctl_json -j monitors
+    }
+
+    resolve_output_name_from_live_json() {
+      local output_json="$1"
+      local live_json="$2"
+
+      "$jq_bin" -n --argjson output "$output_json" --argjson live "$live_json" -r '
+        def present($value): ($value // "") != "";
+        def match_score($monitor; $match):
+          (if present($match.description) and (($monitor.description // "") == $match.description) then 8 else 0 end)
+          + (if present($match.serial) and (($monitor.serial // "") == $match.serial) then 4 else 0 end)
+          + (if present($match.make) and (($monitor.make // "") == $match.make) then 2 else 0 end)
+          + (if present($match.model) and (($monitor.model // "") == $match.model) then 1 else 0 end);
+
+        ($output.name // "") as $declared
+        | if (($live | any((.name // "") == $declared)) or (($output.match // {}) == {})) then
+            $declared
+          else
+            ($output.match // {}) as $match
+            | [
+                $live[]
+                | select((.name // "") != "")
+                | { name: .name, score: match_score(.; $match) }
+                | select(.score > 0)
+              ]
+              | sort_by(.score)
+              | reverse
+              | if length == 0 then
+                  $declared
+                elif length == 1 or .[0].score > .[1].score then
+                  .[0].name
+                else
+                  $declared
+                end
+          end
+      '
+    }
+
+    resolve_output_name() {
+      local output_json="$1"
+      local live_json
+
+      live_json="$(live_monitors_all_json 2>/dev/null || true)"
+      if [ -n "$live_json" ]; then
+        resolve_output_name_from_live_json "$output_json" "$live_json"
+      else
+        printf '%s' "$output_json" | "$jq_bin" -r '.name // empty'
+      fi
+    }
+
+    resolve_handoff_monitor_name() {
+      local preferred_monitor="$1"
+      local output_json
+
+      [ -n "$preferred_monitor" ] || return 0
+      output_json="$(load_output_config "$preferred_monitor" 2>/dev/null || true)"
+      if [ -n "$output_json" ]; then
+        resolve_output_name "$output_json"
+      else
+        printf '%s\n' "$preferred_monitor"
+      fi
     }
 
     lua_string() {
@@ -179,11 +253,11 @@ let
 
     output_is_active() {
       local name="$1"
-      "$hyprctl_bin" -j monitors | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name and (.disabled // false) == false)' >/dev/null 2>&1
+      live_monitors_json | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name and (.disabled // false) == false)' >/dev/null 2>&1
     }
 
     list_unknown_active_monitors() {
-      "$hyprctl_bin" -j monitors all \
+      live_monitors_all_json \
         | "$jq_bin" -c --slurpfile bindings "$bindings_json" '
             .[] as $monitor
             | select(($monitor.disabled // false) == false and ($monitor.name // "") != "")
@@ -194,14 +268,14 @@ let
 
     get_live_monitor_json() {
       local name="$1"
-      "$hyprctl_bin" -j monitors all | "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name and (.disabled // false) == false)'
+      live_monitors_all_json | "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name and (.disabled // false) == false)'
     }
 
     monitor_spec_from_declared_output() {
       local output_json="$1"
       local name mode position scale
 
-      name="$(printf '%s' "$output_json" | "$jq_bin" -r '.name // empty')"
+      name="$(resolve_output_name "$output_json")"
       mode="$(printf '%s' "$output_json" | "$jq_bin" -r '.mode // "preferred"')"
       position="$(printf '%s' "$output_json" | "$jq_bin" -r '.position // "auto"')"
       scale="$(printf '%s' "$output_json" | "$jq_bin" -r '(.scale // 1) | tostring')"
@@ -213,7 +287,7 @@ let
       local output_json="$1"
       local name monitor_json mode position scale
 
-      name="$(printf '%s' "$output_json" | "$jq_bin" -r '.name // empty')"
+      name="$(resolve_output_name "$output_json")"
       [ -n "$name" ] || return 1
       monitor_json="$(get_live_monitor_json "$name" 2>/dev/null || true)"
 
@@ -285,7 +359,7 @@ let
       } >"$tmp_file"
       mv -f "$tmp_file" "$runtime_config_path"
 
-      if "$hyprctl_bin" -j monitors all >/dev/null 2>&1; then
+      if live_monitors_all_json >/dev/null 2>&1; then
         "$jq_bin" -c '.[]' "$initial_states_json" | while IFS= read -r output; do
           name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
           enabled="$(printf '%s' "$output" | "$jq_bin" -r 'if (.enabledByDefault == false) then "0" else "1" end')"
@@ -335,7 +409,7 @@ let
       local left_x bottom_y pos_x pos_y
 
       read -r left_x bottom_y <<EOF
-    $("$hyprctl_bin" -j monitors | "$jq_bin" -r '
+    $(live_monitors_json | "$jq_bin" -r '
       [ .[] | select((.disabled // false) == false) | {
           x: (.x // 0),
           y: (.y // 0),
@@ -364,7 +438,7 @@ let
 
     get_unknown_monitor_json() {
       local name="$1"
-      "$hyprctl_bin" -j monitors all | "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name)'
+      live_monitors_all_json | "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name)'
     }
 
     unknown_monitor_mode() {
@@ -400,7 +474,7 @@ let
     }
 
     list_unknown_monitors() {
-      "$hyprctl_bin" -j monitors all \
+      live_monitors_all_json \
         | "$jq_bin" -r --slurpfile bindings "$bindings_json" '
             .[] as $monitor
             | select(($monitor.name // "") != "")
@@ -442,7 +516,36 @@ let
           --slurpfile initial "$initial_states_json" \
           --slurpfile toggleable "$outputs_json" \
           --slurpfile bindings "$bindings_json" \
-          --slurpfile headless "$headless_outputs_json" '
+          --slurpfile headless "$headless_outputs_json" \
+          --argjson live "$live_json" '
+            def present($value): ($value // "") != "";
+            def match_score($monitor; $match):
+              (if present($match.description) and (($monitor.description // "") == $match.description) then 8 else 0 end)
+              + (if present($match.serial) and (($monitor.serial // "") == $match.serial) then 4 else 0 end)
+              + (if present($match.make) and (($monitor.make // "") == $match.make) then 2 else 0 end)
+              + (if present($match.model) and (($monitor.model // "") == $match.model) then 1 else 0 end);
+            def resolved_name($output):
+              ($output.name // "") as $declared
+              | if (($live | any((.name // "") == $declared)) or (($output.match // {}) == {})) then
+                  $declared
+                else
+                  ($output.match // {}) as $match
+                  | [
+                      $live[]
+                      | select((.name // "") != "")
+                      | { name: .name, score: match_score(.; $match) }
+                      | select(.score > 0)
+                    ]
+                    | sort_by(.score)
+                    | reverse
+                    | if length == 0 then
+                        $declared
+                      elif length == 1 or .[0].score > .[1].score then
+                        .[0].name
+                      else
+                        $declared
+                      end
+                end;
             def source_entries($source; $items):
               ($items[0] // [])
               | map(select((.name // "") != "") | . + { source: $source });
@@ -460,6 +563,7 @@ let
                 | ($entries | map(select(.name == $name))) as $matches
                 | {
                     name: $name,
+                    resolvedName: resolved_name($matches[0]),
                     sources: ($matches | map(.source) | unique),
                     descriptions: (
                       $matches
@@ -506,7 +610,7 @@ let
           "  - none"
         else
           .[]
-          | "  - \(.name) sources=\(.sources | join(","))\(if .isHeadless then " headless=true" else "" end)"
+          | "  - \(.name)\(if .resolvedName != .name then " -> \(.resolvedName)" else "" end) sources=\(.sources | join(","))\(if .isHeadless then " headless=true" else "" end)"
         end
       '
       echo
@@ -518,7 +622,7 @@ let
             | select(.isHeadless == false)
             | select(.enabledByDefault != false)
             | . as $declaredOutput
-            | select(($live | any(.name == $declaredOutput.name)) | not)
+            | select(($live | any(.name == $declaredOutput.resolvedName)) | not)
           ] | length
         '
       )"
@@ -530,7 +634,7 @@ let
           | select(.isHeadless == false)
           | select(.enabledByDefault != false)
           | . as $declaredOutput
-          | select(($live | any(.name == $declaredOutput.name)) | not)
+          | select(($live | any(.name == $declaredOutput.resolvedName)) | not)
           | "  - \(.name) sources=\(.sources | join(","))"
         '
         echo "Hint: connector names can change across boots/GPU topology. Update the declaration or migrate this output to a stable match-based monitor id."
@@ -544,7 +648,7 @@ let
             | select(.isHeadless == false)
             | select(.enabledByDefault == false)
             | . as $declaredOutput
-            | select(($live | any(.name == $declaredOutput.name)) | not)
+            | select(($live | any(.name == $declaredOutput.resolvedName)) | not)
           ] | length
         '
       )"
@@ -555,7 +659,7 @@ let
           | select(.isHeadless == false)
           | select(.enabledByDefault == false)
           | . as $declaredOutput
-          | select(($live | any(.name == $declaredOutput.name)) | not)
+          | select(($live | any(.name == $declaredOutput.resolvedName)) | not)
           | "  - \(.name) sources=\(.sources | join(","))"
         '
         echo
@@ -568,7 +672,7 @@ let
             | select(.isHeadless == false)
             | select(.enabledByDefault != false)
             | . as $declaredOutput
-            | select(($live | any(.name == $declaredOutput.name)) | not)
+            | select(($live | any(.name == $declaredOutput.resolvedName)) | not)
             | . as $declaredOutput
             | $declaredOutput.descriptions[]
             | select(. != "")
@@ -587,7 +691,7 @@ let
           | select(.isHeadless == false)
           | select(.enabledByDefault != false)
           | . as $declaredOutput
-          | select(($live | any(.name == $declaredOutput.name)) | not)
+          | select(($live | any(.name == $declaredOutput.resolvedName)) | not)
           | . as $declaredOutput
           | $declaredOutput.descriptions[]
           | select(. != "")
@@ -606,7 +710,7 @@ let
             | select((.disabled // false) == false)
             | select((.name // "") != "")
             | . as $liveOutput
-            | select(($declared | any(.name == $liveOutput.name)) | not)
+            | select(($declared | any(.resolvedName == $liveOutput.name)) | not)
           ] | length
         '
       )"
@@ -618,7 +722,7 @@ let
           | select((.disabled // false) == false)
           | select((.name // "") != "")
           | . as $liveOutput
-          | select(($declared | any(.name == $liveOutput.name)) | not)
+          | select(($declared | any(.resolvedName == $liveOutput.name)) | not)
           | "  - \(.name) \(.description // ([.make // "", .model // ""] | map(select(. != "")) | join(" ")))"
         '
         echo "Hint: use wm-monitor-suggest <output-name> for a declarative snippet."
@@ -679,7 +783,7 @@ let
           [
             $declared[]
             | . as $declaredOutput
-            | select(($live | any(.name == $declaredOutput.name)))
+            | select(($live | any(.name == $declaredOutput.resolvedName)))
           ] | length
         '
       )"
@@ -851,9 +955,9 @@ let
       "$hyprctl_bin" -j workspaces \
         | "$jq_bin" -r --arg output "$name" '.[] | select(.monitor == $output and (.id // -1) > 0 and (.name // "") != "") | [.name, .monitor] | @tsv' >"$prefix.workspaces.tmp"
       mv -f "$prefix.workspaces.tmp" "$prefix.workspaces"
-      "$hyprctl_bin" -j monitors \
+      live_monitors_json \
         | "$jq_bin" -r --arg output "$name" '.[] | select(.name == $output) | .activeWorkspace.name // empty' >"$prefix.active-workspace"
-      "$hyprctl_bin" -j monitors \
+      live_monitors_json \
         | "$jq_bin" -r '.[] | select(.focused == true) | .name // empty' >"$prefix.focused-monitor"
       save_output_runtime_spec "$output_json" "$prefix"
     }
@@ -868,11 +972,11 @@ let
 
     get_monitor_active_workspace() {
       local name="$1"
-      "$hyprctl_bin" -j monitors | "$jq_bin" -r --arg name "$name" '.[] | select(.name == $name) | .activeWorkspace.name // empty'
+      live_monitors_json | "$jq_bin" -r --arg name "$name" '.[] | select(.name == $name) | .activeWorkspace.name // empty'
     }
 
     get_focused_monitor() {
-      "$hyprctl_bin" -j monitors | "$jq_bin" -r '.[] | select(.focused == true) | .name // empty'
+      live_monitors_json | "$jq_bin" -r '.[] | select(.focused == true) | .name // empty'
     }
 
     pick_handoff_monitor() {
@@ -884,7 +988,7 @@ let
         return 0
       fi
 
-      "$hyprctl_bin" -j monitors         | "$jq_bin" -r --arg source "$source_monitor" '.[] | select((.disabled // false) == false and (.name // "") != "" and .name != $source) | .name'         | head -n 1
+      live_monitors_json         | "$jq_bin" -r --arg source "$source_monitor" '.[] | select((.disabled // false) == false and (.name // "") != "" and .name != $source) | .name'         | head -n 1
     }
 
     focus_monitor() {
@@ -947,7 +1051,7 @@ let
 
       [ -n "$target_monitor" ] || return 0
 
-      "$hyprctl_bin" -j monitors         | "$jq_bin" -r --arg target "$target_monitor" '.[] | select((.disabled // false) == false and (.name // "") != "" and .name != $target) | .name'         | while IFS= read -r source_monitor; do
+      live_monitors_json         | "$jq_bin" -r --arg target "$target_monitor" '.[] | select((.disabled // false) == false and (.name // "") != "" and .name != $target) | .name'         | while IFS= read -r source_monitor; do
             [ -n "$source_monitor" ] || continue
             move_monitor_workspaces_to_target "$source_monitor" "$target_monitor"
           done
@@ -957,15 +1061,16 @@ let
 
     ensure_output_ready_for_workspace_move() {
       local target_monitor="$1"
-      local output_json prefix
+      local output_json prefix resolved_monitor
 
       [ -n "$target_monitor" ] || return 0
       output_json="$(load_output_config "$target_monitor" 2>/dev/null || true)"
       [ -n "$output_json" ] || return 0
+      resolved_monitor="$(resolve_output_name "$output_json")"
 
-      if ! output_is_active "$target_monitor"; then
-        prefix="$(state_prefix "$target_monitor")"
-        enable_output "$output_json" "$target_monitor" "$prefix"
+      if ! output_is_active "$resolved_monitor"; then
+        prefix="$(state_prefix "$(output_state_key "$output_json")")"
+        enable_output "$output_json" "$resolved_monitor" "$prefix"
         sync_runtime_monitor_overrides
       fi
     }
@@ -978,6 +1083,7 @@ let
 
       handoff_enabled="$(get_output_field "$output_json" 'if (.workspaceHandoff.enable // false) then "1" else "0" end')"
       target_monitor="$(get_output_field "$output_json" '.workspaceHandoff.targetMonitor // ""')"
+      target_monitor="$(resolve_handoff_monitor_name "$target_monitor")"
       target_monitor="$(pick_handoff_monitor "$name" "$target_monitor")"
       printf '%s\n' "$target_monitor" >"$prefix.target-monitor"
 
@@ -1004,10 +1110,10 @@ let
       output_scale="$(read_saved_or_declared_output_field "$prefix" scale "$output_json" '(.scale // 1) | tostring')"
       focus_on_enable="$(get_output_field "$output_json" 'if (.focusOnEnable // false) then "1" else "0" end')"
 
-       if output_is_headless "$name" && ! "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
+       if output_is_headless "$name" && ! live_monitors_all_json | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
         "$hyprctl_bin" output create headless "$name" >/dev/null 2>&1 || true
         for _ in $(seq 1 50); do
-          if "$hyprctl_bin" -j monitors all | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
+          if live_monitors_all_json | "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' >/dev/null 2>&1; then
             break
           fi
           sleep 0.1
@@ -1074,6 +1180,10 @@ let
     monitor_list() {
       "$jq_bin" -r '.[] | [.bindIndex, .name, (.description // "")] | @tsv' "$bindings_json" \
         | while IFS=$'\t' read -r bind_index name description; do
+            output_json="$(load_output_binding "$name" 2>/dev/null || true)"
+            if [ -n "$output_json" ]; then
+              name="$(resolve_output_name "$output_json")"
+            fi
             [ -n "$name" ] || continue
             if output_is_active "$name"; then
               active="active"
@@ -1085,7 +1195,7 @@ let
     }
 
     sync_runtime_monitor_overrides_locked() {
-      local tmp_file monitor_line output name unknown_monitor_json unknown_name unknown_spec
+      local tmp_file monitor_line output name resolved_name unknown_monitor_json unknown_name unknown_spec
 
       mkdir -p "$(dirname "$runtime_config_path")"
       tmp_file="$(mktemp "$(dirname "$runtime_config_path")/.runtime-monitors.lua.XXXXXX")"
@@ -1094,20 +1204,21 @@ let
         "$jq_bin" -c '.[]' "$outputs_json" | while IFS= read -r output; do
           name="$(printf '%s' "$output" | "$jq_bin" -r '.name // empty')"
           [ -n "$name" ] || continue
+          resolved_name="$(resolve_output_name "$output")"
 
-          if output_is_active "$name"; then
+          if output_is_active "$resolved_name"; then
             monitor_line="$(monitor_spec_from_live_or_declared_output "$output")"
           else
-            monitor_line="''${name},disable"
+            monitor_line="''${resolved_name},disable"
           fi
 
-          if output_is_active "$name"; then
+          if output_is_active "$resolved_name"; then
             IFS=, read -r _name mode position scale <<EOF
     $monitor_line
     EOF
-            render_monitor_enabled "$name" "$mode" "$position" "$scale"
+            render_monitor_enabled "$resolved_name" "$mode" "$position" "$scale"
           else
-            render_monitor_disabled "$name"
+            render_monitor_disabled "$resolved_name"
           fi
         done
 
@@ -1174,7 +1285,9 @@ let
           echo "Unknown managed output: $output_name" >&2
           exit 1
         }
-        prefix="$(state_prefix "$output_name")"
+        output_key="$(output_state_key "$output_json")"
+        resolved_output_name="$(resolve_output_name "$output_json")"
+        prefix="$(state_prefix "$output_key")"
         ;;
       workspace-to|focused-workspaces-to)
         require_output_name
@@ -1184,6 +1297,12 @@ let
             exit 1
           }
         fi
+        output_json="$(load_output_config "$output_name" 2>/dev/null || load_output_binding "$output_name" 2>/dev/null || true)"
+        if [ -n "$output_json" ]; then
+          resolved_output_name="$(resolve_output_name "$output_json")"
+        else
+          resolved_output_name="$output_name"
+        fi
         ;;
       *)
         usage
@@ -1192,27 +1311,27 @@ let
 
     case "$command" in
       on)
-        enable_output "$output_json" "$output_name" "$prefix"
+        enable_output "$output_json" "$resolved_output_name" "$prefix"
         sync_runtime_monitor_overrides
         ;;
       off)
-        disable_output "$output_json" "$output_name" "$prefix"
+        disable_output "$output_json" "$resolved_output_name" "$prefix"
         sync_runtime_monitor_overrides
         ;;
       toggle)
-        if output_is_active "$output_name"; then
-          disable_output "$output_json" "$output_name" "$prefix"
+        if output_is_active "$resolved_output_name"; then
+          disable_output "$output_json" "$resolved_output_name" "$prefix"
         else
-          enable_output "$output_json" "$output_name" "$prefix"
+          enable_output "$output_json" "$resolved_output_name" "$prefix"
         fi
         sync_runtime_monitor_overrides
         ;;
       restore)
-        restore_output_state "$output_json" "$output_name" "$prefix"
+        restore_output_state "$output_json" "$resolved_output_name" "$prefix"
         sync_runtime_monitor_overrides
         ;;
       status)
-        monitor_status "$output_json" "$output_name" "$prefix"
+        monitor_status "$output_json" "$resolved_output_name" "$prefix"
         ;;
       discover)
         list_unknown_monitors
@@ -1228,11 +1347,11 @@ let
         ;;
       workspace-to)
         ensure_output_ready_for_workspace_move "$output_name"
-        move_active_workspace_to_output "$output_name"
+        move_active_workspace_to_output "$resolved_output_name"
         ;;
       focused-workspaces-to)
         ensure_output_ready_for_workspace_move "$output_name"
-        move_other_monitors_workspaces_to_target "$output_name"
+        move_other_monitors_workspaces_to_target "$resolved_output_name"
         ;;
     esac
   '';
