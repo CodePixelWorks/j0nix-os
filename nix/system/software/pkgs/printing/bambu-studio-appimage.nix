@@ -40,6 +40,7 @@ pkgs.appimageTools.wrapAppImage rec {
     # Do not override GIO_MODULE_DIR: replacing it can hide default GLib modules.
     # Add glib-networking modules on top of defaults instead.
     export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules"
+    export XDG_DATA_DIRS="/usr/share:${pkgs.shared-mime-info}/share:''${XDG_DATA_DIRS:-}"
   '';
 
   extraPkgs =
@@ -50,6 +51,7 @@ pkgs.appimageTools.wrapAppImage rec {
       gst_all_1.gst-plugins-bad
       gst_all_1.gst-plugins-base
       gst_all_1.gst-plugins-good
+      shared-mime-info
       webkitgtk_4_1
     ];
 
