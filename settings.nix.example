@@ -199,10 +199,10 @@ in
       enable = false;
     };
 
-    # Bambu Lab slicer delivery method.
+    # Bambu Lab slicer.
     bambulab = {
       enable   = false;
-      provider = "flatpak";          # "appimage" | "flatpak"
+      provider = "appimage";
     };
 
     # AAGL (Anime Game Launcher family).
