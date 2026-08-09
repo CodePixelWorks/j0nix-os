@@ -12,7 +12,6 @@ in
 {
   imports = [
     ./aagl.nix
-    ./autodesk-fusion.nix
     ./bambulab.nix
     ./flatpak-sync.nix
     ./ollama.nix

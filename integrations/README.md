@@ -6,9 +6,7 @@ Each integration is a standalone unit with its own `flake.nix`, providing packag
 
 ## Current integrations
 
-| Name | Path | Type | Description |
-|------|------|------|-------------|
-| autodesk-fusion-nixos | `integrations/autodesk-fusion-nixos/` | Subflake | Autodesk Fusion runtime helpers for NixOS. Provides `pkgs.autodesk-fusion-linux`, a NixOS module, and a Home Manager module. |
+No vendored integrations are currently active.
 
 ## Adding a new integration
 
