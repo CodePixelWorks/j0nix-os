@@ -10,18 +10,12 @@ let
   enabled = cfg.enable or false;
   provider = cfg.provider or "appimage";
   bambuAppImagePackage = pkgs.bambu-studio-appimage;
-  bambuFlatpakBranch = "stable";
-  bambuFlatpakWrapper = pkgs.writeShellScriptBin "bambu-studio" ''
-    exec flatpak run --branch=${bambuFlatpakBranch} com.bambulab.BambuStudio "$@"
-  '';
   extractedAppImage = "${bambuAppImagePackage}/bin/bambu-studio";
   bambuLauncher = pkgs.writeShellScriptBin "bambu-studio" ''
     cd "$HOME"
     exec ${extractedAppImage} "$@"
   '';
-  bambuDesktopExec = lib.getExe (
-    if provider == "flatpak" then bambuFlatpakWrapper else bambuLauncher
-  );
+  bambuDesktopExec = lib.getExe bambuLauncher;
   bambuDesktopIcon = "${../../../../icons/bambulab/BambuStudio.png}";
   bambuDesktopEntry = {
     text = ''
@@ -42,18 +36,12 @@ in
 lib.mkIf enabled {
   assertions = [
     {
-      assertion = builtins.elem provider [
-        "appimage"
-        "flatpak"
-      ];
-      message = "settings.programs.bambulab.provider must be one of: appimage, flatpak";
+      assertion = provider == "appimage";
+      message = "settings.programs.bambulab.provider must be appimage.";
     }
   ];
 
-  j0nix.user.software.packages = [
-    (lib.mkIf (provider == "flatpak") bambuFlatpakWrapper)
-    (lib.mkIf (provider == "appimage") bambuLauncher)
-  ];
+  j0nix.user.software.packages = [ bambuLauncher ];
 
   xdg.dataFile = {
     "applications/BambuStudio.desktop" = {
