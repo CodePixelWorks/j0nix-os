@@ -20,21 +20,24 @@ let
     cd "$HOME"
     exec ${steamRunBin} ${extractedAppImage} "$@"
   '';
+  bambuDesktopExec = lib.getExe (
+    if provider == "flatpak" then bambuFlatpakWrapper else bambuLauncher
+  );
+  bambuDesktopIcon = "${../../../../icons/bambulab/BambuStudio.png}";
   bambuDesktopEntry = {
-    name = "Bambu Studio";
-    genericName = "3D Printing Software";
-    comment = "3D printing software";
-    exec = "${lib.getExe (
-      if provider == "flatpak" then bambuFlatpakWrapper else bambuLauncher
-    )}";
-    icon = "${../../../../icons/bambulab/BambuStudio.png}";
-    terminal = false;
-    type = "Application";
-    categories = [
-      "Graphics"
-      "Utility"
-    ];
-    startupNotify = true;
+    text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=Bambu Studio
+      GenericName=3D Printing Software
+      Comment=3D printing software
+      Exec=${bambuDesktopExec} %U
+      Icon=${bambuDesktopIcon}
+      Terminal=false
+      StartupNotify=true
+      Categories=Graphics;Utility;
+      MimeType=model/stl;model/3mf;application/sla;application/vnd.ms-3mfdocument;
+    '';
   };
 in
 lib.mkIf enabled {
@@ -53,7 +56,10 @@ lib.mkIf enabled {
     (lib.mkIf (provider == "appimage") bambuLauncher)
   ];
 
-  xdg.desktopEntries = lib.mkIf (provider != "flatpak") {
-    "BambuStudio" = bambuDesktopEntry;
+  xdg.dataFile = lib.mkIf (provider != "flatpak") {
+    "applications/BambuStudio.desktop" = {
+      text = bambuDesktopEntry.text;
+      force = true;
+    };
   };
 }
