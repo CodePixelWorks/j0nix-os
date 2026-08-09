@@ -155,18 +155,6 @@ in
       padding  = { x = 8; y = 8; };
     };
 
-    # Autodesk Fusion 360 via Bottles/Wine runner.
-    autodeskFusion = {
-      enable          = false;
-      installMode     = "wine";      # "wine" | "wine-fix" | "proton"
-      installDir      = null;        # default: ~/.local/share/autodesk-fusion
-      gpuMode         = "dxvk";      # "dxvk" | "opengl"
-      protonVersion   = null;
-      autoSetupOnLogin= false;
-      desktopEntry.enable = true;
-      urlHandler.enable   = true;
-    };
-
     betterdiscord = {
       enable          = false;
       installDiscord  = true;
