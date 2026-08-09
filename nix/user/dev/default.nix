@@ -12,10 +12,11 @@ let
   mkcertEnabled = mkcertCfg.enable or false;
   mkcertAutoInstall = mkcertCfg.autoInstall or true;
   mkcertCaroot = mkcertCfg.caroot or ".local/share/mkcert";
-  mkcertTrustStores = mkcertCfg.trustStores or [
-    "system"
-    "nss"
-  ];
+  mkcertTrustStores =
+    mkcertCfg.trustStores or [
+      "system"
+      "nss"
+    ];
   mkcertTrustedStoresArg = lib.concatStringsSep "," mkcertTrustStores;
   mkcertCarootPath = "${config.home.homeDirectory}/${mkcertCaroot}";
   gitCfg = dev.git or { };
@@ -148,94 +149,93 @@ let
             (sshProfile.identityFile or null)
         else
           (sshProfile.identityFile or null);
-      commonValue =
-        {
-          HostName = host;
-          User = sshProfile.user or "git";
-          IdentitiesOnly = sshProfile.identitiesOnly or false;
-        }
-        // lib.optionalAttrs (resolvedIdentityFile != null) {
-          IdentityFile = resolvedIdentityFile;
-        }
-        // lib.optionalAttrs (sshProfile ? match) {
-          header = "Match ${sshProfile.match}";
-        }
-        // lib.optionalAttrs (sshProfile ? port) {
-          Port = sshProfile.port;
-        }
-        // lib.optionalAttrs (sshProfile ? forwardAgent) {
-          ForwardAgent = sshProfile.forwardAgent;
-        }
-        // lib.optionalAttrs (sshProfile ? forwardX11) {
-          ForwardX11 = sshProfile.forwardX11;
-        }
-        // lib.optionalAttrs (sshProfile ? forwardX11Trusted) {
-          ForwardX11Trusted = sshProfile.forwardX11Trusted;
-        }
-        // lib.optionalAttrs (sshProfile ? identityAgent) {
-          IdentityAgent = sshProfile.identityAgent;
-        }
-        // lib.optionalAttrs (sshProfile ? serverAliveInterval) {
-          ServerAliveInterval = sshProfile.serverAliveInterval;
-        }
-        // lib.optionalAttrs (sshProfile ? serverAliveCountMax) {
-          ServerAliveCountMax = sshProfile.serverAliveCountMax;
-        }
-        // lib.optionalAttrs (sshProfile ? sendEnv) {
-          SendEnv = sshProfile.sendEnv;
-        }
-        // lib.optionalAttrs (sshProfile ? setEnv) {
-          SetEnv = sshProfile.setEnv;
-        }
-        // lib.optionalAttrs (sshProfile ? compression) {
-          Compression = sshProfile.compression;
-        }
-        // lib.optionalAttrs (sshProfile ? checkHostIP) {
-          CheckHostIP = sshProfile.checkHostIP;
-        }
-        // lib.optionalAttrs (sshProfile ? proxyCommand) {
-          ProxyCommand = sshProfile.proxyCommand;
-        }
-        // lib.optionalAttrs (sshProfile ? proxyJump) {
-          ProxyJump = sshProfile.proxyJump;
-        }
-        // lib.optionalAttrs (sshProfile ? addKeysToAgent) {
-          AddKeysToAgent = sshProfile.addKeysToAgent;
-        }
-        // lib.optionalAttrs (sshProfile ? hashKnownHosts) {
-          HashKnownHosts = sshProfile.hashKnownHosts;
-        }
-        // lib.optionalAttrs (sshProfile ? userKnownHostsFile) {
-          UserKnownHostsFile = sshProfile.userKnownHostsFile;
-        }
-        // lib.optionalAttrs (sshProfile ? controlMaster) {
-          ControlMaster = sshProfile.controlMaster;
-        }
-        // lib.optionalAttrs (sshProfile ? controlPath) {
-          ControlPath = sshProfile.controlPath;
-        }
-        // lib.optionalAttrs (sshProfile ? controlPersist) {
-          ControlPersist = sshProfile.controlPersist;
-        }
-        // lib.optionalAttrs (sshProfile ? certificateFile) {
-          CertificateFile = sshProfile.certificateFile;
-        }
-        // lib.optionalAttrs (sshProfile ? addressFamily) {
-          AddressFamily = sshProfile.addressFamily;
-        }
-        // lib.optionalAttrs (sshProfile ? kexAlgorithms) {
-          KexAlgorithms = sshProfile.kexAlgorithms;
-        }
-        // lib.optionalAttrs (sshProfile ? localForwards) {
-          LocalForward = sshProfile.localForwards;
-        }
-        // lib.optionalAttrs (sshProfile ? remoteForwards) {
-          RemoteForward = sshProfile.remoteForwards;
-        }
-        // lib.optionalAttrs (sshProfile ? dynamicForwards) {
-          DynamicForward = sshProfile.dynamicForwards;
-        }
-        // (sshProfile.options or { });
+      commonValue = {
+        HostName = host;
+        User = sshProfile.user or "git";
+        IdentitiesOnly = sshProfile.identitiesOnly or false;
+      }
+      // lib.optionalAttrs (resolvedIdentityFile != null) {
+        IdentityFile = resolvedIdentityFile;
+      }
+      // lib.optionalAttrs (sshProfile ? match) {
+        header = "Match ${sshProfile.match}";
+      }
+      // lib.optionalAttrs (sshProfile ? port) {
+        Port = sshProfile.port;
+      }
+      // lib.optionalAttrs (sshProfile ? forwardAgent) {
+        ForwardAgent = sshProfile.forwardAgent;
+      }
+      // lib.optionalAttrs (sshProfile ? forwardX11) {
+        ForwardX11 = sshProfile.forwardX11;
+      }
+      // lib.optionalAttrs (sshProfile ? forwardX11Trusted) {
+        ForwardX11Trusted = sshProfile.forwardX11Trusted;
+      }
+      // lib.optionalAttrs (sshProfile ? identityAgent) {
+        IdentityAgent = sshProfile.identityAgent;
+      }
+      // lib.optionalAttrs (sshProfile ? serverAliveInterval) {
+        ServerAliveInterval = sshProfile.serverAliveInterval;
+      }
+      // lib.optionalAttrs (sshProfile ? serverAliveCountMax) {
+        ServerAliveCountMax = sshProfile.serverAliveCountMax;
+      }
+      // lib.optionalAttrs (sshProfile ? sendEnv) {
+        SendEnv = sshProfile.sendEnv;
+      }
+      // lib.optionalAttrs (sshProfile ? setEnv) {
+        SetEnv = sshProfile.setEnv;
+      }
+      // lib.optionalAttrs (sshProfile ? compression) {
+        Compression = sshProfile.compression;
+      }
+      // lib.optionalAttrs (sshProfile ? checkHostIP) {
+        CheckHostIP = sshProfile.checkHostIP;
+      }
+      // lib.optionalAttrs (sshProfile ? proxyCommand) {
+        ProxyCommand = sshProfile.proxyCommand;
+      }
+      // lib.optionalAttrs (sshProfile ? proxyJump) {
+        ProxyJump = sshProfile.proxyJump;
+      }
+      // lib.optionalAttrs (sshProfile ? addKeysToAgent) {
+        AddKeysToAgent = sshProfile.addKeysToAgent;
+      }
+      // lib.optionalAttrs (sshProfile ? hashKnownHosts) {
+        HashKnownHosts = sshProfile.hashKnownHosts;
+      }
+      // lib.optionalAttrs (sshProfile ? userKnownHostsFile) {
+        UserKnownHostsFile = sshProfile.userKnownHostsFile;
+      }
+      // lib.optionalAttrs (sshProfile ? controlMaster) {
+        ControlMaster = sshProfile.controlMaster;
+      }
+      // lib.optionalAttrs (sshProfile ? controlPath) {
+        ControlPath = sshProfile.controlPath;
+      }
+      // lib.optionalAttrs (sshProfile ? controlPersist) {
+        ControlPersist = sshProfile.controlPersist;
+      }
+      // lib.optionalAttrs (sshProfile ? certificateFile) {
+        CertificateFile = sshProfile.certificateFile;
+      }
+      // lib.optionalAttrs (sshProfile ? addressFamily) {
+        AddressFamily = sshProfile.addressFamily;
+      }
+      // lib.optionalAttrs (sshProfile ? kexAlgorithms) {
+        KexAlgorithms = sshProfile.kexAlgorithms;
+      }
+      // lib.optionalAttrs (sshProfile ? localForwards) {
+        LocalForward = sshProfile.localForwards;
+      }
+      // lib.optionalAttrs (sshProfile ? remoteForwards) {
+        RemoteForward = sshProfile.remoteForwards;
+      }
+      // lib.optionalAttrs (sshProfile ? dynamicForwards) {
+        DynamicForward = sshProfile.dynamicForwards;
+      }
+      // (sshProfile.options or { });
       mkBlock = attrName: {
         name = attrName;
         value = commonValue;
@@ -310,16 +310,9 @@ let
   pythonVersionManagerEnabled = pythonEnabled && pythonVersionManager == "mise";
   androidStudioEnabled = dev.androidStudio or true;
   androidStudioPackage =
-    if builtins.hasAttr "android-studio" pkgs then
-      pkgs."android-studio"
-    else
-      null;
+    if builtins.hasAttr "android-studio" pkgs then pkgs."android-studio" else null;
   wvkbdEnabled = dev.wvkbd or true;
-  wvkbdPackage =
-    if builtins.hasAttr "wvkbd" pkgs then
-      pkgs.wvkbd
-    else
-      null;
+  wvkbdPackage = if builtins.hasAttr "wvkbd" pkgs then pkgs.wvkbd else null;
   virtualisationCfg = dev.virtualisation or { };
   virtualisationEnabled = virtualisationCfg.enable or false;
   vagrantPackage =
@@ -446,6 +439,7 @@ in
         curl
         openssl
         pnpm
+        godot
         unzip
         zip
         tree
@@ -513,26 +507,24 @@ in
           };
         };
 
-    systemd.user.services.mkcert-install =
-      lib.mkIf (mkcertEnabled && mkcertAutoInstall)
-        {
-          Unit = {
-            Description = "Install the mkcert local development CA into trusted stores";
-            After = [ "graphical-session.target" ];
-            PartOf = [ "graphical-session.target" ];
-          };
-          Service = {
-            Type = "oneshot";
-            Environment = [
-              "CAROOT=${mkcertCarootPath}"
-              "TRUST_STORES=${mkcertTrustedStoresArg}"
-            ];
-            ExecStart = "${lib.getExe mkcertSetupScript}";
-          };
-          Install = {
-            WantedBy = [ "graphical-session.target" ];
-          };
-        };
+    systemd.user.services.mkcert-install = lib.mkIf (mkcertEnabled && mkcertAutoInstall) {
+      Unit = {
+        Description = "Install the mkcert local development CA into trusted stores";
+        After = [ "graphical-session.target" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        Type = "oneshot";
+        Environment = [
+          "CAROOT=${mkcertCarootPath}"
+          "TRUST_STORES=${mkcertTrustedStoresArg}"
+        ];
+        ExecStart = "${lib.getExe mkcertSetupScript}";
+      };
+      Install = {
+        WantedBy = [ "graphical-session.target" ];
+      };
+    };
 
     assertions = [
       {
@@ -548,7 +540,14 @@ in
         message = "settings.dev.mkcert.caroot must be a non-empty relative path";
       }
       {
-        assertion = builtins.all (store: builtins.elem store [ "system" "nss" "java" ]) mkcertTrustStores;
+        assertion = builtins.all (
+          store:
+          builtins.elem store [
+            "system"
+            "nss"
+            "java"
+          ]
+        ) mkcertTrustStores;
         message = "settings.dev.mkcert.trustStores must only contain: system, nss, java";
       }
       {
