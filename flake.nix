@@ -100,12 +100,32 @@
               }
             )
             (
-              { ... }:
+              { pkgs, ... }:
               {
                 home-manager = {
                   useGlobalPkgs = true;
                   useUserPackages = true;
                   backupFileExtension = "backup";
+                  backupCommand = "${pkgs.writeShellScript "home-manager-backup-unique" ''
+                    set -eu
+
+                    target="''${1:?missing target path}"
+                    if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+                      exit 0
+                    fi
+
+                    ext="''${HOME_MANAGER_BACKUP_EXT:-backup}"
+                    timestamp="$(${pkgs.coreutils}/bin/date +%Y%m%d-%H%M%S)"
+                    backup="$target.$ext-$timestamp"
+                    index=0
+
+                    while [ -e "$backup" ] || [ -L "$backup" ]; do
+                      index=$((index + 1))
+                      backup="$target.$ext-$timestamp-$index"
+                    done
+
+                    ${pkgs.coreutils}/bin/mv -- "$target" "$backup"
+                  ''}";
                   extraSpecialArgs = {
                     inherit inputs;
                     profileMeta = host.profileMeta;
