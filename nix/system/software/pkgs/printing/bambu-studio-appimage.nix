@@ -1,8 +1,7 @@
 {
   pkgs,
 }:
-pkgs.appimageTools.wrapType2 rec {
-  name = "BambuStudio";
+let
   pname = "bambu-studio";
   version = "02.08.01.55";
   ubuntu_version = "24.04-v02.08.01.55-20260715113557";
@@ -12,8 +11,25 @@ pkgs.appimageTools.wrapType2 rec {
     hash = "sha256-IlECQz2/zEdcvXm++gRTu5P5880Vu0OEgECn/iIRx94=";
   };
 
+  extracted = pkgs.appimageTools.extract {
+    inherit pname version src;
+  };
+
+  patchedContents = pkgs.runCommand "${pname}-${version}-patched-appimage" { } ''
+    cp -a ${extracted} "$out"
+    chmod -R u+w "$out"
+    substituteInPlace "$out/AppRun" \
+      --replace-fail 'export LC_ALL=C' 'export LC_ALL="''${LC_ALL:-C.UTF-8}"'
+  '';
+in
+pkgs.appimageTools.wrapAppImage rec {
+  name = "BambuStudio";
+  inherit pname version src;
+  contents = patchedContents;
+
   profile = ''
     export SSL_CERT_FILE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+    export LC_ALL="''${LC_ALL:-C.UTF-8}"
     export QT_QPA_PLATFORM="''${QT_QPA_PLATFORM:-xcb}"
     export GDK_BACKEND="''${GDK_BACKEND:-x11}"
     export WEBKIT_DISABLE_DMABUF_RENDERER="''${WEBKIT_DISABLE_DMABUF_RENDERER:-1}"
