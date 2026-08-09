@@ -17,6 +17,8 @@ pkgs.appimageTools.wrapType2 rec {
     export QT_QPA_PLATFORM="''${QT_QPA_PLATFORM:-xcb}"
     export GDK_BACKEND="''${GDK_BACKEND:-x11}"
     export WEBKIT_DISABLE_DMABUF_RENDERER="''${WEBKIT_DISABLE_DMABUF_RENDERER:-1}"
+    export WEBKIT_DISABLE_COMPOSITING_MODE="''${WEBKIT_DISABLE_COMPOSITING_MODE:-1}"
+    export WEBKIT_FORCE_COMPOSITING_MODE="''${WEBKIT_FORCE_COMPOSITING_MODE:-1}"
     # Use the native host OpenGL driver. Forcing zink routes the 3D workspace
     # through OpenGL-on-Vulkan and can crash during STL import/viewport setup.
     # Do not override GIO_MODULE_DIR: replacing it can hide default GLib modules.
