@@ -35,6 +35,11 @@ let
       doInstallCheck = false;
       dontCheck = true;
     });
+    udisks = prev.udisks.overrideAttrs (_: {
+      # udisks 2.11.1 currently aborts one spawned-job unit test on this nixpkgs
+      # revision, which blocks the system closure through gvfs/udiskie.
+      doCheck = false;
+    });
     vagrant-with-libvirt = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/vagrant-with-libvirt.nix") {
       nixpkgsSrc = nixpkgs.outPath;
     };
