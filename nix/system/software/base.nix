@@ -27,6 +27,7 @@
     ntfs3g
     xfsprogs
     exfatprogs
+    bind
     inetutils
     lsof
     lm_sensors
