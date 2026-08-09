@@ -11,14 +11,13 @@ let
   provider = cfg.provider or "appimage";
   bambuAppImagePackage = pkgs.bambu-studio-appimage;
   bambuFlatpakBranch = "stable";
-  steamRunBin = "${pkgs.steam-run}/bin/steam-run";
   bambuFlatpakWrapper = pkgs.writeShellScriptBin "bambu-studio" ''
     exec flatpak run --branch=${bambuFlatpakBranch} com.bambulab.BambuStudio "$@"
   '';
   extractedAppImage = "${bambuAppImagePackage}/bin/bambu-studio";
   bambuLauncher = pkgs.writeShellScriptBin "bambu-studio" ''
     cd "$HOME"
-    exec ${steamRunBin} ${extractedAppImage} "$@"
+    exec ${extractedAppImage} "$@"
   '';
   bambuDesktopExec = lib.getExe (
     if provider == "flatpak" then bambuFlatpakWrapper else bambuLauncher
@@ -56,7 +55,7 @@ lib.mkIf enabled {
     (lib.mkIf (provider == "appimage") bambuLauncher)
   ];
 
-  xdg.dataFile = lib.mkIf (provider != "flatpak") {
+  xdg.dataFile = {
     "applications/BambuStudio.desktop" = {
       text = bambuDesktopEntry.text;
       force = true;
