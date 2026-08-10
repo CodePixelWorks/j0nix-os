@@ -10,6 +10,7 @@ Common user program configs shared across shells/WMs.
 - `element-desktop/default.nix`
 - `fastfetch/default.nix`
 - `keepassxc/default.nix`
+- `autodesk-fusion/default.nix`
 - `windows-apps/default.nix`
 - `windows-apps/packages/*.nix`
 - `windows-exe/default.nix`
@@ -51,6 +52,14 @@ Important limitation:
 Note: Bottles component downloads are runtime/user-state operations and are not part of deterministic Nix build steps.
 `winexe-run` uses `bottles-cli run` with an absolute executable path and the configured default bottle/runner.
 New j0nix-managed bottles are seeded from a Nix-generated template after creation. Existing unmanaged default bottles are migrated once by merging a curated set of safe runtime fields while preserving installed programs, dependencies and other bottle state.
+
+`Autodesk Fusion` is configured via `settings.programs.autodeskFusion.*` and provides a managed Wine runtime environment for the cryinkfly installer:
+- `autodesk-fusion-install` downloads and runs the upstream installer into user state (`~/.autodesk_fusion` by default)
+- `autodesk-fusion-repair` reruns the patched install-fix path
+- `autodesk-fusion` launches the installed Fusion prefix through Xwayland-oriented environment defaults
+- `autodesk-fusion-doctor` checks Wine, DXVK/Vulkan, prefix paths, WebView2, and the `adskidmgr` login URL handler
+
+The Autodesk payload, WebView2 runtime, cryinkfly installer payloads, and license/session data are runtime user state and are not fetched during Nix evaluation or vendored into the Nix store.
 
 `Windows app packages` are configured via `settings.userSettings.<name>.programs.windowsApps.packages = [ ... ];`.
 The infrastructure separates:
