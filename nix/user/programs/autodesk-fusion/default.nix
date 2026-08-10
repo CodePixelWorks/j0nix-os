@@ -104,6 +104,31 @@ let
     export PATH="$guard_bin:$PATH"
   '';
 
+  postInstallDesktopFix = ''
+    applications_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    fusion_desktop_dir="$applications_dir/wine/Programs/Autodesk"
+
+    if [ -d "$fusion_desktop_dir" ]; then
+      find "$fusion_desktop_dir" -name 'Autodesk Fusion.desktop' -type f -print0 2>/dev/null \
+        | while IFS= read -r -d "" desktop_file; do
+          sed -i \
+            -e 's#^Exec=.*#Exec=autodesk-fusion %U#' \
+            -e 's#^Path=.*#Path='"$install_dir"'#' \
+            "$desktop_file"
+        done
+
+      find "$fusion_desktop_dir" -name 'adskidmgr-opener.desktop' -type f -print0 2>/dev/null \
+        | while IFS= read -r -d "" desktop_file; do
+          sed -i \
+            -e 's#^Exec=.*#Exec=autodesk-fusion-adskidmgr %u#' \
+            "$desktop_file"
+        done
+    fi
+
+    update-desktop-database "$applications_dir" 2>/dev/null || true
+    xdg-mime default autodesk-fusion-adskidmgr.desktop x-scheme-handler/adskidmgr 2>/dev/null || true
+  '';
+
   applyGpuBackendPolicy = ''
     configured_gpu_backend=${lib.escapeShellArg gpuBackend}
     case "$configured_gpu_backend" in
@@ -151,7 +176,8 @@ let
       fi
 
       echo "Starting Autodesk Fusion setup in: $install_dir"
-      exec "$installer" "''${args[@]}"
+      "$installer" "''${args[@]}"
+      ${postInstallDesktopFix}
     '';
   };
 
@@ -172,7 +198,8 @@ let
       ${applyGpuBackendPolicy}
 
       echo "Starting Autodesk Fusion repair in: $install_dir"
-      exec "$installer" --install-fix "$install_dir"
+      "$installer" --install-fix "$install_dir"
+      ${postInstallDesktopFix}
     '';
   };
 
@@ -183,15 +210,24 @@ let
       set -eu
       ${commonShell}
 
-      launcher="$install_dir/bin/autodesk_fusion_launcher.sh"
-      if [ ! -x "$launcher" ]; then
+      launcher="$(
+        find "$prefix_dir" -name Fusion360.exe -printf '%T+ %p\n' 2>/dev/null \
+          | sort -r \
+          | head -n 1 \
+          | cut -d' ' -f2-
+      )"
+
+      if [ -z "$launcher" ]; then
         echo "error: Autodesk Fusion is not installed at $install_dir." >&2
         echo "Run: autodesk-fusion-install" >&2
         exit 1
       fi
 
-      cd "$install_dir/bin"
-      exec bash "$launcher" "$@"
+      export WINEPREFIX="$prefix_dir"
+      export DXVK_LOG_LEVEL=none
+      export WINEDEBUG=-all,+err
+
+      exec wine "$launcher" "$@"
     '';
   };
 
@@ -254,7 +290,7 @@ let
         require_cmd "$cmd"
       done
 
-      wine_version="$(wine --version 2>/dev/null | sed -e 's/^wine-//' -e 's/-.*//' || true)"
+      wine_version="$(wine --version 2>/dev/null | sed -E -e 's/^wine-//' -e 's/[^0-9.].*$//' || true)"
       if [ -n "$wine_version" ]; then
         major="''${wine_version%%.*}"
         rest="''${wine_version#*.}"
