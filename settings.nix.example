@@ -180,6 +180,23 @@ in
         # Element restores sessions automatically. SSO redirect for new installs only.
         ssoRedirect = false;
       };
+      selector = {
+        # Shows a desktop menu before launching when more than one profile exists.
+        enable = true;
+      };
+      profiles = [
+        {
+          id      = "default";
+          name    = "Default";
+          profile = null; # Use Element's normal profile.
+          default = true;
+        }
+        {
+          id      = "work";
+          name    = "Work";
+          profile = "Work"; # Launches Element with `--profile Work`.
+        }
+      ];
       extraConfig = {};
     };
 
