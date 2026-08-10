@@ -7,6 +7,7 @@
 let
   cfg = (settings.programs or { }).autodeskFusion or { };
   enabled = cfg.enable or false;
+  nvidiaEnabled = (((settings.drivers or { }).nvidia or { }).enable or false);
 
   installDir = cfg.installDir or "$HOME/.autodesk_fusion";
   installerMode = cfg.installerMode or "install";
@@ -80,6 +81,14 @@ let
     export GDK_BACKEND=x11
     export QT_QPA_PLATFORM=xcb
     export SDL_VIDEODRIVER=x11
+    export LD_LIBRARY_PATH="/run/opengl-driver/lib:/run/opengl-driver-32/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export LIBGL_DRIVERS_PATH="/run/opengl-driver/lib/dri:/run/opengl-driver-32/lib/dri''${LIBGL_DRIVERS_PATH:+:$LIBGL_DRIVERS_PATH}"
+    export __EGL_VENDOR_LIBRARY_DIRS="/run/opengl-driver/share/glvnd/egl_vendor.d''${__EGL_VENDOR_LIBRARY_DIRS:+:$__EGL_VENDOR_LIBRARY_DIRS}"
+    ${lib.optionalString nvidiaEnabled ''
+      export GBM_BACKEND=nvidia-drm
+      export __GLX_VENDOR_LIBRARY_NAME=nvidia
+      export LIBVA_DRIVER_NAME=nvidia
+    ''}
     unset WAYLAND_DISPLAY
   '';
 
@@ -293,7 +302,11 @@ EOF
           ;;
         dxvk|DXVK)
           wineserver -k >/dev/null 2>&1 || true
-          WINEPREFIX="$prefix_dir" winetricks -q dxvk
+          if [ -f "$prefix_dir/drive_c/windows/system32/d3d11.dll" ] && [ -f "$prefix_dir/drive_c/windows/system32/dxgi.dll" ]; then
+            echo "DXVK DLLs already exist in the prefix."
+          else
+            WINEPREFIX="$prefix_dir" winetricks -q dxvk
+          fi
           for options_file in "''${options_paths[@]}"; do
             write_options_file "$options_file"
           done
