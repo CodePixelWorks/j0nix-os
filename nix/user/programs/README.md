@@ -29,9 +29,17 @@ Program toggles should be wired through `settings.programs.*`.
 `Element Desktop` (Matrix client) is configured via `settings.userSettings.<name>.programs.elementDesktop.*` and supports:
 - declarative package installation
 - a managed `~/.config/Element/config.json`
+- multiple isolated instances via Element's `--profile` flag
+- a launcher selection menu for configured instances
 - optional default homeserver / identity server preconfiguration
 - optional SSO redirect for unauthenticated users
 - a wrapped launcher that forces `--password-store=gnome-libsecret` so Electron uses the Secret Service backend reliably on this setup
+
+Profile notes:
+- `profiles = [{ id = "default"; profile = null; ... }]` keeps using the normal Element profile
+- `profiles = [{ id = "work"; profile = "Work"; ... }]` launches `element-desktop --profile Work`
+- when several profiles are configured, the `element-desktop` desktop launcher opens a selector first
+- direct CLI flags are passed through unchanged, so `element-desktop --profile Work` still works
 
 Important limitation:
 - safe declarative "username/password autologin" is not supported
