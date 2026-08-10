@@ -57,6 +57,7 @@ New j0nix-managed bottles are seeded from a Nix-generated template after creatio
 - `autodesk-fusion-install` downloads and runs the upstream installer into user state (`~/.autodesk_fusion` by default)
 - `autodesk-fusion-repair` reruns the patched install-fix path
 - `autodesk-fusion` launches the installed Fusion prefix through Xwayland-oriented environment defaults
+- `autodesk-fusion-renderer [status|opengl|dxvk]` switches the existing prefix between OpenGL and DXVK rendering
 - `autodesk-fusion-doctor` checks Wine, DXVK/Vulkan, prefix paths, WebView2, and the `adskidmgr` login URL handler
 
 The Autodesk payload, WebView2 runtime, cryinkfly installer payloads, and license/session data are runtime user state and are not fetched during Nix evaluation or vendored into the Nix store.
