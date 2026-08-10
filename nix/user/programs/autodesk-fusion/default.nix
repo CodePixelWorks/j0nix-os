@@ -147,6 +147,171 @@ let
     esac
   '';
 
+  rendererScript = pkgs.writeShellApplication {
+    name = "autodesk-fusion-renderer";
+    runtimeInputs = runtimePackages;
+    text = ''
+      set -eu
+      ${commonShell}
+
+      mode="''${1:-status}"
+
+      if [ ! -d "$prefix_dir" ]; then
+        echo "error: Autodesk Fusion Wine prefix does not exist: $prefix_dir" >&2
+        echo "Run: autodesk-fusion-install" >&2
+        exit 1
+      fi
+
+      user_name="$(id -un)"
+      appdata_dir="$prefix_dir/drive_c/users/$user_name/AppData"
+      options_paths=(
+        "$appdata_dir/Roaming/Autodesk/Neutron Platform/Options/NMachineSpecificOptions.xml"
+        "$appdata_dir/Local/Autodesk/Neutron Platform/Options/NMachineSpecificOptions.xml"
+        "$prefix_dir/drive_c/users/$user_name/Application Data/Autodesk/Neutron Platform/Options/NMachineSpecificOptions.xml"
+      )
+      wineprefix_log="$install_dir/logs/wineprefixes.log"
+
+      current_renderer() {
+        if [ -f "$wineprefix_log" ]; then
+          head -n 1 "$wineprefix_log"
+          return
+        fi
+
+        for options_file in "''${options_paths[@]}"; do
+          if [ -f "$options_file" ]; then
+            if strings "$options_file" | grep -q 'VirtualDeviceGLCore'; then
+              echo "OpenGL"
+              return
+            fi
+            if strings "$options_file" | grep -q 'VirtualDeviceDx11'; then
+              echo "DXVK"
+              return
+            fi
+          fi
+        done
+
+        echo "unknown"
+      }
+
+      write_options_file() {
+        target="$1"
+        mkdir -p "$(dirname "$target")"
+        tmp_file="$(mktemp)"
+        case "$mode" in
+          opengl|OpenGL)
+            cat >"$tmp_file" <<'EOF'
+<?xml version="1.0" encoding="UTF-16" standalone="no" ?>
+<OptionGroups>
+  <BootstrapOptionsGroup SchemaVersion="2" ToolTip="Special preferences that require the application to be restarted after a change." UserName="Bootstrap">
+    <driverOptionId ToolTip="The driver used to display the graphics" UserName="Graphics driver" Value="VirtualDeviceGLCore"/>
+    <WeaveTheme ToolTip="Changes the active theme used by Fusion UI." UserName="Theme" Value="weave-dark-blue"/>
+  </BootstrapOptionsGroup>
+  <spacemouseDriverOptionId ToolTip="Changes the version of the SpaceMouse SDK used by Fusion. For unsupported devices, use the Older setting." UserName="SpaceMouse-Driver" Value="0"/>
+  <NetworkOptionGroup SchemaVersion="2" ToolTip="This is a set of options used for network access." UserName="Network">
+    <WindowsProxyOptionId ToolTip="Windows Network Proxy - Setting" UserName="Windows-Network-Proxy - Setting" Value="No Proxy"/>
+    <SSLVerifyPeerOptionId ToolTip="Ensure that the Autodesk Fusion 360 client can validate the server SSL certificate." UserName="Server-Verification" Value="TrustAllServers"/>
+  </NetworkOptionGroup>
+</OptionGroups>
+EOF
+            ;;
+          dxvk|DXVK)
+            cat >"$tmp_file" <<'EOF'
+<?xml version="1.0" encoding="UTF-16" standalone="no" ?>
+<OptionGroups>
+  <BootstrapOptionsGroup SchemaVersion="2" ToolTip="Special preferences that require the application to be restarted after a change." UserName="Bootstrap">
+    <driverOptionId ToolTip="The driver used to display the graphics" UserName="Graphics driver" Value="VirtualDeviceDx11"/>
+    <WeaveTheme ToolTip="Changes the active theme used by Fusion UI." UserName="Theme" Value="weave-dark-blue"/>
+  </BootstrapOptionsGroup>
+  <spacemouseDriverOptionId ToolTip="Changes the version of the SpaceMouse SDK used by Fusion. For unsupported devices, use the Older setting." UserName="SpaceMouse-Driver" Value="0"/>
+  <NetworkOptionGroup SchemaVersion="2" ToolTip="This is a set of options used for network access." UserName="Network">
+    <WindowsProxyOptionId ToolTip="Windows Network Proxy - Setting" UserName="Windows-Network-Proxy - Setting" Value="No Proxy"/>
+    <SSLVerifyPeerOptionId ToolTip="Ensure that the Autodesk Fusion 360 client can validate the server SSL certificate." UserName="Server-Verification" Value="TrustAllServers"/>
+  </NetworkOptionGroup>
+  <CompatibilityGroup SchemaVersion="2" ToolTip="Miscellaneous options which may enable Fusion to perform better on certain hardware or network configurations, and to help diagnose undesirable application behavior.">
+    <graphicsApiOptionId ToolTip="Controls the graphics API used to render the User Interface. This has no effect on the 3D modeling canvas." UserName="Qt Rendering Hardware Interface API" Value="OpenGL"/>
+  </CompatibilityGroup>
+</OptionGroups>
+EOF
+            ;;
+        esac
+
+        if [ -f "$target" ]; then
+          cp -f "$target" "$target.bak.$(date +%Y%m%d%H%M%S)"
+        fi
+        cp -f "$tmp_file" "$target"
+        rm -f "$tmp_file"
+      }
+
+      set_wineprefix_log_renderer() {
+        renderer="$1"
+        mkdir -p "$(dirname "$wineprefix_log")"
+        if [ -f "$wineprefix_log" ]; then
+          tmp_log="$(mktemp)"
+          {
+            echo "$renderer"
+            tail -n +2 "$wineprefix_log"
+          } >"$tmp_log"
+          cp -f "$wineprefix_log" "$wineprefix_log.bak.$(date +%Y%m%d%H%M%S)"
+          mv -f "$tmp_log" "$wineprefix_log"
+        else
+          {
+            echo "$renderer"
+            echo "$install_dir"
+            echo "$prefix_dir"
+            echo "Wine"
+          } >"$wineprefix_log"
+        fi
+      }
+
+      case "$mode" in
+        status)
+          echo "Renderer: $(current_renderer)"
+          for options_file in "''${options_paths[@]}"; do
+            if [ -f "$options_file" ]; then
+              if strings "$options_file" | grep -q 'VirtualDeviceGLCore'; then
+                echo "OpenGL options: $options_file"
+              elif strings "$options_file" | grep -q 'VirtualDeviceDx11'; then
+                echo "DXVK options: $options_file"
+              else
+                echo "Unknown options: $options_file"
+              fi
+            else
+              echo "Missing options: $options_file"
+            fi
+          done
+          ;;
+        opengl|OpenGL)
+          wineserver -k >/dev/null 2>&1 || true
+          for options_file in "''${options_paths[@]}"; do
+            write_options_file "$options_file"
+          done
+          set_wineprefix_log_renderer "OpenGL"
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v d3d11 /t REG_SZ /d builtin /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v dxgi /t REG_SZ /d builtin /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v d3d10core /t REG_SZ /d builtin /f >/dev/null
+          echo "Autodesk Fusion renderer set to OpenGL. Restart Fusion now."
+          ;;
+        dxvk|DXVK)
+          wineserver -k >/dev/null 2>&1 || true
+          WINEPREFIX="$prefix_dir" winetricks -q dxvk
+          for options_file in "''${options_paths[@]}"; do
+            write_options_file "$options_file"
+          done
+          set_wineprefix_log_renderer "DXVK"
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v d3d11 /t REG_SZ /d native /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v dxgi /t REG_SZ /d native /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v d3d10core /t REG_SZ /d native /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v d3d9 /t REG_SZ /d builtin /f >/dev/null
+          echo "Autodesk Fusion renderer set to DXVK. Restart Fusion now."
+          ;;
+        *)
+          echo "usage: autodesk-fusion-renderer [status|opengl|dxvk]" >&2
+          exit 2
+          ;;
+      esac
+    '';
+  };
+
   installCommand =
     if installerMode == "install" then
       "--install"
@@ -409,6 +574,7 @@ lib.mkIf enabled {
     repairScript
     doctorScript
     identityScript
+    rendererScript
   ];
 
   xdg.desktopEntries.autodesk-fusion = {
