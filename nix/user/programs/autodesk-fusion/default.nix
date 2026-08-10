@@ -107,12 +107,14 @@ let
   postInstallDesktopFix = ''
     applications_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/applications"
     fusion_desktop_dir="$applications_dir/wine/Programs/Autodesk"
+    fusion_launcher=${lib.escapeShellArg (lib.getExe launcherScript)}
+    fusion_login_handler=${lib.escapeShellArg (lib.getExe identityScript)}
 
     if [ -d "$fusion_desktop_dir" ]; then
       find "$fusion_desktop_dir" -name 'Autodesk Fusion.desktop' -type f -print0 2>/dev/null \
         | while IFS= read -r -d "" desktop_file; do
           sed -i \
-            -e 's#^Exec=.*#Exec=autodesk-fusion %U#' \
+            -e 's#^Exec=.*#Exec='"$fusion_launcher"' %U#' \
             -e 's#^Path=.*#Path='"$install_dir"'#' \
             "$desktop_file"
         done
@@ -120,7 +122,7 @@ let
       find "$fusion_desktop_dir" -name 'adskidmgr-opener.desktop' -type f -print0 2>/dev/null \
         | while IFS= read -r -d "" desktop_file; do
           sed -i \
-            -e 's#^Exec=.*#Exec=autodesk-fusion-adskidmgr %u#' \
+            -e 's#^Exec=.*#Exec='"$fusion_login_handler"' %u#' \
             "$desktop_file"
         done
     fi
@@ -210,8 +212,18 @@ let
       set -eu
       ${commonShell}
 
+      search_roots=()
+      [ -d "$prefix_dir" ] && search_roots+=("$prefix_dir")
+      [ -d "$proton_prefix_dir" ] && search_roots+=("$proton_prefix_dir")
+
+      if [ "''${#search_roots[@]}" -eq 0 ]; then
+        echo "error: Autodesk Fusion is not installed at $install_dir." >&2
+        echo "Run: autodesk-fusion-install" >&2
+        exit 1
+      fi
+
       launcher="$(
-        find "$prefix_dir" -name Fusion360.exe -printf '%T+ %p\n' 2>/dev/null \
+        find "''${search_roots[@]}" -name Fusion360.exe -printf '%T+ %p\n' 2>/dev/null \
           | sort -r \
           | head -n 1 \
           | cut -d' ' -f2-
@@ -223,7 +235,11 @@ let
         exit 1
       fi
 
-      export WINEPREFIX="$prefix_dir"
+      if [ -d "$prefix_dir" ]; then
+        export WINEPREFIX="$prefix_dir"
+      else
+        export WINEPREFIX="$proton_prefix_dir"
+      fi
       export DXVK_LOG_LEVEL=none
       export WINEDEBUG=-all,+err
 
@@ -244,8 +260,18 @@ let
         exit 2
       fi
 
+      search_roots=()
+      [ -d "$prefix_dir" ] && search_roots+=("$prefix_dir")
+      [ -d "$proton_prefix_dir" ] && search_roots+=("$proton_prefix_dir")
+
+      if [ "''${#search_roots[@]}" -eq 0 ]; then
+        echo "error: Autodesk Fusion is not installed at $install_dir." >&2
+        echo "Run: autodesk-fusion-install" >&2
+        exit 1
+      fi
+
       identity_manager="$(
-        find "$prefix_dir" "$proton_prefix_dir" -name AdskIdentityManager.exe -print 2>/dev/null \
+        find "''${search_roots[@]}" -name AdskIdentityManager.exe -print 2>/dev/null \
           | sort \
           | tail -n 1
       )"
@@ -330,13 +356,17 @@ let
         warn "cryinkfly launcher missing; run autodesk-fusion-install"
       fi
 
-      if find "$prefix_dir" "$proton_prefix_dir" -name AdskIdentityManager.exe -print -quit 2>/dev/null | grep -q .; then
+      search_roots=()
+      [ -d "$prefix_dir" ] && search_roots+=("$prefix_dir")
+      [ -d "$proton_prefix_dir" ] && search_roots+=("$proton_prefix_dir")
+
+      if [ "''${#search_roots[@]}" -gt 0 ] && find "''${search_roots[@]}" -name AdskIdentityManager.exe -print -quit 2>/dev/null | grep -q .; then
         ok "Autodesk Identity Manager exists"
       else
         warn "Autodesk Identity Manager not found yet"
       fi
 
-      if find "$prefix_dir" "$proton_prefix_dir" -iname '*WebView2*' -print -quit 2>/dev/null | grep -q .; then
+      if [ "''${#search_roots[@]}" -gt 0 ] && find "''${search_roots[@]}" -iname '*WebView2*' -print -quit 2>/dev/null | grep -q .; then
         ok "WebView2 files exist"
       else
         warn "WebView2 files not found yet"
@@ -385,7 +415,7 @@ lib.mkIf enabled {
     name = "Autodesk Fusion";
     genericName = "CAD/CAM/CAE";
     comment = "Run Autodesk Fusion through the managed j0nix Wine setup";
-    exec = "autodesk-fusion %U";
+    exec = "${lib.getExe launcherScript} %U";
     terminal = false;
     type = "Application";
     categories = [
@@ -399,7 +429,7 @@ lib.mkIf enabled {
     name = "Autodesk Fusion Login Handler";
     genericName = "Autodesk Identity Manager URL Handler";
     comment = "Open Autodesk Fusion login callbacks";
-    exec = "autodesk-fusion-adskidmgr %u";
+    exec = "${lib.getExe identityScript} %u";
     terminal = false;
     type = "Application";
     mimeType = [ "x-scheme-handler/adskidmgr" ];
