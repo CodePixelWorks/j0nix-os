@@ -55,6 +55,7 @@ let
     systemd
     procps
     gnutar
+    glibc.bin
     mokutil
   ];
 
@@ -188,11 +189,11 @@ let
 
         for options_file in "''${options_paths[@]}"; do
           if [ -f "$options_file" ]; then
-            if strings "$options_file" | grep -q 'VirtualDeviceGLCore'; then
+            if iconv -f UTF-16 -t UTF-8 "$options_file" 2>/dev/null | grep -q 'VirtualDeviceGLCore'; then
               echo "OpenGL"
               return
             fi
-            if strings "$options_file" | grep -q 'VirtualDeviceDx11'; then
+            if iconv -f UTF-16 -t UTF-8 "$options_file" 2>/dev/null | grep -q 'VirtualDeviceDx11'; then
               echo "DXVK"
               return
             fi
@@ -205,10 +206,11 @@ let
       write_options_file() {
         target="$1"
         mkdir -p "$(dirname "$target")"
+        tmp_utf8="$(mktemp)"
         tmp_file="$(mktemp)"
         case "$mode" in
           opengl|OpenGL)
-            cat >"$tmp_file" <<'EOF'
+            cat >"$tmp_utf8" <<'EOF'
 <?xml version="1.0" encoding="UTF-16" standalone="no" ?>
 <OptionGroups>
   <BootstrapOptionsGroup SchemaVersion="2" ToolTip="Special preferences that require the application to be restarted after a change." UserName="Bootstrap">
@@ -224,7 +226,7 @@ let
 EOF
             ;;
           dxvk|DXVK)
-            cat >"$tmp_file" <<'EOF'
+            cat >"$tmp_utf8" <<'EOF'
 <?xml version="1.0" encoding="UTF-16" standalone="no" ?>
 <OptionGroups>
   <BootstrapOptionsGroup SchemaVersion="2" ToolTip="Special preferences that require the application to be restarted after a change." UserName="Bootstrap">
@@ -244,11 +246,35 @@ EOF
             ;;
         esac
 
+        printf '\xff\xfe' >"$tmp_file"
+        iconv -f UTF-8 -t UTF-16LE "$tmp_utf8" >>"$tmp_file"
         if [ -f "$target" ]; then
           cp -f "$target" "$target.bak.$(date +%Y%m%d%H%M%S)"
         fi
         cp -f "$tmp_file" "$target"
-        rm -f "$tmp_file"
+        rm -f "$tmp_utf8" "$tmp_file"
+      }
+
+      disable_dxvk_dlls() {
+        for dll_dir in "$prefix_dir/drive_c/windows/system32" "$prefix_dir/drive_c/windows/syswow64"; do
+          [ -d "$dll_dir" ] || continue
+          for dll in d3d10core d3d11 d3d9 dxgi; do
+            if [ -f "$dll_dir/$dll.dll" ] && [ ! -f "$dll_dir/$dll.dll.j0nix-dxvk-disabled" ]; then
+              mv -f "$dll_dir/$dll.dll" "$dll_dir/$dll.dll.j0nix-dxvk-disabled"
+            fi
+          done
+        done
+      }
+
+      restore_dxvk_dlls() {
+        for dll_dir in "$prefix_dir/drive_c/windows/system32" "$prefix_dir/drive_c/windows/syswow64"; do
+          [ -d "$dll_dir" ] || continue
+          for dll in d3d10core d3d11 d3d9 dxgi; do
+            if [ -f "$dll_dir/$dll.dll.j0nix-dxvk-disabled" ]; then
+              mv -f "$dll_dir/$dll.dll.j0nix-dxvk-disabled" "$dll_dir/$dll.dll"
+            fi
+          done
+        done
       }
 
       set_wineprefix_log_renderer() {
@@ -277,9 +303,9 @@ EOF
           echo "Renderer: $(current_renderer)"
           for options_file in "''${options_paths[@]}"; do
             if [ -f "$options_file" ]; then
-              if strings "$options_file" | grep -q 'VirtualDeviceGLCore'; then
+              if iconv -f UTF-16 -t UTF-8 "$options_file" 2>/dev/null | grep -q 'VirtualDeviceGLCore'; then
                 echo "OpenGL options: $options_file"
-              elif strings "$options_file" | grep -q 'VirtualDeviceDx11'; then
+              elif iconv -f UTF-16 -t UTF-8 "$options_file" 2>/dev/null | grep -q 'VirtualDeviceDx11'; then
                 echo "DXVK options: $options_file"
               else
                 echo "Unknown options: $options_file"
@@ -294,14 +320,21 @@ EOF
           for options_file in "''${options_paths[@]}"; do
             write_options_file "$options_file"
           done
+          disable_dxvk_dlls
           set_wineprefix_log_renderer "OpenGL"
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v '*d3d10core' /t REG_SZ /d builtin /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v '*d3d11' /t REG_SZ /d builtin /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v '*d3d9' /t REG_SZ /d builtin /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v '*dxgi' /t REG_SZ /d builtin /f >/dev/null
           WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v d3d11 /t REG_SZ /d builtin /f >/dev/null
           WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v dxgi /t REG_SZ /d builtin /f >/dev/null
           WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v d3d10core /t REG_SZ /d builtin /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v d3d9 /t REG_SZ /d builtin /f >/dev/null
           echo "Autodesk Fusion renderer set to OpenGL. Restart Fusion now."
           ;;
         dxvk|DXVK)
           wineserver -k >/dev/null 2>&1 || true
+          restore_dxvk_dlls
           if [ -f "$prefix_dir/drive_c/windows/system32/d3d11.dll" ] && [ -f "$prefix_dir/drive_c/windows/system32/dxgi.dll" ]; then
             echo "DXVK DLLs already exist in the prefix."
           else
@@ -311,6 +344,10 @@ EOF
             write_options_file "$options_file"
           done
           set_wineprefix_log_renderer "DXVK"
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v '*d3d10core' /t REG_SZ /d native /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v '*d3d11' /t REG_SZ /d native /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v '*dxgi' /t REG_SZ /d native /f >/dev/null
+          WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v '*d3d9' /t REG_SZ /d builtin /f >/dev/null
           WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v d3d11 /t REG_SZ /d native /f >/dev/null
           WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v dxgi /t REG_SZ /d native /f >/dev/null
           WINEPREFIX="$prefix_dir" wine REG ADD 'HKCU\Software\Wine\DllOverrides' /v d3d10core /t REG_SZ /d native /f >/dev/null
