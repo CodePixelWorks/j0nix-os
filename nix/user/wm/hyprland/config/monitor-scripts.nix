@@ -16,6 +16,7 @@ let
     hyprctl_bin="${hyprctlExec}"
     jq_bin="${pkgs.jq}/bin/jq"
     flock_bin="${pkgs.util-linux}/bin/flock"
+    notify_bin="${pkgs.libnotify}/bin/notify-send"
     outputs_json=${lib.escapeShellArg toggleableOutputsJson}
     initial_states_json=${lib.escapeShellArg initialOutputStatesJson}
     bindings_json=${lib.escapeShellArg outputBindingsJson}
@@ -49,6 +50,14 @@ let
     release_runtime_lock() {
       "$flock_bin" -u 8 >/dev/null 2>&1 || true
       exec 8>&-
+    }
+
+    notify_display() {
+      local summary="$1"
+      local body="$2"
+
+      [ -x "$notify_bin" ] || return 0
+      "$notify_bin" -a "Display control" -r 43001 "$summary" "$body" >/dev/null 2>&1 || true
     }
 
     with_runtime_lock() {
@@ -1075,7 +1084,7 @@ let
       if ! output_is_active "$resolved_monitor"; then
         prefix="$(state_prefix "$(output_state_key "$output_json")")"
         enable_output "$output_json" "$resolved_monitor" "$prefix"
-        sync_runtime_monitor_overrides
+        sync_runtime_monitor_overrides_locked
       fi
     }
 
@@ -1257,6 +1266,7 @@ let
       local target_mode="$3"
       local target_position="$4"
       local target_scale="$5"
+      local staging_position="''${6:-$target_position}"
       local tx_dir target_json target_monitor active_workspace focused_monitor
 
       [ -n "$transaction_name" ] || usage
@@ -1269,6 +1279,9 @@ let
       target_monitor="$(resolve_output_name "$target_json")"
       [ -n "$target_monitor" ] || exit 1
       tx_dir="$(transaction_dir "$transaction_name")"
+      if [ -f "$tx_dir/active" ]; then
+        transaction_end "$transaction_name" "$target_key"
+      fi
       mkdir -p "$tx_dir"
 
       if output_is_headless "$target_monitor"; then
@@ -1297,8 +1310,12 @@ let
       "$hyprctl_bin" -j activeworkspace | "$jq_bin" -r '.name // empty' >"$tx_dir/active-workspace"
       focused_monitor="$(get_focused_monitor || true)"
       printf '%s\n' "$focused_monitor" >"$tx_dir/focused-monitor"
+      : >"$tx_dir/active"
 
-      apply_monitor_enabled "$target_monitor" "$target_mode" "$target_position" "$target_scale"
+      # Keep a headless target out of the physical desktop until every other
+      # output has been disabled.  Enabling it at 0x0 first causes Hyprland's
+      # overlap warnings because the primary output is commonly also at 0x0.
+      apply_monitor_enabled "$target_monitor" "$target_mode" "$staging_position" "$target_scale"
       wait_for_output_state "$target_monitor" active
 
       active_workspace="$(cat "$tx_dir/active-workspace" 2>/dev/null || true)"
@@ -1318,12 +1335,14 @@ let
         while IFS=$'\t' read -r monitor_name _mode _position _scale; do
           [ -n "$monitor_name" ] || continue
           apply_monitor_disabled "$monitor_name"
+          wait_for_output_state "$monitor_name" inactive
         done <"$tx_dir/monitors.tsv"
       fi
 
       apply_monitor_enabled "$target_monitor" "$target_mode" "$target_position" "$target_scale"
       focus_monitor "$target_monitor"
-      sync_runtime_monitor_overrides
+      sync_runtime_monitor_overrides_locked
+      notify_display "Sunshine display ready" "Streaming display enabled."
     }
 
     transaction_end() {
@@ -1334,6 +1353,7 @@ let
 
       [ -n "$transaction_name" ] || usage
       tx_dir="$(transaction_dir "$transaction_name")"
+      [ -f "$tx_dir/active" ] || return 0
 
       if [ -f "$tx_dir/monitors.tsv" ]; then
         while IFS=$'\t' read -r monitor_name monitor_mode monitor_position monitor_scale; do
@@ -1342,6 +1362,7 @@ let
             apply_monitor_disabled "$monitor_name"
           else
             apply_monitor_enabled "$monitor_name" "$monitor_mode" "$monitor_position" "$monitor_scale"
+            wait_for_output_state "$monitor_name" active
           fi
         done <"$tx_dir/monitors.tsv"
       fi
@@ -1352,13 +1373,21 @@ let
         while IFS=$'\t' read -r workspace_name monitor_name; do
           [ -n "$workspace_name" ] || continue
           [ "$workspace_name" = "$active_workspace" ] && continue
-          move_workspace "$workspace_name" "$monitor_name"
+          if output_is_active "$monitor_name"; then
+            move_workspace "$workspace_name" "$monitor_name"
+          else
+            move_workspace "$workspace_name" "$(pick_handoff_monitor "$target_monitor" "")"
+          fi
         done <"$tx_dir/workspaces.tsv"
 
         if [ -n "$active_workspace" ]; then
           while IFS=$'\t' read -r workspace_name monitor_name; do
             [ "$workspace_name" = "$active_workspace" ] || continue
-            move_workspace "$workspace_name" "$monitor_name"
+            if output_is_active "$monitor_name"; then
+              move_workspace "$workspace_name" "$monitor_name"
+            else
+              move_workspace "$workspace_name" "$(pick_handoff_monitor "$target_monitor" "")"
+            fi
             break
           done <"$tx_dir/workspaces.tsv"
         fi
@@ -1369,9 +1398,13 @@ let
         if [ -n "$target_json" ]; then
           target_monitor="$(resolve_output_name "$target_json")"
           if [ "$(get_output_field "$target_json" 'if (.enabledByDefault == false) then "0" else "1" end')" = "1" ]; then
-            enable_output "$target_json" "$target_monitor" "$(state_prefix "$(output_state_key "$target_json")")"
+            apply_monitor_enabled "$target_monitor" \
+              "$(get_output_field "$target_json" '.mode // "preferred"')" \
+              "$(get_output_field "$target_json" '.position // "auto"')" \
+              "$(get_output_field "$target_json" '(.scale // 1) | tostring')"
           else
             apply_monitor_disabled "$target_monitor"
+            wait_for_output_state "$target_monitor" inactive
           fi
         fi
       fi
@@ -1381,7 +1414,65 @@ let
         focus_monitor "$focused_monitor"
       fi
       rm -rf "$tx_dir"
-      sync_runtime_monitor_overrides
+      sync_runtime_monitor_overrides_locked
+      notify_display "Sunshine display restored" "Desktop layout restored and virtual display disabled."
+    }
+
+    run_output_action() {
+      local action="$1"
+      local output_json="$2"
+      local output_name="$3"
+      local prefix="$4"
+      local handoff_target
+
+      case "$action" in
+        on)
+          enable_output "$output_json" "$output_name" "$prefix"
+          sync_runtime_monitor_overrides_locked
+          notify_display "Output enabled" "$output_name is ready."
+          ;;
+        off)
+          disable_output "$output_json" "$output_name" "$prefix"
+          sync_runtime_monitor_overrides_locked
+          handoff_target="$(cat "$prefix.target-monitor" 2>/dev/null || true)"
+          if [ -n "$handoff_target" ]; then
+            notify_display "Output disabled" "$output_name disabled; workspaces moved to $handoff_target."
+          else
+            notify_display "Output disabled" "$output_name is disabled."
+          fi
+          ;;
+        toggle)
+          if output_is_active "$output_name"; then
+            run_output_action off "$output_json" "$output_name" "$prefix"
+          else
+            run_output_action on "$output_json" "$output_name" "$prefix"
+          fi
+          ;;
+        restore)
+          restore_output_state "$output_json" "$output_name" "$prefix"
+          sync_runtime_monitor_overrides_locked
+          notify_display "Output restored" "$output_name and its saved workspaces were restored."
+          ;;
+      esac
+    }
+
+    run_workspace_action() {
+      local action="$1"
+      local target_key="$2"
+      local target_name="$3"
+
+      ensure_output_ready_for_workspace_move "$target_key"
+      case "$action" in
+        workspace-to)
+          move_active_workspace_to_output "$target_name"
+          notify_display "Workspace moved" "Active workspace moved to $target_name."
+          ;;
+        focused-workspaces-to)
+          move_other_monitors_workspaces_to_target "$target_name"
+          notify_display "Workspaces moved" "All normal workspaces moved to $target_name."
+          ;;
+      esac
+      sync_runtime_monitor_overrides_locked
     }
 
     case "$command" in
@@ -1394,11 +1485,11 @@ let
         exit $?
         ;;
       transaction-begin)
-        transaction_begin "''${2:-}" "''${3:-}" "''${4:-preferred}" "''${5:-auto}" "''${6:-1}"
+        with_runtime_lock transaction_begin "''${2:-}" "''${3:-}" "''${4:-preferred}" "''${5:-auto}" "''${6:-1}" "''${7:-auto}"
         exit 0
         ;;
       transaction-end)
-        transaction_end "''${2:-}" "''${3:-}"
+        with_runtime_lock transaction_end "''${2:-}" "''${3:-}"
         exit 0
         ;;
       sync-live)
@@ -1456,24 +1547,16 @@ let
 
     case "$command" in
       on)
-        enable_output "$output_json" "$resolved_output_name" "$prefix"
-        sync_runtime_monitor_overrides
+        with_runtime_lock run_output_action on "$output_json" "$resolved_output_name" "$prefix"
         ;;
       off)
-        disable_output "$output_json" "$resolved_output_name" "$prefix"
-        sync_runtime_monitor_overrides
+        with_runtime_lock run_output_action off "$output_json" "$resolved_output_name" "$prefix"
         ;;
       toggle)
-        if output_is_active "$resolved_output_name"; then
-          disable_output "$output_json" "$resolved_output_name" "$prefix"
-        else
-          enable_output "$output_json" "$resolved_output_name" "$prefix"
-        fi
-        sync_runtime_monitor_overrides
+        with_runtime_lock run_output_action toggle "$output_json" "$resolved_output_name" "$prefix"
         ;;
       restore)
-        restore_output_state "$output_json" "$resolved_output_name" "$prefix"
-        sync_runtime_monitor_overrides
+        with_runtime_lock run_output_action restore "$output_json" "$resolved_output_name" "$prefix"
         ;;
       status)
         monitor_status "$output_json" "$resolved_output_name" "$prefix"
@@ -1491,12 +1574,10 @@ let
         prompt_new_monitor_dialog "$output_name"
         ;;
       workspace-to)
-        ensure_output_ready_for_workspace_move "$output_name"
-        move_active_workspace_to_output "$resolved_output_name"
+        with_runtime_lock run_workspace_action workspace-to "$output_name" "$resolved_output_name"
         ;;
       focused-workspaces-to)
-        ensure_output_ready_for_workspace_move "$output_name"
-        move_other_monitors_workspaces_to_target "$resolved_output_name"
+        with_runtime_lock run_workspace_action focused-workspaces-to "$output_name" "$resolved_output_name"
         ;;
     esac
   '';

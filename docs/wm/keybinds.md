@@ -13,8 +13,8 @@ Notes:
 - `SUPER` means the main modifier key.
 - `SHIFT`, `CTRL`, and `ALT` are additional modifiers.
 - Monitor bind `3` follows the active Sunshine display target.
-  - Current default: `DP-2` (Sunshine Dummy Plug)
-  - Alternate backend: `SUNSHINE-HEADLESS`
+  - Current default: `SUNSHINE-HEADLESS`
+  - Alternative backend: `DP-2` (Sunshine Dummy Plug)
 
 ## Core Window Actions
 
@@ -119,9 +119,9 @@ Notes:
 
 Current numeric monitor map:
 
-- `1` -> `DP-1` (Primary PC Monitor)
+- `1` -> `DP-3` (Primary PC Monitor)
 - `2` -> `HDMI-A-2` (Living Room TV)
-- `3` -> current Sunshine target (`DP-2` by default)
+- `3` -> current Sunshine target (`SUNSHINE-HEADLESS` by default)
 
 Actions:
 
@@ -137,6 +137,11 @@ Actions:
 - `SUPER+CTRL+ALT+1`: move all normal workspaces from the other active monitors to monitor `1`
 - `SUPER+CTRL+ALT+2`: move all normal workspaces from the other active monitors to monitor `2`
 - `SUPER+CTRL+ALT+3`: move all normal workspaces from the other active monitors to monitor `3`
+
+Every output action sends a desktop notification after Hyprland confirms the
+requested state. Turning off the Sunshine virtual output hands its workspaces
+to the primary display. When a Moonlight stream stops, Sunshine restores the
+pre-stream monitor/workspace layout first and disables the virtual output last.
 
 ## Audio And Brightness
 

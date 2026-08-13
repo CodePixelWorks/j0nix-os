@@ -509,7 +509,10 @@ let
         : > "$lockscreen_disable_marker"
         ${pkgs.procps}/bin/pkill -x hyprlock >/dev/null 2>&1 || true
       ''}
-      "$wm_monitor_bin" transaction-begin sunshine "$target_name" "$mode" "$stream_position" "$target_scale"
+      # The monitor helper first enables a headless target at this staging
+      # position, then moves it to the stream position only after physical
+      # outputs are disabled.  This prevents a transient 0x0 overlap.
+      "$wm_monitor_bin" transaction-begin sunshine "$target_name" "$mode" "$stream_position" "$target_scale" "$staging_position"
       if command -v wm-shell-restart-detached >/dev/null 2>&1; then
         wm-shell-restart-detached >/dev/null 2>&1 || true
       fi
