@@ -96,6 +96,7 @@
                 nixpkgs.overlays = [
                   overlays.vscodeOverlay
                   overlays.localFixesOverlay
+                  overlays.resolveOverlay
                 ];
               }
             )
