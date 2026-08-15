@@ -1,5 +1,6 @@
 {
   lib,
+  writeText,
   davinci-resolve-studio,
   replaceDependencies,
   ...
@@ -7,7 +8,7 @@
 let
   # License file content from resolvepatch:
   # https://github.com/unknowntrojan/resolvepatch
-  blackmagicLic = ''
+  blackmagicLic = writeText "blackmagic.lic" ''
     LICENSE blackmagic davinciresolvestudio 999999 permanent uncounted
       hostid=ANY issuer=ANY customer=ANY issued=14-Aug-2025
       akey=0000-0000-0000-0000-0000 _ck=00 sig="00"
@@ -20,9 +21,7 @@ let
 
       # ---- License file (resolvepatch approach) ----
       mkdir -p "$out/.license"
-      cat > "$out/.license/blackmagic.lic" << 'EOL'
-${blackmagicLic}
-EOL
+      cp ${blackmagicLic} "$out/.license/blackmagic.lic"
       echo "resolve-patch: wrote blackmagic.lic license file"
 
       # ---- Binary patching (acuifex patterns) ----
@@ -67,24 +66,18 @@ EOL
         14 '\x85' "18.x"; then
         echo "resolve-patch: successfully patched (18.x pattern)"
       else
-        echo "resolve-patch: WARNING - no binary pattern matched"
+        echo "resolve-patch: WARNING - no binary pattern matched for version $(cat $out/bin/resolve 2>/dev/null | head -c 100 || echo unknown)"
         echo "resolve-patch: Relying on license file + RLM_LICENSE only"
       fi
     '';
   });
-
-  patched = replaceDependencies {
-    drv = davinci-resolve-studio;
-    replacements = [
-      {
-        oldDependency = nonFhsOriginal;
-        newDependency = patchedDavinci;
-      }
-    ];
-  };
 in
-patched.overrideAttrs (old: {
-  passthru = (old.passthru or { }) // {
-    resolvepatched = patchedDavinci;
-  };
-})
+replaceDependencies {
+  drv = davinci-resolve-studio;
+  replacements = [
+    {
+      oldDependency = nonFhsOriginal;
+      newDependency = patchedDavinci;
+    }
+  ];
+}
