@@ -1578,6 +1578,26 @@
         "type": "github"
       }
     },
+    "resolve-patch": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786813824,
+        "narHash": "sha256-pEzr2N0x2l4sSDroWZDqqS+rvdVP2jSBrHih2bXMelY=",
+        "ref": "refs/heads/main",
+        "rev": "7c2dcec323962750b692fc2dd24917fbfa646983",
+        "revCount": 2,
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/NixOS/davinci-resolve-studio-patch.git"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/NixOS/davinci-resolve-studio-patch.git"
+      }
+    },
     "root": {
       "inputs": {
         "aagl": "aagl",
@@ -1605,6 +1625,7 @@
         "quickshell-dev": "quickshell-dev",
         "quickshell-overview": "quickshell-overview",
         "quickshell-stable": "quickshell-stable",
+        "resolve-patch": "resolve-patch",
         "sops-nix": "sops-nix",
         "stylix": "stylix",
         "zen-browser": "zen-browser"
