@@ -386,5 +386,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    resolve-patch = {
+      url = "path:/home/jonas/DEV/davinci-resolve-studio-patch";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
   };
 }
