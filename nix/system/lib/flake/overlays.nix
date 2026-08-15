@@ -44,6 +44,9 @@ let
       nixpkgsSrc = nixpkgs.outPath;
     };
     bambu-studio-appimage = final.callPackage (baseDir + "/nix/system/software/pkgs/printing/bambu-studio-appimage.nix") { };
+    davinci-resolve-studio = final.callPackage (baseDir + "/nix/system/software/pkgs/video/davinci-resolve-studio-patched.nix") {
+      davinci-resolve-studio = prev.davinci-resolve-studio;
+    };
     firecrawl-py = final.python312Packages.callPackage (baseDir + "/nix/pkgs/firecrawl-py") { };
     hermes-extra-python = final.callPackage (baseDir + "/nix/pkgs/hermes-extra-python") {
       inherit (final) firecrawl-py;
