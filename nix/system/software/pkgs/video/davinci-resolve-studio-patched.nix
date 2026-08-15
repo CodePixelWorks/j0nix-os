@@ -24,9 +24,13 @@ let
       cp ${blackmagicLic} "$out/.license/blackmagic.lic"
       echo "resolve-patch: wrote blackmagic.lic license file"
 
-      # ---- Binary patching (acuifex patterns) ----
+      # ---- Binary patching ----
+      # Patterns from: https://acuifex.ru/blog/cracking-davinci-resolve-studio-license/
+      # v21+ pattern found via Ghidra analysis of resolve 21.0.3
+      # Function: push rbx; sub rsp,0x20; mov bl,1; call; test al,al; jnz
+      # Patch: 0F 85 (jnz) -> 90 E9 (nop + jmp) = unconditional jump
       try_patch() {
-        local pattern="$1" offset="$2" patch_byte="$3" label="$4"
+        local pattern="$1" offset="$2" patch_bytes="$3" label="$4"
         local matches
         matches=$(LANG=C grep -obUaP "$pattern" "$patch_file" 2>/dev/null) || true
         local matchcount
@@ -44,14 +48,18 @@ let
         patternOffset=$(echo "$matches" | cut -d: -f1)
         local instructionOffset=$((patternOffset + offset))
         echo "resolve-patch [$label]: patching at offset $instructionOffset"
-        echo -en "$patch_byte" | dd conv=notrunc of="$patch_file" bs=1 seek=$instructionOffset count=1 2>/dev/null
+        echo -en "$patch_bytes" | dd conv=notrunc of="$patch_file" bs=1 seek=$instructionOffset count=''${#patch_bytes} 2>/dev/null
         return 0
       }
 
       # Try patterns newest-first; stop at first success.
-      # Patterns from: https://acuifex.ru/blog/cracking-davinci-resolve-studio-license/
-      # 20.3+ (patch byte: 0x75)
+      # 21.x (two-byte patch: jnz -> nop+jmp)
       if try_patch \
+        '\x53\x48\x83\xec\x20\xb3\x01\xe8....\x84\xc0\x0f\x85....' \
+        14 '\x90\xe9' "21.x"; then
+        echo "resolve-patch: successfully patched (21.x pattern)"
+      # 20.3+ (patch byte: 0x75)
+      elif try_patch \
         '\xff\xe9\x75\x02\x00\x00\x85\xdb\x74\x68\x4d\x8b\x7e\x10\x49\x89' \
         8 '\x75' "20.3+"; then
         echo "resolve-patch: successfully patched (20.3+ pattern)"
@@ -66,7 +74,7 @@ let
         14 '\x85' "18.x"; then
         echo "resolve-patch: successfully patched (18.x pattern)"
       else
-        echo "resolve-patch: WARNING - no binary pattern matched for version $(cat $out/bin/resolve 2>/dev/null | head -c 100 || echo unknown)"
+        echo "resolve-patch: WARNING - no binary pattern matched"
         echo "resolve-patch: Relying on license file + RLM_LICENSE only"
       fi
     '';
