@@ -387,7 +387,7 @@
     };
 
     resolve-patch = {
-      url = "path:/home/jonas/DEV/davinci-resolve-studio-patch";
+      url = "git+ssh://git@git.j0lab.xyz/NixOS/davinci-resolve-studio-patch.git";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
