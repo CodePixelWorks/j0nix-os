@@ -8,8 +8,6 @@ let
   cfg = (settings.programs or { }).davinciResolve or { };
   enabled = cfg.enable or true;
 
-  # Resolve's FHS environment confuses GTK under Wayland.
-  # Force X11 backends and portal file chooser.
   resolveFixed = pkgs.symlinkJoin {
     name = "davinci-resolve-studio-wrapped";
     paths = [ pkgs.davinci-resolve-studio ];
