@@ -111,10 +111,14 @@ let
       '';
     });
   };
+  resolveOverlay = final: prev: {
+    davinci-resolve-studio = final.callPackage (inputs.resolve-patch + "/package.nix") {
+      studioVariant = true;
+    };
+  };
 in
 {
-  inherit vscodeOverlay localFixesOverlay;
-  resolveOverlay = inputs.resolve-patch.overlays.default;
+  inherit vscodeOverlay localFixesOverlay resolveOverlay;
 
   default = [
     vscodeOverlay
