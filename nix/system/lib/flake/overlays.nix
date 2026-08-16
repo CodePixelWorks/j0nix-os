@@ -113,7 +113,7 @@ let
   };
   resolveOverlay = final: prev: {
     davinci-resolve-studio = final.callPackage (inputs.resolve-patch + "/package.nix") {
-      studioVariant = true;
+      davinci-resolve-studio = prev.davinci-resolve-studio;
     };
   };
 in
