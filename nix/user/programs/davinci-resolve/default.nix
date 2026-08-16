@@ -16,7 +16,8 @@ let
       wrapProgram $out/bin/davinci-resolve-studio \
         --set QT_QPA_PLATFORM xcb \
         --set GDK_BACKEND x11 \
-        --set GTK_USE_PORTAL 1
+        --set GTK_USE_PORTAL 1 \
+        --run 'export RLM_LICENSE="''${HOME}/.local/share/DaVinciResolve/license/blackmagic.lic"'
     '';
   };
 in
