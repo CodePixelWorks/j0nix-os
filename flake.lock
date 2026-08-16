@@ -1585,11 +1585,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1786865289,
-        "narHash": "sha256-Np+XxqKSdraQUVWB1cyd4TKPNk+vKqhsQ5QFCVwbr64=",
+        "lastModified": 1786868438,
+        "narHash": "sha256-+t5fxIimHJ803i9UDc3fDcR1jY8SZmiHpV9bvHy5h1w=",
         "ref": "refs/heads/main",
-        "rev": "e6596575b0a6b0c78bdc33d7731511e4377ea177",
-        "revCount": 27,
+        "rev": "3bce307feb0a7209719c85fd5ab5b9859cc22325",
+        "revCount": 29,
         "type": "git",
         "url": "ssh://git@git.j0lab.xyz/NixOS/davinci-resolve-studio-patch.git"
       },
