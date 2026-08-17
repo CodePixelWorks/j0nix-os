@@ -53,12 +53,15 @@ in
   config = {
     nixpkgs.config.allowUnfree = cfg.allowUnfree;
 
+    # Let sudo pass SSH_AUTH_SOCK so nix-daemon can use the user's
+    # SSH agent for private git+ssh:// flake inputs.
+    security.sudo.extraConfig = "Defaults env_keep += SSH_AUTH_SOCK";
+
     nix.settings = {
       experimental-features = cfg.experimentalFeatures;
       substituters = cfg.substituters;
       trusted-public-keys = cfg.trustedPublicKeys;
       trusted-users = cfg.trustedUsers;
-      ssh-agent = "/run/user/1000/gcr/ssh";
     };
 
     nix.gc = {
