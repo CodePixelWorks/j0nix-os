@@ -58,6 +58,7 @@ in
       substituters = cfg.substituters;
       trusted-public-keys = cfg.trustedPublicKeys;
       trusted-users = cfg.trustedUsers;
+      ssh-agent = "/run/user/1000/gcr/ssh";
     };
 
     nix.gc = {
