@@ -12,7 +12,7 @@
     gws
     google-cloud-sdk
     httpie
-    playwright-test
+    playwright-driver
     crush
     zellij
   ];
