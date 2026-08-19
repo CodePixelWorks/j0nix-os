@@ -124,6 +124,20 @@ run_sed() {
     fi
 }
 
+# Run awk, pulling it from nixpkgs if the host doesn't have it.
+run_awk() {
+    if command -v awk >/dev/null 2>&1; then
+        command awk "$@"
+    elif command -v gawk >/dev/null 2>&1; then
+        command gawk "$@"
+    elif command -v nix >/dev/null 2>&1; then
+        nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#gawk --command awk "$@"
+    else
+        printf '%s\n' "ERROR: awk not found and nix not available" >&2
+        exit 1
+    fi
+}
+
 ensure_gpg_available() {
     if command -v gpg >/dev/null 2>&1; then
         return 0
@@ -255,8 +269,8 @@ GPGWRAP
                 gpg --batch --import "$pubkey_temp" >/dev/null 2>&1 || true
                 rm -f "$pubkey_temp"
 
-                sec_fpr="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^fpr/{print $10; exit}')"
-                pub_fpr="$(gpg --list-keys       --with-colons 2>/dev/null | awk -F: '/^fpr/{print $10; exit}')"
+                sec_fpr="$(gpg --list-secret-keys --with-colons 2>/dev/null | run_awk -F: '/^fpr/{print $10; exit}')"
+                pub_fpr="$(gpg --list-keys       --with-colons 2>/dev/null | run_awk -F: '/^fpr/{print $10; exit}')"
 
                 if [ -z "$sec_fpr" ] || [ -z "$pub_fpr" ]; then
                     printf '%s\n' "ERROR: Could not determine GPG fingerprints for key verification" >&2
