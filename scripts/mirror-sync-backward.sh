@@ -36,6 +36,20 @@
 
 set -euo pipefail
 
+# Ensure awk is available (missing in nixos/nix container images).
+run_awk() {
+    if command -v awk >/dev/null 2>&1; then
+        command awk "$@"
+    elif command -v gawk >/dev/null 2>&1; then
+        command gawk "$@"
+    elif command -v nix >/dev/null 2>&1; then
+        nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#gawk --command awk "$@"
+    else
+        printf '%s\n' "ERROR: awk not found and nix not available" >&2
+        exit 1
+    fi
+}
+
 remote_url="${1:?usage: mirror-sync-backward.sh REMOTE_URL [BRANCH]}"
 branch="${2:-main}"
 
@@ -116,7 +130,7 @@ if [ -n "${PUBLIC_GITHUB_SIGNING_KEY:-}" ]; then
         printf '%b\n' "$PUBLIC_GITHUB_SIGNING_KEY" | gpg --batch --import 2>/dev/null
     fi
 
-    gpg_key_id="$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^sec/{print $5}' | head -n1)"
+    gpg_key_id="$(gpg --list-secret-keys --with-colons 2>/dev/null | run_awk -F: '/^sec/{print $5}' | head -n1)"
     if [ -n "$gpg_key_id" ]; then
         printf '%s\n' "GPG signing configured (key ${gpg_key_id:0:16}...)"
 
