@@ -579,6 +579,15 @@ if [ -n "${gpg_key_id}" ] && [ -n "${gpg_dir}" ] && [ -d "${gpg_dir}" ]; then
         printf '%s\n' "ERROR: GPG pre-test direct sign failed"
         printf '%s\n' "--- GPG stderr ---"
         cat "$sign_stderr"
+        rm -f "$sign_stderr"
+        exit 1
+    fi
+    rm -f "$sign_stderr"
+else
+    printf '%s\n' "GPG pre-test: no key loaded, skipping"
+fi
+printf '%s\n' "---"
+
 msg_filter_path="$(mktemp -t msg_filter.XXXXXX)"
 cat > "$msg_filter_path" <<'MSGFILTER'
 #!/usr/bin/env bash
@@ -623,14 +632,6 @@ esac
 printf '%s' "$msg"
 MSGFILTER
 chmod +x "$msg_filter_path"
-        rm -f "$sign_stderr"
-        exit 1
-    fi
-    rm -f "$sign_stderr"
-else
-    printf '%s\n' "GPG pre-test: no key loaded, skipping"
-fi
-printf '%s\n' "---"
 
 git filter-branch \
     --force \
