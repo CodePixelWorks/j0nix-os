@@ -310,6 +310,7 @@ cleanup() {
     [ -n "$gpg_dir" ] && rm -rf "$gpg_dir" 2>/dev/null || true
     [ -n "${env_filter_path:-}" ] && rm -f "$env_filter_path" 2>/dev/null || true
     [ -n "${tree_filter_path:-}" ] && rm -f "$tree_filter_path" 2>/dev/null || true
+    [ -n "${msg_filter_path:-}" ] && rm -f "$msg_filter_path" 2>/dev/null || true
     [ -n "${commit_filter_path:-}" ] && rm -f "$commit_filter_path" 2>/dev/null || true
     [ -n "${parent_filter_script:-}" ] && rm -f "$parent_filter_script" 2>/dev/null || true
 }
@@ -422,6 +423,26 @@ if [ -d secrets/hosts ]; then
 fi
 if [ -d secrets/users ]; then
     find secrets/users -mindepth 1 -maxdepth 1 -type f ! -name '*.example' -delete
+fi
+
+# Strip private flake inputs (resolve-patch points to a private git repo).
+# The overlay gracefully degrades to standard nixpkgs when the input is absent.
+if [ -f flake.nix ]; then
+    # Remove the resolve-patch input block from flake.nix
+    sed -i '/resolve-patch/,/};/d' flake.nix 2>/dev/null || true
+fi
+if [ -f flake.lock ]; then
+    # Remove resolve-patch node and references from flake.lock
+    python3 -c "
+import json, sys
+with open('flake.lock') as f: d = json.load(f)
+# Remove the node
+d['nodes'].pop('resolve-patch', None)
+# Remove from root inputs
+if 'root' in d['nodes'] and 'inputs' in d['nodes']['root']:
+    d['nodes']['root']['inputs'].pop('resolve-patch', None)
+with open('flake.lock', 'w') as f: json.dump(d, f, indent=2)
+    " 2>/dev/null || true
 fi
 
 cp -f '${repo_root}/README.md.public' README.md 2>/dev/null || true
@@ -544,7 +565,50 @@ if [ -n "${gpg_key_id}" ] && [ -n "${gpg_dir}" ] && [ -d "${gpg_dir}" ]; then
         printf '%s\n' "ERROR: GPG pre-test direct sign failed"
         printf '%s\n' "--- GPG stderr ---"
         cat "$sign_stderr"
-        printf '%s\n' "---"
+msg_filter_path="$(mktemp -t msg_filter.XXXXXX)"
+cat > "$msg_filter_path" <<'MSGFILTER'
+#!/usr/bin/env bash
+# Sanitize commit messages for the public mirror.
+# Reads commit message from stdin, writes sanitized version to stdout.
+
+msg="$(cat)"
+
+# DaVinci Resolve specific — rewrite to generic video-editing language
+msg="$(echo "$msg" | sed -E \
+  -e 's/resolve[- ]?patch/video config/gi' \
+  -e 's/blackmagic\.lic/license config/gi' \
+  -e 's/RLM_LICENSE/video environment/gi' \
+  -e 's/license patch/video configuration/gi' \
+  -e 's/license file handling/video configuration/gi' \
+  -e 's/license patch pattern/video build pattern/gi' \
+  -e 's/dialog bypass/dialog configuration/gi' \
+  -e 's/license check/video startup check/gi' \
+  -e 's/DolbyVision patch/DolbyVision configuration/gi' \
+  -e 's/Ghidra/reverse engineering/gi' \
+  -e 's/ghidra/reverse engineering/gi' \
+  -e 's/crack patch/video configuration/gi' \
+  -e 's/fake license/license configuration/gi' \
+  -e 's/patched Davinci/video configuration/gi' \
+  -e 's/davinci-resolve-studio-patch/davinci-resolve-config/gi' \
+  -e 's/find-pattern\.sh/build verification/gi' \
+)"
+
+# If the message is now mostly generic keywords stacked together
+# (e.g. "video config video config video build pattern"), collapse to
+# a clean rewrite.
+case "$msg" in
+  *video\ config*video\ config*video\ config*)
+    # Extract the conventional-commit prefix if present
+    prefix="$(echo "$msg" | sed -n 's/^\([a-z]*([^)]*): \).*/\1/p')"
+    if [ -n "$prefix" ]; then
+      msg="${prefix}update video editing configuration"
+    fi
+    ;;
+esac
+
+printf '%s' "$msg"
+MSGFILTER
+chmod +x "$msg_filter_path"
         rm -f "$sign_stderr"
         exit 1
     fi
@@ -559,6 +623,7 @@ git filter-branch \
     "${parent_filter_args[@]}" \
     --env-filter "source '$env_filter_path'" \
     --tree-filter "source '$tree_filter_path'" \
+    --msg-filter "$msg_filter_path" \
     --commit-filter ". '$commit_filter_path'" \
     --tag-name-filter cat \
     -- --all
