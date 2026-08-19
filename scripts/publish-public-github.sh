@@ -594,10 +594,20 @@ cat > "$msg_filter_path" <<'MSGFILTER'
 # Sanitize commit messages for the public mirror.
 # Reads commit message from stdin, writes sanitized version to stdout.
 
+# nixos/nix container has no sed; pull from nixpkgs if needed.
+if command -v sed >/dev/null 2>&1; then
+  _sed=sed
+elif command -v nix >/dev/null 2>&1; then
+  _sed="nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#gnused --command sed"
+else
+  cat  # pass through unchanged
+  exit 0
+fi
+
 msg="$(cat)"
 
 # DaVinci Resolve specific — rewrite to generic video-editing language
-msg="$(echo "$msg" | sed -E \
+msg="$(echo "$msg" | $_sed -E \
   -e 's/resolve[- ]?patch/video config/gi' \
   -e 's/blackmagic\.lic/license config/gi' \
   -e 's/RLM_LICENSE/video environment/gi' \
@@ -621,8 +631,7 @@ msg="$(echo "$msg" | sed -E \
 # a clean rewrite.
 case "$msg" in
   *video\ config*video\ config*video\ config*)
-    # Extract the conventional-commit prefix if present
-    prefix="$(echo "$msg" | sed -n 's/^\([a-z]*([^)]*): \).*/\1/p')"
+    prefix="$(echo "$msg" | $_sed -n 's/^\([a-z]*([^)]*): \).*/\1/p')"
     if [ -n "$prefix" ]; then
       msg="${prefix}update video editing configuration"
     fi
