@@ -111,11 +111,15 @@ let
       '';
     });
   };
-  resolveOverlay = final: prev: {
-    davinci-resolve-studio = final.callPackage (inputs.resolve-patch + "/package.nix") {
-      davinci-resolve-studio = prev.davinci-resolve-studio;
-    };
-  };
+  resolveOverlay =
+    if (inputs ? resolve-patch) then
+      final: prev: {
+        davinci-resolve-studio = final.callPackage (inputs.resolve-patch + "/package.nix") {
+          davinci-resolve-studio = prev.davinci-resolve-studio;
+        };
+      }
+    else
+      final: prev: { };
 in
 {
   inherit vscodeOverlay localFixesOverlay resolveOverlay;
