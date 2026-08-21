@@ -57,6 +57,29 @@ let
       sync_device_type wifi "$wifi_metric" "$wifi_priority"
     '';
   };
+
+  tailscaleUpScript = pkgs.writeShellApplication {
+    name = "j0nix-tailscale-up";
+    runtimeInputs = [ pkgs.tailscale ];
+    text = ''
+      set -eu
+
+      ${lib.optionalString (cfg.tailscale.loginServer != null) ''
+        up_flags=(--login-server='${cfg.tailscale.loginServer}')
+      ''}
+      ${lib.optionalString cfg.tailscale.acceptRoutes ''
+        up_flags+=(--accept-routes)
+      ''}
+
+      if ! ${pkgs.tailscale}/bin/tailscale status --json --peers=false 2>/dev/null \
+        | ${pkgs.jq}/bin/jq -er '.BackendState' >/dev/null 2>&1; then
+        echo "Tailscale daemon not reachable, skipping tailscale up"
+        exit 0
+      fi
+
+      exec ${pkgs.tailscale}/bin/tailscale up "''${up_flags[@]}"
+    '';
+  };
 in
 {
   options.j0nix.desktop.network = {
@@ -275,6 +298,23 @@ in
           "--login-server=${cfg.tailscale.loginServer}"
         ]
         ++ lib.optional cfg.tailscale.acceptRoutes "--accept-routes";
+    };
+
+    # NixOS's tailscaled-autoconnect only calls `tailscale up` when the daemon
+    # is in NeedsLogin/Stopped state. If it's already Running, extraUpFlags are
+    # never applied. This service runs `tailscale up` (idempotent) after
+    # tailscaled starts, ensuring --login-server and --accept-routes are always
+    # enforced.
+    systemd.services.j0nix-tailscale-apply = lib.mkIf cfg.tailscale.enable {
+      description = "Apply declarative Tailscale up flags";
+      after = [ "tailscaled.service" "tailscaled-autoconnect.service" ];
+      wants = [ "tailscaled.service" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = lib.getExe tailscaleUpScript;
+        RemainAfterExit = true;
+      };
     };
     services.avahi = lib.mkIf cfg.discovery.mdns.enable {
       enable = true;
