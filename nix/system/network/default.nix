@@ -265,9 +265,11 @@ in
       authKeyFile = lib.mkIf (cfg.tailscale.authKeySecret != null) (
         config.sops.secrets.${cfg.tailscale.authKeySecret}.path
       );
-      extraUpFlags = lib.optionals (cfg.tailscale.loginServer != null) [
-        "--login-server=${cfg.tailscale.loginServer}"
-      ];
+      extraUpFlags =
+        lib.optionals (cfg.tailscale.loginServer != null) [
+          "--login-server=${cfg.tailscale.loginServer}"
+        ]
+        ++ [ "--accept-routes" ];
     };
     services.avahi = lib.mkIf cfg.discovery.mdns.enable {
       enable = true;
