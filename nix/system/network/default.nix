@@ -127,6 +127,11 @@ in
         default = null;
         description = "Name of the sops system secret containing the Tailscale auth key.";
       };
+      acceptRoutes = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Accept advertised routes from peers (--accept-routes).";
+      };
     };
 
     discovery.mdns = {
@@ -269,7 +274,7 @@ in
         lib.optionals (cfg.tailscale.loginServer != null) [
           "--login-server=${cfg.tailscale.loginServer}"
         ]
-        ++ [ "--accept-routes" ];
+        ++ lib.optional cfg.tailscale.acceptRoutes "--accept-routes";
     };
     services.avahi = lib.mkIf cfg.discovery.mdns.enable {
       enable = true;
