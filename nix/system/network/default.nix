@@ -334,6 +334,7 @@ in
 
     services.dnsmasq = lib.mkIf resolverEnabled {
       enable = true;
+      resolveLocalQueries = false;
       settings = {
         domain-needed = true;
         bogus-priv = true;
