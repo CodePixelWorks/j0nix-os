@@ -117,6 +117,16 @@ in
         type = lib.types.bool;
         default = true;
       };
+      loginServer = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Tailscale/Headscale login server URL (e.g. https://ts.j0lab.xyz).";
+      };
+      authKeySecret = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Name of the sops system secret containing the Tailscale auth key.";
+      };
     };
 
     discovery.mdns = {
@@ -249,7 +259,16 @@ in
         type = "basic";
       }
     ];
-    services.tailscale.enable = cfg.tailscale.enable;
+    services.tailscale = {
+      enable = cfg.tailscale.enable;
+      openFirewall = true;
+      authKeyFile = lib.mkIf (cfg.tailscale.authKeySecret != null) (
+        config.sops.secrets.${cfg.tailscale.authKeySecret}.path
+      );
+      extraUpFlags = lib.optionals (cfg.tailscale.loginServer != null) [
+        "--login-server=${cfg.tailscale.loginServer}"
+      ];
+    };
     services.avahi = lib.mkIf cfg.discovery.mdns.enable {
       enable = true;
       openFirewall = cfg.discovery.mdns.openFirewall;
