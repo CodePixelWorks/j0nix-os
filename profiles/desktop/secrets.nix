@@ -1,7 +1,7 @@
 {
   # Profile-scoped system secret defaults. These are machine-facing and should
   # live close to the active profile instead of in the shared central config.
-  defaultSopsFile = null;
+  defaultSopsFile = ../../secrets/hosts/Jonas-PC.yaml;
 
   age = {
     generateKey = true;
@@ -9,5 +9,13 @@
     sshKeyPaths = [ ];
   };
 
-  system = { };
+  system = {
+    tailscale-auth-key = {
+      key = "tailscale/auth_key";
+      owner = "root";
+      group = "root";
+      mode = "0400";
+      restartUnits = [ "tailscaled.service" ];
+    };
+  };
 }
