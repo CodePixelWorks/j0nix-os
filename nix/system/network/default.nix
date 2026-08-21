@@ -325,7 +325,10 @@ in
     services.resolved.enable = resolverEnabled;
     services.resolved.settings = lib.mkIf resolverEnabled {
       Resolve = {
-        DNS = [ cfg.resolver.listenAddress ];
+        # dnsmasq first (handles *.lab.test wildcard records), then external
+        # upstreams (handled by resolved with automatic TCP fallback when
+        # outbound UDP 53 is blocked by ISPs/routers).
+        DNS = [ cfg.resolver.listenAddress ] ++ cfg.resolver.upstreamServers;
       }
       // lib.optionalAttrs (resolverRouteDomains != [ ]) {
         Domains = resolverRouteDomains;
@@ -341,8 +344,11 @@ in
         no-resolv = true;
         bind-interfaces = true;
         "listen-address" = cfg.resolver.listenAddress;
-        server = cfg.resolver.upstreamServers;
         address = resolverAddressRecords;
+        # No server= directive: dnsmasq only serves the local wildcard
+        # records configured above. Queries that don't match fall through
+        # to systemd-resolved, which forwards to the external upstreams
+        # with automatic TCP fallback.
       };
     };
 
