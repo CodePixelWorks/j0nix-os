@@ -1,11 +1,12 @@
-# nix/system/dev/crw.nix
-# fastCRW — self-hosted Rust-native crawler, scraper and Firecrawl-compatible API.
-# https://github.com/us/crw
-
-{ config, lib, pkgs, ... }:
-
+{
+  lib,
+  pkgs,
+  settings,
+  ...
+}:
 let
-  cfg = config.settings.dev.crw;
+  cfg = (settings.dev or { }).crw or { };
+  enabled = cfg.enable or false;
 
   crw-server = pkgs.rustPlatform.buildRustPackage rec {
     pname = "crw-server";
@@ -30,114 +31,74 @@ let
     };
   };
 
+  port = cfg.port or 3331;
+  openFirewall = cfg.openFirewall or true;
+  mcpEnable = cfg.mcpEnable or false;
+  mcpPort = cfg.mcpPort or 3001;
+  extraEnv = cfg.extraEnv or { };
 in
-{
-  options.settings.dev.crw = {
-    enable = lib.mkEnableOption "fastCRW self-hosted crawler/scraper API";
+lib.mkIf enabled {
+  networking.firewall.allowedTCPPorts =
+    lib.optional openFirewall port
+    ++ lib.optional (mcpEnable && openFirewall) mcpPort;
 
-    port = lib.mkOption {
-      type = lib.types.port;
-      default = 3331;
-      description = ''
-        REST API listen port for crw-server.
-        Firecrawl-compatible endpoints are served here.
-      '';
+  systemd.services.crw-server = {
+    description = "fastCRW server — Firecrawl-compatible REST API";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    wantedBy = [ "multi-user.target" ];
+
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${crw-server}/bin/crw-server";
+      Restart = "on-failure";
+      RestartSec = 5;
+
+      DynamicUser = true;
+      StateDirectory = "crw";
+      WorkingDirectory = "/var/lib/crw";
+
+      # Hardening
+      NoNewPrivileges = true;
+      PrivateTmp = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectControlGroups = true;
+      RestrictSUIDSGID = true;
+      MemoryDenyWriteExecute = true;
     };
 
-    openFirewall = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = ''
-        Whether to open the configured port in the firewall.
-      '';
-    };
-
-    mcpEnable = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = ''
-        Whether to also run the crw-mcp MCP server alongside crw-server.
-      '';
-    };
-
-    mcpPort = lib.mkOption {
-      type = lib.types.port;
-      default = 3001;
-      description = ''
-        SSE port for the crw-mcp MCP server (when enabled).
-      '';
-    };
-
-    extraEnv = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
-      default = {};
-      description = ''
-        Extra environment variables passed to the crw-server process.
-      '';
-    };
+    environment = {
+      CRW_PORT = toString port;
+    } // extraEnv;
   };
 
-  config = lib.mkIf cfg.enable {
-    networking.firewall.allowedTCPPorts = lib.optional cfg.openFirewall cfg.port
-      ++ lib.optional (cfg.mcpEnable && cfg.openFirewall) cfg.mcpPort;
+  systemd.services.crw-mcp = lib.mkIf mcpEnable {
+    description = "fastCRW MCP server";
+    after = [ "network-online.target" "crw-server.service" ];
+    wants = [ "network-online.target" ];
+    wantedBy = [ "multi-user.target" ];
 
-    systemd.services.crw-server = {
-      description = "fastCRW server — Firecrawl-compatible REST API";
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-      wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${crw-server}/bin/crw-mcp";
+      Restart = "on-failure";
+      RestartSec = 5;
 
-      serviceConfig = {
-        Type = "simple";
-        ExecStart = "${crw-server}/bin/crw-server";
-        Restart = "on-failure";
-        RestartSec = 5;
+      DynamicUser = true;
+      StateDirectory = "crw";
+      WorkingDirectory = "/var/lib/crw";
 
-        DynamicUser = true;
-        StateDirectory = "crw";
-        WorkingDirectory = "/var/lib/crw";
-
-        # Hardening
-        NoNewPrivileges = true;
-        PrivateTmp = true;
-        ProtectSystem = "strict";
-        ProtectHome = true;
-        ProtectKernelTunables = true;
-        ProtectKernelModules = true;
-        ProtectControlGroups = true;
-        RestrictSUIDSGID = true;
-        MemoryDenyWriteExecute = true;
-      };
-
-      environment = {
-        CRW_PORT = toString cfg.port;
-      } // cfg.extraEnv;
+      NoNewPrivileges = true;
+      PrivateTmp = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
     };
 
-    systemd.services.crw-mcp = lib.mkIf cfg.mcpEnable {
-      description = "fastCRW MCP server";
-      after = [ "network-online.target" "crw-server.service" ];
-      wants = [ "network-online.target" ];
-      wantedBy = [ "multi-user.target" ];
-
-      serviceConfig = {
-        Type = "simple";
-        ExecStart = "${crw-server}/bin/crw-mcp";
-        Restart = "on-failure";
-        RestartSec = 5;
-
-        DynamicUser = true;
-        WorkingDirectory = "/var/lib/crw";
-
-        NoNewPrivileges = true;
-        PrivateTmp = true;
-        ProtectSystem = "strict";
-        ProtectHome = true;
-      };
-
-      environment = {
-        CRW_MCP_PORT = toString cfg.mcpPort;
-      } // cfg.extraEnv;
-    };
+    environment = {
+      CRW_MCP_PORT = toString mcpPort;
+    } // extraEnv;
   };
 }
