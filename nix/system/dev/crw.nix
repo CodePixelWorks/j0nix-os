@@ -31,16 +31,13 @@ let
     };
   };
 
-  port = cfg.port or 3331;
+  port = cfg.port or 3000;
   openFirewall = cfg.openFirewall or true;
   mcpEnable = cfg.mcpEnable or false;
-  mcpPort = cfg.mcpPort or 3001;
   extraEnv = cfg.extraEnv or { };
 in
 lib.mkIf enabled {
-  networking.firewall.allowedTCPPorts =
-    lib.optional openFirewall port
-    ++ lib.optional (mcpEnable && openFirewall) mcpPort;
+  networking.firewall.allowedTCPPorts = lib.optional openFirewall port;
 
   systemd.services.crw-server = {
     description = "fastCRW server — Firecrawl-compatible REST API";
@@ -70,35 +67,10 @@ lib.mkIf enabled {
       MemoryDenyWriteExecute = true;
     };
 
-    environment = {
-      CRW_PORT = toString port;
-    } // extraEnv;
+    environment = extraEnv;
   };
 
-  systemd.services.crw-mcp = lib.mkIf mcpEnable {
-    description = "fastCRW MCP server";
-    after = [ "network-online.target" "crw-server.service" ];
-    wants = [ "network-online.target" ];
-    wantedBy = [ "multi-user.target" ];
-
-    serviceConfig = {
-      Type = "simple";
-      ExecStart = "${crw-server}/bin/crw-mcp";
-      Restart = "on-failure";
-      RestartSec = 5;
-
-      DynamicUser = true;
-      StateDirectory = "crw";
-      WorkingDirectory = "/var/lib/crw";
-
-      NoNewPrivileges = true;
-      PrivateTmp = true;
-      ProtectSystem = "strict";
-      ProtectHome = true;
-    };
-
-    environment = {
-      CRW_MCP_PORT = toString mcpPort;
-    } // extraEnv;
-  };
+  # crw-mcp is a stdio-based MCP server — not a daemon. Expose the binary
+  # so Hermes (or any MCP client) can spawn it on demand.
+  environment.systemPackages = lib.optional mcpEnable crw-server;
 }
