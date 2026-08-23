@@ -67,7 +67,9 @@ lib.mkIf enabled {
       MemoryDenyWriteExecute = true;
     };
 
-    environment = extraEnv;
+    environment = {
+      CRW_SERVER__PORT = toString port;
+    } // extraEnv;
   };
 
   # crw-mcp is a stdio-based MCP server — not a daemon. Expose the binary
