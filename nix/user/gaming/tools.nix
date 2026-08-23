@@ -418,7 +418,8 @@ EOF
         ;;
     esac
 
-    export LD_PRELOAD="${pkgs.libfaketime}/lib/libfaketime.so.1\''${LD_PRELOAD:+:$LD_PRELOAD}"
+    LD_PRELOAD="''${LD_PRELOAD:-}"
+    export LD_PRELOAD="${pkgs.libfaketime}/lib/libfaketime.so.1''${LD_PRELOAD:+:$LD_PRELOAD}"
     export FAKETIME="$offset_expr"
     export FAKETIME_NO_CACHE=1
 
@@ -453,7 +454,8 @@ EOF
     target_time="$1"
     shift
 
-    export LD_PRELOAD="${pkgs.libfaketime}/lib/libfaketime.so.1\''${LD_PRELOAD:+:$LD_PRELOAD}"
+    LD_PRELOAD="''${LD_PRELOAD:-}"
+    export LD_PRELOAD="${pkgs.libfaketime}/lib/libfaketime.so.1''${LD_PRELOAD:+:$LD_PRELOAD}"
     export FAKETIME="@$target_time"
     export FAKETIME_NO_CACHE=1
 
@@ -920,7 +922,7 @@ lib.mkIf enabled {
       '')
     ]
     ++ lib.optionals (controllers.dualsense or true) [ pkgs.dualsensectl ]
-    ++ lib.optionals timeHackEnabled [
+    ++ [
       fakeTimeWrapper
       fakeTimeAtWrapper
       fakeTimeNow
