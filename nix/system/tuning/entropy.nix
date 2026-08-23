@@ -3,16 +3,15 @@
   # =============================================================================
   # Entropy/Random Number Generation for GPG key generation
   # =============================================================================
-  # Multiple entropy sources ensure fast and secure key generation
 
-  # 1. jitterentropy - CPU timing jitter entropy (modern, low overhead)
-  systemd.services.jitterentropy = {
-    description = "CPU Jitter Entropy Daemon";
+  # rng-tools - Provides /dev/hwrng support and additional entropy
+  systemd.services.rngd = {
+    description = "Entropy RNG Daemon";
     wantedBy = [ "multi-user.target" ];
     after = [ "systemd-tmpfiles-setup.service" ];
     serviceConfig = {
       Type = "simple";
-      ExecStart = "${pkgs.jitterentropy-rngd}/bin/jitterentropy-rngd";
+      ExecStart = "${pkgs.rng-tools}/bin/rngd -f";
       Restart = "on-failure";
       RestartSec = 5;
       PrivateTmp = true;
@@ -20,25 +19,6 @@
       ProtectHome = true;
       NoNewPrivileges = true;
       CapabilityBoundingSet = "";
-    };
-  };
-
-  # 2. rng-tools - Provides /dev/hwrng support and additional entropy
-  #    Fallback for systems without jitterentropy or hardware RNG
-  systemd.services.rngd = {
-    description = "Entropy RNG Daemon";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "systemd-tmpfiles-setup.service" ];
-    serviceConfig = {
-      Type = "simple";
-      # Use /dev/urandom as fallback source (safe for seeding)
-      ExecStart = "${pkgs.rng-tools}/bin/rngd -f -x jitterentropy";
-      Restart = "on-failure";
-      RestartSec = 5;
-      PrivateTmp = true;
-      ProtectSystem = "strict";
-      ProtectHome = true;
-      NoNewPrivileges = true;
     };
   };
 
