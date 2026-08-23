@@ -27,7 +27,7 @@ stdenv.mkDerivation {
       if [[ -e ${hermesPackage}/bin/$bin ]]; then
         makeWrapper ${hermesPackage}/bin/$bin $out/bin/$bin \
             --prefix PYTHONPATH : "$extraSitePackages" \
-            --set-default FIRECRAWL_API_URL "http://127.0.0.1:3000" \
+            --set-default FIRECRAWL_API_URL "http://127.0.0.1:3331" \
             --set-default FIRECRAWL_API_KEY "local" \
             --set-default QDRANT_URL "http://127.0.0.1:6333"
       fi
