@@ -26,7 +26,10 @@ stdenv.mkDerivation {
     for bin in hermes hermes-agent hermes-acp; do
       if [[ -e ${hermesPackage}/bin/$bin ]]; then
         makeWrapper ${hermesPackage}/bin/$bin $out/bin/$bin \
-            --prefix PYTHONPATH : "$extraSitePackages"
+            --prefix PYTHONPATH : "$extraSitePackages" \
+            --set-default FIRECRAWL_API_URL "http://127.0.0.1:3331" \
+            --set-default FIRECRAWL_API_KEY "local" \
+            --set-default QDRANT_URL "http://127.0.0.1:6333"
       fi
     done
   '';
