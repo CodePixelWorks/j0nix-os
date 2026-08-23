@@ -367,7 +367,7 @@ EOF
 
     show=0
     static_mode=0
-    offset_expr="\''${GAME_TIME_OFFSET:-${timeHackDefaultOffset}}"
+    offset_expr="''${GAME_TIME_OFFSET:-${timeHackDefaultOffset}}"
 
     while [ $# -gt 0 ]; do
       case "$1" in
@@ -467,7 +467,7 @@ EOF
     set -eu
 
     # Show what a fake-time launch with the given offset would currently see.
-    offset="\''${1:-${timeHackDefaultOffset}}"
+    offset="''${1:-${timeHackDefaultOffset}}"
     export LD_PRELOAD="${pkgs.libfaketime}/lib/libfaketime.so.1"
     export FAKETIME="$offset"
     export FAKETIME_NO_CACHE=1
