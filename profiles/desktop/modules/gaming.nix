@@ -94,5 +94,10 @@
       openSourceGames = false;
       archisteamfarm = true;
     };
+
+    timeHack = {
+      enable = true;
+      defaultOffset = "+4h";
+    };
   };
 }
