@@ -295,6 +295,7 @@ let
         echo "warning: SSH agent socket $agent_socket was not ready; skipping declarative SSH key load" >&2
         exit 0
       fi
+      export SSH_AUTH_SOCK="$agent_socket"
       ${lib.concatStringsSep "\n" (lib.mapAttrsToList loadKey sshKeysWithPassphrases)}
     '';
   guiSshAskpass = "${pkgs.openssh-askpass}/libexec/gtk-ssh-askpass";
@@ -490,11 +491,7 @@ in
         {
           Unit = {
             Description = "Load declarative secret-backed SSH keys into the SSH agent";
-            After = [
-              "graphical-session.target"
-              "gcr-ssh-agent.service"
-            ];
-            PartOf = [ "graphical-session.target" ];
+            After = [ "gcr-ssh-agent.service" ];
             Wants = [ "gcr-ssh-agent.service" ];
           };
           Service = {
@@ -503,7 +500,7 @@ in
             ExecStart = "${lib.getExe loadSecretBackedSshKeysScript}";
           };
           Install = {
-            WantedBy = [ "graphical-session.target" ];
+            WantedBy = [ "default.target" ];
           };
         };
 
