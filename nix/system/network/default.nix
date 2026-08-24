@@ -64,11 +64,15 @@ let
     text = ''
       set -eu
 
+      up_flags=()
       ${lib.optionalString (cfg.tailscale.loginServer != null) ''
-        up_flags=(--login-server='${cfg.tailscale.loginServer}')
+        up_flags+=(--login-server='${cfg.tailscale.loginServer}')
       ''}
       ${lib.optionalString cfg.tailscale.acceptRoutes ''
         up_flags+=(--accept-routes)
+      ''}
+      ${lib.optionalString cfg.tailscale.enableSSH ''
+        up_flags+=(--ssh)
       ''}
 
       if ! ${pkgs.tailscale}/bin/tailscale status --json --peers=false 2>/dev/null \
@@ -154,6 +158,11 @@ in
         type = lib.types.bool;
         default = true;
         description = "Accept advertised routes from peers (--accept-routes).";
+      };
+      enableSSH = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Allow SSH access through the Tailscale network (--ssh).";
       };
     };
 
@@ -297,14 +306,14 @@ in
         lib.optionals (cfg.tailscale.loginServer != null) [
           "--login-server=${cfg.tailscale.loginServer}"
         ]
-        ++ lib.optional cfg.tailscale.acceptRoutes "--accept-routes";
+        ++ lib.optional cfg.tailscale.acceptRoutes "--accept-routes"
+        ++ lib.optional cfg.tailscale.enableSSH "--ssh";
     };
 
     # NixOS's tailscaled-autoconnect only calls `tailscale up` when the daemon
     # is in NeedsLogin/Stopped state. If it's already Running, extraUpFlags are
     # never applied. This service runs `tailscale up` (idempotent) after
-    # tailscaled starts, ensuring --login-server and --accept-routes are always
-    # enforced.
+    # tailscaled starts, ensuring all declarative up flags are always enforced.
     systemd.services.j0nix-tailscale-apply = lib.mkIf cfg.tailscale.enable {
       description = "Apply declarative Tailscale up flags";
       after = [ "tailscaled.service" "tailscaled-autoconnect.service" ];
