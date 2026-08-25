@@ -77,7 +77,12 @@ let
 
   keyringCfg = ((settings.dev or { }).ssh or { }).keyring or { };
   sshAgentCfg = ((settings.dev or { }).ssh or { }).agent or { };
-  keyringSupported = (keyringCfg.enable or false) || ((sshAgentCfg.provider or "openssh") == "gnome-keyring");
+  keyringSupported =
+    (keyringCfg.enable or false)
+    || builtins.elem (sshAgentCfg.provider or "openssh") [
+      "gnome-keyring"
+      "auto"
+    ];
 
   launchScript = pkgs.writeShellScriptBin "keepassxc-launch" ''
     set -eu
@@ -357,7 +362,7 @@ lib.mkIf enabled {
     }
     {
       assertion = autoUnlockMode != "convenient" || keyringSupported;
-      message = "keepassxc autoUnlock.mode=convenient requires an enabled keyring (settings.userSettings.<name>.dev.ssh.keyring.enable=true or agent.provider=gnome-keyring).";
+      message = "keepassxc autoUnlock.mode=convenient requires an enabled keyring (settings.userSettings.<name>.dev.ssh.keyring.enable=true or agent.provider=gnome-keyring/auto).";
     }
     {
       assertion = autoUnlockMode != "full-auto" || hasValue passwordSecretName;
