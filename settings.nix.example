@@ -979,7 +979,7 @@ in
         ssh = {
           enable           = true;
           addKeysToAgent   = "yes";        # "yes" | "ask" | "confirm" | "no"
-          agent.provider   = "openssh";  # "openssh" | "gnome-keyring" | "none"
+          agent.provider   = "auto";  # "auto" | "openssh" | "gnome-keyring" | "none"
           keyring.enable   = true;
           # SSH host definitions (deployed to ~/.ssh/config).
           hosts = {
