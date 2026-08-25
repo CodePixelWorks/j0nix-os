@@ -370,10 +370,11 @@ For passphrase-protected keys, you can also add:
 
 - `passphraseKey = "ssh_passphrases/<key-name>"`
 
-When `settings.userSettings.<name>.dev.ssh.agent.provider` selects `openssh` or
-`gnome-keyring`, the user session will automatically load those keys into the SSH
-agent during login using the secret-backed passphrase. Prefer `openssh` when SSH
-signing must also work from a pure TTY session.
+When `settings.userSettings.<name>.dev.ssh.agent.provider` selects `openssh`,
+`gnome-keyring`, or `auto`, the user session will automatically load those keys into
+the selected SSH agent using the secret-backed passphrase. The `auto` provider loads
+both agents, uses GNOME keyring in graphical sessions, and switches pure console
+shells to OpenSSH.
 
 Recommended location for repo-tracked public keys:
 

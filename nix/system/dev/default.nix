@@ -99,7 +99,11 @@ let
       provider = agent.provider or "openssh";
       keyring = sshCfg.keyring or { };
     in
-    (keyring.enable or false) || provider == "gnome-keyring"
+    (keyring.enable or false)
+    || builtins.elem provider [
+      "gnome-keyring"
+      "auto"
+    ]
   ) sshUsers;
   sshAgentProviders = lib.unique (
     map (
@@ -246,12 +250,41 @@ in
 
     programs.ssh.startAgent = sshEnabled && sshAgentEnable && sshAgentProvider == "openssh";
 
+    systemd.user.services.j0nix-openssh-agent =
+      lib.mkIf (sshEnabled && sshAgentEnable && sshAgentProvider == "auto")
+        {
+          description = "j0nix OpenSSH Agent for console sessions";
+          wantedBy = [ "default.target" ];
+          unitConfig.ConditionUser = "!@system";
+          serviceConfig = {
+            ExecStartPre = "${pkgs.coreutils}/bin/rm -f %t/ssh-agent";
+            ExecStart = "${pkgs.openssh}/bin/ssh-agent -a %t/ssh-agent";
+            StandardOutput = "null";
+            Type = "forking";
+            Restart = "on-failure";
+            SuccessExitStatus = "0 2";
+          };
+        };
+
     services.gnome.gcr-ssh-agent.enable = lib.mkForce (
-      sshEnabled && sshAgentEnable && sshAgentProvider == "gnome-keyring"
+      sshEnabled
+      && sshAgentEnable
+      && builtins.elem sshAgentProvider [
+        "gnome-keyring"
+        "auto"
+      ]
     );
 
     services.gnome.gnome-keyring.enable =
-      keyringEnable || (sshEnabled && sshAgentEnable && sshAgentProvider == "gnome-keyring");
+      keyringEnable
+      || (
+        sshEnabled
+        && sshAgentEnable
+        && builtins.elem sshAgentProvider [
+          "gnome-keyring"
+          "auto"
+        ]
+      );
 
     programs.firefox.policies = lib.mkIf (mkcertEnabled && firefoxEnterpriseRoots) {
       Certificates = {
@@ -315,9 +348,10 @@ in
         assertion = builtins.elem sshAgentProvider [
           "openssh"
           "gnome-keyring"
+          "auto"
           "none"
         ];
-        message = "settings.userSettings.<name>.dev.ssh.agent.provider must be one of: openssh, gnome-keyring, none";
+        message = "settings.userSettings.<name>.dev.ssh.agent.provider must be one of: openssh, gnome-keyring, auto, none";
       }
       {
         assertion = builtins.length sshAgentProviders <= 1;
