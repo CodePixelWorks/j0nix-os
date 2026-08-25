@@ -30,8 +30,9 @@ Notable controls:
 - The attr name of each `dev.ssh.hosts.<name>` entry becomes the generated `Host <name>` entry. `host = ...` is used as `HostName ...`, so `hosts.webserver.host = "132.145.254.17"` yields `Host webserver` plus `HostName 132.145.254.17`.
 - `settings.userSettings.<name>.dev.ssh.agent.provider = "gnome-keyring"`: route SSH agent handling through the session keyring
 - `settings.userSettings.<name>.dev.ssh.agent.provider = "openssh"`: use the native agent, including passphrase entry through an interactive TTY
+- `settings.userSettings.<name>.dev.ssh.agent.provider = "auto"`: use GNOME keyring in graphical sessions and OpenSSH in pure console sessions
 - `settings.userSettings.<name>.dev.ssh.keyring.enable = true`: prefer askpass/keyring-assisted passphrase prompts in GUI sessions
-- `SSH_ASKPASS`/`SUDO_ASKPASS` point at the GNOME askpass binary when the SSH agent provider is `gnome-keyring`
+- `SSH_ASKPASS`/`SUDO_ASKPASS` point at the GNOME askpass binary when the SSH agent provider is `gnome-keyring` or `auto`
 - `ssh-add-gui`: explicit `openssh-askpass`/GNOME askpass wrapper for `ssh-add`
 - `settings.dev.python.enable`: install baseline Python tooling for development
 - `settings.dev.python.versionManager = "mise"`: activate `mise` in the shell for fast Python version switching
@@ -50,7 +51,7 @@ Notable controls:
 - `settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey`: optional SOPS path for automatic key loading into the selected OpenSSH or GNOME keyring agent
 - Managed GPG keys are imported only when the encrypted source changes, so rebuilds stay quiet while key rotations still deploy automatically
 - Managed GPG passphrases use `gpg-preset-passphrase`, refresh all keygrips through a user systemd timer, and keep signing non-interactive while leaving the encrypted source in SOPS
-- The automatic loader waits for the selected agent socket and retries `ssh-add`, so key loading is resilient to slower session startup ordering
+- The automatic loader waits for every selected agent socket and retries `ssh-add`; `auto` loads keys into both agents so graphical and console sessions remain independent
 - The mkcert user service exports a stable `CAROOT` in the home directory and re-runs `mkcert -install` on graphical session startup so Chromium-family browsers and the shared NSS DB trust the generated root CA
 - `settings.dev.ai.installScope`: install shared AI CLIs as `system` packages or per-user via Home Manager
 - `settings.dev.ai.codex.mcp.nixos`: install `mcp-nixos` and register it in `~/.codex/config.toml` as the `nixos` MCP server

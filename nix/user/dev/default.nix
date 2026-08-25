@@ -35,9 +35,25 @@ let
   sshAgentCfg = sshCfg.agent or { };
   sshAgentEnabled = sshAgentCfg.enable or true;
   sshAgentProvider = sshAgentCfg.provider or "openssh";
-  sshAgentService =
-    if sshAgentProvider == "openssh" then "ssh-agent.service" else "gcr-ssh-agent.service";
-  sshAgentSocket = if sshAgentProvider == "openssh" then "ssh-agent" else "gcr/ssh";
+  sshAgentAuto = sshAgentProvider == "auto";
+  sshAgentSockets =
+    if sshAgentAuto then
+      [
+        "ssh-agent"
+        "gcr/ssh"
+      ]
+    else if sshAgentProvider == "openssh" then
+      [ "ssh-agent" ]
+    else
+      [ "gcr/ssh" ];
+  sshAgentServices = map (
+    socket:
+    if socket == "ssh-agent" then
+      if sshAgentAuto then "j0nix-openssh-agent.service" else "ssh-agent.service"
+    else
+      "gcr-ssh-agent.service"
+  ) sshAgentSockets;
+  sshSessionAgentSocket = if sshAgentProvider == "openssh" then "ssh-agent" else "gcr/ssh";
   keyringCfg = sshCfg.keyring or { };
   keyringEnabled = keyringCfg.enable or false;
   userSecretsCfg = ((settings.secrets or { }).user or { });
@@ -289,18 +305,21 @@ let
     in
     pkgs.writeShellScriptBin "ssh-load-secret-keys" ''
       set -eu
-      agent_socket="''${SSH_AUTH_SOCK:-''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/${sshAgentSocket}}"
-      wait_attempt=0
-      while [ "$wait_attempt" -lt 20 ] && [ ! -S "$agent_socket" ]; do
-        wait_attempt=$((wait_attempt + 1))
-        sleep 1
-      done
-      if [ ! -S "$agent_socket" ]; then
-        echo "warning: SSH agent socket $agent_socket was not ready; skipping declarative SSH key load" >&2
-        exit 0
-      fi
-      export SSH_AUTH_SOCK="$agent_socket"
-      ${lib.concatStringsSep "\n" (lib.mapAttrsToList loadKey sshKeysWithPassphrases)}
+      runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+      ${lib.concatMapStringsSep "\n" (socket: ''
+        agent_socket="$runtime_dir/${socket}"
+        wait_attempt=0
+        while [ "$wait_attempt" -lt 20 ] && [ ! -S "$agent_socket" ]; do
+          wait_attempt=$((wait_attempt + 1))
+          sleep 1
+        done
+        if [ ! -S "$agent_socket" ]; then
+          echo "warning: SSH agent socket $agent_socket was not ready; skipping declarative SSH key load for this agent" >&2
+        else
+          export SSH_AUTH_SOCK="$agent_socket"
+          ${lib.concatStringsSep "\n" (lib.mapAttrsToList loadKey sshKeysWithPassphrases)}
+        fi
+      '') sshAgentSockets}
     '';
   guiSshAskpass = "${pkgs.openssh-askpass}/libexec/gtk-ssh-askpass";
   sshAddGuiScript = pkgs.writeShellScriptBin "ssh-add-gui" ''
@@ -383,7 +402,7 @@ in
 
     home.sessionVariables =
       (lib.optionalAttrs (sshEnabled && sshAgentEnabled && sshAgentProvider != "none") {
-        SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/${sshAgentSocket}";
+        SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/${sshSessionAgentSocket}";
       })
       // lib.optionalAttrs sshEnabled {
         SSH_ASKPASS = guiSshAskpass;
@@ -397,17 +416,46 @@ in
         MISE_USE_TOML = "1";
       });
 
-    programs.zsh.initContent = lib.mkIf pythonVersionManagerEnabled (
-      lib.mkAfter ''
-        eval "$(${pkgs.mise}/bin/mise activate zsh)"
-      ''
-    );
+    programs.zsh.initContent = lib.mkMerge [
+      (lib.mkIf sshAgentAuto (
+        lib.mkBefore ''
+          case "''${XDG_SESSION_TYPE:-}" in
+            wayland|x11)
+              export SSH_AUTH_SOCK="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh"
+              ;;
+            *)
+              export SSH_AUTH_SOCK="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent"
+              ;;
+          esac
+        ''
+      ))
+      (lib.mkIf pythonVersionManagerEnabled (
+        lib.mkAfter ''
+          eval "$(${pkgs.mise}/bin/mise activate zsh)"
+        ''
+      ))
+    ];
 
-    programs.fish.interactiveShellInit = lib.mkIf pythonVersionManagerEnabled (
-      lib.mkAfter ''
-        ${pkgs.mise}/bin/mise activate fish | source
-      ''
-    );
+    programs.fish.interactiveShellInit = lib.mkMerge [
+      (lib.mkIf sshAgentAuto (
+        lib.mkBefore ''
+          set -l ssh_runtime_dir "$XDG_RUNTIME_DIR"
+          if test -z "$ssh_runtime_dir"
+            set ssh_runtime_dir "/run/user/"(id -u)
+          end
+          if set -q XDG_SESSION_TYPE; and contains -- "$XDG_SESSION_TYPE" wayland x11
+            set -gx SSH_AUTH_SOCK "$ssh_runtime_dir/gcr/ssh"
+          else
+            set -gx SSH_AUTH_SOCK "$ssh_runtime_dir/ssh-agent"
+          end
+        ''
+      ))
+      (lib.mkIf pythonVersionManagerEnabled (
+        lib.mkAfter ''
+          ${pkgs.mise}/bin/mise activate fish | source
+        ''
+      ))
+    ];
 
     programs.ssh = lib.mkIf sshEnabled {
       enable = true;
@@ -482,7 +530,13 @@ in
         pkgs.qemu
       ]
       ++ lib.optionals (wvkbdEnabled && wvkbdPackage != null) [ wvkbdPackage ]
-      ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring") [ sshAddGuiScript ]
+      ++ lib.optionals (
+        sshEnabled
+        && builtins.elem sshAgentProvider [
+          "gnome-keyring"
+          "auto"
+        ]
+      ) [ sshAddGuiScript ]
       ++ lib.optionals (androidStudioEnabled && androidStudioPackage != null) [ androidStudioPackage ]
       ++
         lib.optionals
@@ -497,12 +551,11 @@ in
         {
           Unit = {
             Description = "Load declarative secret-backed SSH keys into the SSH agent";
-            After = [ sshAgentService ];
-            Wants = [ sshAgentService ];
+            After = sshAgentServices;
+            Wants = sshAgentServices;
           };
           Service = {
             Type = "oneshot";
-            Environment = [ "SSH_AUTH_SOCK=%t/${sshAgentSocket}" ];
             ExecStart = "${lib.getExe loadSecretBackedSshKeysScript}";
           };
           Install = {
