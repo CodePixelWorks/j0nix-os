@@ -33,7 +33,11 @@ let
   sshEnabled = sshCfg.enable or true;
   sshAddKeysToAgent = sshCfg.addKeysToAgent or "yes";
   sshAgentCfg = sshCfg.agent or { };
+  sshAgentEnabled = sshAgentCfg.enable or true;
   sshAgentProvider = sshAgentCfg.provider or "openssh";
+  sshAgentService =
+    if sshAgentProvider == "openssh" then "ssh-agent.service" else "gcr-ssh-agent.service";
+  sshAgentSocket = if sshAgentProvider == "openssh" then "ssh-agent" else "gcr/ssh";
   keyringCfg = sshCfg.keyring or { };
   keyringEnabled = keyringCfg.enable or false;
   userSecretsCfg = ((settings.secrets or { }).user or { });
@@ -285,7 +289,7 @@ let
     in
     pkgs.writeShellScriptBin "ssh-load-secret-keys" ''
       set -eu
-      agent_socket="''${SSH_AUTH_SOCK:-''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh}"
+      agent_socket="''${SSH_AUTH_SOCK:-''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/${sshAgentSocket}}"
       wait_attempt=0
       while [ "$wait_attempt" -lt 20 ] && [ ! -S "$agent_socket" ]; do
         wait_attempt=$((wait_attempt + 1))
@@ -378,8 +382,8 @@ in
     );
 
     home.sessionVariables =
-      (lib.optionalAttrs (sshEnabled && sshAgentProvider == "gnome-keyring") {
-        SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/gcr/ssh";
+      (lib.optionalAttrs (sshEnabled && sshAgentEnabled && sshAgentProvider != "none") {
+        SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/${sshAgentSocket}";
       })
       // lib.optionalAttrs sshEnabled {
         SSH_ASKPASS = guiSshAskpass;
@@ -481,22 +485,24 @@ in
       ++ lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring") [ sshAddGuiScript ]
       ++ lib.optionals (androidStudioEnabled && androidStudioPackage != null) [ androidStudioPackage ]
       ++
-        lib.optionals (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { })
+        lib.optionals
+          (sshEnabled && sshAgentEnabled && sshAgentProvider != "none" && sshKeysWithPassphrases != { })
           [
             loadSecretBackedSshKeysScript
           ];
 
     systemd.user.services.ssh-secret-keys-load =
-      lib.mkIf (sshEnabled && sshAgentProvider == "gnome-keyring" && sshKeysWithPassphrases != { })
+      lib.mkIf
+        (sshEnabled && sshAgentEnabled && sshAgentProvider != "none" && sshKeysWithPassphrases != { })
         {
           Unit = {
             Description = "Load declarative secret-backed SSH keys into the SSH agent";
-            After = [ "gcr-ssh-agent.service" ];
-            Wants = [ "gcr-ssh-agent.service" ];
+            After = [ sshAgentService ];
+            Wants = [ sshAgentService ];
           };
           Service = {
             Type = "oneshot";
-            Environment = [ "SSH_AUTH_SOCK=%t/gcr/ssh" ];
+            Environment = [ "SSH_AUTH_SOCK=%t/${sshAgentSocket}" ];
             ExecStart = "${lib.getExe loadSecretBackedSshKeysScript}";
           };
           Install = {
@@ -548,8 +554,8 @@ in
         message = "settings.dev.mkcert.trustStores must only contain: system, nss, java";
       }
       {
-        assertion = (sshKeysWithPassphrases == { }) || sshAgentProvider == "gnome-keyring";
-        message = "settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey requires settings.userSettings.<name>.dev.ssh.agent.provider = gnome-keyring for automatic keyring loading.";
+        assertion = (sshKeysWithPassphrases == { }) || (sshAgentEnabled && sshAgentProvider != "none");
+        message = "settings.userSettings.<name>.secrets.sshKeys.<name>.passphraseKey requires an enabled OpenSSH or GNOME keyring SSH agent for automatic key loading.";
       }
       {
         assertion = builtins.elem pythonVersionManager [
