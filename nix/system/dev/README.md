@@ -16,6 +16,7 @@ Also manages:
 - SSH agent provider selection (`settings.userSettings.<name>.dev.ssh.agent.provider`)
 - OpenSSH agent startup (`provider = "openssh"`)
 - GNOME keyring service (`settings.userSettings.<name>.dev.ssh.keyring.enable` or `provider = "gnome-keyring"`)
+- Dual-agent auto mode (`provider = "auto"`): GNOME keyring for graphical sessions and OpenSSH for pure console sessions
 - Nix dynamic loader compatibility (`settings.dev.nixLd.enable`)
 - Dev virtualisation defaults (`settings.dev.virtualisation.*`) which can install `vagrant`/`qemu` in user dev bundles, optionally wire `vagrant-libvirt`, and enable the shared libvirt/QEMU host stack when requested
 - `programs.firefox.policies.Certificates.ImportEnterpriseRoots = true` when mkcert is enabled for at least one user and `settings.dev.mkcert.firefoxEnterpriseRoots = true`
