@@ -3,6 +3,7 @@
   stdenv,
   fetchurl,
   autoPatchelfHook,
+  procps,
   vulkan-loader,
   python3Packages,
 }:
@@ -41,6 +42,10 @@ python3Packages.buildPythonApplication rec {
   '';
 
   makeWrapperArgs = [
+    "--prefix"
+    "PATH"
+    ":"
+    "${lib.getBin procps}/bin"
     "--prefix"
     "PYTHONPATH"
     ":"
