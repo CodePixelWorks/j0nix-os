@@ -6,6 +6,13 @@
   vulkan-loader,
   python3Packages,
 }:
+let
+  pythonDependencies = with python3Packages; [
+    colorama
+    pyqtgraph
+    pyside6
+  ];
+in
 python3Packages.buildPythonApplication rec {
   pname = "penguin-burner";
   version = "0.7.9";
@@ -21,16 +28,16 @@ python3Packages.buildPythonApplication rec {
     stdenv.cc.cc.lib
     vulkan-loader
   ];
-  dependencies = with python3Packages; [
-    colorama
-    pyqtgraph
-    pyside6
-  ];
+  dependencies = pythonDependencies;
   # nixpkgs' pyside6 output contains PySide6-Essentials but exposes the
   # distribution metadata as "pyside6", so the wheel-name check cannot match it.
   dontCheckRuntimeDeps = true;
 
   makeWrapperArgs = [
+    "--prefix"
+    "PYTHONPATH"
+    ":"
+    "${builtins.placeholder "out"}/${python3Packages.python.sitePackages}:${python3Packages.makePythonPath pythonDependencies}"
     "--prefix"
     "LD_LIBRARY_PATH"
     ":"
