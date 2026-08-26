@@ -33,6 +33,13 @@ python3Packages.buildPythonApplication rec {
   # distribution metadata as "pyside6", so the wheel-name check cannot match it.
   dontCheckRuntimeDeps = true;
 
+  postInstall = ''
+    desktopFile="$out/share/applications/io.github.jpietek.PenguinBurner.desktop"
+    substituteInPlace "$desktopFile" \
+      --replace-fail "GenericName=NVIDIA GPU Automatic Tuning Tool" "GenericName=NVIDIA GPU Tuning Tool" \
+      --replace-fail "Name=NVIDIA GPU Automatic Tuning Tool" "Name=PenguinBurner"
+  '';
+
   makeWrapperArgs = [
     "--prefix"
     "PYTHONPATH"
