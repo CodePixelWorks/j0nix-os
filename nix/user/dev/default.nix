@@ -551,8 +551,8 @@ in
         {
           Unit = {
             Description = "Load declarative secret-backed SSH keys into the SSH agent";
-            After = sshAgentServices;
-            Wants = sshAgentServices;
+            After = [ "sops-nix.service" ] ++ sshAgentServices;
+            Wants = [ "sops-nix.service" ] ++ sshAgentServices;
           };
           Service = {
             Type = "oneshot";
