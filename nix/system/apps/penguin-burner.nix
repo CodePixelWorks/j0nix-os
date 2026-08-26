@@ -44,6 +44,7 @@ lib.mkIf enabled {
     description = "PenguinBurner hardware daemon";
     wantedBy = [ "multi-user.target" ];
     after = [ "multi-user.target" ];
+    path = [ pkgs.procps ];
     environment = {
       SUDO_USER = serviceUser;
       PENGUIN_BURNER_HOME = "/home/${serviceUser}";
