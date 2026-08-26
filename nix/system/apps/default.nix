@@ -15,6 +15,7 @@ in
     ./bambulab.nix
     ./flatpak-sync.nix
     ./ollama.nix
+    ./penguin-burner.nix
     ./syncthing.nix
     ./twintail-launcher.nix
   ];
