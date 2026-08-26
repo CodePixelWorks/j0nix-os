@@ -1,0 +1,52 @@
+{
+  lib,
+  stdenv,
+  fetchurl,
+  autoPatchelfHook,
+  vulkan-loader,
+  python3Packages,
+}:
+python3Packages.buildPythonApplication rec {
+  pname = "penguin-burner";
+  version = "0.7.9";
+  format = "wheel";
+
+  src = fetchurl {
+    url = "https://files.pythonhosted.org/packages/77/56/7eb7125bad61688abd0ff586d2d2ab94e92f7dd81be8502722b88c04a410/penguin_burner-${version}-py3-none-manylinux_2_28_x86_64.whl";
+    hash = "sha256-tNiMt5+R0U0pB3py2r4vb56aUigk8GXsILfwTYapOjw=";
+  };
+
+  nativeBuildInputs = [ autoPatchelfHook ];
+  buildInputs = [
+    stdenv.cc.cc.lib
+    vulkan-loader
+  ];
+  dependencies = with python3Packages; [
+    colorama
+    pyqtgraph
+    pyside6
+  ];
+  # nixpkgs' pyside6 output contains PySide6-Essentials but exposes the
+  # distribution metadata as "pyside6", so the wheel-name check cannot match it.
+  dontCheckRuntimeDeps = true;
+
+  makeWrapperArgs = [
+    "--prefix"
+    "LD_LIBRARY_PATH"
+    ":"
+    "/run/opengl-driver/lib"
+  ];
+
+  pythonImportsCheck = [
+    "penguin_burner"
+    "ui.main"
+  ];
+
+  meta = {
+    description = "NVIDIA GPU automatic undervolting and tuning tool";
+    homepage = "https://github.com/jpietek/PenguinBurner";
+    license = lib.licenses.gpl3Plus;
+    platforms = [ "x86_64-linux" ];
+    mainProgram = "penguin-burner";
+  };
+}
