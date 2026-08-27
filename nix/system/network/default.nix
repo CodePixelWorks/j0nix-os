@@ -279,9 +279,7 @@ in
           if match == null then "" else builtins.elemAt match 0
         ) cfg.resolver.records
       );
-      resolverRouteDomains = map (domain: "~${domain}") (
-        lib.unique (cfg.resolver.wildcardDomains ++ recordRouteDomains)
-      );
+      resolverDelegateDomains = lib.unique (cfg.resolver.wildcardDomains ++ recordRouteDomains);
       resolverAddressRecords =
         (map (domain: "/.${domain}/${cfg.resolver.wildcardAddress}") cfg.resolver.wildcardDomains)
         ++ (lib.mapAttrsToList (host: ip: "/${host}/${ip}") cfg.resolver.records);
@@ -333,14 +331,13 @@ in
     };
     services.resolved.enable = resolverEnabled;
     services.resolved.settings = lib.mkIf resolverEnabled {
-      Resolve = {
-        # dnsmasq first (handles *.lab.test wildcard records), then external
-        # upstreams (handled by resolved with automatic TCP fallback when
-        # outbound UDP 53 is blocked by ISPs/routers).
-        DNS = [ cfg.resolver.listenAddress ] ++ cfg.resolver.upstreamServers;
-      }
-      // lib.optionalAttrs (resolverRouteDomains != [ ]) {
-        Domains = resolverRouteDomains;
+      Resolve.DNS = cfg.resolver.upstreamServers;
+    };
+    services.resolved.dnsDelegates.j0nix-local = lib.mkIf (resolverEnabled && resolverDelegateDomains != [ ]) {
+      Delegate = {
+        DNS = [ cfg.resolver.listenAddress ];
+        Domains = resolverDelegateDomains;
+        DefaultRoute = false;
       };
     };
 
@@ -354,10 +351,9 @@ in
         bind-interfaces = true;
         "listen-address" = cfg.resolver.listenAddress;
         address = resolverAddressRecords;
-        # No server= directive: dnsmasq only serves the local wildcard
-        # records configured above. Queries that don't match fall through
-        # to systemd-resolved, which forwards to the external upstreams
-        # with automatic TCP fallback.
+        # dnsmasq is authoritative only for the delegated local domains.
+        # Other queries remain with systemd-resolved and never reach this
+        # deliberately upstream-less instance.
       };
     };
 
