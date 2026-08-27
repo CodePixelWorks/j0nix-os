@@ -213,11 +213,8 @@ in
 
       upstreamServers = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [
-          "1.1.1.1"
-          "1.0.0.1"
-        ];
-        description = "Upstream DNS servers used for non-local lookups.";
+        default = [ ];
+        description = "Optional global DNS servers. Empty follows DNS servers supplied by the active network.";
       };
 
       wildcardDomains = lib.mkOption {
@@ -331,7 +328,9 @@ in
     };
     services.resolved.enable = resolverEnabled;
     services.resolved.settings = lib.mkIf resolverEnabled {
-      Resolve.DNS = cfg.resolver.upstreamServers;
+      Resolve = lib.optionalAttrs (cfg.resolver.upstreamServers != [ ]) {
+        DNS = cfg.resolver.upstreamServers;
+      };
     };
     services.resolved.dnsDelegates.j0nix-local = lib.mkIf (resolverEnabled && resolverDelegateDomains != [ ]) {
       Delegate = {
@@ -391,11 +390,5 @@ in
       };
     };
 
-    assertions = [
-      {
-        assertion = !resolverEnabled || cfg.resolver.upstreamServers != [ ];
-        message = "j0nix.desktop.network.resolver.upstreamServers must not be empty when the local resolver is enabled.";
-      }
-    ];
   };
 }
