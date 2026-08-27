@@ -132,7 +132,11 @@ let
     in
     [
       {
-        condition = "hasconfig:remote.*.url:git@${host}:**";
+        condition = "hasconfig:remote.*.url:git@${host}:*/**";
+        path = includePath;
+      }
+      {
+        condition = "hasconfig:remote.*.url:ssh://git@${host}/**";
         path = includePath;
       }
       {
