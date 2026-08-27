@@ -38,7 +38,6 @@ let
     else
       null;
   dockerAddressPools = dockerCfg.addressPools or [ ];
-  dockerDnsServers = (settings.profileDetails or { }).dockerDnsServers or [ ];
   dockerUsers = lib.filter (
     name: ((((userOverrides.${name} or { }).dev or { }).docker or { }).enable or false)
   ) allUsers;
@@ -188,9 +187,6 @@ in
       }
       // lib.optionalAttrs (dockerAddressPools != [ ]) {
         default-address-pools = dockerAddressPools;
-      }
-      // lib.optionalAttrs (dockerDnsServers != [ ]) {
-        dns = dockerDnsServers;
       }
       // lib.optionalAttrs (dockerDataRoot != null) {
         data-root = dockerDataRoot;
@@ -368,10 +364,6 @@ in
       {
         assertion = builtins.isList dockerAddressPools;
         message = "settings.dev.docker.addressPools must be a list of { base, size } entries.";
-      }
-      {
-        assertion = builtins.isList dockerDnsServers && lib.all builtins.isString dockerDnsServers;
-        message = "settings.profileDetails.dockerDnsServers must be a list of DNS server address strings.";
       }
       {
         assertion = lib.all (
