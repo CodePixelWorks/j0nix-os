@@ -31,9 +31,15 @@ let
   hermesMcpCfg = ai.hermesMcp or { };
   hermesGiteaCfg = hermesMcpCfg.gitea or { };
   hermesGiteaEnabled = hermesEnabled && (hermesGiteaCfg.enable or false);
+  hermesDonsetchCfg = hermesMcpCfg.donsetch or { };
+  hermesDonsetchEnabled = hermesEnabled && (hermesDonsetchCfg.enable or false);
+  hermesDonsetchPreferred = hermesDonsetchEnabled && (hermesDonsetchCfg.preferForWeb or true);
+  hermesDonsetchSupervised = hermesDonsetchCfg.supervised or true;
   hermesGiteaHost = hermesGiteaCfg.host or "https://gitea.com";
   hermesGiteaTokenSecretName = hermesGiteaCfg.tokenSecretName or "gitea-mcp-token";
-  hermesGiteaTokenAvailable = lib.hasAttrByPath [ hermesGiteaTokenSecretName ] (config.sops.secrets or { });
+  hermesGiteaTokenAvailable = lib.hasAttrByPath [ hermesGiteaTokenSecretName ] (
+    config.sops.secrets or { }
+  );
   hermesGiteaTokenPath =
     if hermesGiteaTokenAvailable then
       config.sops.secrets.${hermesGiteaTokenSecretName}.path
@@ -42,6 +48,7 @@ let
   mcpRemotes = ai.mcpRemotes or { };
   hermesPackage = pkgs.hermes-agent-with-firecrawl or null;
   hermesGiteaPackage = pkgs.gitea-mcp or null;
+  hermesDonsetchPackage = pkgs.donsetch or null;
   ncpPackage = pkgs.writeShellApplication {
     name = "ncp";
     runtimeInputs = [ pkgs.nodejs ];
@@ -111,6 +118,19 @@ let
     ];
     env.GITEA_ACCESS_TOKEN_FILE = hermesGiteaTokenPath;
   };
+  hermesDonsetchServer = {
+    command = "${hermesDonsetchPackage}/bin/donsetch";
+    args = [ "mcp" ] ++ lib.optional hermesDonsetchSupervised "--supervised";
+  };
+  hermesManagedServers =
+    lib.optionalAttrs hermesGiteaEnabled { gitea = hermesGiteaServer; }
+    // lib.optionalAttrs hermesDonsetchEnabled { donsetch = hermesDonsetchServer; };
+  hermesDonsetchPrompt = ''
+    Web research policy:
+    - Use the Donsetch MCP tools web_search, web_fetch, and web_crawl by default for internet search, page retrieval, and crawling.
+    - Do not use CRW, Firecrawl, or Hermes' built-in web tools while Donsetch is available.
+    - Fall back to another web backend only when Donsetch fails or lacks a required capability, and mention that fallback.
+  '';
   hermesMcpSyncPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
   hermesMcpSync = pkgs.writeShellApplication {
     name = "hermes-mcp-sync";
@@ -119,7 +139,10 @@ let
       config_file="$HOME/.hermes/config.yaml"
       mkdir -p "$(dirname "$config_file")"
 
-      HERMES_CONFIG_FILE="$config_file" HERMES_GITEA_CONFIG=${lib.escapeShellArg (builtins.toJSON hermesGiteaServer)} \
+      HERMES_CONFIG_FILE="$config_file" \
+        HERMES_MANAGED_SERVERS=${lib.escapeShellArg (builtins.toJSON hermesManagedServers)} \
+        HERMES_DONSETCH_PREFERRED=${lib.escapeShellArg (if hermesDonsetchPreferred then "1" else "0")} \
+        HERMES_DONSETCH_PROMPT=${lib.escapeShellArg hermesDonsetchPrompt} \
         ${hermesMcpSyncPython}/bin/python <<'PY'
       import json
       import os
@@ -136,12 +159,37 @@ let
           mode = 0o600
 
       servers = config.setdefault("mcp_servers", {})
-      desired = json.loads(os.environ["HERMES_GITEA_CONFIG"])
+      desired_servers = json.loads(os.environ["HERMES_MANAGED_SERVERS"])
+      changed = False
+      for name, desired in desired_servers.items():
+          if servers.get(name) != desired:
+              servers[name] = desired
+              changed = True
 
-      if servers.get("gitea") == desired:
+      marker_start = "<!-- j0nix:donsetch:start -->"
+      marker_end = "<!-- j0nix:donsetch:end -->"
+      if os.environ["HERMES_DONSETCH_PREFERRED"] == "1":
+          agent = config.setdefault("agent", {})
+          current_prompt = agent.get("system_prompt", "") or ""
+          if not isinstance(current_prompt, str):
+              raise TypeError("Hermes agent.system_prompt must be a string")
+          start = current_prompt.find(marker_start)
+          end = current_prompt.find(marker_end)
+          if start != -1 and end >= start:
+              current_prompt = (
+                  current_prompt[:start] + current_prompt[end + len(marker_end):]
+              ).strip()
+          managed_prompt = (
+              f"{marker_start}\n{os.environ['HERMES_DONSETCH_PROMPT'].strip()}\n{marker_end}"
+          )
+          updated_prompt = "\n\n".join(part for part in [current_prompt, managed_prompt] if part)
+          if agent.get("system_prompt", "") != updated_prompt:
+              agent["system_prompt"] = updated_prompt
+              changed = True
+
+      if not changed:
           raise SystemExit(0)
 
-      servers["gitea"] = desired
       path.parent.mkdir(parents=True, exist_ok=True)
       with tempfile.NamedTemporaryFile(
           mode="w", encoding="utf-8", dir=path.parent, delete=False
@@ -253,15 +301,18 @@ lib.mkIf enabled {
       hermesPackage
     ]
     ++ lib.optionals hermesGiteaEnabled [ hermesGiteaPackage ]
+    ++ lib.optionals hermesDonsetchEnabled [ hermesDonsetchPackage ]
     ++ lib.optionals (installScope == "user") [ pkgs.bubblewrap ];
 
   home.activation.codexMcpSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD ${codexMcpSync}/bin/codex-mcp-sync
   '';
 
-  home.activation.hermesMcpSync = lib.mkIf hermesGiteaEnabled (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    $DRY_RUN_CMD ${hermesMcpSync}/bin/hermes-mcp-sync
-  '');
+  home.activation.hermesMcpSync = lib.mkIf (hermesGiteaEnabled || hermesDonsetchEnabled) (
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      $DRY_RUN_CMD ${hermesMcpSync}/bin/hermes-mcp-sync
+    ''
+  );
 
   xdg.configFile."codex/mcp-remotes.json" = lib.mkIf (mcpRemotes != { }) {
     text = builtins.toJSON {
@@ -327,6 +378,10 @@ lib.mkIf enabled {
     {
       assertion = (!hermesGiteaEnabled) || hermesGiteaPackage != null;
       message = "Hermes Gitea MCP is enabled but pkgs.gitea-mcp is unavailable";
+    }
+    {
+      assertion = (!hermesDonsetchEnabled) || hermesDonsetchPackage != null;
+      message = "Hermes Donsetch MCP is enabled but pkgs.donsetch is unavailable";
     }
     {
       assertion = (!hermesGiteaEnabled) || hermesGiteaTokenAvailable;
