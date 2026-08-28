@@ -68,6 +68,7 @@ let
       ${lib.optionalString (cfg.tailscale.loginServer != null) ''
         up_flags+=(--login-server='${cfg.tailscale.loginServer}')
       ''}
+      up_flags+=(--accept-dns=${lib.boolToString cfg.tailscale.acceptDNS})
       ${lib.optionalString cfg.tailscale.acceptRoutes ''
         up_flags+=(--accept-routes)
       ''}
@@ -154,6 +155,11 @@ in
         default = null;
         description = "Name of the sops system secret containing the Tailscale auth key.";
       };
+      acceptDNS = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Accept DNS configuration from the Tailscale coordination server (--accept-dns).";
+      };
       acceptRoutes = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -163,6 +169,11 @@ in
         type = lib.types.bool;
         default = false;
         description = "Allow SSH access through the Tailscale network (--ssh).";
+      };
+      splitDnsDomains = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Additional domain suffixes resolved through Tailscale MagicDNS without overriding system DNS.";
       };
     };
 
@@ -301,6 +312,7 @@ in
         lib.optionals (cfg.tailscale.loginServer != null) [
           "--login-server=${cfg.tailscale.loginServer}"
         ]
+        ++ [ "--accept-dns=${lib.boolToString cfg.tailscale.acceptDNS}" ]
         ++ lib.optional cfg.tailscale.acceptRoutes "--accept-routes"
         ++ lib.optional cfg.tailscale.enableSSH "--ssh";
     };
@@ -336,6 +348,20 @@ in
       Delegate = {
         DNS = [ cfg.resolver.listenAddress ];
         Domains = resolverDelegateDomains;
+        DefaultRoute = false;
+      };
+    };
+    # 100.100.100.100 and its IPv6 counterpart are Tailscale's fixed local
+    # MagicDNS endpoints, not deployment-specific upstream resolvers.
+    services.resolved.dnsDelegates.j0nix-tailscale = lib.mkIf (
+      resolverEnabled && cfg.tailscale.enable && cfg.tailscale.splitDnsDomains != [ ]
+    ) {
+      Delegate = {
+        DNS = [
+          "100.100.100.100"
+          "fd7a:115c:a1e0::53"
+        ];
+        Domains = cfg.tailscale.splitDnsDomains;
         DefaultRoute = false;
       };
     };
