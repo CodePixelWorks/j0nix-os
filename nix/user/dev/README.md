@@ -62,6 +62,7 @@ Notable controls:
 - LSP MCP server names follow `lsp-<language>` in `~/.codex/config.toml` (for example `lsp-nix`, `lsp-rust`, `lsp-python`)
 - Each generated LSP MCP wrapper resolves the workspace from the current git root (or the current working directory when outside git) and starts the matching language server with the right stdio flags
 - `settings.dev.ai.ncp`: install the `ncp` (`@portel/ncp`) CLI as a unified MCP host/helper in the shared AI tool scope
+- `settings.userSettings.<name>.dev.ai.hermesMcp.gitea`: install the official Gitea MCP server and merge a secret-backed stdio entry into `~/.hermes/config.yaml`
 - `settings.dev.ai.kiloCode`: install the `kilocode` CLI (`@kilocode/cli@alpha`) in the shared AI tool scope and add the `kilocode.kilo-code` VS Code extension
 - `settings.dev.ai.caveman`: install the `caveman` Agent Skill into `~/.codex/skills`, `~/.kilo/skills`, `~/.claude/skills`, and `~/.agents/skills`
 - `settings.dev.ai.opencode`: install the `opencode` terminal coding agent in the shared AI tool scope
