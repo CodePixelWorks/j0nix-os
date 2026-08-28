@@ -30,6 +30,7 @@ let
     mcp-language-server-j0nix = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/mcp-language-server.nix") {
       src = inputs.mcp-language-server-src;
     };
+    gitea-mcp = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/gitea-mcp.nix") { };
     openldap = prev.openldap.overrideAttrs (_: {
       doCheck = false;
       doInstallCheck = false;
