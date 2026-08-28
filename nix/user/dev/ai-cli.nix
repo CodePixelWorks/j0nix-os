@@ -1,4 +1,5 @@
 {
+  config,
   inputs,
   lib,
   pkgs,
@@ -27,8 +28,20 @@ let
   antigravityEnabled = ai.antigravity or (ai.gemini or true);
   antigravityDesktopEntry = ai.antigravityDesktopEntry or (ai.geminiDesktopEntry or true);
   hermesEnabled = ai.hermes or true;
+  hermesMcpCfg = ai.hermesMcp or { };
+  hermesGiteaCfg = hermesMcpCfg.gitea or { };
+  hermesGiteaEnabled = hermesEnabled && (hermesGiteaCfg.enable or false);
+  hermesGiteaHost = hermesGiteaCfg.host or "https://gitea.com";
+  hermesGiteaTokenSecretName = hermesGiteaCfg.tokenSecretName or "gitea-mcp-token";
+  hermesGiteaTokenAvailable = lib.hasAttrByPath [ hermesGiteaTokenSecretName ] (config.sops.secrets or { });
+  hermesGiteaTokenPath =
+    if hermesGiteaTokenAvailable then
+      config.sops.secrets.${hermesGiteaTokenSecretName}.path
+    else
+      "/missing/${hermesGiteaTokenSecretName}";
   mcpRemotes = ai.mcpRemotes or { };
   hermesPackage = pkgs.hermes-agent-with-firecrawl or null;
+  hermesGiteaPackage = pkgs.gitea-mcp or null;
   ncpPackage = pkgs.writeShellApplication {
     name = "ncp";
     runtimeInputs = [ pkgs.nodejs ];
@@ -86,6 +99,58 @@ let
         echo "Antigravity CLI not found after installation"
         exit 1
       fi
+    '';
+  };
+  hermesGiteaServer = {
+    command = "${hermesGiteaPackage}/bin/gitea-mcp";
+    args = [
+      "-t"
+      "stdio"
+      "-H"
+      hermesGiteaHost
+    ];
+    env.GITEA_ACCESS_TOKEN_FILE = hermesGiteaTokenPath;
+  };
+  hermesMcpSyncPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
+  hermesMcpSync = pkgs.writeShellApplication {
+    name = "hermes-mcp-sync";
+    runtimeInputs = [ hermesMcpSyncPython ];
+    text = ''
+      config_file="$HOME/.hermes/config.yaml"
+      mkdir -p "$(dirname "$config_file")"
+
+      HERMES_CONFIG_FILE="$config_file" HERMES_GITEA_CONFIG=${lib.escapeShellArg (builtins.toJSON hermesGiteaServer)} \
+        ${hermesMcpSyncPython}/bin/python <<'PY'
+      import json
+      import os
+      from pathlib import Path
+      import tempfile
+      import yaml
+
+      path = Path(os.environ["HERMES_CONFIG_FILE"])
+      if path.exists():
+          config = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+          mode = path.stat().st_mode & 0o777
+      else:
+          config = {}
+          mode = 0o600
+
+      servers = config.setdefault("mcp_servers", {})
+      desired = json.loads(os.environ["HERMES_GITEA_CONFIG"])
+
+      if servers.get("gitea") == desired:
+          raise SystemExit(0)
+
+      servers["gitea"] = desired
+      path.parent.mkdir(parents=True, exist_ok=True)
+      with tempfile.NamedTemporaryFile(
+          mode="w", encoding="utf-8", dir=path.parent, delete=False
+      ) as handle:
+          yaml.safe_dump(config, handle, sort_keys=False, allow_unicode=True)
+          temporary_path = Path(handle.name)
+      temporary_path.chmod(mode)
+      temporary_path.replace(path)
+      PY
     '';
   };
   codexMcpSync = pkgs.writeShellApplication {
@@ -187,11 +252,16 @@ lib.mkIf enabled {
     ++ lib.optionals (installScope == "user" && hermesEnabled && hermesPackage != null) [
       hermesPackage
     ]
+    ++ lib.optionals hermesGiteaEnabled [ hermesGiteaPackage ]
     ++ lib.optionals (installScope == "user") [ pkgs.bubblewrap ];
 
   home.activation.codexMcpSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD ${codexMcpSync}/bin/codex-mcp-sync
   '';
+
+  home.activation.hermesMcpSync = lib.mkIf hermesGiteaEnabled (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    $DRY_RUN_CMD ${hermesMcpSync}/bin/hermes-mcp-sync
+  '');
 
   xdg.configFile."codex/mcp-remotes.json" = lib.mkIf (mcpRemotes != { }) {
     text = builtins.toJSON {
@@ -253,6 +323,18 @@ lib.mkIf enabled {
     {
       assertion = (!hermesEnabled) || hermesPackage != null;
       message = "settings.dev.ai.hermes=true but inputs.hermes-agent package is unavailable for this system";
+    }
+    {
+      assertion = (!hermesGiteaEnabled) || hermesGiteaPackage != null;
+      message = "Hermes Gitea MCP is enabled but pkgs.gitea-mcp is unavailable";
+    }
+    {
+      assertion = (!hermesGiteaEnabled) || hermesGiteaTokenAvailable;
+      message = "Hermes Gitea MCP requires the configured user SOPS secret: ${hermesGiteaTokenSecretName}";
+    }
+    {
+      assertion = (!hermesGiteaEnabled) || lib.hasPrefix "https://" hermesGiteaHost;
+      message = "settings.userSettings.<name>.dev.ai.hermesMcp.gitea.host must use HTTPS";
     }
     {
       assertion = builtins.elem installScope [
