@@ -125,7 +125,10 @@ let
 
     exec ${pkgs.gnupg}/bin/gpg "$@"
   '';
-  defaultKeyName = sshAgentCfg.keyName or (lib.head (builtins.attrNames gpgKeys));
+  defaultKeyName =
+    gitSigningCfg.keyName
+    or sshAgentCfg.keyName
+    or (if gpgKeys != { } then lib.head (builtins.attrNames gpgKeys) else null);
   defaultKey = if defaultKeyName != null then gpgKeys.${defaultKeyName}.key or null else null;
 in
 {

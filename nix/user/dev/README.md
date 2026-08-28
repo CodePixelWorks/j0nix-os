@@ -22,6 +22,7 @@ Notable controls:
 - `settings.userSettings.<name>.dev.git.hostProfiles.<name>.*`: per-host `userName`/`userEmail` overrides for git includes
 - `settings.userSettings.<name>.secrets.gpgKeys.<name>`: SOPS-backed GPG private key material that is imported automatically into `~/.gnupg` during Home Manager activation
 - `settings.userSettings.<name>.secrets.gpgKeys.<name>.passphraseKey`: optional SOPS path for preloading the matching GPG passphrase into `gpg-agent`
+- `settings.userSettings.<name>.dev.gpg.gitSigning.keyName`: optional default GPG key attr name for Git signing when you want to pin a specific signing identity
 - `settings.userSettings.<name>.dev.gpg.agentCacheTtl`: `gpg-agent` passphrase cache TTL in seconds for managed GPG keys
 - `settings.userSettings.<name>.dev.gpg.agentMaxCacheTtl`: maximum `gpg-agent` passphrase cache TTL in seconds for managed GPG keys
 - `settings.userSettings.<name>.dev.gpg.presetInterval`: systemd timer interval for refreshing managed GPG passphrases in `gpg-agent`
