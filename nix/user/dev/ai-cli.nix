@@ -142,7 +142,6 @@ let
       HERMES_CONFIG_FILE="$config_file" \
         HERMES_MANAGED_SERVERS=${lib.escapeShellArg (builtins.toJSON hermesManagedServers)} \
         HERMES_DONSETCH_PREFERRED=${lib.escapeShellArg (if hermesDonsetchPreferred then "1" else "0")} \
-        HERMES_DONSETCH_PROMPT=${lib.escapeShellArg hermesDonsetchPrompt} \
         ${hermesMcpSyncPython}/bin/python <<'PY'
       import json
       import os
@@ -166,25 +165,11 @@ let
               servers[name] = desired
               changed = True
 
-      marker_start = "<!-- j0nix:donsetch:start -->"
-      marker_end = "<!-- j0nix:donsetch:end -->"
       if os.environ["HERMES_DONSETCH_PREFERRED"] == "1":
-          agent = config.setdefault("agent", {})
-          current_prompt = agent.get("system_prompt", "") or ""
-          if not isinstance(current_prompt, str):
-              raise TypeError("Hermes agent.system_prompt must be a string")
-          start = current_prompt.find(marker_start)
-          end = current_prompt.find(marker_end)
-          if start != -1 and end >= start:
-              current_prompt = (
-                  current_prompt[:start] + current_prompt[end + len(marker_end):]
-              ).strip()
-          managed_prompt = (
-              f"{marker_start}\n{os.environ['HERMES_DONSETCH_PROMPT'].strip()}\n{marker_end}"
-          )
-          updated_prompt = "\n\n".join(part for part in [current_prompt, managed_prompt] if part)
-          if agent.get("system_prompt", "") != updated_prompt:
-              agent["system_prompt"] = updated_prompt
+          plugins = config.setdefault("plugins", {})
+          enabled_plugins = plugins.setdefault("enabled", [])
+          if "j0nix-donsetch" not in enabled_plugins:
+              enabled_plugins.append("j0nix-donsetch")
               changed = True
 
       if not changed:
@@ -313,6 +298,30 @@ lib.mkIf enabled {
       $DRY_RUN_CMD ${hermesMcpSync}/bin/hermes-mcp-sync
     ''
   );
+
+  home.file.".hermes/plugins/j0nix-donsetch/plugin.yaml" = lib.mkIf hermesDonsetchPreferred {
+    text = ''
+      name: j0nix-donsetch
+      kind: standalone
+      version: 1.0.0
+      description: Prefer Donsetch for web research
+      author: j0nix-os
+    '';
+  };
+
+  home.file.".hermes/plugins/j0nix-donsetch/__init__.py" = lib.mkIf hermesDonsetchPreferred {
+    text = ''
+      PROMPT = ${builtins.toJSON hermesDonsetchPrompt}
+
+      def register(ctx):
+          ctx.register_system_prompt_section(
+              "j0nix.donsetch.web-policy",
+              PROMPT,
+              position="after_memory",
+              max_chars=1000,
+          )
+    '';
+  };
 
   xdg.configFile."codex/mcp-remotes.json" = lib.mkIf (mcpRemotes != { }) {
     text = builtins.toJSON {
