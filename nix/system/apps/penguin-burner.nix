@@ -24,6 +24,11 @@ let
   pythonEnv = python.withPackages (_: [ package ]);
   programFile = "${package}/${python.sitePackages}/penguin_burner.py";
   daemonBinary = "${package}/${python.sitePackages}/runtime/daemon_bin/penguin-burnerd";
+  # Set the driver path at the worker boundary so its CUDA children inherit it.
+  daemonPython = pkgs.writeShellScript "penguin-burner-daemon-python" ''
+    export LD_LIBRARY_PATH="/run/opengl-driver/lib''${LD_LIBRARY_PATH:+:}''${LD_LIBRARY_PATH:-}"
+    exec ${pythonEnv}/bin/python3 "$@"
+  '';
   daemonLauncher = pkgs.writeShellScript "penguin-burnerd-launch" ''
     set -eu
 
@@ -50,7 +55,7 @@ lib.mkIf enabled {
       PENGUIN_BURNER_HOME = "/home/${serviceUser}";
       PENGUIN_BURNER_Q2RTX_USER = serviceUser;
       PENGUIN_BURNER_DAEMON_PROGRAM_FILE = programFile;
-      PENGUIN_BURNER_DAEMON_PYTHON = "${pythonEnv}/bin/python3";
+      PENGUIN_BURNER_DAEMON_PYTHON = daemonPython;
       LD_LIBRARY_PATH = "/run/opengl-driver/lib";
     };
     serviceConfig = {
