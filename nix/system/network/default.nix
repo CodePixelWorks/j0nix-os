@@ -312,10 +312,14 @@ in
         lib.optionals (cfg.tailscale.loginServer != null) [
           "--login-server=${cfg.tailscale.loginServer}"
         ]
+        ++ [ "--hostname=${cfg.hostName}" ]
         ++ [ "--accept-dns=${lib.boolToString cfg.tailscale.acceptDNS}" ]
         ++ lib.optional cfg.tailscale.acceptRoutes "--accept-routes"
         ++ lib.optional cfg.tailscale.enableSSH "--ssh";
     };
+
+    # Keep the local Tailscale node identity stable across reboots.
+    systemd.services.tailscaled.serviceConfig.StateDirectory = "tailscale";
 
     # NixOS's tailscaled-autoconnect only calls `tailscale up` when the daemon
     # is in NeedsLogin/Stopped state. If it's already Running, extraUpFlags are
