@@ -1004,6 +1004,7 @@ in
           gitSigning = {
             enable         = true;
             signByDefault  = true;
+            keyName        = "primary";
           };
           sshAgent = {
             enable  = true;
