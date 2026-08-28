@@ -31,6 +31,7 @@ let
       src = inputs.mcp-language-server-src;
     };
     gitea-mcp = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/gitea-mcp.nix") { };
+    donsetch = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/donsetch.nix") { };
     openldap = prev.openldap.overrideAttrs (_: {
       doCheck = false;
       doInstallCheck = false;
