@@ -303,6 +303,11 @@ let
       move = [ "100%-w-2%" "100%-h-3%" ];
     }
     {
+      name = "float-steam-windows";
+      match.class = "^(steam)$";
+      float = true;
+    }
+    {
       name = "steam-friends-list";
       match = {
         class = "^(steam)$";
