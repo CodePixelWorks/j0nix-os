@@ -438,6 +438,7 @@ fi
 if [ -d secrets/users ]; then
     find secrets/users -mindepth 1 -maxdepth 1 -type f ! -name '*.example' -delete
 fi
+rm -rf secrets/identity
 
 # Strip private flake inputs (resolve-patch points to a private git repo).
 # The overlay gracefully degrades to standard nixpkgs when the input is absent.
