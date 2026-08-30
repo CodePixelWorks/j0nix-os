@@ -401,6 +401,7 @@ let
     focused_monitor_state="$state_dir/headless-focused-monitor"
     monitor_state="$state_dir/headless-monitors.tsv"
     lockscreen_disable_marker="$state_dir/disable-lock-screen"
+    loginctl_bin="${pkgs.systemd}/bin/loginctl"
 
     if [ -z "$target_name" ] || [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -x "$hyprctl_bin" ] || [ ! -x "$jq_bin" ]; then
       exit 0
@@ -433,6 +434,28 @@ let
 
     apply_monitor_disabled() {
       "$hyprctl_bin" eval "$(render_monitor_disabled "$1")" >/dev/null 2>&1 || true
+    }
+
+    disable_lockscreen_for_display_change() {
+      # Set the guard before touching the outputs so an idle/suspend hook cannot
+      # start the lock screen in the middle of the monitor transaction.
+      : > "$lockscreen_disable_marker"
+
+      # Unlock shell-provided lock surfaces as well as standalone hyprlock.
+      # These commands are intentionally best-effort because only one backend
+      # is normally present in a given session.
+      if command -v dms >/dev/null 2>&1; then
+        dms ipc call lock unlock >/dev/null 2>&1 || true
+      fi
+      "$hyprctl_bin" dispatch 'hl.dsp.global("caelestia:unlock")' >/dev/null 2>&1 || true
+      "$loginctl_bin" unlock-session >/dev/null 2>&1 || true
+      ${pkgs.procps}/bin/pkill -x hyprlock >/dev/null 2>&1 || true
+
+      # Do not begin changing outputs while hyprlock still owns surfaces.
+      for _ in $(seq 1 20); do
+        ${pkgs.procps}/bin/pgrep -x hyprlock >/dev/null 2>&1 || break
+        sleep 0.05
+      done
     }
 
     snapshot_monitors() {
@@ -506,8 +529,7 @@ let
     "$coreutils_bin"/mkdir -p "$state_dir"
     if wm_monitor_bin="$(command -v wm-monitor 2>/dev/null)"; then
       ${lib.optionalString sunshineDisableLockScreenDuringStream ''
-        : > "$lockscreen_disable_marker"
-        ${pkgs.procps}/bin/pkill -x hyprlock >/dev/null 2>&1 || true
+        disable_lockscreen_for_display_change
       ''}
       # The monitor helper first enables a headless target at this staging
       # position, then moves it to the stream position only after physical
@@ -534,8 +556,7 @@ let
     snapshot_monitors
     apply_monitor_enabled "$target_name" "$mode" "$staging_position" "$target_scale"
     ${lib.optionalString sunshineDisableLockScreenDuringStream ''
-      : > "$lockscreen_disable_marker"
-      ${pkgs.procps}/bin/pkill -x hyprlock >/dev/null 2>&1 || true
+      disable_lockscreen_for_display_change
     ''}
     "$hyprctl_bin" -j workspaces | "$jq_bin" -r '.[] | select((.name // "") != "" and (.monitor // "") != "") | [.name, .monitor] | @tsv' > "$workspace_state.tmp"
     "$coreutils_bin"/mv "$workspace_state.tmp" "$workspace_state"
