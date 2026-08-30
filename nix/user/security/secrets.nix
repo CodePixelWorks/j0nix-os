@@ -105,6 +105,7 @@ let
     (name: spec:
       mkSecretValue name {
         key = spec.key or name;
+        sopsFile = spec.sopsFile or defaultSopsFile;
       }
       // lib.optionalAttrs (spec ? mode) {
         mode = spec.mode;
@@ -132,6 +133,7 @@ let
     (name: spec:
       mkSecretValue name {
         key = spec.key or name;
+        sopsFile = spec.sopsFile or defaultSopsFile;
       }
       // lib.optionalAttrs (spec ? mode) {
         mode = spec.mode;
