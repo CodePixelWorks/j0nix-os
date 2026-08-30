@@ -440,24 +440,46 @@ if [ -d secrets/users ]; then
 fi
 rm -rf secrets/identity
 
-# Strip private flake inputs (resolve-patch points to a private git repo).
-# The overlay gracefully degrades to standard nixpkgs when the input is absent.
+# Strip private flake inputs (resolve-patch points to a private git repo,
+# j0nix-identity-secrets points to the private Gitea-hosted identity
+# flake). Both overlays / settings.nix.legacy-default behavior degrade
+# gracefully when the input is absent, so the mirror stays evaluable.
 if [ -f flake.nix ]; then
-    # Remove the resolve-patch input block from flake.nix
-    sed -i '/resolve-patch/,/};/d' flake.nix 2>/dev/null || true
+    # Remove the resolve-patch and j0nix-identity-secrets input blocks
+    # from flake.nix. We use python3 for multiline-aware removal; sed
+    # would only match the first line and leave dangling braces behind.
+    python3 - <<'PYEOF' 2>/dev/null || true
+import re
+with open('flake.nix', 'r') as f:
+    src = f.read()
+# Strip the named input attrset entries (single-line or multi-line).
+for name in ('resolve-patch', 'j0nix-identity-secrets'):
+    pattern = re.compile(
+        r'\n\s*' + re.escape(name) + r'\s*=\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}\s*;\s*\n',
+        re.MULTILINE,
+    )
+    src = pattern.sub('\n', src, count=1)
+with open('flake.nix', 'w') as f:
+    f.write(src)
+PYEOF
 fi
 if [ -f flake.lock ]; then
-    # Remove resolve-patch node and references from flake.lock
-    python3 -c "
-import json, sys
-with open('flake.lock') as f: d = json.load(f)
-# Remove the node
-d['nodes'].pop('resolve-patch', None)
-# Remove from root inputs
-if 'root' in d['nodes'] and 'inputs' in d['nodes']['root']:
-    d['nodes']['root']['inputs'].pop('resolve-patch', None)
-with open('flake.lock', 'w') as f: json.dump(d, f, indent=2)
-    " 2>/dev/null || true
+    # Remove resolve-patch and j0nix-identity-secrets nodes and references
+    # from flake.lock. json manipulation is more reliable than jq inside
+    # a tree-filter subshell where minimal PATHs may lack jq.
+    python3 - <<'PYEOF' 2>/dev/null || true
+import json
+with open('flake.lock') as f:
+    d = json.load(f)
+for name in ('resolve-patch', 'j0nix-identity-secrets'):
+    d['nodes'].pop(name, None)
+    for node in d['nodes'].values():
+        if isinstance(node, dict) and 'inputs' in node:
+            node['inputs'].pop(name, None)
+with open('flake.lock', 'w') as f:
+    json.dump(d, f, indent=2)
+    f.write('\n')
+PYEOF
 fi
 
 cp -f '${repo_root}/README.md.public' README.md 2>/dev/null || true

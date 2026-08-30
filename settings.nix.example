@@ -66,6 +66,24 @@ in
 
     # Sops file format. Valid: "yaml" | "json" | "binary" | "dotenv" | "ini".
     defaultSopsFormat = "yaml";
+
+    # ---------------------------------------------------------------------
+    # Identity source selector (template).
+    # ---------------------------------------------------------------------
+    # The active identity source is chosen EXPLICITLY here. The public
+    # mirror of j0nix-os defaults to `mode = "legacy"` because the
+    # shared-identity flake input is stripped from the mirror tree.
+    #
+    #   "legacy"        : keep using secrets/users/<name>.yaml locally
+    #   "shared-flake"  : route SSH/GPG keys through the private
+    #                      shared-identity flake input
+    #
+    # Operators running the private source can flip the mode to
+    # "shared-flake" without touching sshKeys / gpgKeys definitions; the
+    # per-key `sopsFile` field is auto-derived from this selector.
+    identity = {
+      mode = "legacy"; # "legacy" | "shared-flake"
+    };
   };
 
 
