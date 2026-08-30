@@ -194,6 +194,44 @@ ms_apply_tree_filter() {
         if [ -d secrets/users ]; then
             find secrets/users -mindepth 1 -maxdepth 1 -type f ! -name '*.example' -delete
         fi
+        rm -rf secrets/identity
+
+        # --- strip private flake inputs ---
+        # j0nix-identity-secrets points to the private Gitea-hosted
+        # identity flake. Its URL and lockfile node must never leak into
+        # the public mirror. settings.nix defaults to
+        # `secrets.identity.mode = "legacy"`, so removing the input does
+        # not break evaluation.
+        if [ -f flake.nix ]; then
+            python3 - <<'PYEOF' 2>/dev/null || true
+import re
+with open('flake.nix', 'r') as f:
+    src = f.read()
+for name in ('resolve-patch', 'j0nix-identity-secrets'):
+    pattern = re.compile(
+        r'\n\s*' + re.escape(name) + r'\s*=\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}\s*;\s*\n',
+        re.MULTILINE,
+    )
+    src = pattern.sub('\n', src, count=1)
+with open('flake.nix', 'w') as f:
+    f.write(src)
+PYEOF
+        fi
+        if [ -f flake.lock ]; then
+            python3 - <<'PYEOF' 2>/dev/null || true
+import json
+with open('flake.lock') as f:
+    d = json.load(f)
+for name in ('resolve-patch', 'j0nix-identity-secrets'):
+    d['nodes'].pop(name, None)
+    for node in d['nodes'].values():
+        if isinstance(node, dict) and 'inputs' in node:
+            node['inputs'].pop(name, None)
+with open('flake.lock', 'w') as f:
+    json.dump(d, f, indent=2)
+    f.write('\n')
+PYEOF
+        fi
 
         # --- inject public README ---
         if [ -f "$repo_root/README.md.public" ]; then
