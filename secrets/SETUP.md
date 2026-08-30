@@ -43,6 +43,11 @@ Recommended structure:
 - `secrets/hosts/Jonas-PC.yaml`
 - `secrets/users/jonas.yaml`
 
+Optional shared identity material can use the private-only paths
+`secrets/identity/ssh.yaml` and `secrets/identity/gpg.yaml`. The public mirror
+removes `secrets/identity/` automatically. Existing `secrets/users/*.yaml`
+files remain supported and do not need to be migrated.
+
 Use:
 
 - host files for system services and machine-local credentials
