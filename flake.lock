@@ -1145,6 +1145,26 @@
         "type": "github"
       }
     },
+    "j0nix-identity-secrets": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1788085615,
+        "narHash": "sha256-5638kVaEG+z63VbEkwDfIn5wpjBuurc1rK4rNF17/So=",
+        "ref": "refs/heads/main",
+        "rev": "3f080cbacd95b612cd6a92285304183e10b4a433",
+        "revCount": 1,
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/NixOS/j0nix-identity-secrets.git"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/NixOS/j0nix-identity-secrets.git"
+      }
+    },
     "m3shapes": {
       "flake": false,
       "locked": {
@@ -1636,6 +1656,7 @@
         "hyprland-minimizer-orteip": "hyprland-minimizer-orteip",
         "hyprland-plugins": "hyprland-plugins",
         "hyprmcp-src": "hyprmcp-src",
+        "j0nix-identity-secrets": "j0nix-identity-secrets",
         "mcp-language-server-src": "mcp-language-server-src",
         "nix-cachyos-kernel": "nix-cachyos-kernel",
         "nix-vscode-extensions": "nix-vscode-extensions",
