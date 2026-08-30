@@ -306,6 +306,7 @@ let
       name = "float-steam-windows";
       match.class = "^(steam)$";
       float = true;
+      center = true;
     }
     {
       name = "steam-friends-list";
