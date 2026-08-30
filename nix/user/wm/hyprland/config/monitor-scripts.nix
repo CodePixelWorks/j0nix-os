@@ -93,6 +93,11 @@ let
       "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name or (.id // "") == $name)' "$bindings_json"
     }
 
+    load_initial_output_state() {
+      local name="$1"
+      "$jq_bin" -ce --arg name "$name" '.[] | select(.name == $name or (.id // "") == $name)' "$initial_states_json"
+    }
+
     output_is_headless() {
       local name="$1"
       "$jq_bin" -e --arg name "$name" '.[] | select(.name == $name)' "$headless_outputs_json" >/dev/null 2>&1
@@ -1394,7 +1399,10 @@ let
       fi
 
       if [ -n "$target_key" ]; then
-        target_json="$(load_output_config "$target_key" 2>/dev/null || load_output_binding "$target_key" 2>/dev/null || true)"
+        # Restore the target from initialOutputStates first.  Bindings describe
+        # interactive controls and may omit enabledByDefault; using a binding
+        # for a Sunshine headless output would therefore re-enable it on stop.
+        target_json="$(load_initial_output_state "$target_key" 2>/dev/null || load_output_config "$target_key" 2>/dev/null || load_output_binding "$target_key" 2>/dev/null || true)"
         if [ -n "$target_json" ]; then
           target_monitor="$(resolve_output_name "$target_json")"
           if [ "$(get_output_field "$target_json" 'if (.enabledByDefault == false) then "0" else "1" end')" = "1" ]; then
