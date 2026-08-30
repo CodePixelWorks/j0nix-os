@@ -289,6 +289,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    j0nix-identity-secrets = {
+      url = "git+ssh://git@git.j0lab.xyz/NixOS/j0nix-identity-secrets.git";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     stylix = {
       url = "github:danth/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
