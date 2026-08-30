@@ -48,6 +48,7 @@ fi
 if [ -d "$tmp_dir/secrets/users" ]; then
   find "$tmp_dir/secrets/users" -mindepth 1 -maxdepth 1 -type f ! -name '*.example' -delete
 fi
+rm -rf "$tmp_dir/secrets/identity"
 rm -rf "$tmp_dir/secrets/.backups"
 
 # ---------------------------------------------------------------------------
