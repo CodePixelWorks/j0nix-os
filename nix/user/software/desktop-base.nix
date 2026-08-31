@@ -7,6 +7,7 @@
 let
   syncthingCfg = (settings.programs or { }).syncthing or { };
   syncthingEnabled = syncthingCfg.enable or false;
+  nvidiaEnabled = ((settings.drivers or { }).nvidia or { }).enable or false;
   enableUdiskieAutomount = true;
 
   configuredFileManagersRaw =
@@ -108,6 +109,24 @@ let
         --add-flags "--ozone-platform-hint=auto"
     '';
   };
+  mpvWithHardwareDecoding =
+    if nvidiaEnabled then
+      pkgs.symlinkJoin {
+        name = "mpv-nvidia-${pkgs.mpv.version}";
+        paths = [ pkgs.mpv ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          rm -f "$out/bin/mpv"
+          makeWrapper ${pkgs.mpv}/bin/mpv "$out/bin/mpv" \
+            --add-flags "--hwdec=auto-safe" \
+            --set LIBVA_DRIVER_NAME nvidia \
+            --set NVD_BACKEND direct \
+            --set LIBVA_DRIVERS_PATH /run/opengl-driver/lib/dri \
+            --prefix LD_LIBRARY_PATH : /run/opengl-driver/lib
+        '';
+      }
+    else
+      pkgs.mpv;
 in
 {
   j0nix.user.software.packages =
@@ -125,7 +144,7 @@ in
       blender
       gimp
       naps2
-      mpv
+      mpvWithHardwareDecoding
       gcc
       gnumake
       nodejs
