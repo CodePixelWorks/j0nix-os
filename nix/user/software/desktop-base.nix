@@ -126,6 +126,15 @@ in
       gimp
       naps2
       cine
+      # Complete multimedia codec/runtime set for Cine, browsers and other
+      # GStreamer consumers, including restricted codecs enabled by allowUnfree.
+      ffmpeg-full
+      gst_all_1.gstreamer
+      gst_all_1.gst-plugins-base
+      gst_all_1.gst-plugins-good
+      gst_all_1.gst-plugins-bad
+      gst_all_1.gst-plugins-ugly
+      gst_all_1.gst-libav
       gcc
       gnumake
       nodejs
