@@ -115,8 +115,8 @@ let
     postBuild = ''
       rm -f "$out/bin/clapper"
       makeWrapper ${pkgs.clapper}/bin/clapper "$out/bin/clapper" \
-        --set GST_GL_PLATFORM wayland \
-        --set GST_GL_API opengl
+        --set GDK_BACKEND x11 \
+        --set GST_GL_PLATFORM x11
     '';
   };
 in
