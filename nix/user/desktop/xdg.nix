@@ -77,8 +77,8 @@ let
       ]
   );
   archiveDesktopIds = [ "org.gnome.FileRoller.desktop" "org.kde.ark.desktop" ];
-  videoDesktopIds = [ "mpv.desktop" "org.gnome.Totem.desktop" ];
-  audioDesktopIds = [ "mpv.desktop" "org.gnome.Decibels.desktop" "org.gnome.Music.desktop" ];
+  videoDesktopIds = [ "com.github.rafostar.Clapper.desktop" ];
+  audioDesktopIds = [ "org.gnome.Decibels.desktop" "org.gnome.Music.desktop" ];
   imageMimeTypes = [
     "image/avif"
     "image/bmp"
