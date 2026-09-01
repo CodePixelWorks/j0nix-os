@@ -108,17 +108,6 @@ let
         --add-flags "--ozone-platform-hint=auto"
     '';
   };
-  clapperWayland = pkgs.symlinkJoin {
-    name = "clapper-wayland-${pkgs.clapper.version}";
-    paths = [ pkgs.clapper ];
-    nativeBuildInputs = [ pkgs.makeWrapper ];
-    postBuild = ''
-      rm -f "$out/bin/clapper"
-      makeWrapper ${pkgs.clapper}/bin/clapper "$out/bin/clapper" \
-        --set GDK_BACKEND x11 \
-        --set GST_GL_PLATFORM x11
-    '';
-  };
 in
 {
   j0nix.user.software.packages =
@@ -136,7 +125,7 @@ in
       blender
       gimp
       naps2
-      clapperWayland
+      cine
       gcc
       gnumake
       nodejs
