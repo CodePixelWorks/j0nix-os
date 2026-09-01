@@ -55,6 +55,7 @@ let
   shellModule = baseDir + "/nix/user/shells/${userSettings.shell}.nix";
   resolvedShellModule =
     if builtins.pathExists shellModule then shellModule else baseDir + "/nix/user/shells/zsh.nix";
+  terminalMultiplexerModule = baseDir + "/nix/user/shells/multiplexer.nix";
 
   wmShellModule = baseDir + "/nix/user/wm/hyprland/shells/${userSettings.wmShell}";
   wmShellExists = builtins.pathExists wmShellModule;
@@ -85,6 +86,7 @@ in
   (baseDir + "/nix/user/security/secrets.nix")
   resolvedShellModule
   (baseDir + "/nix/user/session-default.nix")
+  terminalMultiplexerModule
   (
     { lib, ... }:
     {
