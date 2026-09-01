@@ -194,7 +194,7 @@ User-provided reference config (documented here as a source-of-truth example for
     "apps": {
       "terminal": ["foot"],
       "audio": ["pavucontrol"],
-      "playback": ["clapper"],
+      "playback": ["cine"],
       "explorer": ["thunar"]
     },
     "battery": {
