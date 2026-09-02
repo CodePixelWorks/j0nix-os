@@ -501,6 +501,7 @@ in
         zip
         tree
         tmux
+        screen
         pwgen
         shellcheck
         shfmt
