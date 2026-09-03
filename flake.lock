@@ -1152,11 +1152,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788102282,
-        "narHash": "sha256-C6CtjQalJfBXFjHIpwF7nDZBmpgBgrFD+9VH89yG3XU=",
+        "lastModified": 1788382066,
+        "narHash": "sha256-sROzY9QKv3OgtqPVT6HBUqu/K/pcET+/3InQArXo/U4=",
         "ref": "refs/heads/main",
-        "rev": "375cc883e5c7dc55eaf293686a765a6b428dca5d",
-        "revCount": 4,
+        "rev": "36bcf46cd8522823eef4ae8e54bfa44d7f495acd",
+        "revCount": 6,
         "type": "git",
         "url": "ssh://git@git.j0lab.xyz/NixOS/j0nix-identity-secrets.git"
       },
