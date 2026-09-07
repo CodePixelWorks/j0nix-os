@@ -82,6 +82,8 @@ let
         exit 0
       fi
 
+      up_flags+=(--hostname='${cfg.hostName}')
+
       exec ${pkgs.tailscale}/bin/tailscale up "''${up_flags[@]}"
     '';
   };
@@ -293,7 +295,9 @@ in
         ++ (lib.mapAttrsToList (host: ip: "/${host}/${ip}") cfg.resolver.records);
     in
     {
-    networking.hostName = cfg.hostName;
+    # The profile owns the machine identity.  Keep generated NixOS defaults or
+    # unrelated modules from changing the hostname used by Tailscale.
+    networking.hostName = lib.mkForce cfg.hostName;
     networking.networkmanager.enable = cfg.networkmanager.enable;
     networking.networkmanager.dns = lib.mkIf resolverEnabled "systemd-resolved";
     networking.networkmanager.dispatcherScripts = lib.optionals (cfg.networkmanager.enable && cfg.routing.preferWired.enable) [
