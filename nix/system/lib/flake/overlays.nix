@@ -94,27 +94,29 @@ let
         "-Dlager_BUILD_TESTS=OFF"
       ];
     });
-    sunshine = prev.sunshine.overrideAttrs (old: {
-      buildInputs = (old.buildInputs or [ ]) ++ [ prev.boost.out ];
-      postPatch = (old.postPatch or "") + ''
-        substituteInPlace cmake/dependencies/Boost_Sunshine.cmake \
-          --replace-fail $'        system\n' ""
-        substituteInPlace cmake/dependencies/Boost_Sunshine.cmake \
-          --replace-fail 'find_package(Boost CONFIG ''${BOOST_VERSION} EXACT COMPONENTS ''${BOOST_COMPONENTS})' \
-                         $'set(Boost_NO_BOOST_CMAKE ON)\nfind_package(Boost 1.56 REQUIRED COMPONENTS ''${BOOST_COMPONENTS})'
-        substituteInPlace cmake/compile_definitions/linux.cmake \
-          --replace-fail 'add_compile_definitions(SUNSHINE_PLATFORM="linux")' \
-                         $'add_compile_definitions(SUNSHINE_PLATFORM="linux")\nadd_compile_definitions(BOOST_LOG_DYN_LINK BOOST_LOG_SETUP_DYN_LINK)'
-        substituteInPlace cmake/compile_definitions/common.cmake \
-          --replace-fail '        ''${Boost_LIBRARIES}' $'        ''${Boost_LIBRARIES}\n        ${prev.boost.out}/lib/libboost_log_setup.so\n        ${prev.boost.out}/lib/libboost_thread.so\n        ${prev.boost.out}/lib/libboost_chrono.so\n        ${prev.boost.out}/lib/libboost_atomic.so\n        ${prev.boost.out}/lib/libboost_regex.so\n        ${prev.boost.out}/lib/libboost_date_time.so'
-        substituteInPlace cmake/compile_definitions/common.cmake \
-          --replace-fail '        ${prev.boost.out}/lib/libboost_log_setup.so' \
-                         $'        ${prev.boost.out}/lib/libboost_log.so\n        ${prev.boost.out}/lib/libboost_log_setup.so'
-        substituteInPlace cmake/targets/common.cmake \
-          --replace-fail 'target_link_libraries(sunshine ''${SUNSHINE_EXTERNAL_LIBRARIES} ''${EXTRA_LIBS})' \
-                         $'target_link_libraries(sunshine ''${SUNSHINE_EXTERNAL_LIBRARIES} ''${EXTRA_LIBS})\ntarget_link_libraries(sunshine ${prev.boost.out}/lib/libboost_log.so ${prev.boost.out}/lib/libboost_log_setup.so ${prev.boost.out}/lib/libboost_thread.so ${prev.boost.out}/lib/libboost_chrono.so ${prev.boost.out}/lib/libboost_atomic.so ${prev.boost.out}/lib/libboost_regex.so ${prev.boost.out}/lib/libboost_date_time.so)'
-      '';
-    });
+    # Pinned Sunshine release (newer than this nixpkgs snapshot), based on the
+    # nixpkgs by-name expression, plus the boost-dynlink fixups this flake
+    # already needed (upstream's FetchContent boost conflicts with ours).
+    sunshine =
+      let
+        sunshineBase = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/sunshine-new.nix") { };
+      in
+      sunshineBase.overrideAttrs (old: {
+        buildInputs = (old.buildInputs or [ ]) ++ [ final.boost.out ];
+        postPatch = (old.postPatch or "") + ''
+          substituteInPlace cmake/compile_definitions/linux.cmake \
+            --replace-fail 'add_compile_definitions(SUNSHINE_PLATFORM="linux")' \
+                           $'add_compile_definitions(SUNSHINE_PLATFORM="linux")\nadd_compile_definitions(BOOST_LOG_DYN_LINK BOOST_LOG_SETUP_DYN_LINK)'
+          substituteInPlace cmake/compile_definitions/common.cmake \
+            --replace-fail '        ''${Boost_LIBRARIES}' $'        ''${Boost_LIBRARIES}\n        ${final.boost.out}/lib/libboost_log_setup.so\n        ${final.boost.out}/lib/libboost_thread.so\n        ${final.boost.out}/lib/libboost_chrono.so\n        ${final.boost.out}/lib/libboost_atomic.so\n        ${final.boost.out}/lib/libboost_regex.so\n        ${final.boost.out}/lib/libboost_date_time.so'
+          substituteInPlace cmake/compile_definitions/common.cmake \
+            --replace-fail '        ${final.boost.out}/lib/libboost_log_setup.so' \
+                           $'        ${final.boost.out}/lib/libboost_log.so\n        ${final.boost.out}/lib/libboost_log_setup.so'
+          substituteInPlace cmake/targets/common.cmake \
+            --replace-fail 'target_link_libraries(sunshine ''${SUNSHINE_EXTERNAL_LIBRARIES} ''${EXTRA_LIBS})' \
+                           $'target_link_libraries(sunshine ''${SUNSHINE_EXTERNAL_LIBRARIES} ''${EXTRA_LIBS})\ntarget_link_libraries(sunshine ${final.boost.out}/lib/libboost_log.so ${final.boost.out}/lib/libboost_log_setup.so ${final.boost.out}/lib/libboost_thread.so ${final.boost.out}/lib/libboost_chrono.so ${final.boost.out}/lib/libboost_atomic.so ${final.boost.out}/lib/libboost_regex.so ${final.boost.out}/lib/libboost_date_time.so)'
+        '';
+      });
   };
   resolveOverlay =
     if (inputs ? resolve-patch) then
