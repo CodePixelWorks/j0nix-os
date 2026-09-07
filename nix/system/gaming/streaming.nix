@@ -61,6 +61,7 @@ let
   sunshineDisplayTargetIsHeadless = sunshineDisplayTargetBackend == "hyprland-headless";
   sunshineDisplayTargetIsPhysical = sunshineDisplayTargetBackend == "physical-output";
   profileDetails = settings.profileDetails or { };
+  sunshineLanInterfaces = profileDetails.lanDiscoveryInterfaces or [ ];
   profileUnifiedOutputs = profileDetails.hyprlandOutputs or [ ];
   profileHeadlessOutput = profileDetails.hyprlandSunshineHeadlessOutput or null;
   profileInitialOutputStatesBase =
@@ -860,6 +861,14 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
         }
       );
   };
+
+  # Keep Sunshine reachable from the physical LAN even when Tailscale is
+  # active.  The generic openFirewall option is intentionally supplemented
+  # with interface-scoped rules because Tailscale adds its own firewall path.
+  networking.firewall.interfaces = lib.genAttrs sunshineLanInterfaces (_interface: {
+    allowedTCPPorts = [ 47984 47985 47986 47987 47988 47989 47990 48010 ];
+    allowedUDPPorts = [ 47998 47999 48000 48002 ];
+  });
 
   services.sunshine.applications.env = lib.mkMerge [
     sunshineStreamingAppEnvironment
