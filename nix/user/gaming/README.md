@@ -53,6 +53,16 @@ Managed by `j0nix.desktop.gaming.*` (typically set in `profiles/desktop/modules/
 - Enabled by `j0nix.desktop.gaming.launchers.heroic = true`
 - Package fallback is handled for `heroic` / `heroic-games-launcher`
 
+## Nexus Mods / No Man's Sky
+
+- `j0nix.desktop.gaming.launchers.nexusCollectionDl` installs `nexus-dl`, the Nexus collection/download backend.
+- `j0nix.desktop.gaming.launchers.noMansSkyPatcher` installs `nms-patcher` for native No Man's Sky PAK deployment.
+- Build Lua mods with AMUMSS first, then deploy only the resulting PAK files:
+  `nms-patcher deploy --mods-dir <staging-dir> --game-dir <No-Man's-Sky-dir>`
+- Deployment uses symlinks by default, refuses to overwrite unowned PAKs, and records every managed file. Use `--copy` only when a real copy is required.
+- `nms-patcher undeploy` removes only its recorded deployment and restores the game's original `DISABLEMODS.TXT` marker when it had disabled mods.
+- `nms-patcher status` reports the active deployment. `nms-patcher nexus ...` forwards a command to `nexus-dl`.
+
 ## Proton-CachyOS
 
 - Provider toggle: `j0nix.desktop.gaming.proton.provider = "cachyos"`
