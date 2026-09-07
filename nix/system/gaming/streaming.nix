@@ -846,10 +846,12 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
   # to HIGH but CAP_SYS_NICE capability is missing").  The upstream capSysAdmin
   # wrapper only grants cap_sys_admin, so define our own wrapper with both
   # capabilities and use it whenever Sunshine runs with a privileged wrapper.
+  # NOTE: cap_from_text accepts only ONE flag group per string —
+  # "cap_a+p,cap_b+p" is Invalid Argument; the caps must share one group.
   security.wrappers.sunshine = lib.mkIf sunshineNeedsPrivilegedWrapper {
     owner = "root";
     group = "root";
-    capabilities = "cap_sys_admin+p,cap_sys_nice+p";
+    capabilities = "cap_sys_admin,cap_sys_nice+p";
     source = lib.getExe config.services.sunshine.package;
   };
 
