@@ -550,6 +550,7 @@ in
       gemini   = false; # legacy alias for antigravity
       geminiDesktopEntry = true; # legacy alias for antigravityDesktopEntry
       hermes   = false;   # Hermes Agent CLI
+      # Hermes MCP servers are configured per user under userSettings.<name>.dev.ai.hermesMcp.
       image = {
         enable = false;    # ComfyUI, SwarmUI, InvokeAI image-generation stack
         baseDir = "/mnt/LinuxData/ai";
