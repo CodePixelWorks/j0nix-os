@@ -689,6 +689,10 @@ in
   # -------------------------------------------------------------------------
   sunshine = {
     disableLockScreenDuringStream = true;
+    network = {
+      # Prefer IPv4 when multiple LAN interfaces or Tailscale are active.
+      addressFamily = "ipv4"; # "ipv4" | "both"
+    };
     # Output/capture tuning lives here because it is host-facing.
     # Sunshine Web UI credentials belong under userSettings.<name>.programs.sunshine.webUi.
 
