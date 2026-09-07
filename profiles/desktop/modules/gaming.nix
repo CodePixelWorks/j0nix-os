@@ -51,6 +51,7 @@
       teamspeak6 = true;
       # Nexus collections and manually downloaded Nexus files.
       nexusCollectionDl = true;
+      noMansSkyPatcher = true;
     };
 
     streaming = {
