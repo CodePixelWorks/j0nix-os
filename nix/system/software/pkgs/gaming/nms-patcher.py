@@ -46,10 +46,12 @@ def save_state(state: dict) -> None:
 
 
 def game_mod_directory(game_dir: Path) -> Path:
-    bank_dir = game_dir / "GAMEDATA" / "PCBANKS"
-    if not bank_dir.is_dir():
+    game_data = game_dir / "GAMEDATA"
+    if not game_data.is_dir():
         fail(f"Not a No Man's Sky game directory: {game_dir}")
-    return bank_dir / "MODS"
+    # NMS 5.5 and later loads PAKs from game-specific directories here. Keeping
+    # this tool's files in their own directory makes ownership and rollback exact.
+    return game_data / "MODS" / "j0nix-nms-patcher"
 
 
 def collect_paks(mods_dir: Path) -> list[Path]:
@@ -103,8 +105,9 @@ def deploy(args: argparse.Namespace) -> None:
     if state:
         remove_owned_files(state)
 
-    disable_marker = target_dir.parent / DISABLE_MODS
-    backup_marker = target_dir.parent / DISABLED_BACKUP
+    bank_dir = game_dir / "GAMEDATA" / "PCBANKS"
+    disable_marker = bank_dir / DISABLE_MODS
+    backup_marker = bank_dir / DISABLED_BACKUP
     marker_was_disabled = False
     if disable_marker.exists():
         if backup_marker.exists():
@@ -146,7 +149,7 @@ def undeploy(args: argparse.Namespace) -> None:
     if args.game_dir and args.game_dir.expanduser().resolve() != game_dir:
         fail("The requested game directory does not match the recorded deployment")
     removed = remove_owned_files(state)
-    bank_dir = game_mod_directory(game_dir)
+    bank_dir = game_dir / "GAMEDATA" / "PCBANKS"
     backup_marker = bank_dir / DISABLED_BACKUP
     disable_marker = bank_dir / DISABLE_MODS
     if state.get("disabled_marker_moved") and backup_marker.exists():
