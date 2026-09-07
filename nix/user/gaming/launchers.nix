@@ -16,6 +16,7 @@ let
   rockstarEnabled = launchers.rockstar or false;
   gdlauncherEnabled = launchers.gdlauncher or true;
   teamspeak6Enabled = launchers.teamspeak6 or true;
+  nexusCollectionDlEnabled = launchers.nexusCollectionDl or false;
   gdlauncherPkg =
     if builtins.hasAttr "gdlauncher-carbon" pkgs then
       builtins.getAttr "gdlauncher-carbon" pkgs
@@ -53,7 +54,8 @@ lib.mkIf enabled {
     ++ lib.optionals (launchers.wineGui or false) [ pkgs.wineWow64Packages.waylandFull ]
     ++ lib.optionals (rockstarEnabled && (pkgs ? protontricks)) [ pkgs.protontricks ]
     ++ lib.optionals (gdlauncherEnabled && gdlauncherPkg != null) [ gdlauncherPkg ]
-    ++ lib.optionals (teamspeak6Enabled && teamspeak6Pkg != null) [ teamspeak6Pkg ];
+    ++ lib.optionals (teamspeak6Enabled && teamspeak6Pkg != null) [ teamspeak6Pkg ]
+    ++ lib.optionals nexusCollectionDlEnabled [ pkgs.nexus-collection-dl ];
 
   home.file = lib.mkIf (minecraftDataDir != null) {
     ".minecraft".source = config.lib.file.mkOutOfStoreSymlink minecraftDataDir;
