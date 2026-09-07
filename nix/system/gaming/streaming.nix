@@ -28,6 +28,7 @@ let
   sunshineNetworkPerfEnable = sunshineNetworkPerf.enable or true;
   sunshineNetworkPerfMode = sunshineNetworkPerf.mode or sunshinePerfMode;
   sunshineNetworkSettings = (settings.sunshine or { }).network or { };
+  sunshineAddressFamily = sunshineNetworkSettings.addressFamily or "ipv4";
   sunshinePacketSize = sunshineNetworkSettings.packetsize or 0;
   sunshineExtraGroups = lib.unique (
     lib.optionals sunshineAddRenderGroup [ "render" ] ++ lib.optionals sunshineAddInputGroup [ "input" ]
@@ -848,7 +849,10 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
       lib.mkDefault (pkgs.sunshine.override { cudaSupport = true; })
     );
     settings =
-      lib.optionalAttrs sunshineUseNvidia {
+      {
+        address_family = sunshineAddressFamily;
+      }
+      // lib.optionalAttrs sunshineUseNvidia {
         # Enable hardware NVENC encoding
         encoder = "nvenc";
       }
@@ -953,6 +957,10 @@ lib.mkIf (gamingEnabled && sunshineEnabled) {
     {
       assertion = builtins.isBool sunshineNetworkPerfEnable;
       message = "j0nix.desktop.gaming.streaming.sunshine.performance.network.enable must be a boolean";
+    }
+    {
+      assertion = builtins.elem sunshineAddressFamily [ "ipv4" "both" ];
+      message = "settings.sunshine.network.addressFamily must be ipv4 or both";
     }
     {
       assertion = sunshinePacketSize == 0 || (sunshinePacketSize >= 200 && sunshinePacketSize <= 65535);
