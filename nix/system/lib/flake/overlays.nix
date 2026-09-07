@@ -33,6 +33,7 @@ let
     gitea-mcp = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/gitea-mcp.nix") { };
     donsetch = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/donsetch.nix") { };
     nexus-collection-dl = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/nexus-collection-dl.nix") { };
+    nms-patcher = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/nms-patcher.nix") { };
     openldap = prev.openldap.overrideAttrs (_: {
       doCheck = false;
       doInstallCheck = false;
