@@ -97,9 +97,10 @@ let
           "wayland"
         ]
     );
-  # KMS capture requires privileged wrapper for DRM device access
-  sunshineNeedsPrivilegedWrapper =
-    sunshineCapSysAdmin && (!sunshineUsesWaylandCapture || sunshineDisplayTargetCapture == "kms");
+  # Privileged wrapper whenever capSysAdmin is opted in: KMS capture needs
+  # CAP_SYS_ADMIN for DRM access; EGL high-priority render contexts need
+  # CAP_SYS_NICE in every capture mode.  Both live in the wrapper below.
+  sunshineNeedsPrivilegedWrapper = sunshineCapSysAdmin;
   sunshineDisplayTargetResolutions =
     sunshineDisplayTargetSettings.resolutions or (sunshineVirtualDisplay.resolutions or [
       "2880x1800"
@@ -840,10 +841,22 @@ EOF
   ];
 in
 lib.mkIf (gamingEnabled && sunshineEnabled) {
+  # EGL wants CAP_SYS_NICE for high-priority GPU render contexts; without it
+  # the context silently drops to medium priority ("EGL: context priority set
+  # to HIGH but CAP_SYS_NICE capability is missing").  The upstream capSysAdmin
+  # wrapper only grants cap_sys_admin, so define our own wrapper with both
+  # capabilities and use it whenever Sunshine runs with a privileged wrapper.
+  security.wrappers.sunshine = lib.mkIf sunshineNeedsPrivilegedWrapper {
+    owner = "root";
+    group = "root";
+    capabilities = "cap_sys_admin+p,cap_sys_nice+p";
+    source = lib.getExe config.services.sunshine.package;
+  };
+
   services.sunshine = {
     enable = true;
     openFirewall = sunshineOpenFirewall;
-    capSysAdmin = sunshineNeedsPrivilegedWrapper;
+    capSysAdmin = false; # we define our own wrapper above (adds cap_sys_nice)
     autoStart = sunshineAutoStart;
     package = lib.mkIf sunshineUseNvidia (
       lib.mkDefault (pkgs.sunshine.override { cudaSupport = true; })
