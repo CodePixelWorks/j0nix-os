@@ -65,6 +65,7 @@ Notable controls:
 - `settings.dev.ai.ncp`: install the `ncp` (`@portel/ncp`) CLI as a unified MCP host/helper in the shared AI tool scope
 - `settings.userSettings.<name>.dev.ai.hermesMcp.gitea`: install the official Gitea MCP server and merge a secret-backed stdio entry into `~/.hermes/config.yaml`
 - `settings.userSettings.<name>.dev.ai.hermesMcp.donsetch`: install Donsetch, register its stdio MCP server, and optionally add an always-on Hermes plugin prompt section that prefers it for web search, fetch, and crawl while retaining the built-in backend as a fallback
+- `settings.userSettings.<name>.dev.ai.hermesMcp.opnsense`: register the OPNsense MCP server from npm; its API key and secret are read from the configured SOPS secrets (`opnsense/api_key` and `opnsense/api_secret`) at runtime, and plugin tools can be enabled with `includePlugins`
 - `settings.dev.ai.kiloCode`: install the `kilocode` CLI (`@kilocode/cli@alpha`) in the shared AI tool scope and add the `kilocode.kilo-code` VS Code extension
 - `settings.dev.ai.caveman`: install the `caveman` Agent Skill into `~/.codex/skills`, `~/.kilo/skills`, `~/.claude/skills`, and `~/.agents/skills`
 - `settings.dev.ai.opencode`: install the `opencode` terminal coding agent in the shared AI tool scope
