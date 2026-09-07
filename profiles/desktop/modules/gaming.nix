@@ -52,6 +52,7 @@
       # Nexus collections and manually downloaded Nexus files.
       nexusCollectionDl = true;
       noMansSkyPatcher = true;
+      amumss = true;
     };
 
     streaming = {
