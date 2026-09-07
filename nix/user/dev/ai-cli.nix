@@ -35,6 +35,26 @@ let
   hermesDonsetchEnabled = hermesEnabled && (hermesDonsetchCfg.enable or false);
   hermesDonsetchPreferred = hermesDonsetchEnabled && (hermesDonsetchCfg.preferForWeb or true);
   hermesDonsetchSupervised = hermesDonsetchCfg.supervised or true;
+  hermesOpnsenseCfg = hermesMcpCfg.opnsense or { };
+  hermesOpnsenseEnabled = hermesEnabled && (hermesOpnsenseCfg.enable or false);
+  hermesOpnsenseApiKeySecretName = hermesOpnsenseCfg.apiKeySecretName or "opnsense-api-key";
+  hermesOpnsenseApiSecretSecretName = hermesOpnsenseCfg.apiSecretSecretName or "opnsense-api-secret";
+  hermesOpnsenseApiKeySecretAvailable = lib.hasAttrByPath [ hermesOpnsenseApiKeySecretName ] (
+    config.sops.secrets or { }
+  );
+  hermesOpnsenseApiSecretSecretAvailable = lib.hasAttrByPath [ hermesOpnsenseApiSecretSecretName ] (
+    config.sops.secrets or { }
+  );
+  hermesOpnsenseApiKeySecretPath =
+    if hermesOpnsenseApiKeySecretAvailable then
+      config.sops.secrets.${hermesOpnsenseApiKeySecretName}.path
+    else
+      "/missing/${hermesOpnsenseApiKeySecretName}";
+  hermesOpnsenseApiSecretSecretPath =
+    if hermesOpnsenseApiSecretSecretAvailable then
+      config.sops.secrets.${hermesOpnsenseApiSecretSecretName}.path
+    else
+      "/missing/${hermesOpnsenseApiSecretSecretName}";
   hermesGiteaHost = hermesGiteaCfg.host or "https://gitea.com";
   hermesGiteaTokenSecretName = hermesGiteaCfg.tokenSecretName or "gitea-mcp-token";
   hermesGiteaTokenAvailable = lib.hasAttrByPath [ hermesGiteaTokenSecretName ] (
@@ -49,6 +69,31 @@ let
   hermesPackage = pkgs.hermes-agent-with-firecrawl or null;
   hermesGiteaPackage = pkgs.gitea-mcp or null;
   hermesDonsetchPackage = pkgs.donsetch or null;
+  hermesOpnsensePackage = pkgs.writeShellApplication {
+    name = "hermes-opnsense-mcp";
+    runtimeInputs = [ pkgs.coreutils pkgs.nodejs ];
+    text = ''
+      api_key_file=${lib.escapeShellArg hermesOpnsenseApiKeySecretPath}
+      api_secret_file=${lib.escapeShellArg hermesOpnsenseApiSecretSecretPath}
+
+      if [ ! -r "$api_key_file" ] || [ ! -s "$api_key_file" ]; then
+        echo "Hermes OPNsense MCP: API key secret is missing or unreadable" >&2
+        exit 1
+      fi
+      if [ ! -r "$api_secret_file" ] || [ ! -s "$api_secret_file" ]; then
+        echo "Hermes OPNsense MCP: API secret is missing or unreadable" >&2
+        exit 1
+      fi
+
+      export OPNSENSE_URL=${lib.escapeShellArg (hermesOpnsenseCfg.url or "https://opnsense.example.invalid")}
+      export OPNSENSE_API_KEY="$(cat "$api_key_file")"
+      export OPNSENSE_API_SECRET="$(cat "$api_secret_file")"
+      export OPNSENSE_VERIFY_SSL=${lib.escapeShellArg (if hermesOpnsenseCfg.verifySsl or true then "true" else "false")}
+      export INCLUDE_PLUGINS=${lib.escapeShellArg (if hermesOpnsenseCfg.includePlugins or false then "true" else "false")}
+
+      exec npx --yes @richard-stovall/opnsense-mcp-server "$@"
+    '';
+  };
   ncpPackage = pkgs.writeShellApplication {
     name = "ncp";
     runtimeInputs = [ pkgs.nodejs ];
@@ -122,9 +167,13 @@ let
     command = "${hermesDonsetchPackage}/bin/donsetch";
     args = [ "mcp" ] ++ lib.optional hermesDonsetchSupervised "--supervised";
   };
+  hermesOpnsenseServer = {
+    command = "${hermesOpnsensePackage}/bin/hermes-opnsense-mcp";
+  };
   hermesManagedServers =
     lib.optionalAttrs hermesGiteaEnabled { gitea = hermesGiteaServer; }
-    // lib.optionalAttrs hermesDonsetchEnabled { donsetch = hermesDonsetchServer; };
+    // lib.optionalAttrs hermesDonsetchEnabled { donsetch = hermesDonsetchServer; }
+    // lib.optionalAttrs hermesOpnsenseEnabled { opnsense = hermesOpnsenseServer; };
   hermesDonsetchPrompt = ''
     Web research policy:
     - Use the Donsetch MCP tools web_search, web_fetch, and web_crawl by default for internet search, page retrieval, and crawling.
@@ -287,13 +336,14 @@ lib.mkIf enabled {
     ]
     ++ lib.optionals hermesGiteaEnabled [ hermesGiteaPackage ]
     ++ lib.optionals hermesDonsetchEnabled [ hermesDonsetchPackage ]
+    ++ lib.optionals hermesOpnsenseEnabled [ hermesOpnsensePackage ]
     ++ lib.optionals (installScope == "user") [ pkgs.bubblewrap ];
 
   home.activation.codexMcpSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD ${codexMcpSync}/bin/codex-mcp-sync
   '';
 
-  home.activation.hermesMcpSync = lib.mkIf (hermesGiteaEnabled || hermesDonsetchEnabled) (
+  home.activation.hermesMcpSync = lib.mkIf (hermesGiteaEnabled || hermesDonsetchEnabled || hermesOpnsenseEnabled) (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       $DRY_RUN_CMD ${hermesMcpSync}/bin/hermes-mcp-sync
     ''
@@ -391,6 +441,22 @@ lib.mkIf enabled {
     {
       assertion = (!hermesDonsetchEnabled) || hermesDonsetchPackage != null;
       message = "Hermes Donsetch MCP is enabled but pkgs.donsetch is unavailable";
+    }
+    {
+      assertion = (!hermesOpnsenseEnabled) || ((hermesOpnsenseCfg.url or null) != null);
+      message = "Hermes OPNsense MCP requires settings.userSettings.<name>.dev.ai.hermesMcp.opnsense.url";
+    }
+    {
+      assertion = (!hermesOpnsenseEnabled) || hermesOpnsenseApiKeySecretAvailable;
+      message = "Hermes OPNsense MCP requires the configured API key SOPS secret";
+    }
+    {
+      assertion = (!hermesOpnsenseEnabled) || hermesOpnsenseApiSecretSecretAvailable;
+      message = "Hermes OPNsense MCP requires the configured API secret SOPS secret";
+    }
+    {
+      assertion = (!hermesOpnsenseEnabled) || lib.hasPrefix "https://" (hermesOpnsenseCfg.url or "");
+      message = "settings.userSettings.<name>.dev.ai.hermesMcp.opnsense.url must use HTTPS";
     }
     {
       assertion = (!hermesGiteaEnabled) || hermesGiteaTokenAvailable;
