@@ -55,6 +55,29 @@ let
       config.sops.secrets.${hermesOpnsenseApiSecretSecretName}.path
     else
       "/missing/${hermesOpnsenseApiSecretSecretName}";
+  # Plain HTTP is only acceptable for private network addresses (RFC 1918,
+  # loopback, link-local, ULA). Everything else must use HTTPS.
+  hermesOpnsenseUrl = hermesOpnsenseCfg.url or "";
+  hermesOpnsenseUrlHost = lib.head (
+    lib.splitString ":" (
+      lib.head (
+        lib.splitString "/" (
+          lib.removePrefix "https://" (lib.removePrefix "http://" hermesOpnsenseUrl)
+        )
+      )
+    )
+  );
+  hermesOpnsenseUrlPrivate =
+    lib.hasPrefix "localhost" hermesOpnsenseUrlHost
+    || builtins.match "10\\..*" hermesOpnsenseUrlHost != null
+    || builtins.match "192\\.168\\..*" hermesOpnsenseUrlHost != null
+    || builtins.match "172\\.(1[6-9]|2[0-9]|3[0-1])\\..*" hermesOpnsenseUrlHost != null
+    || builtins.match "127\\..*" hermesOpnsenseUrlHost != null
+    || builtins.match "169\\.254\\..*" hermesOpnsenseUrlHost != null
+    || hermesOpnsenseUrlHost == "[::1]"
+    || lib.hasPrefix "fe80:" hermesOpnsenseUrlHost
+    || lib.hasPrefix "fc" hermesOpnsenseUrlHost
+    || lib.hasPrefix "fd" hermesOpnsenseUrlHost;
   hermesGiteaHost = hermesGiteaCfg.host or "https://gitea.com";
   hermesGiteaTokenSecretName = hermesGiteaCfg.tokenSecretName or "gitea-mcp-token";
   hermesGiteaTokenAvailable = lib.hasAttrByPath [ hermesGiteaTokenSecretName ] (
@@ -86,8 +109,10 @@ let
       fi
 
       export OPNSENSE_URL=${lib.escapeShellArg (hermesOpnsenseCfg.url or "https://opnsense.example.invalid")}
-      export OPNSENSE_API_KEY="$(cat "$api_key_file")"
-      export OPNSENSE_API_SECRET="$(cat "$api_secret_file")"
+      OPNSENSE_API_KEY="$(cat "$api_key_file")"
+      export OPNSENSE_API_KEY
+      OPNSENSE_API_SECRET="$(cat "$api_secret_file")"
+      export OPNSENSE_API_SECRET
       export OPNSENSE_VERIFY_SSL=${lib.escapeShellArg (if hermesOpnsenseCfg.verifySsl or true then "true" else "false")}
       export INCLUDE_PLUGINS=${lib.escapeShellArg (if hermesOpnsenseCfg.includePlugins or false then "true" else "false")}
 
@@ -455,8 +480,15 @@ lib.mkIf enabled {
       message = "Hermes OPNsense MCP requires the configured API secret SOPS secret";
     }
     {
-      assertion = (!hermesOpnsenseEnabled) || lib.hasPrefix "https://" (hermesOpnsenseCfg.url or "");
-      message = "settings.userSettings.<name>.dev.ai.hermesMcp.opnsense.url must use HTTPS";
+      assertion = (!hermesOpnsenseEnabled) || lib.hasPrefix "http://" hermesOpnsenseUrl || lib.hasPrefix "https://" hermesOpnsenseUrl;
+      message = "settings.userSettings.<name>.dev.ai.hermesMcp.opnsense.url must start with http:// or https://";
+    }
+    {
+      assertion =
+        (!hermesOpnsenseEnabled)
+        || lib.hasPrefix "https://" hermesOpnsenseUrl
+        || hermesOpnsenseUrlPrivate;
+      message = "settings.userSettings.<name>.dev.ai.hermesMcp.opnsense.url must use HTTPS unless it points to a private network address (RFC 1918, loopback, link-local, ULA)";
     }
     {
       assertion = (!hermesGiteaEnabled) || hermesGiteaTokenAvailable;
