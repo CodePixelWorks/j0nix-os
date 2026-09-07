@@ -1,12 +1,17 @@
 {
   config,
   lib,
+  osConfig ? null,
   pkgs,
   settings,
   ...
 }:
 let
-  gaming = config.j0nix.desktop.gaming or { };
+  gaming =
+    if osConfig != null && osConfig ? j0nix && osConfig.j0nix ? desktop && osConfig.j0nix.desktop ? gaming then
+      osConfig.j0nix.desktop.gaming
+    else
+      config.j0nix.desktop.gaming or { };
   enabled = gaming.enable or true;
   launchers = gaming.launchers or { };
   protonCfg = gaming.proton or { };
