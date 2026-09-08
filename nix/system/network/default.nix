@@ -75,6 +75,9 @@ let
       ${lib.optionalString cfg.tailscale.enableSSH ''
         up_flags+=(--ssh)
       ''}
+      ${lib.optionalString (cfg.tailscale.operator != null) ''
+        up_flags+=(--operator='${cfg.tailscale.operator}')
+      ''}
 
       if ! ${pkgs.tailscale}/bin/tailscale status --json --peers=false 2>/dev/null \
         | ${pkgs.jq}/bin/jq -er '.BackendState' >/dev/null 2>&1; then
@@ -83,6 +86,7 @@ let
       fi
 
       up_flags+=(--hostname='${cfg.hostName}')
+      up_flags+=(--reset)
 
       exec ${pkgs.tailscale}/bin/tailscale up "''${up_flags[@]}"
     '';
@@ -171,6 +175,15 @@ in
         type = lib.types.bool;
         default = false;
         description = "Allow SSH access through the Tailscale network (--ssh).";
+      };
+      operator = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          Local user that unqualified `tailscale ssh` logins map to
+          (--operator). Null (default) leaves the operator unset and
+          relies on qualified logins (`tailscale ssh <user>@<host>`).
+        '';
       };
       splitDnsDomains = lib.mkOption {
         type = lib.types.listOf lib.types.str;
