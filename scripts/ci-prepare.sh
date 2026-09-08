@@ -2,17 +2,16 @@
 # ci-prepare.sh — nix + git auth preparation for the nix-flake-check step
 # (runs inside the nixos/nix image).
 #
-# Kept as a separate script so the CI log shows one curated line instead
-# of raw command traces (Drone echoes only `+ ./scripts/ci-prepare.sh`).
+# Auth strategy for private flake inputs (ssh://git@git.j0lab.xyz/...):
+# write an insteadOf rewrite (ssh → https+token) into the global git
+# config. Nix spawns git subprocesses for git-type flake fetches; those
+# subprocesses read ~/.gitconfig, so the rewrite applies transparently
+# without changing any flake.lock URL and without SSH keys.
 #
-# Auth strategy: Nix's flake fetcher is built on libgit2 and ignores
-# `git config url.*.insteadOf` — it dereferences `git+ssh://` URLs
-# directly and fails on host-key verification when the CI container has
-# no SSH key. The reliable intercept is `--override-input <name>=<url>`
-# on every `nix eval` call: Nix happily substitutes the URL on the fly.
-# We extract the bot token once, verify reachability, then export the
-# assembled `--override-input ...` flag string as CI_FLAKE_OVERRIDE_ARGS
-# for ci-flake-check.sh to splice in.
+# Note on Drone: each `commands:` entry runs as a separate subprocess.
+# An `export` here would be lost by the time ci-flake-check.sh runs, so
+# all communication happens through files (~/.gitconfig), not env vars.
+# sed is NOT available in the nixos/nix image — use printf / git config.
 
 set -eu
 
@@ -25,34 +24,27 @@ log "nix flakes enabled"
 # 2) Extract the Gitea bot token from the composed secret.
 log "git auth: resolving bot token from gitea_api_tokens"
 test -n "${GITEA_API_TOKENS:-}" || { log "FATAL gitea_api_tokens secret missing"; exit 1; }
-TOKEN=$(printf '%s' "$GITEA_API_TOKENS" | grep -o '"gitea_bot_ai": *"[^\"]*"' | cut -d'"' -f4)
+TOKEN=$(printf '%s' "$GITEA_API_TOKENS" | grep -o '"gitea_bot_ai": *"[^"]*"' | cut -d'"' -f4)
 test -n "$TOKEN" || { log "FATAL gitea_bot_ai entry not found in gitea_api_tokens"; exit 1; }
 
-# 3) Build --override-input flags for each private flake input.
-#    Format: name|NixOS/repo-name. The real input `name` must match the
-#    corresponding `inputs.<name>` in flake.nix.
-#
-#    We use a here-string (not a pipe) for the loop so that
-#    `set -eu` failures inside the loop propagate to the parent
-#    shell — `... | while read ...; do ...; done` runs the loop in
-#    a subshell where `exit 1` only kills the subshell.
-: > /tmp/ci-override-args
-while IFS='|' read -r input_name repo; do
-    [ -z "$input_name" ] && continue
-    url="https://oauth2:${TOKEN}@git.j0lab.xyz/${repo}.git"
-    if git ls-remote "$url" HEAD > /dev/null 2>&1; then
+# 3) Write the insteadOf rewrite (ssh → https+token) into the global
+#    git config. Any git subprocess spawned by nix reads this file and
+#    transparently rewrites ssh://git@git.j0lab.xyz/... URLs to
+#    https://oauth2:TOKEN@git.j0lab.xyz/... before connecting.
+rm -f "${HOME:-/root}/.gitconfig"
+git config --file "${HOME:-/root}/.gitconfig" \
+    "url.https://oauth2:${TOKEN}@git.j0lab.xyz/.insteadOf" \
+    "ssh://git@git.j0lab.xyz/"
+log "git auth: ssh transport rewritten to HTTPS (token hidden)"
+
+# 4) Fail fast with a clear message instead of a deep nix fetch error.
+#    ls-remote goes through the insteadOf rewrite too.
+PRIVATE_INPUT_REPOS="NixOS/j0nix-identity-secrets NixOS/davinci-resolve-studio-patch"
+for repo in $PRIVATE_INPUT_REPOS; do
+    if git ls-remote "ssh://git@git.j0lab.xyz/${repo}.git" HEAD > /dev/null 2>&1; then
         log "git auth: private flake input reachable (${repo} HEAD ok)"
     else
         log "FATAL cannot fetch ${repo} via HTTPS (token invalid?)"
         exit 1
     fi
-    printf -- '--override-input %s=%s\n' "$input_name" "$url" \
-        >> /tmp/ci-override-args
-done <<PRIVATE_INPUTS
-j0nix-identity-secrets|NixOS/j0nix-identity-secrets
-resolve-patch|NixOS/davinci-resolve-studio-patch
-PRIVATE_INPUTS
-
-# Single space-separated line, no trailing newline.
-export CI_FLAKE_OVERRIDE_ARGS="$(tr '\n' ' ' < /tmp/ci-override-args | sed 's/ $//')"
-log "git auth: override args prepared (token hidden)"
+done
