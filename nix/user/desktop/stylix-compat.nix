@@ -12,11 +12,21 @@ let
   ];
 in
 lib.mkIf stylixEnabled {
-  # Stylix defines these files with force=false. The previous j0nix theme stack
-  # already owned the same paths, so force replacement when Stylix is active.
-  xdg.configFile = lib.genAttrs stylixManagedConfigFiles (_: {
-    force = lib.mkForce true;
-  });
+  # Stylix manages theme config files (gtk-3.0/gtk.css, gtk-4.0/gtk.css,
+  # qt5ct/qt6ct, Kvantum, gtk-3.0/gtk-4.0 settings.ini) via its own
+  # `home.file` mechanism — NOT `xdg.configFile`. The previous
+  # implementation of this module also wrote `xdg.configFile.<path>.force =
+  # mkForce true` for these paths, which created empty xdg.configFile
+  # entries without a `source`. Home Manager's home-file layer would then
+  # read `xdg.configFile."gtk-3.0/gtk.css".source` while materializing the
+  # activation script and throw "accessed but has no value", breaking
+  # every homeConfiguration evaluation. The right thing here is therefore
+  # to leave `xdg.configFile` alone and only run the legacy cleanup.
+  #
+  # Future schema drift between Stylix and the legacy theme stack should be
+  # handled by extending `stylixManagedConfigFiles` below with explicit
+  # `xdg.configFile` overrides only when Stylix actually writes a given
+  # path through `xdg.configFile` instead of `home.file`.
 
   home.activation.cleanLegacyJ0nixThemeFiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     config_home="''${XDG_CONFIG_HOME:-$HOME/.config}"
