@@ -73,7 +73,7 @@ The correct ownership model is:
 Therefore:
 
 - Caelestia GTK theme writing should be disabled explicitly
-- Caelestia Qt theme writing should also be disabled when `user/desktop/qt-theme.nix` is active
+- Caelestia Qt theme writing should also be disabled because Stylix owns desktop Qt theming
 - session restore hooks are only fallback safety nets, not the primary solution
 
 ### Follow-up Rule

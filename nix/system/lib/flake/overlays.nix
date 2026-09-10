@@ -11,8 +11,6 @@ let
     gparted-j0nix = final.callPackage (baseDir + "/nix/system/software/pkgs/storage/gparted-j0nix.nix") {
       gparted = prev.gparted;
     };
-    darkly-qt6 = final.kdePackages.callPackage (baseDir + "/nix/system/software/pkgs/qt/darkly-qt6.nix") { };
-    hyprqt6engine = final.callPackage (baseDir + "/nix/system/software/pkgs/qt/hyprqt6engine.nix") { };
     mauiman4 = final.callPackage (baseDir + "/nix/system/software/pkgs/maui/mauiman4.nix") { };
     mauikit4 = final.callPackage (baseDir + "/nix/system/software/pkgs/maui/mauikit4.nix") { };
     naps2 = prev.naps2.overrideAttrs (old: {
