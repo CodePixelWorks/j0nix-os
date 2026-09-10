@@ -300,7 +300,7 @@
     };
 
     ags = {
-      url = "git+https://github.com/Aylur/ags?rev=60180a184cfb32b61a1d871c058b31a3b9b0743d";
+      url = "git+https://github.com/Aylur/ags?rev=bbee2f18939f1ec7ff720e717cf305e73635628f";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
