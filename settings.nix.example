@@ -555,6 +555,19 @@ in
         enable = false;    # ComfyUI, SwarmUI, InvokeAI image-generation stack
         baseDir = "/mnt/LinuxData/ai";
         modelsDir = "/mnt/LinuxData/ai/models/image";
+        downloadsDir = "/mnt/LinuxData/ai/downloads";
+        modelDirs = {
+          checkpoints = "/mnt/LinuxData/ai/models/image/checkpoints";
+          clip = "/mnt/LinuxData/ai/models/image/clip";
+          clip_vision = "/mnt/LinuxData/ai/models/image/clip_vision";
+          controlnet = "/mnt/LinuxData/ai/models/image/controlnet";
+          diffusion_models = "/mnt/LinuxData/ai/models/image/diffusion_models";
+          embeddings = "/mnt/LinuxData/ai/models/image/embeddings";
+          loras = "/mnt/LinuxData/ai/models/image/loras";
+          unet = "/mnt/LinuxData/ai/models/image/unet";
+          upscale_models = "/mnt/LinuxData/ai/models/image/upscale_models";
+          vae = "/mnt/LinuxData/ai/models/image/vae";
+        };
         outputsDir = "/mnt/LinuxData/ai/outputs";
         inputsDir = "/mnt/LinuxData/ai/input";
         workflowsDir = "/mnt/LinuxData/ai/workflows";
