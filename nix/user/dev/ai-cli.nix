@@ -11,7 +11,7 @@ let
   ai = dev.ai or { };
   imageCfg = ai.image or { };
   imageEnabled = imageCfg.enable or false;
-  imageBaseDir = imageCfg.baseDir or "/var/lib/j0nix-ai";
+  imageBaseDir = imageCfg.baseDir or "/mnt/LinuxData/ai";
   imageModelsDir = imageCfg.modelsDir or "${imageBaseDir}/models";
   imageDownloadsDir = imageCfg.downloadsDir or "${imageBaseDir}/downloads";
   imageHost = imageCfg.host or "127.0.0.1";
