@@ -89,6 +89,9 @@ in
         platform = lib.mkForce "qtct";
       };
       gnome.enable = true;
+      # qmlgreet is the active greeter; do not auto-enable Stylix's
+      # regreet target and its legacy programs.regreet compatibility option.
+      regreet.enable = false;
     };
   };
 
