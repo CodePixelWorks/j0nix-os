@@ -170,18 +170,6 @@ User-provided reference config (documented here as a source-of-truth example for
         "mono": "CaskaydiaCove NF",
         "sans": "Rubik"
       },
-      "size": {
-        "scale": 1
-      }
-    },
-    "padding": {
-      "scale": 1
-    },
-    "rounding": {
-      "scale": 1
-    },
-    "spacing": {
-      "scale": 1
     },
     "transparency": {
       "enabled": false,
