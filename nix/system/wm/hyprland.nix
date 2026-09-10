@@ -352,7 +352,7 @@ in
     ];
   };
 
-  programs.regreet.enable = useGreetd && selectedGreetdGreeter == "regreet";
+  services.displayManager.regreet.enable = useGreetd && selectedGreetdGreeter == "regreet";
 
   assertions = [
     {
