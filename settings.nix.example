@@ -668,8 +668,6 @@ in
     useUWSM = true;
 
     sessionEnv = {
-      # Qt platform theme shared across env files and desktop Qt module.
-      qtPlatformTheme = "hyprqt6engine"; # "hyprqt6engine" | "qtengine" | "qt6ct" | "qt5ct" | null
       # systemd app2unit slice assignment.
       app2unitSlices = "a=app-graphical.slice b=background-graphical.slice s=session-graphical.slice";
       extra = {};
