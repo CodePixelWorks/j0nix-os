@@ -14,6 +14,33 @@ let
   firefoxEnterpriseRoots = mkcertCfg.firefoxEnterpriseRoots or true;
   userOverrides = settings.userSettings or { };
   allUsers = builtins.attrNames userOverrides;
+  sshBootstrapProfiles = lib.concatLists (
+    map (
+      username:
+      let
+        sshHosts = ((((userOverrides.${username} or { }).dev or { }).ssh or { }).hosts or { });
+      in
+      lib.mapAttrsToList (name: profile: profile // { inherit username name; }) sshHosts
+    ) allUsers
+  );
+  privateGitBootstrapProfiles = lib.filter (
+    profile:
+    (profile.host or "") == "git.j0lab.xyz"
+    && (profile.identityFile or null) != null
+  ) sshBootstrapProfiles;
+  privateGitBootstrapConfig = lib.concatMapStringsSep "\n" (
+    profile:
+    let
+      identityFile = lib.replaceStrings [ "~" ] [ "/home/${profile.username}" ] profile.identityFile;
+    in
+    ''
+      Host git.j0lab.xyz
+        User ${profile.user or "git"}
+        IdentityFile ${identityFile}
+        IdentitiesOnly yes
+        IdentityAgent none
+    ''
+  ) privateGitBootstrapProfiles;
   mkcertUsers = lib.filter (
     name:
     let
@@ -249,6 +276,17 @@ in
       ++ lib.optionals (aiEnabled && aiInstallScope == "system") [ pkgs.bubblewrap ];
 
     programs.ssh.startAgent = sshEnabled && sshAgentEnable && sshAgentProvider == "openssh";
+
+    # NixOS rebuilds fetch private flake inputs as root before Home Manager
+    # can activate the per-user SSH config. Keep this bootstrap block limited
+    # to the private Git host and point it at the already-deployed user key;
+    # it contains no secret material.
+    environment.etc."ssh/ssh_config.d/20-j0nix-private-flakes.conf" = lib.mkIf (
+      privateGitBootstrapProfiles != [ ]
+    ) {
+      mode = "0644";
+      text = privateGitBootstrapConfig;
+    };
 
     systemd.user.services.j0nix-openssh-agent =
       lib.mkIf (sshEnabled && sshAgentEnable && sshAgentProvider == "auto")
