@@ -9,6 +9,35 @@
 let
   dev = settings.dev or { };
   ai = dev.ai or { };
+  imageCfg = ai.image or { };
+  imageEnabled = imageCfg.enable or false;
+  imageBaseDir = imageCfg.baseDir or "/var/lib/j0nix-ai";
+  imageModelsDir = imageCfg.modelsDir or "${imageBaseDir}/models";
+  imageDownloadsDir = imageCfg.downloadsDir or "${imageBaseDir}/downloads";
+  imageHost = imageCfg.host or "127.0.0.1";
+  imageApps = imageCfg.apps or { };
+  imageComfyPort = (imageApps.comfyui or { }).port or 8188;
+  imageInvokePort = (imageApps.invoke or { }).port or 9090;
+  imageModelSubdirs = imageCfg.modelSubdirs or [
+    "checkpoints"
+    "clip"
+    "clip_vision"
+    "controlnet"
+    "diffusion_models"
+    "embeddings"
+    "loras"
+    "unet"
+    "upscale_models"
+    "vae"
+  ];
+  imageModelDirs = imageCfg.modelDirs or (
+    builtins.listToAttrs (
+      map (name: {
+        inherit name;
+        value = "${imageModelsDir}/${name}";
+      }) imageModelSubdirs
+    )
+  );
   enabled = (dev.enable or true) && (ai.enable or true);
   installScope = ai.installScope or "system"; # "system" | "user"
   preferredTerminal = settings.preferredTerminal or "kitty";
@@ -28,6 +57,7 @@ let
   antigravityEnabled = ai.antigravity or (ai.gemini or true);
   antigravityDesktopEntry = ai.antigravityDesktopEntry or (ai.geminiDesktopEntry or true);
   hermesEnabled = ai.hermes or true;
+  hermesImageEnabled = hermesEnabled && imageEnabled;
   hermesMcpCfg = ai.hermesMcp or { };
   hermesGiteaCfg = hermesMcpCfg.gitea or { };
   hermesGiteaEnabled = hermesEnabled && (hermesGiteaCfg.enable or false);
@@ -204,6 +234,19 @@ let
     - Use the Donsetch MCP tools web_search, web_fetch, and web_crawl by default for internet search, page retrieval, and crawling.
     - Do not use CRW, Firecrawl, or Hermes' built-in web tools while Donsetch is available.
     - Fall back to another web backend only when Donsetch fails or lacks a required capability, and mention that fallback.
+  '';
+  hermesImagePrompt = ''
+    Local image-generation stack:
+    - ComfyUI API/UI: http://${imageHost}:${toString imageComfyPort}
+    - InvokeAI UI: http://${imageHost}:${toString imageInvokePort}
+    - Read the current paths and service state with `ai-image-info`.
+    - Shared model root: ${imageModelsDir}
+    - Stage downloaded files in: ${imageDownloadsDir}
+    - Put active model files into their category directory:
+      ${lib.concatStringsSep "\n" (map (name: "  ${name}: ${imageModelDirs.${name}}") imageModelSubdirs)}
+    - Prefer ComfyUI's HTTP API for workflow execution and use the shared
+      workflow directory. Do not download duplicate copies into UI state dirs.
+    - Ask before downloading or deleting large model files.
   '';
   hermesMcpSyncPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
   hermesMcpSync = pkgs.writeShellApplication {
@@ -394,6 +437,30 @@ lib.mkIf enabled {
               PROMPT,
               position="after_memory",
               max_chars=1000,
+          )
+    '';
+  };
+
+  home.file.".hermes/plugins/j0nix-ai-image/plugin.yaml" = lib.mkIf hermesImageEnabled {
+    text = ''
+      name: j0nix-ai-image
+      kind: standalone
+      version: 1.0.0
+      description: Shared ComfyUI and InvokeAI workspace guidance
+      author: j0nix-os
+    '';
+  };
+
+  home.file.".hermes/plugins/j0nix-ai-image/__init__.py" = lib.mkIf hermesImageEnabled {
+    text = ''
+      PROMPT = ${builtins.toJSON hermesImagePrompt}
+
+      def register(ctx):
+          ctx.register_system_prompt_section(
+              "j0nix.ai-image.shared-workspace",
+              PROMPT,
+              position="after_memory",
+              max_chars=2500,
           )
     '';
   };
