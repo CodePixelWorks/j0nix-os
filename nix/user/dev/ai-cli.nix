@@ -218,6 +218,23 @@ let
     ];
     env.GITEA_ACCESS_TOKEN_FILE = hermesGiteaTokenPath;
   };
+  comfyMcpPackage = pkgs.writeShellApplication {
+    name = "comfy-mcp";
+    runtimeInputs = [ pkgs.uv ];
+    text = ''
+      exec ${pkgs.uv}/bin/uvx \
+        --from comfy-mcp \
+        --from 'comfy-cli>=1.14.0' \
+        comfy-mcp "$@"
+    '';
+  };
+  hermesComfyServer = {
+    command = "${comfyMcpPackage}/bin/comfy-mcp";
+    env = {
+      COMFYUI_URL = "http://${imageHost}:${toString imageComfyPort}";
+      COMFY_MCP_REMOTE_SHARED_MODELS = imageModelsDir;
+    };
+  };
   hermesDonsetchServer = {
     command = "${hermesDonsetchPackage}/bin/donsetch";
     args = [ "mcp" ] ++ lib.optional hermesDonsetchSupervised "--supervised";
@@ -228,7 +245,8 @@ let
   hermesManagedServers =
     lib.optionalAttrs hermesGiteaEnabled { gitea = hermesGiteaServer; }
     // lib.optionalAttrs hermesDonsetchEnabled { donsetch = hermesDonsetchServer; }
-    // lib.optionalAttrs hermesOpnsenseEnabled { opnsense = hermesOpnsenseServer; };
+    // lib.optionalAttrs hermesOpnsenseEnabled { opnsense = hermesOpnsenseServer; }
+    // lib.optionalAttrs hermesImageEnabled { comfy = hermesComfyServer; };
   hermesDonsetchPrompt = ''
     Web research policy:
     - Use the Donsetch MCP tools web_search, web_fetch, and web_crawl by default for internet search, page retrieval, and crawling.
@@ -405,13 +423,16 @@ lib.mkIf enabled {
     ++ lib.optionals hermesGiteaEnabled [ hermesGiteaPackage ]
     ++ lib.optionals hermesDonsetchEnabled [ hermesDonsetchPackage ]
     ++ lib.optionals hermesOpnsenseEnabled [ hermesOpnsensePackage ]
+    ++ lib.optionals hermesImageEnabled [ comfyMcpPackage ]
     ++ lib.optionals (installScope == "user") [ pkgs.bubblewrap ];
 
   home.activation.codexMcpSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD ${codexMcpSync}/bin/codex-mcp-sync
   '';
 
-  home.activation.hermesMcpSync = lib.mkIf (hermesGiteaEnabled || hermesDonsetchEnabled || hermesOpnsenseEnabled) (
+  home.activation.hermesMcpSync = lib.mkIf (
+    hermesGiteaEnabled || hermesDonsetchEnabled || hermesOpnsenseEnabled || hermesImageEnabled
+  ) (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       $DRY_RUN_CMD ${hermesMcpSync}/bin/hermes-mcp-sync
     ''
