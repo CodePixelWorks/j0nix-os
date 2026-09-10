@@ -70,6 +70,7 @@ let
         }) modelSubdirs
       )
   );
+  modelDownloads = cfg.modelDownloads or [ ];
 
   commonEnv = {
     HF_HOME = "/data/cache/huggingface";
@@ -310,6 +311,50 @@ let
     '';
   };
 
+  modelInstaller = pkgs.writeShellApplication {
+    name = "ai-image-models";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.curl
+    ];
+    text = ''
+      action="''${1:-install}"
+      case "$action" in
+        install)
+          ;;
+        list)
+          cat <<'EOF'
+      ${lib.concatStringsSep "\n" (map (model: "${model.name}: ${model.repo}/${model.file} -> ${modelDirs.${model.targetDir or "checkpoints"}}/${model.targetName or (builtins.baseNameOf model.file)}") modelDownloads)}
+      EOF
+          exit 0
+          ;;
+        *)
+          echo "Usage: ai-image-models [install|list]" >&2
+          exit 2
+          ;;
+      esac
+
+      ${lib.concatMapStringsSep "\n" (model: let
+        targetDir = model.targetDir or "checkpoints";
+        targetName = model.targetName or (builtins.baseNameOf model.file);
+        targetPath = "${modelDirs.${targetDir}}/${targetName}";
+        url = "https://huggingface.co/${model.repo}/resolve/main/${model.file}?download=true";
+      in ''
+        target=${lib.escapeShellArg targetPath}
+        mkdir -p "$(dirname "$target")"
+        if [ -f "$target" ]; then
+          echo "Already present: $target"
+        else
+          echo "Downloading ${model.name}"
+          curl -fL --retry 5 --retry-delay 5 -C - -o "$target.part" ${lib.escapeShellArg url}
+          mv "$target.part" "$target"
+        fi
+        echo "Verifying ${model.name}"
+        echo ${lib.escapeShellArg "${model.sha256}  ${targetPath}"} | sha256sum -c -
+      '') modelDownloads}
+    '';
+  };
+
   prepareDirs = [
     baseDir
     modelsDir
@@ -425,6 +470,7 @@ lib.mkIf enabled {
   j0nix.software.systemPackages = [
     stackLauncher
     imageInfo
+    modelInstaller
   ]
   ++ lib.optional appDefaults.comfyui.enable (
     mkLauncher "comfyui" "http://${host}:${toString appDefaults.comfyui.port}"
