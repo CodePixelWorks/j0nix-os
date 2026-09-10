@@ -116,12 +116,6 @@ let
       center = true;
     }
     {
-      name = "float-qt-config-tools";
-      match.class = "^(qt5ct|qt6ct)$";
-      float = true;
-      center = true;
-    }
-    {
       name = "float-xdg-desktop-portal-gtk";
       match.class = "^(xdg-desktop-portal-gtk)$";
       float = true;
