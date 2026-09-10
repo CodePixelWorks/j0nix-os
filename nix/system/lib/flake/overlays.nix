@@ -25,7 +25,6 @@ let
                          '<Theme mode="default">Dark</Theme>'
       '';
     });
-    qmlgreet = final.callPackage (baseDir + "/nix/system/software/pkgs/greetd/qmlgreet.nix") { };
     bettersoundcloud = final.callPackage (baseDir + "/nix/system/software/pkgs/audio/better-soundcloud.nix") { };
     mcp-language-server-j0nix = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/mcp-language-server.nix") {
       src = inputs.mcp-language-server-src;
