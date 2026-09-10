@@ -66,7 +66,7 @@ Caelestia can manage more than its own shell colours. The upstream CLI also has 
 That matters for this repo because desktop theming is already managed separately in:
 
 - `user/desktop/theme.nix` for GTK
-- `user/desktop/qt-theme.nix` for Qt/KDE
+- Stylix for GTK and Qt/KDE desktop theming
 
 Operational rule:
 - Caelestia should own shell theming.
