@@ -2,7 +2,7 @@
 let
   cfg = (settings.programs or { }).windowsExe or { };
   enabled = cfg.enable or false;
-  bottlesPkg = pkgs.bottles-j0nix or pkgs.bottles;
+  bottlesPkg = pkgs.bottles;
   setAsDefaultHandler = cfg.setAsDefaultHandler or true;
   bottleName = cfg.bottleName or "Default";
   bottleEnvironment = cfg.environment or "application";
