@@ -631,14 +631,6 @@ let
                   $defaultMaterial
                 end
             )
-          | .appearance.padding = (.appearance.padding // {})
-          | .appearance.padding.scale = ((.appearance.padding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
-          | .appearance.spacing = (.appearance.spacing // {})
-          | .appearance.spacing.scale = ((.appearance.spacing.scale // 1) | as_num(1) | clamp(0.5; 2.0))
-          | .appearance.rounding = (.appearance.rounding // {})
-          | .appearance.rounding.scale = ((.appearance.rounding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
-          | .appearance.font.size = (.appearance.font.size // {})
-          | .appearance.font.size.scale = ((.appearance.font.size.scale // 1) | as_num(1) | clamp(0.5; 2.0))
         ' "$cfg_file" >"$tmp_file" \
           && mv -f "$tmp_file" "$cfg_file"
       }
@@ -1146,14 +1138,6 @@ in
                           $defaultMaterial
                         end
                     )
-                | .appearance.padding = (.appearance.padding // {})
-                | .appearance.padding.scale = ((.appearance.padding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
-                | .appearance.spacing = (.appearance.spacing // {})
-                | .appearance.spacing.scale = ((.appearance.spacing.scale // 1) | as_num(1) | clamp(0.5; 2.0))
-                | .appearance.rounding = (.appearance.rounding // {})
-                | .appearance.rounding.scale = ((.appearance.rounding.scale // 1) | as_num(1) | clamp(0.5; 2.0))
-                | .appearance.font.size = (.appearance.font.size // {})
-                | .appearance.font.size.scale = ((.appearance.font.size.scale // 1) | as_num(1) | clamp(0.5; 2.0))
                 | if $wallpaperDir != "" then
                     .paths = ((.paths // {}) | .wallpaperDir = $wallpaperDir)
                   else
