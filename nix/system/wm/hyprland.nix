@@ -44,9 +44,7 @@ let
   qmlgreetConfigPath = "/etc/qmlgreet/qmlgreet.conf";
   qmlgreetColorSchemePath = "/etc/qmlgreet/j0nix.colors";
   dmsGreeterHyprConfigPath = "/etc/greetd/hypr.lua";
-  # qmlgreet is retained as a compatibility branch, but is not part of the
-  # default configuration because the current nixpkgs does not provide it.
-  qmlgreetPackage = if selectedGreetdGreeter == "qmlgreet" then pkgs.qmlgreet else null;
+  qmlgreetPackage = pkgs.qmlgreet;
   qmlgreetSettings = (settings.greetd or { }).qmlgreet or { };
   caelestiaThemeSettings = ((settings.programs or { }).caelestia or { }).theme or { };
   qmlgreetMode = settings.colorSchemePreference or (caelestiaThemeSettings.mode or "dark");
@@ -354,7 +352,7 @@ in
     ];
   };
 
-  services.displayManager.regreet.enable = useGreetd && selectedGreetdGreeter == "regreet";
+  programs.regreet.enable = useGreetd && selectedGreetdGreeter == "regreet";
 
   assertions = [
     {
