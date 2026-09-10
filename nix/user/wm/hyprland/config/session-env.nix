@@ -5,7 +5,6 @@
 }:
 let
   sessionEnvCfg = hyprlandCfg.sessionEnv or { };
-  stylixEnabled = ((settings.stylix or { }).enable or false);
   sessionEnvBase = {
     QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
     QT_AUTO_SCREEN_SCALE_FACTOR = "1";
@@ -23,12 +22,7 @@ let
       sessionEnvCfg.app2unitSlices
         or "a=app-graphical.slice b=background-graphical.slice s=session-graphical.slice";
   };
-  sessionEnv =
-    sessionEnvBase
-    // lib.optionalAttrs (!stylixEnabled && (sessionEnvCfg.qtPlatformTheme or null) != null) {
-      QT_QPA_PLATFORMTHEME = sessionEnvCfg.qtPlatformTheme;
-    }
-    // (sessionEnvCfg.extra or { });
+  sessionEnv = sessionEnvBase // (sessionEnvCfg.extra or { });
 in
 {
   inherit sessionEnvCfg sessionEnv;

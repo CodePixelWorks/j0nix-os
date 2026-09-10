@@ -59,7 +59,6 @@ in
           # Environment
           env=QT_QPA_PLATFORM,wayland
           env=ELECTRON_OZONE_PLATFORM_HINT,auto
-          env=QT_QPA_PLATFORMTHEME,gtk3
 
           # Startup
 
