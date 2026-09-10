@@ -41,9 +41,9 @@ in
 
   config = lib.mkIf cfg.enable {
     services.journald = {
-      storage = if journalCfg.persistent then "persistent" else "auto";
       settings.Journal = {
         Compress = boolToYesNo journalCfg.compress;
+        Storage = if journalCfg.persistent then "persistent" else "auto";
         SystemMaxUse = journalCfg.systemMaxUse;
         RuntimeMaxUse = journalCfg.runtimeMaxUse;
         MaxRetentionSec = journalCfg.maxRetention;
