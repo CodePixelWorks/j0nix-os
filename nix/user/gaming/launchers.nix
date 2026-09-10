@@ -17,7 +17,7 @@ let
   protonCfg = gaming.proton or { };
   minecraftCfg = (settings.programs or { }).minecraft or { };
   minecraftDataDir = minecraftCfg.dataDir or null;
-  bottlesPkg = pkgs.bottles;
+  bottlesPkg = pkgs.bottles.override { removeWarningPopup = true; };
   rockstarEnabled = launchers.rockstar or false;
   gdlauncherEnabled = launchers.gdlauncher or true;
   teamspeak6Enabled = launchers.teamspeak6 or true;
