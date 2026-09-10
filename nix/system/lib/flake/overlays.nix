@@ -44,6 +44,7 @@ let
       # revision, which blocks the system closure through gvfs/udiskie.
       doCheck = false;
     });
+    qmlgreet = final.callPackage (baseDir + "/nix/system/software/pkgs/greetd/qmlgreet.nix") { };
     vagrant-with-libvirt = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/vagrant-with-libvirt.nix") {
       nixpkgsSrc = nixpkgs.outPath;
     };
