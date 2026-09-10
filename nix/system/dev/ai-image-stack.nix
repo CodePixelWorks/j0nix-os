@@ -17,7 +17,7 @@ let
   useNvidia = cfg.useNvidia or nvidiaEnabled;
   uid = cfg.uid or 1000;
   gid = cfg.gid or 100;
-  baseDir = cfg.baseDir or "/var/lib/j0nix-ai";
+  baseDir = cfg.baseDir or "/mnt/LinuxData/ai";
   host = cfg.host or "127.0.0.1";
   autoStartDefault = cfg.autoStart or false;
 
