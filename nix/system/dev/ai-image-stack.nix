@@ -40,6 +40,7 @@ let
       null;
 
   modelsDir = cfg.modelsDir or "${baseDir}/models";
+  downloadsDir = cfg.downloadsDir or "${baseDir}/downloads";
   outputsDir = cfg.outputsDir or "${baseDir}/outputs";
   inputsDir = cfg.inputsDir or "${baseDir}/input";
   workflowsDir = cfg.workflowsDir or "${baseDir}/workflows";
@@ -60,6 +61,15 @@ let
       "upscale_models"
       "vae"
     ];
+
+  modelDirs = cfg.modelDirs or (
+    builtins.listToAttrs (
+        map (name: {
+          inherit name;
+          value = "${modelsDir}/${name}";
+        }) modelSubdirs
+      )
+  );
 
   commonEnv = {
     HF_HOME = "/data/cache/huggingface";
@@ -93,6 +103,7 @@ let
       volumes = [
         "${stateDir}/comfyui:/workspace"
         "${modelsDir}:/workspace/ComfyUI/models"
+        "${downloadsDir}:/workspace/ComfyUI/models/downloads"
         "${outputsDir}/comfyui:/workspace/ComfyUI/output"
         "${inputsDir}:/workspace/ComfyUI/input"
         "${workflowsDir}/comfyui:/workspace/ComfyUI/user/default/workflows"
@@ -115,6 +126,7 @@ let
       volumes = [
         "${stateDir}/invokeai:/invokeai"
         "${modelsDir}:/invokeai/models"
+        "${downloadsDir}:/invokeai/downloads"
         "${outputsDir}/invoke:/invokeai/outputs"
         "${inputsDir}:/invokeai/input"
         "${cacheDir}:/data/cache"
@@ -161,6 +173,7 @@ let
             "${stateDir}/swarmui/dlnodes:/SwarmUI/src/BuiltinExtensions/ComfyUIBackend/DLNodes"
             "${stateDir}/swarmui/extensions:/SwarmUI/src/Extensions"
             "${modelsDir}:/SwarmUI/Models"
+            "${downloadsDir}:/SwarmUI/Downloads"
             "${outputsDir}/swarmui:/SwarmUI/Output"
             "${workflowsDir}/swarmui:/SwarmUI/src/BuiltinExtensions/ComfyUIBackend/CustomWorkflows"
           ];
@@ -273,9 +286,34 @@ let
     '';
   };
 
+  imageInfo = pkgs.writeShellApplication {
+    name = "ai-image-info";
+    runtimeInputs = [ pkgs.coreutils ];
+    text = ''
+      cat <<'EOF'
+      Shared AI image workspace
+
+      Model root: ${modelsDir}
+      Download/import root: ${downloadsDir}
+      Inputs: ${inputsDir}
+      Outputs: ${outputsDir}
+      Workflows: ${workflowsDir}
+
+      Model categories:
+      ${lib.concatStringsSep "\n" (map (name: "  ${name}: ${modelDirs.${name}}") modelSubdirs)}
+
+      Services:
+        ComfyUI: http://${host}:${toString appDefaults.comfyui.port}
+        InvokeAI: http://${host}:${toString appDefaults.invoke.port}
+        SwarmUI: http://${host}:${toString swarm.port}
+      EOF
+    '';
+  };
+
   prepareDirs = [
     baseDir
     modelsDir
+    downloadsDir
     outputsDir
     "${outputsDir}/comfyui"
     "${outputsDir}/invoke"
@@ -299,7 +337,8 @@ let
     appsDir
     (builtins.dirOf swarm.sourceDir)
   ]
-  ++ map (subdir: "${modelsDir}/${subdir}") modelSubdirs;
+  ++ map (subdir: "${modelsDir}/${subdir}") modelSubdirs
+  ++ builtins.attrValues modelDirs;
 in
 lib.mkIf enabled {
   virtualisation = {
@@ -385,6 +424,7 @@ lib.mkIf enabled {
 
   j0nix.software.systemPackages = [
     stackLauncher
+    imageInfo
   ]
   ++ lib.optional appDefaults.comfyui.enable (
     mkLauncher "comfyui" "http://${host}:${toString appDefaults.comfyui.port}"
