@@ -568,6 +568,22 @@ in
           upscale_models = "/mnt/LinuxData/ai/models/image/upscale_models";
           vae = "/mnt/LinuxData/ai/models/image/vae";
         };
+        modelDownloads = [
+          {
+            name = "Krea 2 Turbo FP8 scaled";
+            repo = "Comfy-Org/Krea-2";
+            file = "diffusion_models/krea2_turbo_fp8_scaled.safetensors";
+            targetDir = "diffusion_models";
+            sha256 = "eb4dd8c612cfd10f64f25b057e6e6bbcb5737c94a7372177e456dbf7579502f1";
+          }
+          {
+            name = "MajicMIX realistic v7";
+            repo = "kli017/majicMIX-realistic-v7";
+            file = "majicmixRealistic_v7.safetensors";
+            targetDir = "checkpoints";
+            sha256 = "7c819b6d13663ed720c2254f4fe18373107dfef2448d337913c8fc545640881e";
+          }
+        ];
         outputsDir = "/mnt/LinuxData/ai/outputs";
         inputsDir = "/mnt/LinuxData/ai/input";
         workflowsDir = "/mnt/LinuxData/ai/workflows";
