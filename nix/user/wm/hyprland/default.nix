@@ -551,11 +551,6 @@ in
       message = "settings.hyprland.sessionEnv.extra must be an attribute set of environment variables.";
     }
     {
-      assertion =
-        (sessionEnvCfg.qtPlatformTheme or null) == null || builtins.isString sessionEnvCfg.qtPlatformTheme;
-      message = "settings.hyprland.sessionEnv.qtPlatformTheme must be a string or null.";
-    }
-    {
       assertion = !minimizerEnabled || minimizerCommand != "";
       message = "settings.hyprland.minimizer.command must not be empty when minimizer is enabled.";
     }
