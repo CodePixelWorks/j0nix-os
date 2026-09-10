@@ -42,14 +42,14 @@ in
   config = lib.mkIf cfg.enable {
     services.journald = {
       storage = if journalCfg.persistent then "persistent" else "auto";
-      extraConfig = lib.concatStringsSep "\n" [
-        "Compress=${boolToYesNo journalCfg.compress}"
-        "SystemMaxUse=${journalCfg.systemMaxUse}"
-        "RuntimeMaxUse=${journalCfg.runtimeMaxUse}"
-        "MaxRetentionSec=${journalCfg.maxRetention}"
-        "SplitMode=uid"
-        "SyncIntervalSec=5m"
-      ];
+      settings.Journal = {
+        Compress = boolToYesNo journalCfg.compress;
+        SystemMaxUse = journalCfg.systemMaxUse;
+        RuntimeMaxUse = journalCfg.runtimeMaxUse;
+        MaxRetentionSec = journalCfg.maxRetention;
+        SplitMode = "uid";
+        SyncIntervalSec = "5m";
+      };
     };
 
     systemd.tmpfiles.rules = lib.optional journalCfg.persistent
