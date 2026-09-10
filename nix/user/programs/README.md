@@ -48,7 +48,7 @@ Important limitation:
 
 `Windows EXE` integration is configured via `settings.programs.windowsExe.*` and provides:
 - a managed default Bottles bottle (`winexe-prefix-init`)
-- the patched `bottles-j0nix` runtime for consistent runner execution
+- the nixpkgs `bottles` runtime for Windows application execution
 - optional preferred runner pin (`runner = "kron4ek-wine-11.2-amd64"`)
 - automatic bottle creation plus j0nix template seeding for first use
 - optional auto-bootstrap service on login (`autoBootstrapOnLogin = true`)
