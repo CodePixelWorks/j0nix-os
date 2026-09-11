@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, settings, ... }:
 let
   cfg = config.j0nix.desktop.network;
   wifiManagerDesktopEntry = pkgs.makeDesktopItem {
@@ -308,6 +308,11 @@ in
         ++ (lib.mapAttrsToList (host: ip: "/${host}/${ip}") cfg.resolver.records);
     in
     {
+    j0nix.desktop.network = lib.mkDefault (lib.recursiveUpdate (settings.network or { }) {
+      hostName = settings.profileDetails.hostname;
+      discovery.mdns.allowInterfaces = settings.profileDetails.lanDiscoveryInterfaces or [ ];
+    });
+
     # The profile owns the machine identity.  Keep generated NixOS defaults or
     # unrelated modules from changing the hostname used by Tailscale.
     networking.hostName = lib.mkForce cfg.hostName;
