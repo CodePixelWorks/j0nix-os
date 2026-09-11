@@ -2,12 +2,25 @@
 let
   cfg = config.j0nix.desktop.accounts;
   allowedShells = [ "zsh" "fish" ];
+  userSettings = settings.userSettings or { };
+  configuredUsers = builtins.attrNames userSettings;
+  primaryUser = if configuredUsers == [ ] then null else builtins.head configuredUsers;
+  configuredDefaultShell =
+    if primaryUser == null then
+      "zsh"
+    else
+      (userSettings.${primaryUser}.shell or "zsh");
+  configuredUserShells = lib.mapAttrs (
+    _: userConfig: userConfig.shell
+  ) (lib.filterAttrs (_: userConfig: userConfig ? shell) userSettings);
+  configuredDockerUsers = lib.filter (
+    username: ((((userSettings.${username} or { }).dev or { }).docker or { }).enable or false)
+  ) configuredUsers;
   shellForUser = username: cfg.userShells.${username} or cfg.defaultShell;
   resolvedShells = map shellForUser cfg.users;
   hmServiceNames = map (username: "home-manager-${username}") cfg.users;
   useZsh = builtins.elem "zsh" resolvedShells;
   useFish = builtins.elem "fish" resolvedShells;
-  userSettings = settings.userSettings or { };
   resolvePasswordSecret = username:
     let
       userCfg = userSettings.${username} or { };
@@ -82,6 +95,14 @@ in
   };
 
   config = {
+    j0nix.desktop.accounts = {
+      users = lib.mkDefault configuredUsers;
+      defaultShell = lib.mkDefault configuredDefaultShell;
+      userShells = lib.mkDefault configuredUserShells;
+      dockerUsers = lib.mkDefault configuredDockerUsers;
+      autologinUser = lib.mkDefault null;
+    };
+
     programs.zsh.enable = useZsh;
     programs.fish.enable = useFish;
     services.getty.autologinUser = lib.mkForce cfg.autologinUser;
