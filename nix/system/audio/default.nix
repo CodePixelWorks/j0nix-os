@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  settings,
   ...
 }:
 let
@@ -61,6 +62,8 @@ in
   };
 
   config = {
+    j0nix.desktop.audio = lib.mkDefault (settings.audio or { });
+
     services.pipewire = {
       enable = usePipeWire;
       pulse.enable = usePipeWire;
