@@ -16,8 +16,7 @@ let
       config.users.groups.users.gid
     else
       100;
-  storageCfg = settings.storage or { };
-  systemMounts = storageCfg.systemMounts or [ ];
+  systemMounts = settings.profileDetails.storage.systemMounts or [ ];
   userOverrides = settings.userSettings or { };
   sambaShares = lib.concatMap (
     username:
