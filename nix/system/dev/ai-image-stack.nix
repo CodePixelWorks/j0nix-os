@@ -12,6 +12,9 @@ let
   cfg = ai.image or { };
   enabled = cfg.enable or false;
   apps = cfg.apps or { };
+  runtime = cfg.runtime or "rootful";
+  rootlessEnabled = runtime == "rootless";
+  rootlessUser = cfg.rootlessUser or null;
 
   nvidiaEnabled = ((config.j0nix.desktop.drivers or { }).nvidia or { }).enable or false;
   useNvidia = cfg.useNvidia or nvidiaEnabled;
@@ -137,7 +140,9 @@ let
     };
   };
 
-  enabledOciApps = lib.filterAttrs (_: app: app.enable) appDefaults;
+  enabledOciApps = lib.filterAttrs (
+    name: app: app.enable && !(rootlessEnabled && name == "comfyui")
+  ) appDefaults;
 
   swarmCfg = apps.swarmui or { };
   swarm = {
@@ -229,7 +234,7 @@ let
   };
 
   mkLauncher =
-    name: url: service:
+    name: url: service: userService:
     pkgs.writeShellApplication {
       name = "ai-${name}";
       runtimeInputs = [
@@ -237,22 +242,23 @@ let
         pkgs.xdg-utils
       ];
       text = ''
+        systemctl_cmd="${if userService then "systemctl --user" else "systemctl"}"
         action="''${1:-open}"
         case "$action" in
           start)
-            exec systemctl start ${service}
+            exec $systemctl_cmd start ${service}
             ;;
           stop)
-            exec systemctl stop ${service}
+            exec $systemctl_cmd stop ${service}
             ;;
           restart)
-            exec systemctl restart ${service}
+            exec $systemctl_cmd restart ${service}
             ;;
           status)
-            exec systemctl status ${service} --no-pager
+            exec $systemctl_cmd status ${service} --no-pager
             ;;
           open)
-            systemctl start ${service}
+            $systemctl_cmd start ${service}
             exec xdg-open ${lib.escapeShellArg url}
             ;;
           *)
@@ -388,6 +394,7 @@ in
 lib.mkIf enabled {
   virtualisation = {
     docker.enable = true;
+    docker.rootless.enable = rootlessEnabled;
     oci-containers = {
       backend = lib.mkDefault "docker";
       containers = lib.mapAttrs' (
@@ -474,16 +481,25 @@ lib.mkIf enabled {
   ]
   ++ lib.optional appDefaults.comfyui.enable (
     mkLauncher "comfyui" "http://${host}:${toString appDefaults.comfyui.port}"
-      "docker-ai-comfyui.service"
+      (if rootlessEnabled then "ai-comfyui.service" else "docker-ai-comfyui.service")
+      rootlessEnabled
   )
   ++ lib.optional appDefaults.invoke.enable (
-    mkLauncher "invoke" "http://${host}:${toString appDefaults.invoke.port}" "docker-ai-invoke.service"
+    mkLauncher "invoke" "http://${host}:${toString appDefaults.invoke.port}" "docker-ai-invoke.service" false
   )
   ++ lib.optional swarm.enable (
-    mkLauncher "swarmui" "http://${host}:${toString swarm.port}" "ai-swarmui.service"
+    mkLauncher "swarmui" "http://${host}:${toString swarm.port}" "ai-swarmui.service" false
   );
 
   assertions = [
+    {
+      assertion = builtins.elem runtime [ "rootful" "rootless" ];
+      message = "settings.dev.ai.image.runtime must be one of: rootful, rootless";
+    }
+    {
+      assertion = !rootlessEnabled || (rootlessUser != null && rootlessUser != "");
+      message = "settings.dev.ai.image.rootlessUser must be set when runtime is rootless";
+    }
     {
       assertion = builtins.isString baseDir && lib.hasPrefix "/" baseDir;
       message = "settings.dev.ai.image.baseDir must be an absolute path";

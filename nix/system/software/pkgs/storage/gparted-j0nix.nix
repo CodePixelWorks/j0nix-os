@@ -26,7 +26,7 @@ if [ -n "\''${DISPLAY:-}" ] && "\$xhost_bin" >/dev/null 2>&1; then
   fi
 fi
 
-"\$pkexec_bin" --disable-internal-agent env \
+"\$pkexec_bin" env \
   DISPLAY="\''${DISPLAY:-}" \
   XAUTHORITY="\''${XAUTHORITY:-}" \
   GDK_BACKEND=x11 \
