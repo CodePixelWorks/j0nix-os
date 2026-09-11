@@ -19,9 +19,10 @@ Related deep dives:
 ```mermaid
 flowchart TD
   A[settings.nix] --> B[flake.nix]
-  B --> |mkNixosSystem<br>{ profileName = "desktop"; hostname = "Jonas-PC"; }| C[nixosSystem profiles/<profile>/configuration.nix]
+  B --> H[nix/system/lib/flake/outputs.nix]
+  H --> |discover profiles/<profile>/details.nix| C[nixosSystem profiles/<profile>/configuration.nix]
   C --> D[nixosConfigurations.<hostname>]
-  B --> |mkHomeManagerConfiguration| E[mkUserSettings per user]
+  H --> |mkHomeManagerConfiguration| E[mkUserSettings per user]
   E --> F[home-manager modules per user]
   F --> G[homeConfigurations."user@hostname"]
 ```
@@ -47,7 +48,7 @@ flowchart LR
 
 ## Settings Resolution
 
-`flake.nix` merges:
+The flake output helper merges:
 
 1. Base settings from `settings.nix`
 2. Per-user overrides from `userSettings.<name>`

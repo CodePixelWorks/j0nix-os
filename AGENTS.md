@@ -127,8 +127,8 @@ nix flake lock --update-input nixpkgs
 ## Architecture
 
 ### Configuration Flow
-1. Root `flake.nix` defines hosts via `mkNixosSystem` / `mkHomeManagerConfiguration` with explicit `profileName`.
-2. `mkNixosSystem` loads the profile directory (`profiles/<profileName>/`), merging `details.nix` and `secrets.nix` into the settings object.
+1. Root `flake.nix` declares inputs and delegates output construction to `nix/system/lib/flake/outputs.nix`.
+2. The flake helper discovers profiles with `profiles/<profileName>/details.nix`, maps each `details.nix.hostname` to a NixOS output, and loads the matching `configuration.nix` / `secrets.nix`.
 3. `mkUserSettings` applies per-user overrides from `settings.userSettings`.
 4. System profile `profiles/<profile>/configuration.nix` is built.
 5. Home Manager modules are composed per user from `nix/user/*`, `profiles/`, and `nix/roles/home/`.
