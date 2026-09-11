@@ -14,10 +14,68 @@ let
   imageBaseDir = imageCfg.baseDir or "/mnt/LinuxData/ai";
   imageModelsDir = imageCfg.modelsDir or "${imageBaseDir}/models";
   imageDownloadsDir = imageCfg.downloadsDir or "${imageBaseDir}/downloads";
+  imageOutputsDir = imageCfg.outputsDir or "${imageBaseDir}/outputs";
+  imageInputsDir = imageCfg.inputsDir or "${imageBaseDir}/input";
+  imageWorkflowsDir = imageCfg.workflowsDir or "${imageBaseDir}/workflows";
+  imageCacheDir = imageCfg.cacheDir or "${imageBaseDir}/cache";
+  imageStateDir = imageCfg.stateDir or "${imageBaseDir}/state";
   imageHost = imageCfg.host or "127.0.0.1";
+  imageRuntime = imageCfg.runtime or "rootful";
+  imageRootlessUser = imageCfg.rootlessUser or null;
+  rootlessComfyEnabled = imageEnabled
+    && imageRuntime == "rootless"
+    && imageRootlessUser == (settings.username or "");
   imageApps = imageCfg.apps or { };
   imageComfyEnabled = (imageApps.comfyui or { }).enable or true;
   imageComfyPort = (imageApps.comfyui or { }).port or 8188;
+  imageComfy = imageApps.comfyui or { };
+  imageComfyImage = imageComfy.image or "ghcr.io/ai-dock/comfyui:latest-cuda";
+  imageComfyContainerPort = imageComfy.containerPort or 8188;
+  imageComfyArgs = imageComfy.comfyArgs or "--listen 0.0.0.0";
+  imageComfyEnvironment = imageComfy.environment or { };
+  imageComfyVolumes = [
+    "${imageStateDir}/comfyui:/workspace"
+    "${imageModelsDir}:/workspace/ComfyUI/models"
+    "${imageDownloadsDir}:/workspace/ComfyUI/models/downloads"
+    "${imageOutputsDir}/comfyui:/workspace/ComfyUI/output"
+    "${imageInputsDir}:/workspace/ComfyUI/input"
+    "${imageWorkflowsDir}/comfyui:/workspace/ComfyUI/user/default/workflows"
+    "${imageCacheDir}:/data/cache"
+  ] ++ (imageComfy.volumes or [ ]);
+  rootlessComfyStart = pkgs.writeShellApplication {
+    name = "j0nix-rootless-comfyui-start";
+    runtimeInputs = [ pkgs.docker ];
+    text = ''
+      set -eu
+      export DOCKER_HOST="unix://''${XDG_RUNTIME_DIR}/docker.sock"
+      exec docker run \
+        --name ai-comfyui \
+        --rm \
+        --pull missing \
+        ${lib.concatMapStringsSep " " (volume: "-v ${lib.escapeShellArg volume}") imageComfyVolumes} \\
+        -e COMFYUI_ARGS=${lib.escapeShellArg imageComfyArgs} \\
+        -e COMFYUI_PORT_HOST=${toString imageComfyContainerPort} \\
+        -e HF_HOME=/data/cache/huggingface \\
+        -e HUGGINGFACE_HUB_CACHE=/data/cache/huggingface/hub \\
+        -e PGID=${toString (imageCfg.gid or 100)} \\
+        -e PUID=${toString (imageCfg.uid or 1000)} \\
+        -e TRANSFORMERS_CACHE=/data/cache/huggingface/transformers \\
+        -e WEB_ENABLE_AUTH=false \\
+        -e XDG_CACHE_HOME=/data/cache/xdg \\
+        ${lib.concatStringsSep " " (lib.mapAttrsToList (name: value: "-e ${lib.escapeShellArg "${name}=${toString value}"}") imageComfyEnvironment)} \\
+        -p ${lib.escapeShellArg "${imageHost}:${toString imageComfyPort}:${toString imageComfyContainerPort}"} \\
+        --device=nvidia.com/gpu=all \\
+        ${lib.escapeShellArg imageComfyImage}
+    '';
+  };
+  rootlessComfyStop = pkgs.writeShellApplication {
+    name = "j0nix-rootless-comfyui-stop";
+    runtimeInputs = [ pkgs.docker ];
+    text = ''
+      export DOCKER_HOST="unix://''${XDG_RUNTIME_DIR}/docker.sock"
+      docker stop ai-comfyui 2>/dev/null || true
+    '';
+  };
   imageInvokePort = (imageApps.invoke or { }).port or 9090;
   imageModelSubdirs = imageCfg.modelSubdirs or [
     "checkpoints"
@@ -490,6 +548,22 @@ lib.mkIf enabled {
   xdg.configFile."codex/mcp-remotes.json" = lib.mkIf (mcpRemotes != { }) {
     text = builtins.toJSON {
       inherit mcpRemotes;
+    };
+  };
+
+  systemd.user.services.ai-comfyui = lib.mkIf rootlessComfyEnabled {
+    Unit = {
+      Description = "Rootless ComfyUI container";
+      After = [ "docker.service" ];
+      Wants = [ "docker.service" ];
+    };
+    Service = {
+      Type = "simple";
+      ExecStart = lib.getExe rootlessComfyStart;
+      ExecStop = lib.getExe rootlessComfyStop;
+      Restart = "on-failure";
+      RestartSec = 10;
+      TimeoutStartSec = "30min";
     };
   };
 
