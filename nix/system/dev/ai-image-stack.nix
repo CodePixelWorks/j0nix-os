@@ -239,6 +239,8 @@ let
       runtimeInputs = [
         pkgs.systemd
         pkgs.xdg-utils
+        pkgs.curl
+        pkgs.coreutils
       ];
       text = ''
         systemctl_cmd="${if userService then "systemctl --user" else "systemctl"}"
@@ -258,7 +260,14 @@ let
             ;;
           open)
             $systemctl_cmd start ${service}
-            exec xdg-open ${lib.escapeShellArg url}
+            for _ in $(seq 1 120); do
+              if curl --fail --silent --show-error --max-time 2 ${lib.escapeShellArg url} >/dev/null; then
+                exec xdg-open ${lib.escapeShellArg url}
+              fi
+              sleep 1
+            done
+            echo "Timed out waiting for ${name} at ${url}" >&2
+            exit 1
             ;;
           *)
             echo "Usage: ai-${name} [open|start|stop|restart|status]" >&2
