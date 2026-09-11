@@ -21,8 +21,6 @@ let
       pkgs.nautilus
     else if name == "nemo" then
       pkgs.nemo
-    else if name == "dolphin" then
-      if (pkgs ? kdePackages) && (pkgs.kdePackages ? dolphin) then pkgs.kdePackages.dolphin else null
     else if name == "thunar" then
       if (pkgs ? xfce) && (pkgs.xfce ? thunar) then pkgs.xfce.thunar else null
     else
@@ -53,8 +51,6 @@ let
   };
 
   hasNautilus = builtins.elem "nautilus" configuredFileManagers;
-  hasDolphin = builtins.elem "dolphin" configuredFileManagers;
-
   preferredTerminalRaw = settings.preferredTerminal or null;
   terminalPackage =
     name:
@@ -116,7 +112,6 @@ in
       gh
       starship
       qbittorrent
-      telegram-desktop
       nextcloud-client
       drawio
       simplescreenrecorder
@@ -156,8 +151,7 @@ in
     ++ lib.optionals (iconThemeEnabled && iconThemePackage != null) (
       [ iconThemePackage ] ++ iconThemeFallbackPackages
     )
-    ++ lib.optionals hasNautilus [ nautilusAdminPackage ]
-    ++ lib.optionals hasDolphin [ pkgs.kdePackages.kio-admin ];
+    ++ lib.optionals hasNautilus [ nautilusAdminPackage ];
 
   home.file = lib.mkIf hasNautilus {
     ".local/share/nautilus-python/extensions/nautilus-admin.py".source = "${nautilusAdminPackage}/share/nautilus-python/extensions/nautilus-admin.py";
