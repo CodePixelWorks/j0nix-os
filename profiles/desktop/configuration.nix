@@ -37,7 +37,6 @@ in
     ./modules/gaming.nix
     ./modules/security.nix
     ./modules/storage.nix
-    ./modules/accounts.nix
     ./modules/virtualisation.nix
     ./modules/thermal.nix
     ./modules/drivers.nix
