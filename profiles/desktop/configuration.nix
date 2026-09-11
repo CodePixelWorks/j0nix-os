@@ -27,7 +27,6 @@ in
     ./modules/custom.nix
     ./modules/fonts.nix
     ./modules/printing.nix
-    ./modules/network.nix
     ./modules/kernel.nix
     ./modules/gaming.nix
     ./modules/security.nix
