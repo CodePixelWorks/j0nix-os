@@ -15,5 +15,6 @@ in
     ./controllers.nix
     ./streaming.nix
     ./extras.nix
+    ./mod-manager.nix
   ];
 }

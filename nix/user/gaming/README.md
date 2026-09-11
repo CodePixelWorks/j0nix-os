@@ -55,37 +55,16 @@ Managed by `j0nix.desktop.gaming.*` (typically set in `profiles/desktop/modules/
 
 ## Nexus Mods / No Man's Sky
 
-Game mods are configured through `settings.gaming.mods.targets`. Each target
-has a stable name, a Steam App ID (or an explicit `gameDir`), a backend, and a
-user-owned staging directory. The generic command resolves Steam libraries and
-dispatches to the selected backend:
+Game mods are managed by Amethyst when `settings.gaming.modManager.provider =
+"amethyst"`. It detects Steam libraries, supports No Man's Sky, installs Nexus
+mods and collections, manages profiles/conflicts, and deploys via symlinks,
+hardlinks, or a VFS. Open it from the application launcher, select No Man's
+Sky, install the desired mods, and deploy the profile before starting the game.
+The previous custom `game-mods`/`nms-patcher` implementation is removed;
+`nms-amumss` remains available for building Lua-based mods.
 
-```nix
-gaming.mods = {
-  enable = true;
-  targets.no-mans-sky = {
-    steamAppId = 275850;
-    backend = "nms-pak";
-    modsDir = "~/.local/share/j0nix/game-mods/no-mans-sky";
-  };
-};
-```
-
-Use `game-mods list`, `game-mods install no-mans-sky`, `game-mods status
-no-mans-sky`, and `game-mods remove no-mans-sky`. The first backend is the
-safe NMS PAK deployer; additional game backends can be added without changing
-the profile interface. Mod archives should be unpacked into the staging
-directory before installation.
-
-- `j0nix.desktop.gaming.launchers.nexusCollectionDl` installs `nexus-dl`, the Nexus collection/download backend.
-- `j0nix.desktop.gaming.launchers.noMansSkyPatcher` installs `nms-patcher` for native No Man's Sky PAK deployment.
 - `j0nix.desktop.gaming.launchers.amumss` installs `nms-amumss`, a pinned AMUMSS runner for Lua scripts.
-- Build Lua mods with AMUMSS first, then deploy only the resulting PAK files:
-  `nms-patcher deploy --mods-dir <staging-dir> --game-dir <No-Man's-Sky-dir>`
 - Run AMUMSS with `nms-amumss --game-dir <No-Man's-Sky-dir> --scripts-dir <Lua-directory>`. It is extracted into `~/.local/share/nms-patcher/` and runs through Wine; AMUMSS fetches the matching MBINCompiler when building.
-- Deployment uses symlinks by default, refuses to overwrite unowned PAKs, and records every managed file. Use `--copy` only when a real copy is required.
-- `nms-patcher undeploy` removes only its recorded deployment and restores the game's original `DISABLEMODS.TXT` marker when it had disabled mods.
-- `nms-patcher status` reports the active deployment. `nms-patcher nexus ...` forwards a command to `nexus-dl`.
 
 ## Proton-CachyOS
 

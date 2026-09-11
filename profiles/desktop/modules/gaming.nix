@@ -50,8 +50,8 @@
       gdlauncher = true;
       teamspeak6 = true;
       # Nexus collections and manually downloaded Nexus files.
-      nexusCollectionDl = true;
-      noMansSkyPatcher = true;
+      nexusCollectionDl = false;
+      noMansSkyPatcher = false;
       amumss = true;
     };
 
