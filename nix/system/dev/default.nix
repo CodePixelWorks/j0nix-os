@@ -51,7 +51,7 @@ let
   mkcertEnabled = mkcertUsers != [ ];
   dockerCfg = dev.docker or { };
   dockerDataRoot = dockerCfg.dataRoot or null;
-  systemMounts = (settings.storage or { }).systemMounts or [ ];
+  systemMounts = (settings.profileDetails.storage or { }).systemMounts or [ ];
   isPathUnderMount = mountPoint: dataRoot:
     let
       mp = lib.removeSuffix "/" mountPoint;
