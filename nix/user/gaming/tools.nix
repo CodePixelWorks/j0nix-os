@@ -25,7 +25,6 @@ let
   protonNtSync = proton.ntsync or { };
   protonNtSyncEnabled = protonNtSync.enable or false;
   launchers = gaming.launchers or { };
-  modsCfg = settings.gaming.mods or { };
   controllers = gaming.controllers or { };
   rockstarEnabled = launchers.rockstar or false;
   gamescopeEnabled = perf.gamescope or true;
@@ -476,10 +475,7 @@ EOF
   '';
 in
 lib.mkIf enabled {
-  j0nix.user.software.packages =
-    lib.optionals (modsCfg.enable or false) [ pkgs.game-mods ]
-    ++
-    [
+  j0nix.user.software.packages = [
       # Steam launch options examples:
       #   steam-session-run --gamemode %command%
       #   steam-session-run --wayland --gamemode %command%
