@@ -30,8 +30,6 @@ let
       "org.gnome.Nautilus.desktop"
     else if name == "nemo" then
       "nemo.desktop"
-    else if name == "dolphin" then
-      "org.kde.dolphin.desktop"
     else if name == "thunar" then
       "thunar.desktop"
     else
@@ -45,7 +43,7 @@ let
         if preferGnomeApps then
           [ "org.gnome.Nautilus.desktop" ]
         else
-          [ "org.gnome.Nautilus.desktop" "org.kde.dolphin.desktop" ];
+          [ "org.gnome.Nautilus.desktop" ];
     in
     lib.unique (preferred ++ configured ++ fallback);
   textDesktopIds = lib.unique (
@@ -264,8 +262,8 @@ in
       message = "preferredFileManager must also be included in the effective per-user fileManagers list";
     }
     {
-      assertion = lib.all (name: builtins.elem name [ "nautilus" "nemo" "dolphin" "thunar" ]) configuredFileManagers;
-      message = "The effective per-user fileManagers list may only contain: nautilus, nemo, dolphin, thunar";
+      assertion = lib.all (name: builtins.elem name [ "nautilus" "nemo" "thunar" ]) configuredFileManagers;
+      message = "The effective per-user fileManagers list may only contain: nautilus, nemo, thunar";
     }
   ];
 }
