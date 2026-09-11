@@ -16,6 +16,7 @@ let
   imageDownloadsDir = imageCfg.downloadsDir or "${imageBaseDir}/downloads";
   imageHost = imageCfg.host or "127.0.0.1";
   imageApps = imageCfg.apps or { };
+  imageComfyEnabled = (imageApps.comfyui or { }).enable or true;
   imageComfyPort = (imageApps.comfyui or { }).port or 8188;
   imageInvokePort = (imageApps.invoke or { }).port or 9090;
   imageModelSubdirs = imageCfg.modelSubdirs or [
@@ -503,6 +504,20 @@ lib.mkIf enabled {
     categories = [
       "Development"
       "Utility"
+    ];
+  };
+
+  xdg.desktopEntries.comfyui = lib.mkIf (imageEnabled && imageComfyEnabled) {
+    name = "ComfyUI";
+    genericName = "AI Image Generation";
+    comment = "Open the local ComfyUI image-generation workspace";
+    exec = "ai-comfyui open";
+    icon = "applications-graphics";
+    terminal = false;
+    type = "Application";
+    categories = [
+      "Graphics"
+      "Photography"
     ];
   };
 
