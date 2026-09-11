@@ -24,8 +24,7 @@ let
   host = cfg.host or "127.0.0.1";
   autoStartDefault = cfg.autoStart or false;
 
-  storageCfg = settings.storage or { };
-  systemMounts = storageCfg.systemMounts or [ ];
+  systemMounts = (settings.profileDetails.storage or { }).systemMounts or [ ];
   isPathUnderMount =
     mountPoint: path:
     let
