@@ -26,6 +26,9 @@ Recommended modern baseline roles:
 - `3d-creation`
 - `3d-printing`
 
+Optional roles:
+- `messaging` installs Signal and Telegram without adding them to the desktop baseline.
+
 Roles should append into central aggregators (e.g. `j0nix.software.*`, `j0nix.user.software.*`, `j0nix.desktop.sysctl.extraFragments`) instead of writing directly to final package/sysctl outputs.
 
 Example split:
