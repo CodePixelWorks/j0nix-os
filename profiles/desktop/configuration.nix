@@ -33,7 +33,6 @@ in
     ./modules/storage.nix
     ./modules/virtualisation.nix
     ./modules/thermal.nix
-    ./modules/drivers.nix
     ./modules/support-drivers.nix
     ../../nix/system/apps
     ../../nix/system/software
