@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, lib, settings, ... }:
 let
   cfg = config.j0nix.desktop.locale;
 in
@@ -26,6 +26,16 @@ in
   };
 
   config = {
+    j0nix.desktop.locale = lib.mkDefault {
+      timeZone = settings.timezone;
+      defaultLocale = settings.locale;
+      extraLocaleSettings = {
+        LANG = settings.locale;
+        LANGUAGE = "de:en";
+      };
+      console.useXkbConfig = true;
+    };
+
     time.timeZone = cfg.timeZone;
     i18n.defaultLocale = cfg.defaultLocale;
     i18n.extraLocaleSettings = cfg.extraLocaleSettings;
