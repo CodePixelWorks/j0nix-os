@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, lib, settings, ... }:
 let
   cfg = config.j0nix.desktop.drivers;
   intelEnabled = cfg.intel.enable;
@@ -71,4 +71,6 @@ in {
   ];
 
   config.hardware.enableRedistributableFirmware = cfg.firmware.enableRedistributable;
+
+  config.j0nix.desktop.drivers = lib.mkDefault (settings.profileDetails.drivers or { });
 }
