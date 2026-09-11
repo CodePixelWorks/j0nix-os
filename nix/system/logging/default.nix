@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, lib, settings, ... }:
 let
   cfg = config.j0nix.desktop.logging;
   journalCfg = cfg.journal;
@@ -39,7 +39,18 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = {
+    j0nix.desktop.logging = lib.mkDefault {
+      enable = (settings.logging or { }).enable or true;
+      journal = {
+        persistent = ((settings.logging or { }).journal or { }).persistent or true;
+        maxRetention = ((settings.logging or { }).journal or { }).maxRetention or "14day";
+        systemMaxUse = ((settings.logging or { }).journal or { }).systemMaxUse or "1G";
+        runtimeMaxUse = ((settings.logging or { }).journal or { }).runtimeMaxUse or "256M";
+        compress = ((settings.logging or { }).journal or { }).compress or true;
+      };
+    };
+  } // lib.mkIf cfg.enable {
     services.journald = {
       settings.Journal = {
         Compress = boolToYesNo journalCfg.compress;
