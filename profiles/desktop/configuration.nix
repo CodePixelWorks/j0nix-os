@@ -30,7 +30,6 @@ in
     ./modules/kernel.nix
     ./modules/gaming.nix
     ./modules/security.nix
-    ./modules/storage.nix
     ./modules/virtualisation.nix
     ./modules/thermal.nix
     ./modules/support-drivers.nix
