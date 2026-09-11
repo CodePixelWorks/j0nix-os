@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, settings, ... }:
 let
   cfg = config.j0nix.desktop.scanning;
 in
@@ -53,7 +53,9 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = {
+    j0nix.desktop.scanning = lib.mkDefault (settings.scanning or { });
+  } // lib.mkIf cfg.enable {
     hardware.sane = {
       enable = true;
       extraBackends =
