@@ -24,15 +24,11 @@ in
     hardwareConfigurationFile
     ./modules/boot.nix
     ./modules/binfmt.nix
-    ./modules/audio.nix
     ./modules/custom.nix
-    ./modules/locale.nix
     ./modules/fonts.nix
     ./modules/printing.nix
-    ./modules/scanning.nix
     ./modules/network.nix
     ./modules/kernel.nix
-    ./modules/logging.nix
     ./modules/gaming.nix
     ./modules/security.nix
     ./modules/storage.nix
