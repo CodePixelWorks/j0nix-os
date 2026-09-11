@@ -1,6 +1,38 @@
-{ config, lib, pkgs, utils, ... }:
+{ config, lib, pkgs, settings, utils, ... }:
 let
   cfg = config.j0nix.desktop.storage;
+  polkitRules = import ../lib/polkit-rules.nix { inherit lib; };
+  storageHelpers = import ../lib/storage-helpers.nix { inherit lib; };
+  usersGroupGid =
+    if
+      (config.users.groups ? users)
+      && (config.users.groups.users ? gid)
+      && config.users.groups.users.gid != null
+    then
+      config.users.groups.users.gid
+    else
+      100;
+  systemMounts = ((settings.profileDetails or { }).storage or { }).systemMounts or [ ];
+  userOverrides = settings.userSettings or { };
+  sambaShares = lib.concatMap (
+    username:
+    let
+      userCfg = userOverrides.${username} or { };
+      userStorageCfg = userCfg.storage or { };
+    in
+    userStorageCfg.sambaShares or [ ]
+  ) (builtins.attrNames userOverrides);
+  systemSambaShares = builtins.filter (share: (share.mode or "system") != "user") sambaShares;
+  sambaAssertions = map (share: {
+    assertion =
+      !(
+        (storageHelpers.hasValue (share.secretName or null))
+        && (share ? credentialsFile && share.credentialsFile != "")
+      );
+    message = "settings.userSettings.<name>.storage.sambaShares.${
+      share.name or share.mountPoint or "share"
+    } must not set both secretName and credentialsFile.";
+  }) systemSambaShares;
   mkMountRebuildGuards = import ../lib/mount-rebuild-guards.nix { inherit lib utils; };
 
   enabledManagedMounts = lib.filter (m: m.enable) cfg.mounts;
@@ -135,6 +167,15 @@ in
   };
 
   config = {
+    services.gvfs.enable = true;
+    services.udisks2.enable = true;
+
+    j0nix.desktop.storage.mounts =
+      (map (storageHelpers.enrichSystemMount usersGroupGid) systemMounts)
+      ++ map storageHelpers.mkSambaMount systemSambaShares;
+
+    j0nix.desktop.security.polkit.extraConfigSnippets = [ polkitRules.mkUdisksWheelMountRule ];
+
     boot.supportedFilesystems = lib.mkIf hasCifsMounts [ "cifs" ];
 
     j0nix.software.systemPackages = lib.mkIf hasCifsMounts [ pkgs.cifs-utils ];
@@ -155,8 +196,8 @@ in
     systemd.units = mkMountRebuildGuards cfg.mounts;
     systemd.services = builtins.listToAttrs ((map mkLazyUnmountService lazyUnmountMounts) ++ permissionFixServices);
 
-    assertions =
-      map (m: {
+    assertions = sambaAssertions
+      ++ map (m: {
         assertion = m.device != "";
         message = "storage mount '${m.name}' requires a non-empty device";
       }) enabledManagedMounts
