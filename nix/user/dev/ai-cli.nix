@@ -52,19 +52,19 @@ let
         --name ai-comfyui \
         --rm \
         --pull missing \
-        ${lib.concatMapStringsSep " " (volume: "-v ${lib.escapeShellArg volume}") imageComfyVolumes} \\
-        -e COMFYUI_ARGS=${lib.escapeShellArg imageComfyArgs} \\
-        -e COMFYUI_PORT_HOST=${toString imageComfyContainerPort} \\
-        -e HF_HOME=/data/cache/huggingface \\
-        -e HUGGINGFACE_HUB_CACHE=/data/cache/huggingface/hub \\
-        -e PGID=${toString (imageCfg.gid or 100)} \\
-        -e PUID=${toString (imageCfg.uid or 1000)} \\
-        -e TRANSFORMERS_CACHE=/data/cache/huggingface/transformers \\
-        -e WEB_ENABLE_AUTH=false \\
-        -e XDG_CACHE_HOME=/data/cache/xdg \\
-        ${lib.concatStringsSep " " (lib.mapAttrsToList (name: value: "-e ${lib.escapeShellArg "${name}=${toString value}"}") imageComfyEnvironment)} \\
-        -p ${lib.escapeShellArg "${imageHost}:${toString imageComfyPort}:${toString imageComfyContainerPort}"} \\
-        --device=nvidia.com/gpu=all \\
+        ${lib.concatMapStringsSep " " (volume: "-v ${lib.escapeShellArg volume}") imageComfyVolumes} \
+        -e COMFYUI_ARGS=${lib.escapeShellArg imageComfyArgs} \
+        -e COMFYUI_PORT_HOST=${toString imageComfyContainerPort} \
+        -e HF_HOME=/data/cache/huggingface \
+        -e HUGGINGFACE_HUB_CACHE=/data/cache/huggingface/hub \
+        -e PGID=${toString (imageCfg.gid or 100)} \
+        -e PUID=${toString (imageCfg.uid or 1000)} \
+        -e TRANSFORMERS_CACHE=/data/cache/huggingface/transformers \
+        -e WEB_ENABLE_AUTH=false \
+        -e XDG_CACHE_HOME=/data/cache/xdg \
+        ${lib.concatStringsSep " " (lib.mapAttrsToList (name: value: "-e ${lib.escapeShellArg "${name}=${toString value}"}") imageComfyEnvironment)} \
+        -p ${lib.escapeShellArg "${imageHost}:${toString imageComfyPort}:${toString imageComfyContainerPort}"} \
+        --device=nvidia.com/gpu=all \
         ${lib.escapeShellArg imageComfyImage}
     '';
   };
