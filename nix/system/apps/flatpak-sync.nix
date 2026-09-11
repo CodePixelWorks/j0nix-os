@@ -34,9 +34,12 @@ let
     ${pkgs.flatpak}/bin/flatpak remote-add --if-not-exists --system \
       flathub https://flathub.org/repo/flathub.flatpakrepo
 
-    ${pkgs.jq}/bin/jq -r '.[] | [.remote, .appId, .branch] | @tsv' ${entriesJson} | \
-    while IFS=$'\t' read -r remote appId branch; do
+    ${pkgs.jq}/bin/jq -r '.[] | [.remote, .appId, .branch, (.remoteUrl // "")] | @tsv' ${entriesJson} | \
+    while IFS=$'\t' read -r remote appId branch remoteUrl; do
       [ -n "$appId" ] || continue
+      if [ -n "$remoteUrl" ]; then
+        ${pkgs.flatpak}/bin/flatpak remote-add --if-not-exists --system "$remote" "$remoteUrl"
+      fi
       ref="app/$appId/$(uname -m)/$branch"
       if ! ${pkgs.flatpak}/bin/flatpak info --system "$ref" >/dev/null 2>&1; then
         ${pkgs.flatpak}/bin/flatpak install --system --noninteractive "$remote" "$ref"
@@ -102,6 +105,11 @@ in
           type = lib.types.str;
           default = "flathub";
           description = "Flatpak remote to use for installs.";
+        };
+        remoteUrl = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Optional remote URL to add before installing.";
         };
         branch = lib.mkOption {
           type = lib.types.str;
