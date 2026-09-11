@@ -1,0 +1,32 @@
+{ ... }:
+{
+  # Required: target architecture and unique NixOS hostname.
+  system = "x86_64-linux";
+  hostname = "my-host";
+
+  # Optional: host-specific network discovery interface allowlist.
+  lanDiscoveryInterfaces = [ ];
+
+  # Optional: add actual monitor data when using Hyprland.
+  hyprlandOutputs = [ ];
+  hyprlandSunshineHeadlessOutput = null;
+  hyprlandSunshinePhysicalOutput = null;
+
+  # Optional: host-specific data mounts. Device paths and UUIDs belong here,
+  # never in settings.nix.
+  storage = {
+    systemMounts = [ ];
+  };
+
+  # Optional: hibernation resume data. Leave unset when hibernation is unused.
+  boot = {
+    resumeDevice = null;
+    resumeOffset = null;
+  };
+
+  # Optional: hardware driver policy. The central driver module supplies safe
+  # defaults; set only hardware that is present on this host.
+  drivers = {
+    firmware.enableRedistributable = true;
+  };
+}
