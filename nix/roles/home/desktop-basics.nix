@@ -6,7 +6,7 @@ let
     (if (pkgs ? kdePackages) && (pkgs.kdePackages ? okular) then pkgs.kdePackages.okular else pkgs.okular or null)
     (pkgs.loupe or null)
     (pkgs.gnome-calculator or null)
-    (pkgs.gparted-j0nix or pkgs.gparted or null)
+    (pkgs.gparted or null)
     (pkgs.nwg-look or null)
     (pkgs.pavucontrol or null)
     (pkgs.yad or null)
