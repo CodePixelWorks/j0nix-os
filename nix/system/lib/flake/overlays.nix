@@ -8,9 +8,6 @@ let
 
   localFixesOverlay = final: prev: {
     j0nix-wallpapers = final.callPackage (baseDir + "/nix/system/software/pkgs/assets/j0nix-wallpapers.nix") { };
-    gparted-j0nix = final.callPackage (baseDir + "/nix/system/software/pkgs/storage/gparted-j0nix.nix") {
-      gparted = prev.gparted;
-    };
     mauiman4 = final.callPackage (baseDir + "/nix/system/software/pkgs/maui/mauiman4.nix") { };
     mauikit4 = final.callPackage (baseDir + "/nix/system/software/pkgs/maui/mauikit4.nix") { };
     naps2 = prev.naps2.overrideAttrs (old: {
