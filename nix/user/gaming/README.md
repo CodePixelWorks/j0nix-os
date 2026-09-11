@@ -55,6 +55,28 @@ Managed by `j0nix.desktop.gaming.*` (typically set in `profiles/desktop/modules/
 
 ## Nexus Mods / No Man's Sky
 
+Game mods are configured through `settings.gaming.mods.targets`. Each target
+has a stable name, a Steam App ID (or an explicit `gameDir`), a backend, and a
+user-owned staging directory. The generic command resolves Steam libraries and
+dispatches to the selected backend:
+
+```nix
+gaming.mods = {
+  enable = true;
+  targets.no-mans-sky = {
+    steamAppId = 275850;
+    backend = "nms-pak";
+    modsDir = "~/.local/share/j0nix/game-mods/no-mans-sky";
+  };
+};
+```
+
+Use `game-mods list`, `game-mods install no-mans-sky`, `game-mods status
+no-mans-sky`, and `game-mods remove no-mans-sky`. The first backend is the
+safe NMS PAK deployer; additional game backends can be added without changing
+the profile interface. Mod archives should be unpacked into the staging
+directory before installation.
+
 - `j0nix.desktop.gaming.launchers.nexusCollectionDl` installs `nexus-dl`, the Nexus collection/download backend.
 - `j0nix.desktop.gaming.launchers.noMansSkyPatcher` installs `nms-patcher` for native No Man's Sky PAK deployment.
 - `j0nix.desktop.gaming.launchers.amumss` installs `nms-amumss`, a pinned AMUMSS runner for Lua scripts.
