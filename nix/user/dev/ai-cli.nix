@@ -42,6 +42,8 @@ let
     "${imageWorkflowsDir}/comfyui:/workspace/ComfyUI/user/default/workflows"
     "${imageCacheDir}:/data/cache"
   ] ++ (imageComfy.volumes or [ ]);
+  imageReloadOnModelChanges = imageCfg.reloadOnModelChanges or true;
+  imageModelWatchDirs = lib.unique (builtins.attrValues imageModelDirs);
   rootlessComfyStart = pkgs.writeShellApplication {
     name = "j0nix-rootless-comfyui-start";
     runtimeInputs = [ pkgs.docker ];
@@ -74,6 +76,37 @@ let
     text = ''
       export DOCKER_HOST="unix://''${XDG_RUNTIME_DIR}/docker.sock"
       docker stop ai-comfyui 2>/dev/null || true
+    '';
+  };
+  rootlessComfyModelWatcher = pkgs.writeShellApplication {
+    name = "j0nix-rootless-comfyui-model-watcher";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.inotify-tools
+      pkgs.systemd
+    ];
+    text = ''
+      set -eu
+
+      model_dirs=(${lib.concatMapStringsSep " " lib.escapeShellArg imageModelWatchDirs})
+      for model_dir in "''${model_dirs[@]}"; do
+        mkdir -p "$model_dir"
+      done
+
+      # A model is only considered visible after its temporary download has
+      # been closed/moved. Ignore partial files to avoid restarting repeatedly.
+      inotifywait --monitor --recursive \
+        --event close_write,moved_to,create,delete,move \
+        --format '%w%f' \
+        "''${model_dirs[@]}" | while IFS= read -r changed_path; do
+          case "$changed_path" in
+            *.part|*.partial|*.tmp)
+              continue
+              ;;
+          esac
+          sleep 2
+          systemctl --user try-restart ai-comfyui.service || true
+        done
     '';
   };
   imageInvokePort = (imageApps.invoke or { }).port or 9090;
@@ -565,6 +598,20 @@ lib.mkIf enabled {
       RestartSec = 10;
       TimeoutStartSec = "30min";
     };
+  };
+
+  systemd.user.services.ai-comfyui-model-watcher = lib.mkIf (rootlessComfyEnabled && imageReloadOnModelChanges) {
+    Unit = {
+      Description = "Reload ComfyUI when managed models change";
+      After = [ "ai-comfyui.service" ];
+    };
+    Service = {
+      Type = "simple";
+      ExecStart = lib.getExe rootlessComfyModelWatcher;
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+    Install.WantedBy = [ "default.target" ];
   };
 
   xdg.desktopEntries.antigravity-cli = lib.mkIf (antigravityEnabled && antigravityDesktopEntry) {
