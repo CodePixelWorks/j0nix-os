@@ -499,6 +499,9 @@ EOF
       fi
       export DXVK_LOG_LEVEL=none
       export WINEDEBUG=-all,+err
+      # The current Autodesk SSO helper cannot be started reliably by Wine.
+      # Use Fusion's legacy WebView-based login path instead.
+      export FUSION_IDSDK=false
 
       ${runFusionTarget}
       run_fusion_target "$launcher" "$@"
