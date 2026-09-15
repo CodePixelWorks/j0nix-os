@@ -168,11 +168,12 @@ let
 
     if [ -d "$fusion_desktop_dir" ]; then
       # Home Manager owns the two canonical desktop entries below.  The
-      # upstream installer writes duplicate entries in this subdirectory.
-      rm -f \
-        "$fusion_desktop_dir/Autodesk Fusion.desktop" \
-        "$fusion_desktop_dir/adskidmgr-opener.desktop"
-      rmdir --ignore-fail-on-non-empty "$fusion_desktop_dir" 2>/dev/null || true
+      # upstream installer and Wine write duplicate entries, sometimes in
+      # numbered subdirectories below this path.
+      find "$fusion_desktop_dir" -type f \
+        \( -name 'Autodesk Fusion.desktop' -o -name 'adskidmgr-opener.desktop' \) \
+        -delete
+      find "$fusion_desktop_dir" -depth -type d -empty -delete
     fi
   '';
 
