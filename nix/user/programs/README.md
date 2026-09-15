@@ -70,6 +70,18 @@ New j0nix-managed bottles are seeded from a Nix-generated template after creatio
 
 The Autodesk payload, WebView2 runtime, cryinkfly installer payloads, and license/session data are runtime user state and are not fetched during Nix evaluation or vendored into the Nix store.
 
+### Fusion sign-in on Hyprland
+
+Current Fusion builds authenticate through a top-level Wine/Xwayland window backed by Microsoft Edge WebView2. They do not reliably launch the system browser. The `adskidmgr` XDG handler remains necessary for a callback when Fusion does use an external flow, but it must not be treated as the primary sign-in launcher.
+
+The managed Hyprland rule matches `fusion360.exe` with the title `Anmelden - Autodesk Fusion`, then floats and centers it. This keeps the login visible on the workspace where Fusion was started. Do not add `FUSION_IDSDK=false`: that was an old workaround for the retired login path and current Fusion versions ignore it while still starting the Identity Manager.
+
+If sign-in appears stuck:
+
+- Run `autodesk-fusion-doctor` and confirm WebView2 and the `adskidmgr` handler are present.
+- Check `hyprctl -j clients` for `fusion360.exe` or `adskidentitymanager.exe`; the login dialog may be on the launch workspace.
+- Close all Fusion, Identity Manager, WebView2, and Wine processes for this prefix before retrying, so an old instance cannot retain the login session.
+
 `Windows app packages` are configured via `settings.userSettings.<name>.programs.windowsApps.packages = [ ... ];`.
 The infrastructure separates:
 - immutable Nix-managed runtime/payload artifacts
