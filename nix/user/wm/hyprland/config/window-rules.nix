@@ -243,6 +243,19 @@ let
       center = true;
     }
     {
+      # Fusion's current authentication flow is a top-level WebView2 window,
+      # not a modal child.  Keep it visible and usable on the workspace from
+      # which Fusion was launched.
+      name = "float-autodesk-fusion-login";
+      match = {
+        class = "^(fusion360\\.exe)$";
+        title = "^Anmelden - Autodesk Fusion.*$";
+      };
+      float = true;
+      size = [ "1200" "750" ];
+      center = true;
+    }
+    {
       name = "float-sse-password-dialog";
       match = {
         class = "^(sse\\.exe)$";
