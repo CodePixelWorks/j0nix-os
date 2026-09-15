@@ -670,29 +670,35 @@ lib.mkIf enabled {
     rendererScript
   ];
 
-  xdg.desktopEntries.autodesk-fusion = {
-    name = "Autodesk Fusion";
-    genericName = "CAD/CAM/CAE";
-    comment = "Run Autodesk Fusion through the managed j0nix Wine setup";
-    exec = "${lib.getExe launcherScript} %U";
-    terminal = false;
-    type = "Application";
-    categories = [
-      "Graphics"
-      "Engineering"
-    ];
-    startupNotify = true;
-  };
-
-  xdg.desktopEntries.autodesk-fusion-adskidmgr = {
-    name = "Autodesk Fusion Login Handler";
-    genericName = "Autodesk Identity Manager URL Handler";
-    comment = "Open Autodesk Fusion login callbacks";
-    exec = "${lib.getExe identityScript} %u";
-    terminal = false;
-    type = "Application";
-    mimeType = [ "x-scheme-handler/adskidmgr" ];
-    noDisplay = true;
+  xdg.dataFile = {
+    "applications/autodesk-fusion.desktop" = {
+      force = true;
+      text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=Autodesk Fusion
+        GenericName=CAD/CAM/CAE
+        Comment=Run Autodesk Fusion through the managed j0nix Wine setup
+        Exec=${lib.getExe launcherScript} %U
+        Terminal=false
+        StartupNotify=true
+        Categories=Graphics;Engineering;
+      '';
+    };
+    "applications/autodesk-fusion-adskidmgr.desktop" = {
+      force = true;
+      text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=Autodesk Fusion Login Handler
+        GenericName=Autodesk Identity Manager URL Handler
+        Comment=Open Autodesk Fusion login callbacks
+        Exec=${lib.getExe identityScript} %u
+        Terminal=false
+        NoDisplay=true
+        MimeType=x-scheme-handler/adskidmgr;
+      '';
+    };
   };
 
   xdg.mimeApps.defaultApplications = lib.mkIf setAsDefaultLoginHandler {
