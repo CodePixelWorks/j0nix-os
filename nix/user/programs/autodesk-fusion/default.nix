@@ -54,6 +54,7 @@ let
     gettext
     systemd
     procps
+    pciutils
     gnutar
     glibc.bin
     mokutil
@@ -91,6 +92,53 @@ let
       export LIBVA_DRIVER_NAME=nvidia
     ''}
     unset WAYLAND_DISPLAY
+  '';
+
+  runFusionTarget = ''
+    run_fusion_target() {
+      target="$1"
+      shift
+
+      wine_mode="$(sed -n '4p' "$install_dir/logs/wineprefixes.log" 2>/dev/null || true)"
+      case "$wine_mode" in
+        ""|Wine)
+          export WINEPREFIX="$prefix_dir"
+          exec wine "$target" "$@"
+          ;;
+        Wine-fix)
+          fusion_wine_dir="$HOME/fusion-wine-build/bin"
+          if [ ! -x "$fusion_wine_dir/wine" ]; then
+            echo "error: Fusion's patched Wine runtime is missing: $fusion_wine_dir/wine" >&2
+            echo "Run: autodesk-fusion-repair" >&2
+            exit 1
+          fi
+          export WINEPREFIX="$prefix_dir"
+          export WINESERVER="$fusion_wine_dir/wineserver"
+          exec "$fusion_wine_dir/wine" "$target" "$@"
+          ;;
+        *)
+          steam_dir=""
+          for candidate in \
+            "$HOME/.local/share/Steam" \
+            "$HOME/.steam/steam" \
+            "$HOME/.steam/root" \
+            "$HOME/.steam/debian-installation"; do
+            if [ -x "$candidate/compatibilitytools.d/$wine_mode/proton" ]; then
+              steam_dir="$candidate"
+              break
+            fi
+          done
+          if [ -z "$steam_dir" ]; then
+            echo "error: Fusion's Proton runtime '$wine_mode' was not found in Steam compatibilitytools.d." >&2
+            echo "Install that compatibility tool in Steam, then run autodesk-fusion-repair." >&2
+            exit 1
+          fi
+          export STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir"
+          export STEAM_COMPAT_DATA_PATH="$install_dir/protonprefix"
+          exec "$steam_dir/compatibilitytools.d/$wine_mode/proton" run "$target" "$@"
+          ;;
+      esac
+    }
   '';
 
   protectedInstallerEnv = ''
@@ -458,7 +506,8 @@ EOF
       export DXVK_LOG_LEVEL=none
       export WINEDEBUG=-all,+err
 
-      exec wine "$launcher" "$@"
+      ${runFusionTarget}
+      run_fusion_target "$launcher" "$@"
     '';
   };
 
@@ -497,13 +546,8 @@ EOF
         exit 1
       fi
 
-      if [ -d "$prefix_dir" ]; then
-        export WINEPREFIX="$prefix_dir"
-      elif [ -d "$proton_prefix_dir" ]; then
-        export WINEPREFIX="$proton_prefix_dir"
-      fi
-
-      exec wine "$identity_manager" "$url"
+      ${runFusionTarget}
+      run_fusion_target "$identity_manager" "$url"
     '';
   };
 
@@ -527,7 +571,7 @@ EOF
         fi
       }
 
-      for cmd in wine wineserver winetricks curl wget 7z cabextract wbinfo glxinfo xrandr xdg-open xdg-mime update-desktop-database bc mokutil; do
+      for cmd in wine wineserver winetricks curl wget 7z cabextract wbinfo glxinfo xrandr xdg-open xdg-mime update-desktop-database bc mokutil lspci; do
         require_cmd "$cmd"
       done
 
