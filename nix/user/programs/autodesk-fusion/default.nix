@@ -162,29 +162,22 @@ let
     export PATH="$guard_bin:$PATH"
   '';
 
-  postInstallDesktopFix = ''
+  cleanupUpstreamDesktopEntries = ''
     applications_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/applications"
     fusion_desktop_dir="$applications_dir/wine/Programs/Autodesk"
-    fusion_launcher=${lib.escapeShellArg (lib.getExe launcherScript)}
-    fusion_login_handler=${lib.escapeShellArg (lib.getExe identityScript)}
 
     if [ -d "$fusion_desktop_dir" ]; then
-      find "$fusion_desktop_dir" -name 'Autodesk Fusion.desktop' -type f -print0 2>/dev/null \
-        | while IFS= read -r -d "" desktop_file; do
-          sed -i \
-            -e 's#^Exec=.*#Exec='"$fusion_launcher"' %U#' \
-            -e 's#^Path=.*#Path='"$install_dir"'#' \
-            "$desktop_file"
-        done
-
-      find "$fusion_desktop_dir" -name 'adskidmgr-opener.desktop' -type f -print0 2>/dev/null \
-        | while IFS= read -r -d "" desktop_file; do
-          sed -i \
-            -e 's#^Exec=.*#Exec='"$fusion_login_handler"' %u#' \
-            "$desktop_file"
-        done
+      # Home Manager owns the two canonical desktop entries below.  The
+      # upstream installer writes duplicate entries in this subdirectory.
+      rm -f \
+        "$fusion_desktop_dir/Autodesk Fusion.desktop" \
+        "$fusion_desktop_dir/adskidmgr-opener.desktop"
+      rmdir --ignore-fail-on-non-empty "$fusion_desktop_dir" 2>/dev/null || true
     fi
+  '';
 
+  postInstallDesktopFix = ''
+    ${cleanupUpstreamDesktopEntries}
     update-desktop-database "$applications_dir" 2>/dev/null || true
     xdg-mime default autodesk-fusion-adskidmgr.desktop x-scheme-handler/adskidmgr 2>/dev/null || true
   '';
@@ -662,6 +655,11 @@ EOF
   };
 in
 lib.mkIf enabled {
+  home.activation.removeUpstreamFusionDesktopEntries = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    ${cleanupUpstreamDesktopEntries}
+    ${pkgs.desktop-file-utils}/bin/update-desktop-database "$applications_dir" 2>/dev/null || true
+  '';
+
   j0nix.user.software.packages = [
     launcherScript
     installerScript
