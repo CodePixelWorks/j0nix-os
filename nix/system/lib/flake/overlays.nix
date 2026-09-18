@@ -22,7 +22,6 @@ let
       src = inputs.mcp-language-server-src;
     };
     gitea-mcp = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/gitea-mcp.nix") { };
-    drone-ci-mcp = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/drone-ci-mcp.nix") { };
     donsetch = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/donsetch.nix") { };
     nexus-collection-dl = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/nexus-collection-dl.nix") { };
     nms-amumss = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/nms-amumss.nix") { };
