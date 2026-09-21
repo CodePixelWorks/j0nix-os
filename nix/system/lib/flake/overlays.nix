@@ -40,23 +40,26 @@ let
       nixpkgsSrc = nixpkgs.outPath;
     };
     bambu-studio-appimage = final.callPackage (baseDir + "/nix/system/software/pkgs/printing/bambu-studio-appimage.nix") { };
-    firecrawl-py = final.python312Packages.callPackage (baseDir + "/nix/pkgs/firecrawl-py") { };
     hermes-extra-python = final.callPackage (baseDir + "/nix/pkgs/hermes-extra-python") {
-      inherit (final) firecrawl-py;
-      inherit (final.python312Packages) qdrant-client;
+      inherit (final.python312Packages) ollama;
     };
-    hermes-agent-with-firecrawl =
+    # Workstation hermes: curated package from NixOS/hermes (private
+    # Gitea, see flake.nix) with the mem0 dependency group — required
+    # for `memory.provider: mem0` (OSS mode backed by the local Qdrant).
+    hermes-agent-ext =
       let
         system = final.stdenv.hostPlatform.system;
         # Curated hermes package from the NixOS/hermes input (NOT the
         # public upstream repo — see flake.nix). Falls back to null when
-        # the input or the package is unavailable for this system.
+        # the input or the package is unavailable for this system. The
+        # mem0 variant is consumed unconditionally: same curated layer,
+        # the bigger venv closure is the price for local memory.
         hermesPkg =
           if (inputs ? hermes)
              && (inputs.hermes ? packages)
              && (inputs.hermes.packages.${system} or null) != null
-             && (inputs.hermes.packages.${system} ? hermes)
-          then inputs.hermes.packages.${system}.hermes
+             && (inputs.hermes.packages.${system} ? hermes-mem0)
+          then inputs.hermes.packages.${system}.hermes-mem0
           else null;
       in
       if hermesPkg != null then
