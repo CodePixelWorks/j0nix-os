@@ -26,10 +26,6 @@
       url = "github:sadjow/codex-cli-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    hermes-agent = {
-      url = "git+https://github.com/NousResearch/hermes-agent.git?ref=main";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     open-design = {
       url = "github:nexu-io/open-design/main";
       inputs.nixpkgs.follows = "nixpkgs";

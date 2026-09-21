@@ -48,12 +48,15 @@ let
     hermes-agent-with-firecrawl =
       let
         system = final.stdenv.hostPlatform.system;
+        # Curated hermes package from the NixOS/hermes input (NOT the
+        # public upstream repo — see flake.nix). Falls back to null when
+        # the input or the package is unavailable for this system.
         hermesPkg =
-          if (inputs ? hermes-agent)
-             && (inputs.hermes-agent ? packages)
-             && (inputs.hermes-agent.packages.${system} or null) != null
-             && (inputs.hermes-agent.packages.${system} ? default)
-          then inputs.hermes-agent.packages.${system}.default
+          if (inputs ? hermes)
+             && (inputs.hermes ? packages)
+             && (inputs.hermes.packages.${system} or null) != null
+             && (inputs.hermes.packages.${system} ? hermes)
+          then inputs.hermes.packages.${system}.hermes
           else null;
       in
       if hermesPkg != null then
