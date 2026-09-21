@@ -26,8 +26,12 @@
       url = "github:sadjow/codex-cli-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    hermes-agent = {
-      url = "git+https://github.com/NousResearch/hermes-agent.git?ref=main";
+    # Hermes Agent — NOT the public NousResearch repo (public stays
+    # vanilla upstream, zweigleisig). This workstation consumes the
+    # curated package repo (NixOS/hermes on Gitea): upstream binary +
+    # souls/presets/mcp-catalog/skills + the donsetch web plugin.
+    hermes = {
+      url = "git+ssh://git@git.j0lab.xyz/NixOS/hermes.git";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     open-design = {
