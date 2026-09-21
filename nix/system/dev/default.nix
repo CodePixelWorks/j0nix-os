@@ -150,7 +150,7 @@ let
   keyringEnable = sshUsersNeedingKeyring != [ ];
   antigravityEnabled = ai.antigravity or (ai.gemini or true);
   hermesEnabled = ai.hermes or true;
-  hermesPackage = pkgs.hermes-agent-with-firecrawl or null;
+  hermesPackage = pkgs.hermes-agent-ext or null;
   antigravityInstaller = pkgs.writeShellApplication {
     name = "antigravity-install";
     runtimeInputs = [

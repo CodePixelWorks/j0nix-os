@@ -211,7 +211,7 @@ let
     else
       "/missing/${hermesGiteaTokenSecretName}";
   mcpRemotes = ai.mcpRemotes or { };
-  hermesPackage = pkgs.hermes-agent-with-firecrawl or null;
+  hermesPackage = pkgs.hermes-agent-ext or null;
   hermesGiteaPackage = pkgs.gitea-mcp or null;
   hermesDonsetchPackage = pkgs.donsetch or null;
   hermesOpnsensePackage = pkgs.writeShellApplication {
