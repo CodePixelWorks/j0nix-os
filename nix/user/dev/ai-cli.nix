@@ -154,8 +154,17 @@ let
   hermesGiteaCfg = hermesMcpCfg.gitea or { };
   hermesGiteaEnabled = hermesEnabled && (hermesGiteaCfg.enable or false);
   hermesDonsetchCfg = hermesMcpCfg.donsetch or { };
-  hermesDonsetchEnabled = hermesEnabled && (hermesDonsetchCfg.enable or false);
-  hermesDonsetchPreferred = hermesDonsetchEnabled && (hermesDonsetchCfg.preferForWeb or true);
+  # The donsetch web_search/web_extract backends are provided by the
+  # web-donsetch plugin shipped with the curated hermes-package (see
+  # flake.nix hermes input) — auto-discovered from ~/.hermes/plugins/.
+  # We deliberately do NOT register a second donsetch MCP server here:
+  # that would expose a parallel `mcp__donsetch__*` tool surface on top
+  # of the built-in web tools that already route to donsetch via the
+  # backend plugin. The hermesMcp.donsetch settings block is read but
+  # ignored for forward-compat — the web-donsetch plugin owns web
+  # research routing exclusively.
+  hermesDonsetchEnabled = false;
+  hermesDonsetchPreferred = false;
   hermesDonsetchSupervised = hermesDonsetchCfg.supervised or true;
   hermesOpnsenseCfg = hermesMcpCfg.opnsense or { };
   hermesOpnsenseEnabled = hermesEnabled && (hermesOpnsenseCfg.enable or false);
@@ -261,7 +270,6 @@ let
   mcpRemotes = ai.mcpRemotes or { };
   hermesPackage = pkgs.hermes-agent-ext or null;
   hermesGiteaPackage = pkgs.gitea-mcp or null;
-  hermesDonsetchPackage = pkgs.donsetch or null;
   hermesOpnsensePackage = pkgs.writeShellApplication {
     name = "hermes-opnsense-mcp";
     runtimeInputs = [ pkgs.coreutils pkgs.nodejs ];
@@ -375,27 +383,16 @@ let
       COMFY_MCP_REMOTE_SHARED_MODELS = imageModelsDir;
     };
   };
-  hermesDonsetchServer = {
-    command = "${hermesDonsetchPackage}/bin/donsetch";
-    args = [ "mcp" ] ++ lib.optional hermesDonsetchSupervised "--supervised";
-  };
   hermesOpnsenseServer = {
     command = "${hermesOpnsensePackage}/bin/hermes-opnsense-mcp";
   };
   hermesManagedServers =
     lib.optionalAttrs hermesGiteaEnabled { gitea = hermesGiteaServer; }
-    // lib.optionalAttrs hermesDonsetchEnabled { donsetch = hermesDonsetchServer; }
     // lib.optionalAttrs hermesOpnsenseEnabled { opnsense = hermesOpnsenseServer; }
     // lib.optionalAttrs hermesImageEnabled { comfy = hermesComfyServer; }
     // lib.optionalAttrs (hermesDroneEnabled && hermesDronePackage != null) {
       drone-ci = hermesDroneServer;
     };
-  hermesDonsetchPrompt = ''
-    Web research policy:
-    - Use the Donsetch MCP tools web_search, web_fetch, and web_crawl by default for internet search, page retrieval, and crawling.
-    - Do not use CRW, Firecrawl, or Hermes' built-in web tools while Donsetch is available.
-    - Fall back to another web backend only when Donsetch fails or lacks a required capability, and mention that fallback.
-  '';
   hermesImagePrompt = ''
     Local image-generation stack:
     - ComfyUI API/UI: http://${imageHost}:${toString imageComfyPort}
@@ -419,7 +416,6 @@ let
 
       HERMES_CONFIG_FILE="$config_file" \
         HERMES_MANAGED_SERVERS=${lib.escapeShellArg (builtins.toJSON hermesManagedServers)} \
-        HERMES_DONSETCH_PREFERRED=${lib.escapeShellArg (if hermesDonsetchPreferred then "1" else "0")} \
         ${hermesMcpSyncPython}/bin/python <<'PY'
       import json
       import os
@@ -443,12 +439,28 @@ let
               servers[name] = desired
               changed = True
 
-      if os.environ["HERMES_DONSETCH_PREFERRED"] == "1":
-          plugins = config.setdefault("plugins", {})
-          enabled_plugins = plugins.setdefault("enabled", [])
-          if "j0nix-donsetch" not in enabled_plugins:
-              enabled_plugins.append("j0nix-donsetch")
+      # Remove managed servers that are no longer desired so disabling a
+      # hermesMcp block in settings actually removes the config entry.
+      for name in list(servers.keys()):
+          if name in ("gitea", "donsetch", "opnsense", "comfy", "drone-ci") and name not in desired_servers:
+              del servers[name]
               changed = True
+
+      # Retire the j0nix-donsetch standalone plugin: web research routing
+      # now lives in the web-donsetch backend plugin from hermes-package.
+      plugins = config.get("plugins") or {}
+      enabled_plugins = plugins.get("enabled") or []
+      if "j0nix-donsetch" in enabled_plugins:
+          enabled_plugins.remove("j0nix-donsetch")
+          if enabled_plugins:
+              plugins["enabled"] = enabled_plugins
+          else:
+              del plugins["enabled"]
+          if plugins:
+              config["plugins"] = plugins
+          else:
+              del config["plugins"]
+          changed = True
 
       if not changed:
           raise SystemExit(0)
@@ -564,7 +576,6 @@ lib.mkIf enabled {
       hermesPackage
     ]
     ++ lib.optionals hermesGiteaEnabled [ hermesGiteaPackage ]
-    ++ lib.optionals hermesDonsetchEnabled [ hermesDonsetchPackage ]
     ++ lib.optionals hermesOpnsenseEnabled [ hermesOpnsensePackage ]
     ++ lib.optionals hermesImageEnabled [ comfyMcpPackage ]
     ++ lib.optionals (installScope == "user") [ pkgs.bubblewrap ];
@@ -575,7 +586,6 @@ lib.mkIf enabled {
 
   home.activation.hermesMcpSync = lib.mkIf (
     hermesGiteaEnabled
-    || hermesDonsetchEnabled
     || hermesDroneEnabled
     || hermesOpnsenseEnabled
     || hermesImageEnabled
@@ -584,30 +594,6 @@ lib.mkIf enabled {
       $DRY_RUN_CMD ${hermesMcpSync}/bin/hermes-mcp-sync
     ''
   );
-
-  home.file.".hermes/plugins/j0nix-donsetch/plugin.yaml" = lib.mkIf hermesDonsetchPreferred {
-    text = ''
-      name: j0nix-donsetch
-      kind: standalone
-      version: 1.0.0
-      description: Prefer Donsetch for web research
-      author: j0nix-os
-    '';
-  };
-
-  home.file.".hermes/plugins/j0nix-donsetch/__init__.py" = lib.mkIf hermesDonsetchPreferred {
-    text = ''
-      PROMPT = ${builtins.toJSON hermesDonsetchPrompt}
-
-      def register(ctx):
-          ctx.register_system_prompt_section(
-              "j0nix.donsetch.web-policy",
-              PROMPT,
-              position="after_memory",
-              max_chars=1000,
-          )
-    '';
-  };
 
   home.file.".hermes/plugins/j0nix-ai-image/plugin.yaml" = lib.mkIf hermesImageEnabled {
     text = ''
@@ -741,10 +727,6 @@ lib.mkIf enabled {
     {
       assertion = (!hermesGiteaEnabled) || hermesGiteaPackage != null;
       message = "Hermes Gitea MCP is enabled but pkgs.gitea-mcp is unavailable";
-    }
-    {
-      assertion = (!hermesDonsetchEnabled) || hermesDonsetchPackage != null;
-      message = "Hermes Donsetch MCP is enabled but pkgs.donsetch is unavailable";
     }
     {
       assertion = (!hermesDroneEnabled) || hermesDronePackage != null;
