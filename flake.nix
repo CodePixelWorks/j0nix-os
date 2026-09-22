@@ -52,8 +52,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # drone-ci-mcp — Rust MCP server exposing Drone CI (ci.j0lab.xyz) as
-    # tools (readonly by default). Consumes the release tarballs from the
-    # Rust/drone-ci-mcp pipeline, same pattern as nixos-server-base.
+    # tools. Consumes the release tarballs from the Rust/drone-ci-mcp
+    # pipeline, same pattern as nixos-server-base. The Hermes wrapper
+    # (hermes-drone-ci-mcp, built in ai-cli.nix) defaults to the full
+    # tool surface — set hermesMcp.droneCi.enableWrites = false to
+    # opt back into the readonly 6-tool profile.
     drone-ci-mcp = {
       url = "git+ssh://git@git.j0lab.xyz/Rust/drone-ci-mcp.git";
       inputs.nixpkgs.follows = "nixpkgs";
