@@ -210,6 +210,41 @@ let
       config.sops.secrets.${hermesGiteaTokenSecretName}.path
     else
       "/missing/${hermesGiteaTokenSecretName}";
+  # Drone CI MCP — readonly market/CI data from the fleet's Drone instance.
+  # drone-ci-mcp only accepts DRONE_TOKEN directly (no *_FILE env support),
+  # so the wrapper reads the sops-provisioned token file and execs the
+  # Rust binary.
+  hermesDroneCfg = hermesMcpCfg.droneCi or { };
+  hermesDroneEnabled = hermesEnabled && (hermesDroneCfg.enable or false);
+  hermesDroneServerUrl = hermesDroneCfg.serverUrl or "https://ci.j0lab.xyz";
+  hermesDroneTokenSecretName = hermesDroneCfg.tokenSecretName or "drone-ci-mcp-token";
+  hermesDroneTokenAvailable = lib.hasAttrByPath [ hermesDroneTokenSecretName ] (
+    config.sops.secrets or { }
+  );
+  hermesDroneTokenPath =
+    if hermesDroneTokenAvailable then
+      config.sops.secrets.${hermesDroneTokenSecretName}.path
+    else
+      "/missing/${hermesDroneTokenSecretName}";
+  hermesDronePackage = pkgs.drone-ci-mcp or null;
+  hermesDroneServer = pkgs.writeShellApplication {
+    name = "hermes-drone-ci-mcp";
+    runtimeInputs = [ pkgs.coreutils ];
+    text = ''
+      token_file=${lib.escapeShellArg hermesDroneTokenPath}
+
+      if [ ! -r "$token_file" ] || [ ! -s "$token_file" ]; then
+        echo "Hermes Drone CI MCP: token secret is missing or unreadable" >&2
+        exit 1
+      fi
+
+      export DRONE_SERVER=${lib.escapeShellArg hermesDroneServerUrl}
+      DRONE_TOKEN="$(tr -d '[:space:]' < "$token_file")"
+      export DRONE_TOKEN
+
+      exec ${hermesDronePackage}/bin/drone-ci-mcp "$@"
+    '';
+  };
   mcpRemotes = ai.mcpRemotes or { };
   hermesPackage = pkgs.hermes-agent-ext or null;
   hermesGiteaPackage = pkgs.gitea-mcp or null;
@@ -338,7 +373,10 @@ let
     lib.optionalAttrs hermesGiteaEnabled { gitea = hermesGiteaServer; }
     // lib.optionalAttrs hermesDonsetchEnabled { donsetch = hermesDonsetchServer; }
     // lib.optionalAttrs hermesOpnsenseEnabled { opnsense = hermesOpnsenseServer; }
-    // lib.optionalAttrs hermesImageEnabled { comfy = hermesComfyServer; };
+    // lib.optionalAttrs hermesImageEnabled { comfy = hermesComfyServer; }
+    // lib.optionalAttrs (hermesDroneEnabled && hermesDronePackage != null) {
+      drone-ci = hermesDroneServer;
+    };
   hermesDonsetchPrompt = ''
     Web research policy:
     - Use the Donsetch MCP tools web_search, web_fetch, and web_crawl by default for internet search, page retrieval, and crawling.

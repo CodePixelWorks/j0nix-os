@@ -23,6 +23,14 @@ let
     };
     gitea-mcp = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/gitea-mcp.nix") { };
     donsetch = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/donsetch.nix") { };
+    # Drone CI MCP server (Rust/drone-ci-mcp release tarballs via the
+    # flake input; same consumption as nixos-server-base).
+    drone-ci-mcp =
+      let
+        system = final.stdenv.hostPlatform.system;
+        pkg = (inputs.drone-ci-mcp.packages or { }).${system} or null;
+      in
+      if pkg != null then pkg.drone-ci-mcp or null else null;
     nexus-collection-dl = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/nexus-collection-dl.nix") { };
     nms-amumss = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/nms-amumss.nix") { };
     openldap = prev.openldap.overrideAttrs (_: {
