@@ -720,11 +720,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790115507,
-        "narHash": "sha256-TowIEY0v1wfORNnMKqpA2dz0eiR5oMX8oHaPoStVdJQ=",
-        "ref": "feat/comfy-mcp-package",
-        "rev": "7047c8d2c0b6f978b18a7a28854428d9340f3e81",
-        "revCount": 162,
+        "lastModified": 1790117145,
+        "narHash": "sha256-pGtqBfACBFu5k6QQamNRMI8lZocfS1heWsoes9ErxZ0=",
+        "ref": "refs/heads/main",
+        "rev": "8105cb06d1be227e52cf86328d767dbcaa9e5761",
+        "revCount": 194,
         "type": "git",
         "url": "ssh://git@git.j0lab.xyz/NixOS/hermes.git"
       },
@@ -744,17 +744,17 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1790046327,
-        "narHash": "sha256-HO42YOka3L6Q/WXIyFPjOwZhhI0OJWOCkuWAAv/MxV4=",
+        "lastModified": 1790113823,
+        "narHash": "sha256-twgCAYuRhZKkqTphB8FUHSJtqr7zFFnx1RBL9T2843o=",
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "439eb0395eed5025139ee917526f31e2d161699e",
+        "rev": "ec21bd7674e78907ccacca846efad198e5cfdbbc",
         "type": "github"
       },
       "original": {
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "439eb0395eed5025139ee917526f31e2d161699e",
+        "rev": "ec21bd7674e78907ccacca846efad198e5cfdbbc",
         "type": "github"
       }
     },
