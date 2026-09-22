@@ -379,6 +379,26 @@
         "type": "github"
       }
     },
+    "drone-ci-mcp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1790052067,
+        "narHash": "sha256-KcRWWyXeqqmu3dsZ6RHTlZxgH4X1fgDgCZF0nk/U6Lo=",
+        "ref": "refs/heads/main",
+        "rev": "c07d98f19513a9a7856ff6e5767ace8a20c34ac0",
+        "revCount": 29,
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/Rust/drone-ci-mcp.git"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/Rust/drone-ci-mcp.git"
+      }
+    },
     "firefox-gnome-theme": {
       "flake": false,
       "locked": {
@@ -1769,6 +1789,7 @@
         "caelestia-shell-dev": "caelestia-shell-dev",
         "codex-cli-nix": "codex-cli-nix",
         "dank-material-shell": "dank-material-shell",
+        "drone-ci-mcp": "drone-ci-mcp",
         "hermes": "hermes",
         "home-manager": "home-manager_2",
         "hypr-dynamic-cursors": "hypr-dynamic-cursors",
