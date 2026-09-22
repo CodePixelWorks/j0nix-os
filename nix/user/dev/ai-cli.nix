@@ -210,10 +210,12 @@ let
       config.sops.secrets.${hermesGiteaTokenSecretName}.path
     else
       "/missing/${hermesGiteaTokenSecretName}";
-  # Drone CI MCP — readonly market/CI data from the fleet's Drone instance.
+  # Drone CI MCP — fleet's Drone instance exposed as MCP tools.
   # drone-ci-mcp only accepts DRONE_TOKEN directly (no *_FILE env support),
   # so the wrapper reads the sops-provisioned token file and execs the
-  # Rust binary.
+  # Rust binary. The wrapper is built by Nix (writeShellApplication) and
+  # referenced by absolute store path — Hermes' config.yaml never holds
+  # the token in plaintext.
   hermesDroneCfg = hermesMcpCfg.droneCi or { };
   hermesDroneEnabled = hermesEnabled && (hermesDroneCfg.enable or false);
   hermesDroneServerUrl = hermesDroneCfg.serverUrl or "https://ci.j0lab.xyz";
@@ -227,7 +229,12 @@ let
     else
       "/missing/${hermesDroneTokenSecretName}";
   hermesDronePackage = pkgs.drone-ci-mcp or null;
-  hermesDroneServer = pkgs.writeShellApplication {
+  # Default to the full tool surface (6 read + 4 write). Set
+  # `hermesMcp.droneCi.enableWrites = false` to opt back into the
+  # readonly 6-tool profile (build_restart/promote/stop, cron_trigger
+  # hidden from the model entirely).
+  hermesDroneEnableWrites = hermesDroneCfg.enableWrites or true;
+  hermesDroneServerWrapper = pkgs.writeShellApplication {
     name = "hermes-drone-ci-mcp";
     runtimeInputs = [ pkgs.coreutils ];
     text = ''
@@ -244,6 +251,12 @@ let
 
       exec ${hermesDronePackage}/bin/drone-ci-mcp "$@"
     '';
+  };
+  # Render-friendly attrset — the hermes-mcp-sync Python embeds this as
+  # JSON, so it MUST be a {command, args, env} shape (same as gitea).
+  hermesDroneServer = {
+    command = "${hermesDroneServerWrapper}/bin/hermes-drone-ci-mcp";
+    args = lib.optional hermesDroneEnableWrites "--enable-writes";
   };
   mcpRemotes = ai.mcpRemotes or { };
   hermesPackage = pkgs.hermes-agent-ext or null;
@@ -561,7 +574,11 @@ lib.mkIf enabled {
   '';
 
   home.activation.hermesMcpSync = lib.mkIf (
-    hermesGiteaEnabled || hermesDonsetchEnabled || hermesOpnsenseEnabled || hermesImageEnabled
+    hermesGiteaEnabled
+    || hermesDonsetchEnabled
+    || hermesDroneEnabled
+    || hermesOpnsenseEnabled
+    || hermesImageEnabled
   ) (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       $DRY_RUN_CMD ${hermesMcpSync}/bin/hermes-mcp-sync
@@ -728,6 +745,14 @@ lib.mkIf enabled {
     {
       assertion = (!hermesDonsetchEnabled) || hermesDonsetchPackage != null;
       message = "Hermes Donsetch MCP is enabled but pkgs.donsetch is unavailable";
+    }
+    {
+      assertion = (!hermesDroneEnabled) || hermesDronePackage != null;
+      message = "Hermes Drone CI MCP is enabled but pkgs.drone-ci-mcp is unavailable";
+    }
+    {
+      assertion = (!hermesDroneEnabled) || hermesDroneTokenAvailable;
+      message = "Hermes Drone CI MCP requires the configured user SOPS secret: ${hermesDroneTokenSecretName}";
     }
     {
       assertion = (!hermesOpnsenseEnabled) || ((hermesOpnsenseCfg.url or null) != null);
