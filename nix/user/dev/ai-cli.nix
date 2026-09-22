@@ -366,21 +366,40 @@ let
     ];
     env.GITEA_ACCESS_TOKEN_FILE = hermesGiteaTokenPath;
   };
-  comfyMcpPackage = pkgs.writeShellApplication {
-    name = "comfy-mcp";
-    runtimeInputs = [ pkgs.uv ];
-    text = ''
-      exec ${pkgs.uv}/bin/uvx \
-        --from comfy-mcp \
-        --from 'comfy-cli>=1.14.0' \
-        comfy-mcp "$@"
-    '';
-  };
+  # ComfyUI MCP — consumed from the curated hermes-package (NixOS/hermes
+  # input, pkgs.comfy-mcp): the package bundles both the MCP server and
+  # its comfy-cli engine binary, so the local uvx wrapper (which pulled
+  # unpinned PyPI packages at runtime) is gone.
+  # The public j0nix-os mirror keeps working: overlays fall back to the
+  # previous uvx path when the private hermes input is absent.
+  comfyMcpPackage =
+    if (pkgs ? comfy-mcp) && pkgs.comfy-mcp != null then
+      pkgs.comfy-mcp
+    else
+      pkgs.writeShellApplication {
+        name = "comfy-mcp";
+        runtimeInputs = [ pkgs.uv ];
+        text = ''
+          exec ${pkgs.uv}/bin/uvx \
+            --from comfy-mcp \
+            --from 'comfy-cli>=1.14.0' \
+            comfy-mcp "$@"
+        '';
+      };
   hermesComfyServer = {
     command = "${comfyMcpPackage}/bin/comfy-mcp";
     env = {
+      # Read by the comfy-mcp SERVER: points the submit/job tools at
+      # the local ComfyUI (docker-published host:port).
       COMFYUI_URL = "http://${imageHost}:${toString imageComfyPort}";
-      COMFY_MCP_REMOTE_SHARED_MODELS = imageModelsDir;
+      # Read by the comfy-cli ENGINE (not the server): re-points every
+      # engine verb (launch/logs/nodes/templates) at the same address —
+      # without it the engine falls back to 127.0.0.1:8188.
+      COMFY_LOCAL_URL = "http://${imageHost}:${toString imageComfyPort}";
+      # Shared-storage flag: the ComfyUI container mounts the same
+      # models dir the agent downloads into, so download_model may
+      # write locally (the value is "1", not a path).
+      COMFY_MCP_REMOTE_SHARED_MODELS = "1";
     };
   };
   hermesOpnsenseServer = {

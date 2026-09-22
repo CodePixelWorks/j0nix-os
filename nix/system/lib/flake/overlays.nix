@@ -31,6 +31,16 @@ let
         pkg = (inputs.drone-ci-mcp.packages or { }).${system} or null;
       in
       if pkg != null then pkg.drone-ci-mcp or null else null;
+    # ComfyUI MCP server from the curated hermes-package input (bundles
+    # the comfy-cli engine). Null when the private input is absent —
+    # ai-cli.nix falls back to the uvx wrapper in that case, so the
+    # public mirror keeps a working comfy MCP.
+    comfy-mcp =
+      let
+        system = final.stdenv.hostPlatform.system;
+        pkg = (inputs.hermes.packages or { }).${system} or null;
+      in
+      if pkg != null then pkg.comfy-mcp or null else null;
     nexus-collection-dl = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/nexus-collection-dl.nix") { };
     nms-amumss = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/nms-amumss.nix") { };
     openldap = prev.openldap.overrideAttrs (_: {
