@@ -51,6 +51,13 @@
       url = "git+ssh://git@git.j0lab.xyz/NixOS/j0nix-identity-secrets.git";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # drone-ci-mcp — Rust MCP server exposing Drone CI (ci.j0lab.xyz) as
+    # tools (readonly by default). Consumes the release tarballs from the
+    # Rust/drone-ci-mcp pipeline, same pattern as nixos-server-base.
+    drone-ci-mcp = {
+      url = "git+ssh://git@git.j0lab.xyz/Rust/drone-ci-mcp.git";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     stylix = {
       url = "github:danth/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
