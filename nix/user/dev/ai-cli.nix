@@ -166,6 +166,7 @@ let
   hermesDonsetchEnabled = false;
   hermesDonsetchPreferred = false;
   hermesDonsetchSupervised = hermesDonsetchCfg.supervised or true;
+  # ── hermesMcp settings reads (kept; consumed by the plugin eval) ─
   hermesOpnsenseCfg = hermesMcpCfg.opnsense or { };
   hermesOpnsenseEnabled = hermesEnabled && (hermesOpnsenseCfg.enable or false);
   hermesOpnsenseApiKeySecretName = hermesOpnsenseCfg.apiKeySecretName or "opnsense-api-key";
@@ -186,8 +187,6 @@ let
       config.sops.secrets.${hermesOpnsenseApiSecretSecretName}.path
     else
       "/missing/${hermesOpnsenseApiSecretSecretName}";
-  # Plain HTTP is only acceptable for private network addresses (RFC 1918,
-  # loopback, link-local, ULA). Everything else must use HTTPS.
   hermesOpnsenseUrl = hermesOpnsenseCfg.url or "";
   hermesOpnsenseUrlHost = lib.head (
     lib.splitString ":" (
@@ -219,12 +218,9 @@ let
       config.sops.secrets.${hermesGiteaTokenSecretName}.path
     else
       "/missing/${hermesGiteaTokenSecretName}";
-  # Drone CI MCP — fleet's Drone instance exposed as MCP tools.
-  # drone-ci-mcp only accepts DRONE_TOKEN directly (no *_FILE env support),
-  # so the wrapper reads the sops-provisioned token file and execs the
-  # Rust binary. The wrapper is built by Nix (writeShellApplication) and
-  # referenced by absolute store path — Hermes' config.yaml never holds
-  # the token in plaintext.
+  # Drone CI MCP — fleet's Drone instance exposed as MCP tools; the
+  # plugin module's token wrapper reads the sops-provisioned file at
+  # runtime (no native *_FILE support in the binary).
   hermesDroneCfg = hermesMcpCfg.droneCi or { };
   hermesDroneEnabled = hermesEnabled && (hermesDroneCfg.enable or false);
   hermesDroneServerUrl = hermesDroneCfg.serverUrl or "https://ci.j0lab.xyz";
@@ -243,60 +239,56 @@ let
   # readonly 6-tool profile (build_restart/promote/stop, cron_trigger
   # hidden from the model entirely).
   hermesDroneEnableWrites = hermesDroneCfg.enableWrites or true;
-  hermesDroneServerWrapper = pkgs.writeShellApplication {
-    name = "hermes-drone-ci-mcp";
-    runtimeInputs = [ pkgs.coreutils ];
-    text = ''
-      token_file=${lib.escapeShellArg hermesDroneTokenPath}
-
-      if [ ! -r "$token_file" ] || [ ! -s "$token_file" ]; then
-        echo "Hermes Drone CI MCP: token secret is missing or unreadable" >&2
-        exit 1
-      fi
-
-      export DRONE_SERVER=${lib.escapeShellArg hermesDroneServerUrl}
-      DRONE_TOKEN="$(tr -d '[:space:]' < "$token_file")"
-      export DRONE_TOKEN
-
-      exec ${hermesDronePackage}/bin/drone-ci-mcp "$@"
-    '';
-  };
-  # Render-friendly attrset — the hermes-mcp-sync Python embeds this as
-  # JSON, so it MUST be a {command, args, env} shape (same as gitea).
-  hermesDroneServer = {
-    command = "${hermesDroneServerWrapper}/bin/hermes-drone-ci-mcp";
-    args = lib.optional hermesDroneEnableWrites "--enable-writes";
-  };
-  mcpRemotes = ai.mcpRemotes or { };
-  hermesPackage = pkgs.hermes-agent-ext or null;
-  hermesGiteaPackage = pkgs.gitea-mcp or null;
-  hermesOpnsensePackage = pkgs.writeShellApplication {
-    name = "hermes-opnsense-mcp";
-    runtimeInputs = [ pkgs.coreutils pkgs.nodejs ];
-    text = ''
-      api_key_file=${lib.escapeShellArg hermesOpnsenseApiKeySecretPath}
-      api_secret_file=${lib.escapeShellArg hermesOpnsenseApiSecretSecretPath}
-
-      if [ ! -r "$api_key_file" ] || [ ! -s "$api_key_file" ]; then
-        echo "Hermes OPNsense MCP: API key secret is missing or unreadable" >&2
-        exit 1
-      fi
-      if [ ! -r "$api_secret_file" ] || [ ! -s "$api_secret_file" ]; then
-        echo "Hermes OPNsense MCP: API secret is missing or unreadable" >&2
-        exit 1
-      fi
-
-      export OPNSENSE_URL=${lib.escapeShellArg (hermesOpnsenseCfg.url or "https://opnsense.example.invalid")}
-      OPNSENSE_API_KEY="$(cat "$api_key_file")"
-      export OPNSENSE_API_KEY
-      OPNSENSE_API_SECRET="$(cat "$api_secret_file")"
-      export OPNSENSE_API_SECRET
-      export OPNSENSE_VERIFY_SSL=${lib.escapeShellArg (if hermesOpnsenseCfg.verifySsl or true then "true" else "false")}
-      export INCLUDE_PLUGINS=${lib.escapeShellArg (if hermesOpnsenseCfg.includePlugins or false then "true" else "false")}
-
-      exec npx --yes @richard-stovall/opnsense-mcp-server "$@"
-    '';
-  };
+  # ── MCP plugin modules (hermes-package nixosModules) ─────────────
+  # The hand-written per-server wiring (wrapper scripts, env
+  # rendering, per-server assertions) is replaced by the typed plugin
+  # modules from the curated hermes-package (nixos/modules/mcp):
+  # settings stay in settings.nix (hermesMcp.<name>.*), rendering
+  # happens in lib.evalModules per user via the tested modules, and
+  # this file only maps settings -> plugin options and reads the
+  # rendered entries. Contract: nixos/modules/mcp/README.md.
+  # The curated hermes-package (flake input) provides the plugin
+  # modules AND the server packages (flake/packages.nix outputs). The
+  # host overlay exposes gitea-mcp/comfy-mcp/drone-ci-mcp; opnsense-mcp
+  # ships only as a hermes-package package output (not in the host
+  # overlay), so resolve it from the flake input directly. The public
+  # mirror has no hermes input: plugin rendering falls back to empty
+  # and the servers stay unconfigured (same behavior as before — the
+  # old npx wrapper path is gone with the hand-written wiring).
+  hermesSystem = pkgs.stdenv.hostPlatform.system;
+  hermesMcpPackageFromHermes = name:
+    ((inputs.hermes.packages or { }).${hermesSystem} or { }).${name} or null;
+  hermesOpnsensePackageFromHermes = hermesMcpPackageFromHermes "opnsense-mcp";
+  hermesGiteaPackageFromHermes = hermesMcpPackageFromHermes "gitea-mcp";
+  hermesOpnsensePackageAvailable = hermesOpnsensePackageFromHermes != null;
+  # Plugin-module eval runs whenever the private hermes input exists
+  # (its nixos/module.nix + nixos/modules/mcp are imported from there).
+  hermesMcpPluginsAvailable = (inputs ? hermes) && (inputs.hermes ? outPath);
+  # gitea-mcp: prefer the curated hermes-package build (1.7.0, matches the
+  # plugin module's contract); fall back to the local overlay build so the
+  # public mirror keeps a working gitea MCP.
+  hermesGiteaMcpPackage =
+    if hermesGiteaPackageFromHermes != null then hermesGiteaPackageFromHermes else hermesGiteaPackage;
+  # ComfyUI MCP — consumed from the curated hermes-package
+  # (inputs.hermes, pkgs.comfy-mcp): the package bundles both the MCP
+  # server and its comfy-cli engine binary, so the local uvx wrapper
+  # (which pulled unpinned PyPI packages at runtime) is gone. The
+  # public j0nix-os mirror keeps working: this falls back to the uvx
+  # path when the private hermes input is absent.
+  comfyMcpPackage =
+    if (pkgs ? comfy-mcp) && pkgs.comfy-mcp != null then
+      pkgs.comfy-mcp
+    else
+      pkgs.writeShellApplication {
+        name = "comfy-mcp";
+        runtimeInputs = [ pkgs.uv ];
+        text = ''
+          exec ${pkgs.uv}/bin/uvx \\
+            --from comfy-mcp \\
+            --from 'comfy-cli>=1.14.0' \\
+            comfy-mcp "$@"
+        '';
+      };
   ncpPackage = pkgs.writeShellApplication {
     name = "ncp";
     runtimeInputs = [ pkgs.nodejs ];
@@ -356,62 +348,91 @@ let
       fi
     '';
   };
-  hermesGiteaServer = {
-    command = "${hermesGiteaPackage}/bin/gitea-mcp";
-    args = [
-      "-t"
-      "stdio"
-      "-H"
-      hermesGiteaHost
-    ];
-    env.GITEA_ACCESS_TOKEN_FILE = hermesGiteaTokenPath;
-  };
-  # ComfyUI MCP — consumed from the curated hermes-package (NixOS/hermes
-  # input, pkgs.comfy-mcp): the package bundles both the MCP server and
-  # its comfy-cli engine binary, so the local uvx wrapper (which pulled
-  # unpinned PyPI packages at runtime) is gone.
-  # The public j0nix-os mirror keeps working: overlays fall back to the
-  # previous uvx path when the private hermes input is absent.
-  comfyMcpPackage =
-    if (pkgs ? comfy-mcp) && pkgs.comfy-mcp != null then
-      pkgs.comfy-mcp
-    else
-      pkgs.writeShellApplication {
-        name = "comfy-mcp";
-        runtimeInputs = [ pkgs.uv ];
-        text = ''
-          exec ${pkgs.uv}/bin/uvx \
-            --from comfy-mcp \
-            --from 'comfy-cli>=1.14.0' \
-            comfy-mcp "$@"
-        '';
+
+
+  hermesPluginEval =
+    let
+      lib' = pkgs.lib;
+      hermesModule = import (inputs.hermes + "/nixos/module.nix");
+      evalModulesArgs = {
+        specialArgs = { pkgs = pkgs; };
+        modules = [
+          hermesModule
+          { config._module.check = false; }
+          {
+            j0lab.hermes.mcpPlugins =
+              (lib'.optionalAttrs hermesGiteaEnabled {
+                gitea = {
+                  enable = true;
+                  package = hermesGiteaMcpPackage;
+                  host = hermesGiteaHost;
+                  tokenFile = hermesGiteaTokenPath;
+                };
+              })
+              // (lib'.optionalAttrs (hermesOpnsenseEnabled && hermesOpnsensePackageAvailable) {
+                opnsense = {
+                  enable = true;
+                  package = hermesOpnsensePackageFromHermes;
+                  url = hermesOpnsenseCfg.url or "https://opnsense.example.invalid";
+                  apiKeyFile = hermesOpnsenseApiKeySecretPath;
+                  apiSecretFile = hermesOpnsenseApiSecretSecretPath;
+                  verifySsl = hermesOpnsenseCfg.verifySsl or true;
+                  # private-address HTTP bypass: the plugin module's
+                  # own assertion requires insecureAck when verifySsl
+                  # is false — acknowledge explicitly (RFC1918 targets
+                  # only, guarded by this file's URL assertion).
+                  insecureAck = if (hermesOpnsenseCfg.verifySsl or true) then null else "private-lan";
+                };
+              })
+              // (lib'.optionalAttrs (hermesDroneEnabled && hermesDronePackage != null) {
+                drone-ci = {
+                  enable = true;
+                  package = hermesDronePackage;
+                  serverUrl = hermesDroneServerUrl;
+                  tokenFile = hermesDroneTokenPath;
+                  enableWrites = hermesDroneEnableWrites;
+                };
+              })
+              // (lib'.optionalAttrs hermesImageEnabled {
+                comfy = {
+                  enable = true;
+                  package = comfyMcpPackage;
+                  host = imageHost;
+                  port = imageComfyPort;
+                  remoteSharedModels = true;
+                };
+              });
+          }
+        ];
       };
-  hermesComfyServer = {
-    command = "${comfyMcpPackage}/bin/comfy-mcp";
-    env = {
-      # Read by the comfy-mcp SERVER: points the submit/job tools at
-      # the local ComfyUI (docker-published host:port).
-      COMFYUI_URL = "http://${imageHost}:${toString imageComfyPort}";
-      # Read by the comfy-cli ENGINE (not the server): re-points every
-      # engine verb (launch/logs/nodes/templates) at the same address —
-      # without it the engine falls back to 127.0.0.1:8188.
-      COMFY_LOCAL_URL = "http://${imageHost}:${toString imageComfyPort}";
-      # Shared-storage flag: the ComfyUI container mounts the same
-      # models dir the agent downloads into, so download_model may
-      # write locally (the value is "1", not a path).
-      COMFY_MCP_REMOTE_SHARED_MODELS = "1";
-    };
-  };
-  hermesOpnsenseServer = {
-    command = "${hermesOpnsensePackage}/bin/hermes-opnsense-mcp";
-  };
-  hermesManagedServers =
-    lib.optionalAttrs hermesGiteaEnabled { gitea = hermesGiteaServer; }
-    // lib.optionalAttrs hermesOpnsenseEnabled { opnsense = hermesOpnsenseServer; }
-    // lib.optionalAttrs hermesImageEnabled { comfy = hermesComfyServer; }
-    // lib.optionalAttrs (hermesDroneEnabled && hermesDronePackage != null) {
-      drone-ci = hermesDroneServer;
-    };
+    in
+    if hermesMcpPluginsAvailable then
+      lib'.evalModules evalModulesArgs
+    else
+      null;
+
+  # Rendered { command, args, env } entries from the plugin modules —
+  # replaces the hand-written hermesGiteaServer/hermesOpnsenseServer/
+  # hermesDroneServer/hermesComfyServer attrsets.
+  hermesRenderedServers =
+    if hermesPluginEval != null then
+      hermesPluginEval.config.j0lab.hermes.renderedMcpServers or { }
+    else
+      { };
+  # Plugin-module assertions (drone-ci privacy/writes combo, opnsense
+  # verifySsl+insecureAck pair) — lib.evalModules does not evaluate
+  # config.assertions on its own, so surface them here and let the
+  # host's assertions list fire them.
+  hermesPluginAssertions =
+    if hermesPluginEval != null then
+      hermesPluginEval.config.assertions or [ ]
+    else
+      [ ];
+
+  mcpRemotes = ai.mcpRemotes or { };
+  hermesPackage = pkgs.hermes-agent-ext or null;
+  hermesGiteaPackage = pkgs.gitea-mcp or null;
+  # resolved before the plugin eval: hermesGiteaMcpPackage above.
   hermesImagePrompt = ''
     Local image-generation stack:
     - ComfyUI API/UI: http://${imageHost}:${toString imageComfyPort}
@@ -434,7 +455,7 @@ let
       mkdir -p "$(dirname "$config_file")"
 
       HERMES_CONFIG_FILE="$config_file" \
-        HERMES_MANAGED_SERVERS=${lib.escapeShellArg (builtins.toJSON hermesManagedServers)} \
+        HERMES_MANAGED_SERVERS=${lib.escapeShellArg (builtins.toJSON hermesRenderedServers)} \
         ${hermesMcpSyncPython}/bin/python <<'PY'
       import json
       import os
@@ -595,7 +616,7 @@ lib.mkIf enabled {
       hermesPackage
     ]
     ++ lib.optionals hermesGiteaEnabled [ hermesGiteaPackage ]
-    ++ lib.optionals hermesOpnsenseEnabled [ hermesOpnsensePackage ]
+    ++ lib.optionals (hermesOpnsenseEnabled && hermesOpnsensePackageAvailable) [ hermesOpnsensePackageFromHermes ]
     ++ lib.optionals hermesImageEnabled [ comfyMcpPackage ]
     ++ lib.optionals (installScope == "user") [ pkgs.bubblewrap ];
 
@@ -793,5 +814,5 @@ lib.mkIf enabled {
       ];
       message = "settings.dev.ai.installScope must be one of: system, user";
     }
-  ];
+  ] ++ hermesPluginAssertions;
 }
