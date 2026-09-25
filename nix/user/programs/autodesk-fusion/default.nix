@@ -8,8 +8,11 @@ let
   cfg = (settings.programs or { }).autodeskFusion or { };
   enabled = cfg.enable or false;
 
-  installDir = cfg.installDir or "$HOME/.autodesk_fusion";
-  installerMode = cfg.installerMode or "install";
+  # Lolig4 keeps independent prefixes per runner. Do not reuse the legacy
+  # cryinkfly prefix: it is retained as a rollback source until the patched
+  # runner has been verified.
+  installDir = cfg.installDir or "$HOME/.local/share/Autodesk-Unofficial";
+  installerMode = cfg.installerMode or "fusion-wine";
   protonVersion = cfg.protonVersion or "GE-Proton11-Fusion";
   gpuBackend = cfg.gpuBackend or "auto";
   extensions = cfg.extensions or false;
@@ -25,7 +28,7 @@ let
 
   installerUrl =
     cfg.installerUrl or
-      "https://codeberg.org/cryinkfly/Autodesk-Fusion-360-on-Linux/raw/branch/main/files/setup/autodesk_fusion_installer_x86-64.sh";
+      "https://codeberg.org/Lolig4/Autodesk-Fusion-360-on-Linux/raw/branch/main/files/setup/autodesk_fusion_installer_x86-64.sh";
 
   runtimePackages = with pkgs; [
     runner
@@ -57,6 +60,10 @@ let
     gnutar
     glibc.bin
     mokutil
+    msitools
+    util-linux
+    qt6.qttools
+    zenity
   ];
 
   commonShell = ''
@@ -405,12 +412,12 @@ EOF
   };
 
   installCommand =
-    if installerMode == "install" then
-      "--install"
-    else if installerMode == "install-fix" then
-      "--install-fix"
+    if installerMode == "wine" then
+      "--wine"
+    else if installerMode == "proton" then
+      "--proton=${protonVersion}"
     else
-      "--proton=${protonVersion}";
+      "--fusion-wine";
 
   installerScript = pkgs.writeShellApplication {
     name = "autodesk-fusion-install";
@@ -421,15 +428,16 @@ EOF
       ${protectedInstallerEnv}
 
       mkdir -p "$install_dir/bin" "$install_dir/logs"
-      installer="$install_dir/bin/cryinkfly-autodesk-fusion-installer.sh"
+      installer="$install_dir/bin/autodesk_fusion_installer_x86-64.sh"
       extensions_enabled=${if extensions then "1" else "0"}
 
       echo "Fetching Autodesk Fusion Linux installer..."
       curl -L --fail ${lib.escapeShellArg installerUrl} -o "$installer"
       chmod +x "$installer"
-      ${applyGpuBackendPolicy}
 
-      args=( ${lib.escapeShellArg installCommand} "$install_dir" )
+      # Lolig4 detects the real GPU and configures its matching DXVK/VKD3D
+      # stack. Its fusion-wine runner carries the canvas and owned-window fixes.
+      args=( --install fusion ${lib.escapeShellArg installCommand} )
       if [ "$extensions_enabled" = "1" ]; then
         args+=(--full)
       fi
@@ -439,7 +447,6 @@ EOF
       ${postInstallDesktopFix}
     '';
   };
-
   repairScript = pkgs.writeShellApplication {
     name = "autodesk-fusion-repair";
     runtimeInputs = runtimePackages;
@@ -449,19 +456,17 @@ EOF
       ${protectedInstallerEnv}
 
       mkdir -p "$install_dir/bin" "$install_dir/logs"
-      installer="$install_dir/bin/cryinkfly-autodesk-fusion-installer.sh"
+      installer="$install_dir/bin/autodesk_fusion_installer_x86-64.sh"
 
       echo "Fetching Autodesk Fusion Linux installer..."
       curl -L --fail ${lib.escapeShellArg installerUrl} -o "$installer"
       chmod +x "$installer"
-      ${applyGpuBackendPolicy}
 
-      echo "Starting Autodesk Fusion repair in: $install_dir"
-      "$installer" --install-fix "$install_dir"
+      echo "Deploying a fresh, parallel Fusion prefix in: $install_dir"
+      "$installer" --install fusion ${lib.escapeShellArg installCommand}
       ${postInstallDesktopFix}
     '';
   };
-
   launcherScript = pkgs.writeShellApplication {
     name = "autodesk-fusion";
     runtimeInputs = runtimePackages;
@@ -469,39 +474,14 @@ EOF
       set -eu
       ${commonShell}
 
-      search_roots=()
-      [ -d "$prefix_dir" ] && search_roots+=("$prefix_dir")
-      [ -d "$proton_prefix_dir" ] && search_roots+=("$proton_prefix_dir")
-
-      if [ "''${#search_roots[@]}" -eq 0 ]; then
-        echo "error: Autodesk Fusion is not installed at $install_dir." >&2
+      launcher="$install_dir/bin/autodesk_fusion_launcher.sh"
+      if [ ! -x "$launcher" ]; then
+        echo "error: the Lolig4 Fusion flow is not installed at $install_dir." >&2
         echo "Run: autodesk-fusion-install" >&2
         exit 1
       fi
 
-      launcher="$(
-        find "''${search_roots[@]}" -name Fusion360.exe -printf '%T+ %p\n' 2>/dev/null \
-          | sort -r \
-          | head -n 1 \
-          | cut -d' ' -f2-
-      )"
-
-      if [ -z "$launcher" ]; then
-        echo "error: Autodesk Fusion is not installed at $install_dir." >&2
-        echo "Run: autodesk-fusion-install" >&2
-        exit 1
-      fi
-
-      if [ -d "$prefix_dir" ]; then
-        export WINEPREFIX="$prefix_dir"
-      else
-        export WINEPREFIX="$proton_prefix_dir"
-      fi
-      export DXVK_LOG_LEVEL=none
-      export WINEDEBUG=-all,+err
-
-      ${runFusionTarget}
-      run_fusion_target "$launcher" "$@"
+      exec "$launcher" fusion "$@"
     '';
   };
 
@@ -518,30 +498,14 @@ EOF
         exit 2
       fi
 
-      search_roots=()
-      [ -d "$prefix_dir" ] && search_roots+=("$prefix_dir")
-      [ -d "$proton_prefix_dir" ] && search_roots+=("$proton_prefix_dir")
-
-      if [ "''${#search_roots[@]}" -eq 0 ]; then
-        echo "error: Autodesk Fusion is not installed at $install_dir." >&2
+      opener="$install_dir/bin/adskidmgr-opener.sh"
+      if [ ! -x "$opener" ]; then
+        echo "error: the Lolig4 Fusion login handler is not installed at $install_dir." >&2
         echo "Run: autodesk-fusion-install" >&2
         exit 1
       fi
 
-      identity_manager="$(
-        find "''${search_roots[@]}" -name AdskIdentityManager.exe -print 2>/dev/null \
-          | sort \
-          | tail -n 1
-      )"
-
-      if [ -z "$identity_manager" ]; then
-        echo "error: AdskIdentityManager.exe was not found under $install_dir." >&2
-        echo "Run: autodesk-fusion-install" >&2
-        exit 1
-      fi
-
-      ${runFusionTarget}
-      run_fusion_target "$identity_manager" "$url"
+      exec "$opener" "$url"
     '';
   };
 
@@ -595,36 +559,40 @@ EOF
           ;;
       esac
 
-      if [ -d "$prefix_dir" ]; then
-        ok "Wine prefix exists: $prefix_dir"
-      elif [ -d "$proton_prefix_dir" ]; then
-        ok "Proton prefix exists: $proton_prefix_dir"
+      active_prefix_name="$(cat "$install_dir/logs/active_fusion.log" 2>/dev/null || true)"
+      active_prefix="$install_dir/wineprefixes/$active_prefix_name"
+      if [ -n "$active_prefix_name" ] && [ -d "$active_prefix" ]; then
+        ok "Active Lolig4 Fusion prefix: $active_prefix"
       else
-        warn "Fusion prefix is not installed yet under $install_dir"
+        warn "No active Lolig4 Fusion prefix exists under $install_dir; run autodesk-fusion-install"
       fi
 
       if [ -x "$install_dir/bin/autodesk_fusion_launcher.sh" ]; then
-        ok "cryinkfly launcher exists"
+        ok "Lolig4 launcher exists"
       else
-        warn "cryinkfly launcher missing; run autodesk-fusion-install"
+        warn "Lolig4 launcher missing; run autodesk-fusion-install"
+      fi
+
+      if [ -x "$install_dir/fusion-wine-build/bin/wine" ]; then
+        ok "Patched fusion-wine runner exists"
+      else
+        warn "Patched fusion-wine runner is missing"
       fi
 
       search_roots=()
-      [ -d "$prefix_dir" ] && search_roots+=("$prefix_dir")
-      [ -d "$proton_prefix_dir" ] && search_roots+=("$proton_prefix_dir")
+      [ -d "$active_prefix" ] && search_roots+=("$active_prefix")
 
       if [ "''${#search_roots[@]}" -gt 0 ] && find "''${search_roots[@]}" -name AdskIdentityManager.exe -print -quit 2>/dev/null | grep -q .; then
         ok "Autodesk Identity Manager exists"
       else
-        warn "Autodesk Identity Manager not found yet"
+        warn "Autodesk Identity Manager not found in the active prefix"
       fi
 
       if [ "''${#search_roots[@]}" -gt 0 ] && find "''${search_roots[@]}" -iname '*WebView2*' -print -quit 2>/dev/null | grep -q .; then
         ok "WebView2 files exist"
       else
-        warn "WebView2 files not found yet"
+        warn "WebView2 files not found in the active prefix"
       fi
-
       mime_default="$(xdg-mime query default x-scheme-handler/adskidmgr 2>/dev/null || true)"
       if [ "$mime_default" = "autodesk-fusion-adskidmgr.desktop" ]; then
         ok "adskidmgr login handler is registered"
@@ -731,11 +699,11 @@ lib.mkIf enabled {
     }
     {
       assertion = builtins.elem installerMode [
-        "install"
-        "install-fix"
+        "fusion-wine"
+        "wine"
         "proton"
       ];
-      message = "settings.programs.autodeskFusion.installerMode must be one of: install, install-fix, proton";
+      message = "settings.programs.autodeskFusion.installerMode must be one of: fusion-wine, wine, proton";
     }
     {
       assertion = builtins.isString protonVersion && protonVersion != "";
