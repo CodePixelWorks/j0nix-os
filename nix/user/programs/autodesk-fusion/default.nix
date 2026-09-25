@@ -83,6 +83,15 @@ let
     export QT_QPA_PLATFORM=xcb
     export SDL_VIDEODRIVER=x11
     unset WAYLAND_DISPLAY
+    # v2.1.7: on NVIDIA hosts Wine's default Mesa libEGL fails to bind the GPU
+    # ("failed to create dri2 screen", driver (null)) and Fusion exits with 53
+    # before any window opens.  Pin the GLVND vendor explicitly to the NVIDIA
+    # ICD; this only changes *which* EGL implementation is loaded, not the
+    # search path (LD_LIBRARY_PATH stays untouched, so Mesa swrast cannot drift
+    # in like the earlier 74b176f override did and OOM the process).
+    if [ -f /run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json ]; then
+      export __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json
+    fi
   '';
 
   runFusionTarget = ''
