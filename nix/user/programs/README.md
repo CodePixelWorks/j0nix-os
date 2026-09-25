@@ -61,14 +61,17 @@ Note: Bottles component downloads are runtime/user-state operations and are not 
 `winexe-run` uses `bottles-cli run` with an absolute executable path and the configured default bottle/runner.
 New j0nix-managed bottles are seeded from a Nix-generated template after creation. Existing unmanaged default bottles are migrated once by merging a curated set of safe runtime fields while preserving installed programs, dependencies and other bottle state.
 
-`Autodesk Fusion` is configured via `settings.programs.autodeskFusion.*` and provides a managed Wine runtime environment for the cryinkfly installer:
-- `autodesk-fusion-install` downloads and runs the upstream installer into user state (`~/.autodesk_fusion` by default)
-- `autodesk-fusion-repair` reruns the patched install-fix path
-- `autodesk-fusion` launches the installed Fusion prefix through Xwayland-oriented environment defaults
-- `autodesk-fusion-renderer [status|opengl|dxvk]` switches the existing prefix between OpenGL and DXVK rendering
-- `autodesk-fusion-doctor` checks Wine, DXVK/Vulkan, prefix paths, WebView2, and the `adskidmgr` login URL handler
+`Autodesk Fusion` is configured via `settings.programs.autodeskFusion.*` and uses the maintained Lolig4 installer flow. The default `fusion-wine` runner installs a separate prefix in `~/.local/share/Autodesk-Unofficial`; the former `~/.autodesk_fusion` prefix is intentionally left untouched as a rollback source.
 
-The Autodesk payload, WebView2 runtime, cryinkfly installer payloads, and license/session data are runtime user state and are not fetched during Nix evaluation or vendored into the Nix store.
+- `autodesk-fusion-install` creates a new Fusion prefix with Lolig4's patched Wine runner, DXVK/VKD3D, corrected Visual C++ override, and Wine-DX9 sidebar override.
+- `autodesk-fusion-repair` creates another clean, parallel prefix rather than mutating a potentially broken installation.
+- `autodesk-fusion` delegates to Lolig4's active-prefix launcher.
+- `autodesk-fusion-adskidmgr` delegates `adskidmgr:` callbacks to Lolig4's opener.
+- `autodesk-fusion-renderer` is retained only for legacy-prefix diagnosis; the maintained flow selects its renderer during prefix creation.
+
+The patched `fusion-wine` runner is required with modern Wine versions: upstream documents a black/white 3D canvas regression in Wine 11.11+ and includes the canvas plus owned-tool-window fixes in this runner. Its Wine-DX9 override for `AdCefWebBrowser.exe` is the corresponding sidebar/navigation fix.
+
+The Autodesk payload, runner archive, WebView2 runtime, and license/session data are mutable user state. They are fetched only when the install or repair command is explicitly run, never during Nix evaluation.
 
 ### Fusion sign-in on Hyprland
 
