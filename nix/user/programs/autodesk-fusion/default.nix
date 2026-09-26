@@ -234,15 +234,13 @@ let
     # Steam inherits it and a completed installer can leave the lock held.
     if [ -z "''${J0NIX_FUSION_INSTALLER_LOCKED:-}" ]; then
       export J0NIX_FUSION_INSTALLER_LOCKED=1
-      if ! flock -n -o "$lock_file" "$0" "$@"; then
-        status=$?
-        if [ "$status" -eq 1 ]; then
-          echo "error: another Autodesk Fusion installation or repair is already running." >&2
-          echo "Wait for it to finish before starting a new one." >&2
-        fi
-        exit "$status"
+      flock -n -o "$lock_file" "$0" "$@"
+      status=$?
+      if [ "$status" -eq 1 ]; then
+        echo "error: another Autodesk Fusion installation or repair is already running." >&2
+        echo "Wait for it to finish before starting a new one." >&2
       fi
-      exit 0
+      exit "$status"
     fi
   '';
 
