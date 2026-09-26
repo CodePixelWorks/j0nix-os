@@ -1,6 +1,29 @@
 # Autodesk Fusion 360: Wayland- und Login-Status
 
 Stand: 2026-09-26
+
+## Revalidiertes Ergebnis (ersetzt den experimentellen Zielpfad)
+
+Der native CachyOS-WineWayland-Proton-Weg ist auf Jonas-PC derzeit **nicht
+installierbar**: Der Lolig4-Installer kann Prefix, WebView2 und DXVK einrichten,
+doch `FusionClientInstaller.exe --quiet` bleibt sowohl mit
+`PROTON_ENABLE_WAYLAND=1` als auch explizit mit `=0` ohne Netzwerk, Programmdateien
+oder sichtbares Fenster hängen. Das ist ein reproduzierbarer Fehler im
+FusionClient-/CachyOS-Proton-Zusammenspiel und kein Desktop-File- oder
+Browser-Callback-Problem.
+
+Der produktive Pfad ist daher Lolig4 `fusion-wine` auf dem Hyprland-Wayland-
+Desktop über XWayland. Der vorhandene Prefix `fusion-1` wurde erneut gestartet:
+`Fusion360.exe`, `ADPClientService.exe` und `AdskIdentityManager.exe` laufen,
+und das Fusion-Fenster erscheint. Dieser Pfad nutzt den gemeinsamen
+Host-Namespace, wodurch die früher erfolgreiche Login-IPC beibehalten wird.
+
+`settings.programs.autodeskFusion.installerMode` ist deshalb auf
+`"fusion-wine"` gesetzt. Der verwaltete Launcher normalisiert die Renderer wie
+beim Lolig4-Referenzpfad: OpenGL für Fusion-Shell/Cloud-Sidebar und DXVK/D3D11
+für den 3D-Canvas. `PROTON_ENABLE_WAYLAND=1` bleibt nur ein später erneut zu
+prüfendes Experiment; es darf nicht mehr als Standard oder Reparaturpfad
+verwendet werden.
 Geltungsbereich: Jonas-PC, NixOS, Hyprland, NVIDIA RTX 4070 Ti SUPER
 
 ## Ziel
