@@ -503,7 +503,6 @@ EOF
     runtimeInputs = runtimePackages;
     text = ''
       set -eu
-      saved_wayland_display="''${WAYLAND_DISPLAY-}"
       ${commonShell}
       ${protectedInstallerEnv}
 
@@ -534,7 +533,6 @@ EOF
     runtimeInputs = runtimePackages;
     text = ''
       set -eu
-      saved_wayland_display="''${WAYLAND_DISPLAY-}"
       ${commonShell}
       ${protectedInstallerEnv}
 
@@ -558,7 +556,6 @@ EOF
     text = ''
       saved_ld_library_path="''${LD_LIBRARY_PATH-}"
       set -eu
-      saved_wayland_display="''${WAYLAND_DISPLAY-}"
       ${commonShell}
       ${cleanInheritedQtEnvironment}
 
@@ -692,7 +689,6 @@ EOF
     runtimeInputs = runtimePackages;
     text = ''
       set -eu
-      saved_wayland_display="''${WAYLAND_DISPLAY-}"
       ${commonShell}
       ${cleanInheritedQtEnvironment}
 
