@@ -660,6 +660,9 @@ EOF
           fi
           export WAYLAND_DISPLAY="$saved_wayland_display"
           export XKB_CONFIG_ROOT="${pkgs.xkeyboard_config}/share/X11/xkb"
+          # Autodesk IDSDK in this WineWayland build assumes CET even during CEST.
+          # Keep the process clock aligned with the server-side login check.
+          export TZ=Etc/GMT-1
           # Proton otherwise falls back to Mesa EGL under NixOS even though the
           # host NVIDIA GLVND vendor is available. Keep the vendor selection
           # while leaving Proton's own runtime library stack intact.
@@ -761,6 +764,8 @@ EOF
           exit 1
         fi
         # Keep the browser callback in the same WineWayland-Proton context as Fusion.
+        # Match Fusion's IDSDK process clock for the browser callback.
+        export TZ=Etc/GMT-1
         export WAYLAND_DISPLAY="$saved_wayland_display"
         unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER
         export XKB_CONFIG_ROOT="${pkgs.xkeyboard_config}/share/X11/xkb"
