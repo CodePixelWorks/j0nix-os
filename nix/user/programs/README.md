@@ -61,7 +61,7 @@ Note: Bottles component downloads are runtime/user-state operations and are not 
 `winexe-run` uses `bottles-cli run` with an absolute executable path and the configured default bottle/runner.
 New j0nix-managed bottles are seeded from a Nix-generated template after creation. Existing unmanaged default bottles are migrated once by merging a curated set of safe runtime fields while preserving installed programs, dependencies and other bottle state.
 
-`Autodesk Fusion` is configured via `settings.programs.autodeskFusion.*` and uses the maintained Lolig4 installer flow. The current configuration selects `installerMode = "proton"` with `protonVersion = "cachyos-wineland-11.0-Fusion"`, which is Lolig4's experimental native-Wayland path and creates a separate Proton prefix.
+`Autodesk Fusion` is configured via `settings.programs.autodeskFusion.*` and uses the maintained Lolig4 installer flow. The current configuration selects `installerMode = "fusion-wine"`, the tested path for Hyprland through XWayland. CachyOS WineWayland Proton remains experimental because its quiet FusionClient bootstrap hangs before downloading Fusion.
 
 - `autodesk-fusion-install` creates a new Fusion prefix with the selected Lolig4 runner and its corresponding component overrides.
 - `autodesk-fusion-repair` creates another clean, parallel prefix rather than mutating a potentially broken installation.
