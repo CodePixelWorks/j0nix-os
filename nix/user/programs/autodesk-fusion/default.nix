@@ -714,9 +714,39 @@ EOF
               WINEPREFIX="$STEAM_COMPAT_DATA_PATH/pfx" "$J0NIX_FUSION_WINESERVER" -k >/dev/null 2>&1 || true
             }
             trap cleanup_fusion_wine EXIT HUP INT TERM
-            # IDSDK starts asynchronously. Let it publish its IPC endpoint
-            # before Fusion requests product configuration and login.
-            sleep 20
+            # Wait for the exact server-ready event emitted by IDSDK instead of
+            # imposing an arbitrary startup delay. The log is append-only for
+            # this prefix; retain its byte offset from before the launch.
+            identity_log="$STEAM_COMPAT_DATA_PATH/pfx/drive_c/users/steamuser/AppData/Local/Autodesk/Identity Services/Log/IdServices.log"
+            identity_log_offset=0
+            if [ -f "$identity_log" ]; then
+              identity_log_offset="$(wc -c <"$identity_log")"
+            fi
+            identity_attempt=0
+            identity_ready=0
+            while [ "$identity_attempt" -lt 150 ]; do
+              if ! kill -0 "$identity_pid" 2>/dev/null; then
+                echo "error: Autodesk Identity Manager exited before its SSO server became ready." >&2
+                exit 1
+              fi
+              if [ -f "$identity_log" ]; then
+                identity_log_size="$(wc -c <"$identity_log")"
+                if [ "$identity_log_size" -lt "$identity_log_offset" ]; then
+                  identity_log_offset=0
+                fi
+                if tail -c "+$((identity_log_offset + 1))" "$identity_log" 2>/dev/null | grep -Fq "[AdskIdentityManager INFO] SSO Server is ready"; then
+                  identity_ready=1
+                  break
+                fi
+              fi
+              identity_attempt=$((identity_attempt + 1))
+              sleep 0.2
+            done
+            if [ "$identity_ready" -ne 1 ]; then
+              echo "error: Autodesk Identity Manager did not publish its SSO server within 30 seconds." >&2
+              exit 1
+            fi
+            echo "Autodesk Identity Manager SSO server is ready; starting Fusion."
             "$J0NIX_FUSION_PROTON" run "$J0NIX_FUSION_EXE" "$@"
             status=$?
             exit "$status"
