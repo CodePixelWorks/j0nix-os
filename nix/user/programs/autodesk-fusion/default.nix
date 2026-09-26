@@ -703,15 +703,14 @@ EOF
           echo "error: Proton runner '$runner_mode' is unavailable for Autodesk login." >&2
           exit 1
         fi
-        export WAYLAND_DISPLAY="$saved_wayland_display"
-        unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER __EGL_VENDOR_LIBRARY_FILENAMES
-        export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.vulkan-loader ]}"
+        # Fusion stays WineWayland; browser callbacks use direct Wine in the
+        # same prefix via XWayland, matching the earlier working flow.
+        unset WAYLAND_DISPLAY GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER __EGL_VENDOR_LIBRARY_FILENAMES
         exec env \
-          PROTON_LOG=0 \
-          PROTON_ENABLE_WAYLAND=1 \
-          STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" \
-          STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" \
-          ${pkgs.steam-run}/bin/steam-run "$steam_dir/compatibilitytools.d/$runner_mode/proton" run "$identity_exe" "$url"
+          WINEDEBUG="''${WINEDEBUG:--all,+err}" \
+          WINEPREFIX="$wine_pfx" \
+          WINESERVER="$steam_dir/compatibilitytools.d/$runner_mode/files/bin/wineserver" \
+          ${pkgs.steam-run}/bin/steam-run "$steam_dir/compatibilitytools.d/$runner_mode/files/bin/wine" "$identity_exe" "$url"
       fi
 
       opener="$install_dir/bin/adskidmgr-opener.sh"
@@ -867,7 +866,7 @@ lib.mkIf enabled {
         Name=Autodesk Fusion
         GenericName=CAD/CAM/CAE
         Comment=Run Autodesk Fusion through the managed j0nix Wine setup
-        Exec=${lib.getExe launcherScript} %U
+        Exec=${pkgs.steam-run}/bin/steam-run ${lib.getExe launcherScript} %U
         Icon=autodesk-fusion
         StartupWMClass=fusion360.exe
         Terminal=false
