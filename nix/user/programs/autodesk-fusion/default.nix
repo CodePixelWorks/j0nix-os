@@ -212,6 +212,7 @@ let
     sed -i \
       -e 's|WINE="$PROTON_DIRECTORY/files/bin/wine"|export J0NIX_PROTON_DIRECTORY="$PROTON_DIRECTORY"\n        WINE="$J0NIX_PROTON_WINE_WRAPPER"|' \
       -e 's|WINESERVER="$PROTON_DIRECTORY/files/bin/wineserver"|WINESERVER="$J0NIX_PROTON_WINESERVER_WRAPPER"|' \
+      -e 's|"$PROTON_DIRECTORY/proton" run wineboot --init|${pkgs.steam-run}/bin/steam-run "$PROTON_DIRECTORY/proton" run wineboot --init|' \
       "$installer"
   '';
 
