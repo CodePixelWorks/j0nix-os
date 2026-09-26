@@ -701,22 +701,28 @@ EOF
 
           echo "Starting Autodesk Identity Manager before Fusion..."
           # shellcheck disable=SC2016 # variables intentionally expand inside bash -c
-          steam-run env PROTON_LOG=0 PROTON_ENABLE_WAYLAND=1 STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" J0NIX_FUSION_PROTON="$proton_dir/proton" J0NIX_FUSION_IDENTITY="$identity_exe" J0NIX_FUSION_EXE="$fusion_exe" bash -c '
+          steam-run env PROTON_LOG=0 PROTON_ENABLE_WAYLAND=1 STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" J0NIX_FUSION_PROTON="$proton_dir/proton" J0NIX_FUSION_WINESERVER="$proton_dir/files/bin/wineserver" J0NIX_FUSION_IDENTITY="$identity_exe" J0NIX_FUSION_EXE="$fusion_exe" bash -c '
             set -u
             "$J0NIX_FUSION_PROTON" run "$J0NIX_FUSION_IDENTITY" --process_name Autodesk.IDSDK.DefaultProcess-v2 --server_name Autodesk.IDSDK.DefaultServer-v2 >/dev/null 2>&1 &
             identity_pid=$!
+            cleanup_fusion_wine() {
+              kill "$identity_pid" 2>/dev/null || true
+              wait "$identity_pid" 2>/dev/null || true
+              # Proton runs inside a private steam-run /tmp. Its Wine server
+              # must be stopped here as well; an outer cleanup cannot reach
+              # its IPC socket and leaves ADPClientService.exe orphaned.
+              WINEPREFIX="$STEAM_COMPAT_DATA_PATH/pfx" "$J0NIX_FUSION_WINESERVER" -k >/dev/null 2>&1 || true
+            }
+            trap cleanup_fusion_wine EXIT HUP INT TERM
             # IDSDK starts asynchronously. Let it publish its IPC endpoint
             # before Fusion requests product configuration and login.
             sleep 20
             "$J0NIX_FUSION_PROTON" run "$J0NIX_FUSION_EXE" "$@"
             status=$?
-            kill "$identity_pid" 2>/dev/null || true
-            wait "$identity_pid" 2>/dev/null || true
             exit "$status"
           ' fusion-wayland "$@" &
           runner_pid=$!
           if wait "$runner_pid"; then status=0; else status=$?; fi
-          WINEPREFIX="$wine_pfx" "$proton_dir/files/bin/wineserver" -k || true
           exit "$status"
           ;;
       esac
