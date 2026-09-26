@@ -16,6 +16,9 @@ let
   protonVersion = cfg.protonVersion or "GE-Proton11-Fusion";
   gpuBackend = cfg.gpuBackend or "auto";
   extensions = cfg.extensions or false;
+  # The upstream add-in regularly refreshes the canvas. It is required on
+  # systems where Fusion otherwise leaves the DXVK viewport white.
+  viewportRefreshForcer = cfg.viewportRefreshForcer or true;
   autoSetupOnLogin = cfg.autoSetupOnLogin or false;
   runnerName = cfg.runner or "wineWow64Packages.stagingFull";
   setAsDefaultLoginHandler = cfg.setAsDefaultLoginHandler or true;
@@ -510,6 +513,7 @@ EOF
       installer="$install_dir/bin/autodesk_fusion_installer_x86-64.sh"
       ${installerLock}
       extensions_enabled=${if extensions then "1" else "0"}
+      viewport_refresh_forcer=${if viewportRefreshForcer then "1" else "0"}
 
       echo "Fetching Autodesk Fusion Linux installer..."
       curl -L --fail ${lib.escapeShellArg installerUrl} -o "$installer"
@@ -521,6 +525,9 @@ EOF
       args=( --install fusion ${lib.escapeShellArg installCommand} )
       if [ "$extensions_enabled" = "1" ]; then
         args+=(--full)
+      fi
+      if [ "$viewport_refresh_forcer" = "1" ]; then
+        args+=(--refresh-forcer)
       fi
 
       echo "Starting Autodesk Fusion setup in: $install_dir"
@@ -539,6 +546,7 @@ EOF
       mkdir -p "$install_dir/bin" "$install_dir/logs"
       installer="$install_dir/bin/autodesk_fusion_installer_x86-64.sh"
       ${installerLock}
+      viewport_refresh_forcer=${if viewportRefreshForcer then "1" else "0"}
 
       echo "Fetching Autodesk Fusion Linux installer..."
       curl -L --fail ${lib.escapeShellArg installerUrl} -o "$installer"
@@ -546,7 +554,11 @@ EOF
       ${protonInstallerRuntime}
 
       echo "Deploying a fresh, parallel Fusion prefix in: $install_dir"
-      "$installer" --install fusion ${lib.escapeShellArg installCommand}
+      args=( --install fusion ${lib.escapeShellArg installCommand} )
+      if [ "$viewport_refresh_forcer" = "1" ]; then
+        args+=(--refresh-forcer)
+      fi
+      "$installer" "''${args[@]}"
       ${postInstallDesktopFix}
     '';
   };
@@ -971,6 +983,10 @@ lib.mkIf enabled {
     {
       assertion = builtins.isBool extensions;
       message = "settings.programs.autodeskFusion.extensions must be a boolean";
+    }
+    {
+      assertion = builtins.isBool viewportRefreshForcer;
+      message = "settings.programs.autodeskFusion.viewportRefreshForcer must be a boolean";
     }
     {
       assertion = builtins.isBool autoSetupOnLogin;
