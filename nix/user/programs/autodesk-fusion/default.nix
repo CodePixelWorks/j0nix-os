@@ -727,6 +727,14 @@ EOF
       wine_pfx="$(sed -n '2p' "$prefix_config" 2>/dev/null || true)"
 
       if [ -n "$runner_mode" ] && [ "$runner_mode" != "--wine" ] && [ "$runner_mode" != "--fusion-wine" ]; then
+        if [ -z "$saved_wayland_display" ] && [ -n "''${XDG_RUNTIME_DIR-}" ]; then
+          for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
+            if [ -S "$socket" ]; then
+              saved_wayland_display="$(basename "$socket")"
+              break
+            fi
+          done
+        fi
         if [ -z "$saved_wayland_display" ] || [ ! -d "$wine_pfx" ]; then
           echo "error: Autodesk login requires the active Wayland Proton prefix." >&2
           exit 1
