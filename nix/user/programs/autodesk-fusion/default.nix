@@ -610,6 +610,9 @@ EOF
             options_normalized="$(mktemp)"
             options_utf16="$(mktemp)"
             iconv -f UTF-16 -t UTF-8 "$options_file" >"$options_utf8"
+            if ! grep -q '<graphicsApiOptionId ' "$options_utf8"; then
+              sed -i 's@</OptionGroups>@  <CompatibilityGroup SchemaVersion="2" ToolTip="User interface renderer" UserName="Compatibility"><graphicsApiOptionId ToolTip="Controls the graphics API used to render the User Interface." UserName="Qt Rendering Hardware Interface API" Value="OpenGL"/></CompatibilityGroup></OptionGroups>@' "$options_utf8"
+            fi
             sed -E \
               -e 's/(<driverOptionId[^>]*Value=")[^"]*/\1VirtualDeviceDx11/' \
               -e 's/(<graphicsApiOptionId[^>]*Value=")[^"]*/\1OpenGL/' \
