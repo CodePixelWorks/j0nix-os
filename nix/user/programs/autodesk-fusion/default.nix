@@ -205,11 +205,23 @@ let
     # as SpaceMouse.
     export WINEDLLOVERRIDES="''${WINEDLLOVERRIDES:+$WINEDLLOVERRIDES;}winebth.sys=d"
 
+    # The WineWayland driver is initialized by Proton's entry point, not by a
+    # bare Wine binary. Route upstream's direct Wine calls through Proton while
+    # remaining on the host namespace (unlike steam-run/Bubblewrap).
+    cat >"$guard_bin/j0nix-proton-run" <<'EOF'
+    #!/usr/bin/env bash
+    exec "$J0NIX_PROTON_DIRECTORY/proton" run "$@"
+    export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.vulkan-loader ]}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    EOF
+    chmod +x "$guard_bin/j0nix-proton-run"
+    export J0NIX_PROTON_RUNNER="$guard_bin/j0nix-proton-run"
+
     # The runner uses the host namespace so the browser callback can reach
     # Fusion's local SSO server. nix-ld.nix supplies the i686 loader path;
     # Proton's Python bootstrap still needs the host Vulkan loader directly.
     # shellcheck disable=SC2016
     sed -i \
+      -e 's|WINE="$PROTON_DIRECTORY/files/bin/wine"|export J0NIX_PROTON_DIRECTORY="$PROTON_DIRECTORY"\n        export STEAM_COMPAT_CLIENT_INSTALL_PATH="$STEAM_DIRECTORY"\n        export STEAM_COMPAT_DATA_PATH="$PROTON_COMPAT_DIRECTORY"\n        WINE="$J0NIX_PROTON_RUNNER"|' \
       -e 's|"$PROTON_DIRECTORY/proton" run wineboot --init|LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.vulkan-loader ]}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" "$PROTON_DIRECTORY/proton" run wineboot --init|' \
       "$installer"
   '';
