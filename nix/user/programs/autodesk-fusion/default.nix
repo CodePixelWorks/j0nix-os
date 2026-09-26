@@ -64,6 +64,7 @@ let
     msitools
     util-linux
     qt6.qttools
+    steam-run
     zenity
   ];
 
@@ -187,6 +188,30 @@ let
     EOF
     chmod +x "$guard_bin/sudo" "$guard_bin/pkexec"
     export PATH="$guard_bin:$PATH"
+  '';
+
+  protonInstallerRuntime = lib.optionalString (installerMode == "proton") ''
+    # CachyOS WineWayland's Wine binaries expect FHS loader paths, including
+    # /lib/ld-linux.so.2. On NixOS they must run inside Steam's FHS runtime.
+    cat >"$guard_bin/j0nix-proton-wine" <<'EOF'
+    #!/usr/bin/env bash
+    exec ${pkgs.steam-run}/bin/steam-run "$J0NIX_PROTON_DIRECTORY/files/bin/wine" "$@"
+    EOF
+    cat >"$guard_bin/j0nix-proton-wineserver" <<'EOF'
+    #!/usr/bin/env bash
+    exec ${pkgs.steam-run}/bin/steam-run "$J0NIX_PROTON_DIRECTORY/files/bin/wineserver" "$@"
+    EOF
+    chmod +x "$guard_bin/j0nix-proton-wine" "$guard_bin/j0nix-proton-wineserver"
+    export J0NIX_PROTON_WINE_WRAPPER="$guard_bin/j0nix-proton-wine"
+    export J0NIX_PROTON_WINESERVER_WRAPPER="$guard_bin/j0nix-proton-wineserver"
+
+    # The upstream script initializes a Proton prefix through its `proton`
+    # entry point, but invokes Wine directly for WebView2 and Fusion. Patch
+    # only this freshly downloaded installer copy.
+    sed -i \
+      -e 's|WINE="$PROTON_DIRECTORY/files/bin/wine"|export J0NIX_PROTON_DIRECTORY="$PROTON_DIRECTORY"\n        WINE="$J0NIX_PROTON_WINE_WRAPPER"|' \
+      -e 's|WINESERVER="$PROTON_DIRECTORY/files/bin/wineserver"|WINESERVER="$J0NIX_PROTON_WINESERVER_WRAPPER"|' \
+      "$installer"
   '';
 
   cleanupUpstreamDesktopEntries = ''
@@ -454,6 +479,7 @@ EOF
       echo "Fetching Autodesk Fusion Linux installer..."
       curl -L --fail ${lib.escapeShellArg installerUrl} -o "$installer"
       chmod +x "$installer"
+      ${protonInstallerRuntime}
 
       # Lolig4 detects the real GPU and configures its matching DXVK/VKD3D
       # stack. Its fusion-wine runner carries the canvas and owned-window fixes.
@@ -481,6 +507,7 @@ EOF
       echo "Fetching Autodesk Fusion Linux installer..."
       curl -L --fail ${lib.escapeShellArg installerUrl} -o "$installer"
       chmod +x "$installer"
+      ${protonInstallerRuntime}
 
       echo "Deploying a fresh, parallel Fusion prefix in: $install_dir"
       "$installer" --install fusion ${lib.escapeShellArg installCommand}
@@ -610,10 +637,10 @@ EOF
           PROTON_ENABLE_WAYLAND=1 \
           STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" \
           STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" \
-          "$proton_dir/proton" run "$fusion_exe" "$@" &
+          ${pkgs.steam-run}/bin/steam-run "$proton_dir/proton" run "$fusion_exe" "$@" &
           runner_pid=$!
           if wait "$runner_pid"; then status=0; else status=$?; fi
-          WINEPREFIX="$wine_pfx" "$proton_dir/files/bin/wineserver" -k || true
+          WINEPREFIX="$wine_pfx" ${pkgs.steam-run}/bin/steam-run "$proton_dir/files/bin/wineserver" -k || true
           exit "$status"
           ;;
       esac
