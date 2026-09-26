@@ -49,4 +49,14 @@ lib.mkIf enabled {
       vulkan-loader
     ];
   };
+
+  # CachyOS WineWayland Proton contains 32-bit Wine components with the
+  # conventional interpreter path /lib/ld-linux.so.2. NixOS supplies the
+  # 64-bit nix-ld path, but not this i686 compatibility path. Keep the target
+  # in the store and let tmpfiles replace it on upgrades; do not create a
+  # mutable, hand-maintained loader link.
+  systemd.tmpfiles.rules = [
+    "d /lib 0755 root root -"
+    "L+ /lib/ld-linux.so.2 - - - - ${pkgs.pkgsi686Linux.glibc}/lib/ld-linux.so.2"
+  ];
 }
