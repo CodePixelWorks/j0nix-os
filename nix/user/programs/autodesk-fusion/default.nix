@@ -785,8 +785,18 @@ EOF
         fi
         host_wine_socket_dir="/tmp/.wine-$(id -u)"
         made_wine_socket_bridge=0
+        stashed_wine_socket_dir=""
         if [ -e "$host_wine_socket_dir" ] || [ -L "$host_wine_socket_dir" ]; then
-          if [ "$(readlink "$host_wine_socket_dir" 2>/dev/null || true)" != "$wine_socket_dir" ]; then
+          if [ "$(readlink "$host_wine_socket_dir" 2>/dev/null || true)" = "$wine_socket_dir" ]; then
+            : # an earlier handler invocation owns the bridge
+          elif [ -d "$host_wine_socket_dir" ] && [ -z "$(find "$host_wine_socket_dir" -maxdepth 3 -type s -print -quit 2>/dev/null || true)" ]; then
+            # Wine leaves stale server directories after a crash. Preserve the
+            # inert directory and restore it after this callback finishes.
+            stashed_wine_socket_dir="$host_wine_socket_dir.j0nix-stale-$$"
+            mv "$host_wine_socket_dir" "$stashed_wine_socket_dir"
+            ln -s "$wine_socket_dir" "$host_wine_socket_dir"
+            made_wine_socket_bridge=1
+          else
             echo "error: another Wine server is using $host_wine_socket_dir; close it before Autodesk login." >&2
             exit 1
           fi
@@ -798,6 +808,9 @@ EOF
         cleanup_wine_socket_bridge() {
           if [ "$made_wine_socket_bridge" = 1 ]; then
             rm -f "$host_wine_socket_dir"
+          fi
+          if [ -n "$stashed_wine_socket_dir" ] && [ -d "$stashed_wine_socket_dir" ]; then
+            mv "$stashed_wine_socket_dir" "$host_wine_socket_dir"
           fi
         }
         trap cleanup_wine_socket_bridge EXIT HUP INT TERM
