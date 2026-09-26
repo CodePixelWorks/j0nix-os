@@ -256,6 +256,13 @@ let
       center = true;
     }
     {
+      name = "keep-autodesk-fusion-windowed";
+      match.class = "^(fusion360\\.exe)$";
+      fullscreen_state = "0 0";
+      suppress_event = "fullscreen maximize fullscreenoutput";
+    }
+
+    {
       name = "float-sse-password-dialog";
       match = {
         class = "^(sse\\.exe)$";

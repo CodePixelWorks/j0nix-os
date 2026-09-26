@@ -233,6 +233,13 @@ let
 
   postInstallDesktopFix = ''
     ${cleanupUpstreamDesktopEntries}
+    # Fusion invokes this helper from inside Proton for adskidmgr: callbacks.
+    # Do not retain the install-time wrapper path saved by the upstream script.
+    cat >"$install_dir/bin/adskidmgr-opener.sh" <<'EOF'
+    #!/usr/bin/env sh
+    exec "$HOME/.nix-profile/bin/autodesk-fusion-adskidmgr" "$@"
+    EOF
+    chmod +x "$install_dir/bin/adskidmgr-opener.sh"
     update-desktop-database "$applications_dir" 2>/dev/null || true
     xdg-mime default autodesk-fusion-adskidmgr.desktop x-scheme-handler/adskidmgr 2>/dev/null || true
   '';
