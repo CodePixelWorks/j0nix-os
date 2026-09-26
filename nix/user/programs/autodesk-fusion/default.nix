@@ -555,6 +555,7 @@ EOF
     runtimeInputs = runtimePackages;
     text = ''
       saved_ld_library_path="''${LD_LIBRARY_PATH-}"
+      saved_wayland_display="${WAYLAND_DISPLAY-}"
       set -eu
       ${commonShell}
       ${cleanInheritedQtEnvironment}
@@ -688,6 +689,7 @@ EOF
     name = "autodesk-fusion-adskidmgr";
     runtimeInputs = runtimePackages;
     text = ''
+      saved_wayland_display="${WAYLAND_DISPLAY-}"
       set -eu
       ${commonShell}
       ${cleanInheritedQtEnvironment}
