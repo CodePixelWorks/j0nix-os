@@ -18,6 +18,13 @@ For agent coding rules and commit policy, see [`AGENTS.md`](../AGENTS.md) in the
 | [caelestia.md](./wm/quickshell/caelestia.md) | Debuggers | Keybind regression runbook |
 | [startup-flow.md](./wm/startup-flow.md) | Contributors, debuggers | WM startup order: DM -> compositor -> shell -> apps |
 
+### Applications
+
+| Doc | Audience | Topic |
+|-----|----------|-------|
+| [fusion-wayland-status.md](./fusion-wayland-status.md) | Users, debuggers | Fusion 360 Wayland integration, Autodesk login diagnosis, and recovery plan |
+| [fusion-renderer-matrix.md](./fusion-renderer-matrix.md) | Debuggers | Fusion renderer test matrix for NVIDIA / Hyprland |
+
 ### DevOps / CI
 
 | Doc | Audience | Topic |
