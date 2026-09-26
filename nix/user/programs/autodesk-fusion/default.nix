@@ -978,7 +978,6 @@ EOF
       else
         warn "WebView2 files not found in the active prefix"
       fi
-    killScript
       mime_default="$(xdg-mime query default x-scheme-handler/adskidmgr 2>/dev/null || true)"
       if [ "$mime_default" = "autodesk-fusion-adskidmgr.desktop" ]; then
         ok "adskidmgr login handler is registered"

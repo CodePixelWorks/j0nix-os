@@ -256,8 +256,14 @@ let
       center = true;
     }
     {
+      # WineWayland exposes Fusion as steam_proton rather than its Windows
+      # executable class. Restrict the broader class match by title so other
+      # Proton applications retain their own fullscreen behavior.
       name = "keep-autodesk-fusion-windowed";
-      match.class = "^(fusion360\\.exe)$";
+      match = {
+        class = "^(fusion360\\.exe|steam_proton)$";
+        title = "^(Autodesk Fusion ?|Fusion360)$";
+      };
       fullscreen_state = "0 0";
       suppress_event = "fullscreen maximize fullscreenoutput";
     }
