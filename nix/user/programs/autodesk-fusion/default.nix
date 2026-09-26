@@ -47,6 +47,7 @@ let
     xrandr
     desktop-file-utils
     xdg-utils
+    xkeyboard_config
     bc
     polkit
     lsb-release
@@ -658,8 +659,13 @@ EOF
             exit 1
           fi
           export WAYLAND_DISPLAY="$saved_wayland_display"
-          unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER
-          unset __EGL_VENDOR_LIBRARY_FILENAMES
+          export XKB_CONFIG_ROOT="${pkgs.xkeyboard_config}/share/X11/xkb"
+          # Proton otherwise falls back to Mesa EGL under NixOS even though the
+          # host NVIDIA GLVND vendor is available. Keep the vendor selection
+          # while leaving Proton's own runtime library stack intact.
+          if [ -f /run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json ]; then
+            export __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json
+          fi
 
           export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.vulkan-loader ]}''${saved_ld_library_path:+:$saved_ld_library_path}"
           steam_dir=""
