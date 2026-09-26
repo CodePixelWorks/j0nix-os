@@ -199,6 +199,12 @@ let
       unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER __EGL_VENDOR_LIBRARY_FILENAMES
     fi
 
+    # Fusion does not require Wine's Bluetooth device driver. On the CachyOS
+    # WineWayland build it can crash the Fusion client installer in winebth.sys
+    # through the host BlueZ stack. Keep wineusb enabled for USB devices such
+    # as SpaceMouse.
+    export WINEDLLOVERRIDES="''${WINEDLLOVERRIDES:+$WINEDLLOVERRIDES;}winebth.sys=d"
+
     # The runner uses the host namespace so the browser callback can reach
     # Fusion's local SSO server. nix-ld.nix supplies the i686 loader path;
     # Proton's Python bootstrap still needs the host Vulkan loader directly.
