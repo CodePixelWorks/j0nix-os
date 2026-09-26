@@ -105,6 +105,22 @@ let
     fi
   '';
 
+  cleanInheritedQtEnvironment = ''
+    # Fusion ships its own Windows Qt/Chromium stack. Do not let the
+    # surrounding Nix/Flatpak session inject host Qt plugins, QML imports, or
+    # a desktop theme into Wine: those libraries are ABI-incompatible and can
+    # leave Electron/Fusion panes black after the native window is created.
+    unset QML2_IMPORT_PATH
+    unset QT_AUTO_SCREEN_SCALE_FACTOR
+    unset QT_PLUGIN_PATH
+    unset QT_QPA_PLATFORMTHEME
+    unset QT_STYLE_OVERRIDE
+    unset QT_WAYLAND_DISABLE_WINDOWDECORATION
+    unset QTWEBKIT_PLUGIN_PATH
+    unset ELECTRON_OZONE_PLATFORM_HINT
+    unset XDG_BACKEND
+  '';
+
   runFusionTarget = ''
     run_fusion_target() {
       target="$1"
@@ -477,6 +493,7 @@ EOF
     text = ''
       set -eu
       ${commonShell}
+      ${cleanInheritedQtEnvironment}
 
       launcher="$install_dir/bin/autodesk_fusion_launcher.sh"
       if [ ! -x "$launcher" ]; then
@@ -495,6 +512,7 @@ EOF
     text = ''
       set -eu
       ${commonShell}
+      ${cleanInheritedQtEnvironment}
 
       url="''${1:-}"
       if [ -z "$url" ]; then
