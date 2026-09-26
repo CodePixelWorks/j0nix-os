@@ -768,16 +768,13 @@ EOF
         export TZ=Etc/GMT-1
         export WAYLAND_DISPLAY="$saved_wayland_display"
         unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER
-        export XKB_CONFIG_ROOT="${pkgs.xkeyboard_config}/share/X11/xkb"
-        if [ -f /run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json ]; then
-          export __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json
-        fi
-        unset LD_LIBRARY_PATH
-        exec steam-run env \
-          PROTON_ENABLE_WAYLAND=1 \
-          STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" \
-          STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" \
-          "$steam_dir/compatibilitytools.d/$runner_mode/proton" run "$identity_exe" "$url"
+        # The URI must be delivered to Fusion's already running SSO server.
+        # Do not use steam-run here: its Bubblewrap namespace creates an
+        # isolated Identity Manager that cannot see that IPC server.
+        exec env \
+          WINEPREFIX="$wine_pfx" \
+          WINESERVER="$steam_dir/compatibilitytools.d/$runner_mode/files/bin/wineserver" \
+          "$steam_dir/compatibilitytools.d/$runner_mode/files/bin/wine" "$identity_exe" "$url"
       fi
 
       opener="$install_dir/bin/adskidmgr-opener.sh"
