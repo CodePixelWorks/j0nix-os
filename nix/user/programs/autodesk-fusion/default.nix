@@ -768,13 +768,44 @@ EOF
         export TZ=Etc/GMT-1
         export WAYLAND_DISPLAY="$saved_wayland_display"
         unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER
-        # The URI must be delivered to Fusion's already running SSO server.
-        # Do not use steam-run here: its Bubblewrap namespace creates an
-        # isolated Identity Manager that cannot see that IPC server.
-        exec env \
+        # The URI must reach Fusion's already running SSO server. steam-run
+        # gives Fusion a private /tmp, where Wine keeps this IPC socket. A
+        # direct callback would otherwise start a second Wine server and IDSDK
+        # reports "No SSO server is running". Bridge that existing socket only
+        identity_pid="$(pgrep -f 'AdskIdentityManager.exe --process_name.*DefaultServer' | head -n 1 || true)"
+        if [ -z "$identity_pid" ] || [ ! -d "/proc/$identity_pid/root/tmp" ]; then
+          echo "error: Fusion's Identity Manager SSO server is not running." >&2
+          exit 1
+        fi
+        wine_socket_dir="/proc/$identity_pid/root/tmp/.wine-$(id -u)"
+        wine_socket="$(find "$wine_socket_dir" -maxdepth 2 -type s -name socket -print -quit 2>/dev/null || true)"
+        if [ -z "$wine_socket" ]; then
+          echo "error: Fusion's Wine IPC socket is not available." >&2
+          exit 1
+        fi
+        host_wine_socket_dir="/tmp/.wine-$(id -u)"
+        made_wine_socket_bridge=0
+        if [ -e "$host_wine_socket_dir" ] || [ -L "$host_wine_socket_dir" ]; then
+          if [ "$(readlink "$host_wine_socket_dir" 2>/dev/null || true)" != "$wine_socket_dir" ]; then
+            echo "error: another Wine server is using $host_wine_socket_dir; close it before Autodesk login." >&2
+            exit 1
+          fi
+        else
+          ln -s "$wine_socket_dir" "$host_wine_socket_dir"
+          made_wine_socket_bridge=1
+        fi
+        # shellcheck disable=SC2329 # invoked by the EXIT trap below
+        cleanup_wine_socket_bridge() {
+          if [ "$made_wine_socket_bridge" = 1 ]; then
+            rm -f "$host_wine_socket_dir"
+          fi
+        }
+        trap cleanup_wine_socket_bridge EXIT HUP INT TERM
+        env \
           WINEPREFIX="$wine_pfx" \
           WINESERVER="$steam_dir/compatibilitytools.d/$runner_mode/files/bin/wineserver" \
           "$steam_dir/compatibilitytools.d/$runner_mode/files/bin/wine" "$identity_exe" "$url"
+        exit $?
       fi
 
       opener="$install_dir/bin/adskidmgr-opener.sh"
