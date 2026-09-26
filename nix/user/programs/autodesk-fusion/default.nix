@@ -64,7 +64,6 @@ let
     msitools
     util-linux
     qt6.qttools
-    steam-run
     zenity
   ];
 
@@ -191,28 +190,12 @@ let
   '';
 
   protonInstallerRuntime = lib.optionalString (installerMode == "proton") ''
-    # CachyOS WineWayland's Wine binaries expect FHS loader paths, including
-    # /lib/ld-linux.so.2. On NixOS they must run inside Steam's FHS runtime.
-    cat >"$guard_bin/j0nix-proton-wine" <<'EOF'
-    #!/usr/bin/env bash
-    exec ${pkgs.steam-run}/bin/steam-run "$J0NIX_PROTON_DIRECTORY/files/bin/wine" "$@"
-    EOF
-    cat >"$guard_bin/j0nix-proton-wineserver" <<'EOF'
-    #!/usr/bin/env bash
-    exec ${pkgs.steam-run}/bin/steam-run "$J0NIX_PROTON_DIRECTORY/files/bin/wineserver" "$@"
-    EOF
-    chmod +x "$guard_bin/j0nix-proton-wine" "$guard_bin/j0nix-proton-wineserver"
-    export J0NIX_PROTON_WINE_WRAPPER="$guard_bin/j0nix-proton-wine"
-    export J0NIX_PROTON_WINESERVER_WRAPPER="$guard_bin/j0nix-proton-wineserver"
-
-    # The upstream script initializes a Proton prefix through its `proton`
-    # entry point, but invokes Wine directly for WebView2 and Fusion. Patch
-    # only this freshly downloaded installer copy.
+    # The runner uses the host namespace so the browser callback can reach
+    # Fusion's local SSO server. nix-ld.nix supplies the i686 loader path;
+    # Proton's Python bootstrap still needs the host Vulkan loader directly.
     # shellcheck disable=SC2016
     sed -i \
-      -e 's|WINE="$PROTON_DIRECTORY/files/bin/wine"|export J0NIX_PROTON_DIRECTORY="$PROTON_DIRECTORY"\n        WINE="$J0NIX_PROTON_WINE_WRAPPER"|' \
-      -e 's|WINESERVER="$PROTON_DIRECTORY/files/bin/wineserver"|WINESERVER="$J0NIX_PROTON_WINESERVER_WRAPPER"|' \
-      -e 's|"$PROTON_DIRECTORY/proton" run wineboot --init|${pkgs.steam-run}/bin/steam-run "$PROTON_DIRECTORY/proton" run wineboot --init|' \
+      -e 's|"$PROTON_DIRECTORY/proton" run wineboot --init|LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.vulkan-loader ]}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" "$PROTON_DIRECTORY/proton" run wineboot --init|' \
       "$installer"
   '';
 
@@ -648,10 +631,10 @@ EOF
           PROTON_ENABLE_WAYLAND=1 \
           STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" \
           STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" \
-          ${pkgs.steam-run}/bin/steam-run "$proton_dir/proton" run "$fusion_exe" "$@" &
+          "$proton_dir/proton" run "$fusion_exe" "$@" &
           runner_pid=$!
           if wait "$runner_pid"; then status=0; else status=$?; fi
-          WINEPREFIX="$wine_pfx" ${pkgs.steam-run}/bin/steam-run "$proton_dir/files/bin/wineserver" -k || true
+          WINEPREFIX="$wine_pfx" "$proton_dir/files/bin/wineserver" -k || true
           exit "$status"
           ;;
       esac
@@ -710,7 +693,7 @@ EOF
           WINEDEBUG="''${WINEDEBUG:--all,+err}" \
           WINEPREFIX="$wine_pfx" \
           WINESERVER="$steam_dir/compatibilitytools.d/$runner_mode/files/bin/wineserver" \
-          ${pkgs.steam-run}/bin/steam-run "$steam_dir/compatibilitytools.d/$runner_mode/files/bin/wine" "$identity_exe" "$url"
+          "$steam_dir/compatibilitytools.d/$runner_mode/files/bin/wine" "$identity_exe" "$url"
       fi
 
       opener="$install_dir/bin/adskidmgr-opener.sh"
@@ -866,7 +849,7 @@ lib.mkIf enabled {
         Name=Autodesk Fusion
         GenericName=CAD/CAM/CAE
         Comment=Run Autodesk Fusion through the managed j0nix Wine setup
-        Exec=${pkgs.steam-run}/bin/steam-run ${lib.getExe launcherScript} %U
+        Exec=${lib.getExe launcherScript} %U
         Icon=autodesk-fusion
         StartupWMClass=fusion360.exe
         Terminal=false
