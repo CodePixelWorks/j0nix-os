@@ -61,17 +61,17 @@ Note: Bottles component downloads are runtime/user-state operations and are not 
 `winexe-run` uses `bottles-cli run` with an absolute executable path and the configured default bottle/runner.
 New j0nix-managed bottles are seeded from a Nix-generated template after creation. Existing unmanaged default bottles are migrated once by merging a curated set of safe runtime fields while preserving installed programs, dependencies and other bottle state.
 
-`Autodesk Fusion` is configured via `settings.programs.autodeskFusion.*` and uses the maintained Lolig4 installer flow. The default `fusion-wine` runner installs a separate prefix in `~/.local/share/Autodesk-Unofficial`; the former `~/.autodesk_fusion` prefix is intentionally left untouched as a rollback source.
+`Autodesk Fusion` is configured via `settings.programs.autodeskFusion.*` and uses the maintained Lolig4 installer flow. The current configuration selects `installerMode = "proton"` with `protonVersion = "cachyos-wineland-11.0-Fusion"`, which is Lolig4's experimental native-Wayland path and creates a separate Proton prefix.
 
-- `autodesk-fusion-install` creates a new Fusion prefix with Lolig4's patched Wine runner, DXVK/VKD3D, corrected Visual C++ override, and Wine-DX9 sidebar override.
+- `autodesk-fusion-install` creates a new Fusion prefix with the selected Lolig4 runner and its corresponding component overrides.
 - `autodesk-fusion-repair` creates another clean, parallel prefix rather than mutating a potentially broken installation.
-- `autodesk-fusion` is a j0nix-owned launcher. It reads Lolig4's active-prefix contract but does not execute the mutable installer launcher.
+- `autodesk-fusion` is a j0nix-owned launcher. It reads Lolig4's active-prefix contract but does not execute the mutable installer launcher. For Proton prefixes it restores the Hyprland Wayland socket, keeps Proton's library stack unmodified, and sets `PROTON_ENABLE_WAYLAND=1`.
 - `autodesk-fusion-adskidmgr` delegates `adskidmgr:` callbacks to Lolig4's opener.
 - `autodesk-fusion-renderer` is retained only for legacy-prefix diagnosis; the maintained flow selects its renderer during prefix creation.
 
-The patched `fusion-wine` runner is required with modern Wine versions: upstream documents a black/white 3D canvas regression in Wine 11.11+ and includes the canvas plus owned-tool-window fixes in this runner. Its Wine-DX9 override for `AdCefWebBrowser.exe` is the corresponding sidebar/navigation fix.
+The patched `fusion-wine` runner remains available as a fallback for modern Wine canvas regressions; it includes canvas and owned-tool-window fixes. Its Wine-DX9 override for `AdCefWebBrowser.exe` is the corresponding sidebar/navigation fix.
 
-The managed launcher preserves Lolig4's split renderer policy: DXVK/D3D11 renders the 3D canvas, while OpenGL renders Fusion's Qt/Chromium shell. Fusion can overwrite the shell setting with D3D11 in its roaming profile; the launcher restores the upstream OpenGL value before each start to avoid black panels.
+For legacy Wine prefixes, the managed launcher preserves Lolig4's split renderer policy: DXVK/D3D11 renders the 3D canvas, while OpenGL renders Fusion's Qt/Chromium shell. Fusion can overwrite the shell setting with D3D11 in its roaming profile; the launcher restores the upstream OpenGL value before each start to avoid black panels. This normalization is intentionally not applied to the Proton Wayland prefix.
 
 The Autodesk payload, runner archive, WebView2 runtime, and license/session data are mutable user state. They are fetched only when the install or repair command is explicitly run, never during Nix evaluation.
 

@@ -492,6 +492,7 @@ EOF
     runtimeInputs = runtimePackages;
     text = ''
       set -eu
+      saved_wayland_display="''${WAYLAND_DISPLAY-}"
       ${commonShell}
       ${cleanInheritedQtEnvironment}
 
@@ -513,37 +514,10 @@ EOF
       runner_mode="$(sed -n '3p' "$prefix_config")"
       fusion_wine="$(sed -n '4p' "$prefix_config")"
       fusion_wineserver="$(sed -n '5p' "$prefix_config")"
-      if [ "$runner_mode" != "--fusion-wine" ] && [ "$runner_mode" != "--wine" ]; then
-        echo "error: the managed launcher only supports Wine prefixes; active runner is $runner_mode." >&2
-        echo "Run: autodesk-fusion-repair after selecting fusion-wine." >&2
-        exit 1
-      fi
-      if [ ! -d "$wine_pfx" ] || [ ! -x "$fusion_wine" ] || [ ! -x "$fusion_wineserver" ]; then
-        echo "error: Fusion's active Wine prefix or runner is incomplete." >&2
+      if [ ! -d "$wine_pfx" ]; then
+        echo "error: Fusion's active prefix is incomplete." >&2
         echo "Run: autodesk-fusion-repair" >&2
         exit 1
-      fi
-
-      # Lolig4 intentionally uses DXVK for the 3D canvas, but OpenGL for the
-      # Qt/Chromium shell. Fusion can overwrite the latter with D3D11 in the
-      # roaming profile; that mismatch produces black shell panes on Wine.
-      options_file="$wine_pfx/drive_c/users/$(id -un)/AppData/Roaming/Autodesk/Neutron Platform/Options/NMachineSpecificOptions.xml"
-      if [ -f "$options_file" ]; then
-        options_utf8="$(mktemp)"
-        options_normalized="$(mktemp)"
-        options_utf16="$(mktemp)"
-        iconv -f UTF-16 -t UTF-8 "$options_file" >"$options_utf8"
-        sed -E \
-          -e 's/(<driverOptionId[^>]*Value=")[^"]*/\1VirtualDeviceDx11/' \
-          -e 's/(<graphicsApiOptionId[^>]*Value=")[^"]*/\1OpenGL/' \
-          "$options_utf8" >"$options_normalized"
-        printf '\xff\xfe' >"$options_utf16"
-        iconv -f UTF-8 -t UTF-16LE "$options_normalized" >>"$options_utf16"
-        if ! cmp -s "$options_file" "$options_utf16"; then
-          cp -f "$options_utf16" "$options_file"
-          echo "Normalized Fusion UI renderer to OpenGL; 3D canvas remains DXVK."
-        fi
-        rm -f "$options_utf8" "$options_normalized" "$options_utf16"
       fi
 
       fusion_exe="$(find "$wine_pfx" -type f -name Fusion360.exe -printf '%T@ %p\n' | sort -rn | head -n 1 | cut -d' ' -f2-)"
@@ -556,21 +530,93 @@ EOF
         "$install_dir/bin/spconvd"
       fi
 
-      echo "Starting Fusion with managed $runner_mode runner..."
-      QTWEBENGINE_DISABLE_SANDBOX=1 \
-      DXVK_LOG_LEVEL=none \
-      WINEPREFIX="$wine_pfx" \
-      WINESERVER="$fusion_wineserver" \
-      WINEDEBUG="''${WINEDEBUG:--all,+err}" \
-      "$fusion_wine" "$fusion_exe" "$@" &
-      wine_pid=$!
-      if wait "$wine_pid"; then
-        status=0
-      else
-        status=$?
-      fi
-      WINEPREFIX="$wine_pfx" "$fusion_wineserver" -k || true
-      exit "$status"
+      case "$runner_mode" in
+        --fusion-wine|--wine)
+          if [ ! -x "$fusion_wine" ] || [ ! -x "$fusion_wineserver" ]; then
+            echo "error: Fusion's managed Wine runner is incomplete." >&2
+            echo "Run: autodesk-fusion-repair" >&2
+            exit 1
+          fi
+
+          # Lolig4 intentionally uses DXVK for the 3D canvas, but OpenGL for
+          # the Qt/Chromium shell. Fusion can overwrite the latter with D3D11.
+          options_file="$wine_pfx/drive_c/users/$(id -un)/AppData/Roaming/Autodesk/Neutron Platform/Options/NMachineSpecificOptions.xml"
+          if [ -f "$options_file" ]; then
+            options_utf8="$(mktemp)"
+            options_normalized="$(mktemp)"
+            options_utf16="$(mktemp)"
+            iconv -f UTF-16 -t UTF-8 "$options_file" >"$options_utf8"
+            sed -E \
+              -e 's/(<driverOptionId[^>]*Value=")[^"]*/\1VirtualDeviceDx11/' \
+              -e 's/(<graphicsApiOptionId[^>]*Value=")[^"]*/\1OpenGL/' \
+              "$options_utf8" >"$options_normalized"
+            printf '\xff\xfe' >"$options_utf16"
+            iconv -f UTF-8 -t UTF-16LE "$options_normalized" >>"$options_utf16"
+            if ! cmp -s "$options_file" "$options_utf16"; then
+              cp -f "$options_utf16" "$options_file"
+              echo "Normalized Fusion UI renderer to OpenGL; 3D canvas remains DXVK."
+            fi
+            rm -f "$options_utf8" "$options_normalized" "$options_utf16"
+          fi
+
+          echo "Starting Fusion with managed $runner_mode runner..."
+          QTWEBENGINE_DISABLE_SANDBOX=1 \
+          DXVK_LOG_LEVEL=none \
+          WINEPREFIX="$wine_pfx" \
+          WINESERVER="$fusion_wineserver" \
+          WINEDEBUG="''${WINEDEBUG:--all,+err}" \
+          "$fusion_wine" "$fusion_exe" "$@" &
+          runner_pid=$!
+          if wait "$runner_pid"; then status=0; else status=$?; fi
+          WINEPREFIX="$wine_pfx" "$fusion_wineserver" -k || true
+          exit "$status"
+          ;;
+        *)
+          # A Proton runner is launched through its proton script, not its
+          # wine binary. Restore the Wayland socket cleared for legacy Wine.
+          if [ -z "$saved_wayland_display" ]; then
+            echo "error: CachyOS WineWayland Proton requires a Wayland session." >&2
+            exit 1
+          fi
+          export WAYLAND_DISPLAY="$saved_wayland_display"
+          unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER
+          unset __EGL_VENDOR_LIBRARY_FILENAMES LD_LIBRARY_PATH
+
+          steam_dir=""
+          for candidate in \
+            "$HOME/.local/share/Steam" \
+            "$HOME/.steam/steam" \
+            "$HOME/.steam/root" \
+            "$HOME/.steam/debian-installation"; do
+            if [ -x "$candidate/compatibilitytools.d/$runner_mode/proton" ]; then
+              steam_dir="$candidate"
+              break
+            fi
+          done
+          if [ -z "$steam_dir" ]; then
+            echo "error: Proton runner '$runner_mode' is not installed in Steam compatibilitytools.d." >&2
+            echo "Run: autodesk-fusion-repair" >&2
+            exit 1
+          fi
+          proton_dir="$steam_dir/compatibilitytools.d/$runner_mode"
+
+          if ! pgrep -x steam >/dev/null 2>&1 && command -v steam >/dev/null 2>&1; then
+            setsid -f systemd-run --user --scope --quiet steam -silent </dev/null >/dev/null 2>&1 || true
+            sleep 5
+          fi
+
+          echo "Starting Fusion with CachyOS WineWayland Proton runner $runner_mode..."
+          PROTON_LOG=0 \
+          PROTON_ENABLE_WAYLAND=1 \
+          STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" \
+          STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" \
+          "$proton_dir/proton" run "$fusion_exe" "$@" &
+          runner_pid=$!
+          if wait "$runner_pid"; then status=0; else status=$?; fi
+          WINEPREFIX="$wine_pfx" "$proton_dir/files/bin/wineserver" -k || true
+          exit "$status"
+          ;;
+      esac
     '';
   };
 
