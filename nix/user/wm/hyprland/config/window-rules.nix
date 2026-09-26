@@ -267,6 +267,21 @@ let
       fullscreen_state = "0 0";
       suppress_event = "fullscreen maximize fullscreenoutput";
     }
+    {
+      # Fusion uses a separate transparent WineWayland client for radial
+      # marking menus. Keep it out of compositor fullscreen and disable blur
+      # so it does not dim or soften the CAD canvas behind the menu.
+      name = "keep-autodesk-fusion-marking-menu-windowed";
+      match = {
+        class = "^steam_proton$";
+        title = "^Marking Menu$";
+      };
+      float = true;
+      no_blur = true;
+      fullscreen_state = "0 0";
+      suppress_event = "fullscreen maximize fullscreenoutput";
+    }
+
 
     {
       name = "float-sse-password-dialog";
