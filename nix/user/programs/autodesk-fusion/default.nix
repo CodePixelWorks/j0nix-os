@@ -851,6 +851,49 @@ EOF
     '';
   };
 
+  killScript = pkgs.writeShellApplication {
+    name = "autodesk-fusion-kill";
+    runtimeInputs = [ pkgs.procps pkgs.coreutils ];
+    text = ''
+      set -u
+
+      stop_matching() {
+        label="$1"
+        pattern="$2"
+        pids="$(pgrep -f "$pattern" || true)"
+        if [ -z "$pids" ]; then
+          echo "No $label process is running."
+          return
+        fi
+        echo "Stopping $label process(es): $pids"
+        pkill -TERM -f "$pattern" || true
+      }
+
+      # These patterns are deliberately limited to Fusion executables. Do not
+      # terminate generic Wine, Proton, Steam, or unrelated Autodesk tools.
+      stop_matching "Fusion" '[F]usion360\.exe'
+      stop_matching "Autodesk Identity Manager" '[A]dskIdentityManager\.exe'
+      stop_matching "Autodesk ADP service" '[A]DPClientService\.exe'
+
+      sleep 5
+
+      force_stop_matching() {
+        label="$1"
+        pattern="$2"
+        pids="$(pgrep -f "$pattern" || true)"
+        if [ -n "$pids" ]; then
+          echo "Force-stopping remaining $label process(es): $pids"
+          pkill -KILL -f "$pattern" || true
+        fi
+      }
+
+      force_stop_matching "Fusion" '[F]usion360\.exe'
+      force_stop_matching "Autodesk Identity Manager" '[A]dskIdentityManager\.exe'
+      force_stop_matching "Autodesk ADP service" '[A]DPClientService\.exe'
+      echo "Fusion processes have been stopped."
+    '';
+  };
+
   doctorScript = pkgs.writeShellApplication {
     name = "autodesk-fusion-doctor";
     runtimeInputs = runtimePackages ++ [ launcherScript identityScript installerScript repairScript ];
@@ -935,6 +978,7 @@ EOF
       else
         warn "WebView2 files not found in the active prefix"
       fi
+    killScript
       mime_default="$(xdg-mime query default x-scheme-handler/adskidmgr 2>/dev/null || true)"
       if [ "$mime_default" = "autodesk-fusion-adskidmgr.desktop" ]; then
         ok "adskidmgr login handler is registered"
@@ -977,6 +1021,7 @@ lib.mkIf enabled {
     repairScript
     doctorScript
     identityScript
+    killScript
     rendererScript
   ];
 
