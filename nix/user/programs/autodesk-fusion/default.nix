@@ -495,14 +495,82 @@ EOF
       ${commonShell}
       ${cleanInheritedQtEnvironment}
 
-      launcher="$install_dir/bin/autodesk_fusion_launcher.sh"
-      if [ ! -x "$launcher" ]; then
-        echo "error: the Lolig4 Fusion flow is not installed at $install_dir." >&2
+      active_prefix_name="$(cat "$install_dir/logs/active_fusion.log" 2>/dev/null || true)"
+      if [ -z "$active_prefix_name" ]; then
+        echo "error: no active Fusion prefix is configured in $install_dir." >&2
         echo "Run: autodesk-fusion-install" >&2
         exit 1
       fi
 
-      exec "$launcher" fusion "$@"
+      prefix_config="$install_dir/logs/$active_prefix_name/prefix.config"
+      if [ ! -r "$prefix_config" ]; then
+        echo "error: Fusion prefix configuration is missing: $prefix_config" >&2
+        echo "Run: autodesk-fusion-repair" >&2
+        exit 1
+      fi
+
+      wine_pfx="$(sed -n '2p' "$prefix_config")"
+      runner_mode="$(sed -n '3p' "$prefix_config")"
+      fusion_wine="$(sed -n '4p' "$prefix_config")"
+      fusion_wineserver="$(sed -n '5p' "$prefix_config")"
+      if [ "$runner_mode" != "--fusion-wine" ] && [ "$runner_mode" != "--wine" ]; then
+        echo "error: the managed launcher only supports Wine prefixes; active runner is $runner_mode." >&2
+        echo "Run: autodesk-fusion-repair after selecting fusion-wine." >&2
+        exit 1
+      fi
+      if [ ! -d "$wine_pfx" ] || [ ! -x "$fusion_wine" ] || [ ! -x "$fusion_wineserver" ]; then
+        echo "error: Fusion's active Wine prefix or runner is incomplete." >&2
+        echo "Run: autodesk-fusion-repair" >&2
+        exit 1
+      fi
+
+      # Lolig4 intentionally uses DXVK for the 3D canvas, but OpenGL for the
+      # Qt/Chromium shell. Fusion can overwrite the latter with D3D11 in the
+      # roaming profile; that mismatch produces black shell panes on Wine.
+      options_file="$wine_pfx/drive_c/users/$(id -un)/AppData/Roaming/Autodesk/Neutron Platform/Options/NMachineSpecificOptions.xml"
+      if [ -f "$options_file" ]; then
+        options_utf8="$(mktemp)"
+        options_normalized="$(mktemp)"
+        options_utf16="$(mktemp)"
+        iconv -f UTF-16 -t UTF-8 "$options_file" >"$options_utf8"
+        sed -E \
+          -e 's/(<driverOptionId[^>]*Value=")[^"]*/\1VirtualDeviceDx11/' \
+          -e 's/(<graphicsApiOptionId[^>]*Value=")[^"]*/\1OpenGL/' \
+          "$options_utf8" >"$options_normalized"
+        printf '\xff\xfe' >"$options_utf16"
+        iconv -f UTF-8 -t UTF-16LE "$options_normalized" >>"$options_utf16"
+        if ! cmp -s "$options_file" "$options_utf16"; then
+          cp -f "$options_utf16" "$options_file"
+          echo "Normalized Fusion UI renderer to OpenGL; 3D canvas remains DXVK."
+        fi
+        rm -f "$options_utf8" "$options_normalized" "$options_utf16"
+      fi
+
+      fusion_exe="$(find "$wine_pfx" -type f -name Fusion360.exe -printf '%T@ %p\n' | sort -rn | head -n 1 | cut -d' ' -f2-)"
+      if [ -z "$fusion_exe" ]; then
+        echo "error: Fusion360.exe was not found in the active prefix." >&2
+        echo "Run: autodesk-fusion-repair" >&2
+        exit 1
+      fi
+      if [ -x "$install_dir/bin/spconvd" ]; then
+        "$install_dir/bin/spconvd"
+      fi
+
+      echo "Starting Fusion with managed $runner_mode runner..."
+      QTWEBENGINE_DISABLE_SANDBOX=1 \
+      DXVK_LOG_LEVEL=none \
+      WINEPREFIX="$wine_pfx" \
+      WINESERVER="$fusion_wineserver" \
+      WINEDEBUG="''${WINEDEBUG:--all,+err}" \
+      "$fusion_wine" "$fusion_exe" "$@" &
+      wine_pid=$!
+      if wait "$wine_pid"; then
+        status=0
+      else
+        status=$?
+      fi
+      WINEPREFIX="$wine_pfx" "$fusion_wineserver" -k || true
+      exit "$status"
     '';
   };
 
