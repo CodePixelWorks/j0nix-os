@@ -688,19 +688,32 @@ EOF
             exit 1
           fi
           proton_dir="$steam_dir/compatibilitytools.d/$runner_mode"
+          identity_exe="$(find "$wine_pfx" -type f -name AdskIdentityManager.exe -printf '%T@ %p\n' | sort -rn | head -n 1 | cut -d' ' -f2-)"
+          if [ -z "$identity_exe" ]; then
+            echo "error: AdskIdentityManager.exe was not found in the active Fusion prefix." >&2
+            exit 1
+          fi
 
           if ! pgrep -x steam >/dev/null 2>&1 && command -v steam >/dev/null 2>&1; then
             setsid -f systemd-run --user --scope --quiet steam -silent </dev/null >/dev/null 2>&1 || true
             sleep 5
           fi
 
-          echo "Starting Fusion with CachyOS WineWayland Proton runner $runner_mode..."
-          steam-run env \
-            PROTON_LOG=0 \
-            PROTON_ENABLE_WAYLAND=1 \
-            STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" \
-            STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" \
-            "$proton_dir/proton" run "$fusion_exe" "$@" &
+          echo "Starting Autodesk Identity Manager before Fusion..."
+          # shellcheck disable=SC2016 # variables intentionally expand inside bash -c
+          steam-run env PROTON_LOG=0 PROTON_ENABLE_WAYLAND=1 STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" J0NIX_FUSION_PROTON="$proton_dir/proton" J0NIX_FUSION_IDENTITY="$identity_exe" J0NIX_FUSION_EXE="$fusion_exe" bash -c '
+            set -u
+            "$J0NIX_FUSION_PROTON" run "$J0NIX_FUSION_IDENTITY" --process_name Autodesk.IDSDK.DefaultProcess-v2 --server_name Autodesk.IDSDK.DefaultServer-v2 >/dev/null 2>&1 &
+            identity_pid=$!
+            # IDSDK starts asynchronously. Let it publish its IPC endpoint
+            # before Fusion requests product configuration and login.
+            sleep 20
+            "$J0NIX_FUSION_PROTON" run "$J0NIX_FUSION_EXE" "$@"
+            status=$?
+            kill "$identity_pid" 2>/dev/null || true
+            wait "$identity_pid" 2>/dev/null || true
+            exit "$status"
+          ' fusion-wayland "$@" &
           runner_pid=$!
           if wait "$runner_pid"; then status=0; else status=$?; fi
           WINEPREFIX="$wine_pfx" "$proton_dir/files/bin/wineserver" -k || true
