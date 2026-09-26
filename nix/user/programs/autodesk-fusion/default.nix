@@ -656,6 +656,7 @@ EOF
     runtimeInputs = runtimePackages;
     text = ''
       set -eu
+      saved_wayland_display="''${WAYLAND_DISPLAY-}"
       ${commonShell}
       ${cleanInheritedQtEnvironment}
 
@@ -663,6 +664,47 @@ EOF
       if [ -z "$url" ]; then
         echo "usage: autodesk-fusion-adskidmgr <adskidmgr-url>" >&2
         exit 2
+      fi
+
+      active_prefix_name="$(cat "$install_dir/logs/active_adskidmgr-opener.log" 2>/dev/null || cat "$install_dir/logs/active_fusion.log" 2>/dev/null || true)"
+      prefix_config="$install_dir/logs/$active_prefix_name/prefix.config"
+      runner_mode="$(sed -n '3p' "$prefix_config" 2>/dev/null || true)"
+      wine_pfx="$(sed -n '2p' "$prefix_config" 2>/dev/null || true)"
+
+      if [ -n "$runner_mode" ] && [ "$runner_mode" != "--wine" ] && [ "$runner_mode" != "--fusion-wine" ]; then
+        if [ -z "$saved_wayland_display" ] || [ ! -d "$wine_pfx" ]; then
+          echo "error: Autodesk login requires the active Wayland Proton prefix." >&2
+          exit 1
+        fi
+        identity_exe="$(find "$wine_pfx" -type f -name AdskIdentityManager.exe -printf '%T@ %p\n' | sort -rn | head -n 1 | cut -d' ' -f2-)"
+        if [ -z "$identity_exe" ]; then
+          echo "error: AdskIdentityManager.exe was not found in the active Fusion prefix." >&2
+          exit 1
+        fi
+        steam_dir=""
+        for candidate in \
+          "$HOME/.local/share/Steam" \
+          "$HOME/.steam/steam" \
+          "$HOME/.steam/root" \
+          "$HOME/.steam/debian-installation"; do
+          if [ -x "$candidate/compatibilitytools.d/$runner_mode/proton" ]; then
+            steam_dir="$candidate"
+            break
+          fi
+        done
+        if [ -z "$steam_dir" ]; then
+          echo "error: Proton runner '$runner_mode' is unavailable for Autodesk login." >&2
+          exit 1
+        fi
+        export WAYLAND_DISPLAY="$saved_wayland_display"
+        unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER __EGL_VENDOR_LIBRARY_FILENAMES
+        export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.vulkan-loader ]}"
+        exec env \
+          PROTON_LOG=0 \
+          PROTON_ENABLE_WAYLAND=1 \
+          STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" \
+          STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" \
+          ${pkgs.steam-run}/bin/steam-run "$steam_dir/compatibilitytools.d/$runner_mode/proton" run "$identity_exe" "$url"
       fi
 
       opener="$install_dir/bin/adskidmgr-opener.sh"
