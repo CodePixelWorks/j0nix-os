@@ -209,6 +209,7 @@ let
     # entry point, but invokes Wine directly for WebView2 and Fusion. Patch
     # only this freshly downloaded installer copy.
     sed -i \
+    # shellcheck disable=SC2016
       -e 's|WINE="$PROTON_DIRECTORY/files/bin/wine"|export J0NIX_PROTON_DIRECTORY="$PROTON_DIRECTORY"\n        WINE="$J0NIX_PROTON_WINE_WRAPPER"|' \
       -e 's|WINESERVER="$PROTON_DIRECTORY/files/bin/wineserver"|WINESERVER="$J0NIX_PROTON_WINESERVER_WRAPPER"|' \
       "$installer"
