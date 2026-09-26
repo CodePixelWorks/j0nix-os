@@ -208,7 +208,7 @@ let
     cat >"$guard_bin/j0nix-proton-run" <<'EOF'
     #!/usr/bin/env bash
     export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.vulkan-loader ]}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-    export PROTON_ENABLE_WAYLAND=1
+    unset PROTON_ENABLE_WAYLAND
     exec "$J0NIX_PROTON_DIRECTORY/proton" run "$@"
     EOF
     chmod +x "$guard_bin/j0nix-proton-run"
