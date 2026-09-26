@@ -729,6 +729,10 @@ lib.mkIf enabled {
   ];
 
   xdg.dataFile = {
+    "icons/hicolor/512x512/apps/autodesk-fusion.png" = {
+      force = true;
+      source = ./assets/autodesk-fusion.png;
+    };
     "applications/autodesk-fusion.desktop" = {
       force = true;
       text = ''
@@ -738,6 +742,8 @@ lib.mkIf enabled {
         GenericName=CAD/CAM/CAE
         Comment=Run Autodesk Fusion through the managed j0nix Wine setup
         Exec=${lib.getExe launcherScript} %U
+        Icon=autodesk-fusion
+        StartupWMClass=fusion360.exe
         Terminal=false
         StartupNotify=true
         Categories=Graphics;Engineering;
