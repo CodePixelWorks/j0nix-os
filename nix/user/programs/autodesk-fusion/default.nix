@@ -93,7 +93,7 @@ let
     unset WAYLAND_DISPLAY
     # The prebuilt Lolig4 runner dynamically loads libgnutls for Schannel.
     # Keep this narrow: do not reintroduce Mesa/GLVND path overrides.
-    export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.gnutls ]}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.gnutls pkgs.freetype ]}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     # v2.1.7: on NVIDIA hosts Wine's default Mesa libEGL fails to bind the GPU
     # ("failed to create dri2 screen", driver (null)) and Fusion exits with 53
     # before any window opens.  Pin the GLVND vendor explicitly to the NVIDIA
