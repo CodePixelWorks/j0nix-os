@@ -751,14 +751,18 @@ EOF
           echo "error: Proton runner '$runner_mode' is unavailable for Autodesk login." >&2
           exit 1
         fi
-        # Fusion stays WineWayland; browser callbacks use direct Wine in the
-        # same prefix via XWayland, matching the earlier working flow.
-        unset WAYLAND_DISPLAY GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER __EGL_VENDOR_LIBRARY_FILENAMES
+        # Keep the browser callback in the same WineWayland-Proton context as Fusion.
+        export WAYLAND_DISPLAY="$saved_wayland_display"
+        unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER
+        export XKB_CONFIG_ROOT="${pkgs.xkeyboard_config}/share/X11/xkb"
+        if [ -f /run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json ]; then
+          export __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json
+        fi
         exec env \
-          WINEDEBUG="''${WINEDEBUG:--all,+err}" \
-          WINEPREFIX="$wine_pfx" \
-          WINESERVER="$steam_dir/compatibilitytools.d/$runner_mode/files/bin/wineserver" \
-          "$steam_dir/compatibilitytools.d/$runner_mode/files/bin/wine" "$identity_exe" "$url"
+          PROTON_ENABLE_WAYLAND=1 \
+          STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" \
+          STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" \
+          "$steam_dir/compatibilitytools.d/$runner_mode/proton" run "$identity_exe" "$url"
       fi
 
       opener="$install_dir/bin/adskidmgr-opener.sh"
