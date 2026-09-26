@@ -190,6 +190,15 @@ let
   '';
 
   protonInstallerRuntime = lib.optionalString (installerMode == "proton") ''
+    # The upstream installer invokes Wine directly for WebView2 and the
+    # Fusion client. Restore the graphical Wayland session for those calls;
+    # otherwise WineWayland falls back to an unavailable X11 driver.
+    if [ -n "$saved_wayland_display" ]; then
+      export WAYLAND_DISPLAY="$saved_wayland_display"
+      export PROTON_ENABLE_WAYLAND=1
+      unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER __EGL_VENDOR_LIBRARY_FILENAMES
+    fi
+
     # The runner uses the host namespace so the browser callback can reach
     # Fusion's local SSO server. nix-ld.nix supplies the i686 loader path;
     # Proton's Python bootstrap still needs the host Vulkan loader directly.
@@ -473,6 +482,7 @@ EOF
     runtimeInputs = runtimePackages;
     text = ''
       set -eu
+      saved_wayland_display="''${WAYLAND_DISPLAY-}"
       ${commonShell}
       ${protectedInstallerEnv}
 
@@ -503,6 +513,7 @@ EOF
     runtimeInputs = runtimePackages;
     text = ''
       set -eu
+      saved_wayland_display="''${WAYLAND_DISPLAY-}"
       ${commonShell}
       ${protectedInstallerEnv}
 
