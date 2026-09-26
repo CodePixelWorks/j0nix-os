@@ -199,6 +199,18 @@ let
       "$installer"
   '';
 
+  installerLock = ''
+    lock_file="$install_dir/.j0nix-fusion-installer.lock"
+    # The upstream installer mutates global active-prefix logs and must have
+    # one writer. Keep the descriptor open for the complete wrapper lifetime.
+    exec 9>"$lock_file"
+    if ! flock -n 9; then
+      echo "error: another Autodesk Fusion installation or repair is already running." >&2
+      echo "Wait for it to finish before starting a new one." >&2
+      exit 1
+    fi
+  '';
+
   cleanupUpstreamDesktopEntries = ''
     applications_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/applications"
     fusion_desktop_dir="$applications_dir/wine/Programs/Autodesk"
@@ -466,6 +478,7 @@ EOF
 
       mkdir -p "$install_dir/bin" "$install_dir/logs"
       installer="$install_dir/bin/autodesk_fusion_installer_x86-64.sh"
+      ${installerLock}
       extensions_enabled=${if extensions then "1" else "0"}
 
       echo "Fetching Autodesk Fusion Linux installer..."
@@ -495,6 +508,7 @@ EOF
 
       mkdir -p "$install_dir/bin" "$install_dir/logs"
       installer="$install_dir/bin/autodesk_fusion_installer_x86-64.sh"
+      ${installerLock}
 
       echo "Fetching Autodesk Fusion Linux installer..."
       curl -L --fail ${lib.escapeShellArg installerUrl} -o "$installer"
