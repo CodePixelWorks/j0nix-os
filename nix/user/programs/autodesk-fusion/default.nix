@@ -194,7 +194,7 @@ let
     # WineWayland can launch Fusion itself, but its quiet client installer
     # creates no window or network request when it is initialized as Wayland.
     # commonShell has already selected the X11 environment for this phase.
-    unset PROTON_ENABLE_WAYLAND
+    export PROTON_ENABLE_WAYLAND=0
 
     # Fusion does not require Wine's Bluetooth device driver. On the CachyOS
     # WineWayland build it can crash the Fusion client installer in winebth.sys
@@ -208,7 +208,7 @@ let
     cat >"$guard_bin/j0nix-proton-run" <<'EOF'
     #!/usr/bin/env bash
     export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.vulkan-loader ]}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-    unset PROTON_ENABLE_WAYLAND
+    export PROTON_ENABLE_WAYLAND=0
     exec "$J0NIX_PROTON_DIRECTORY/proton" run "$@"
     EOF
     chmod +x "$guard_bin/j0nix-proton-run"
