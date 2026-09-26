@@ -520,6 +520,7 @@ EOF
     name = "autodesk-fusion";
     runtimeInputs = runtimePackages;
     text = ''
+      saved_ld_library_path="''${LD_LIBRARY_PATH-}"
       set -eu
       saved_wayland_display="''${WAYLAND_DISPLAY-}"
       ${commonShell}
@@ -609,8 +610,9 @@ EOF
           fi
           export WAYLAND_DISPLAY="$saved_wayland_display"
           unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER
-          unset __EGL_VENDOR_LIBRARY_FILENAMES LD_LIBRARY_PATH
+          unset __EGL_VENDOR_LIBRARY_FILENAMES
 
+          export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.vulkan-loader ]}''${saved_ld_library_path:+:$saved_ld_library_path}"
           steam_dir=""
           for candidate in \
             "$HOME/.local/share/Steam" \
