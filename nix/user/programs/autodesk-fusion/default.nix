@@ -190,14 +190,11 @@ let
   '';
 
   protonInstallerRuntime = lib.optionalString (installerMode == "proton") ''
-    # The upstream installer invokes Wine directly for WebView2 and the
-    # Fusion client. Restore the graphical Wayland session for those calls;
-    # otherwise WineWayland falls back to an unavailable X11 driver.
-    if [ -n "$saved_wayland_display" ]; then
-      export WAYLAND_DISPLAY="$saved_wayland_display"
-      export PROTON_ENABLE_WAYLAND=1
-      unset GDK_BACKEND QT_QPA_PLATFORM SDL_VIDEODRIVER __EGL_VENDOR_LIBRARY_FILENAMES
-    fi
+    # Bootstrap WebView2 and FusionClient through XWayland. CachyOS
+    # WineWayland can launch Fusion itself, but its quiet client installer
+    # creates no window or network request when it is initialized as Wayland.
+    # commonShell has already selected the X11 environment for this phase.
+    unset PROTON_ENABLE_WAYLAND
 
     # Fusion does not require Wine's Bluetooth device driver. On the CachyOS
     # WineWayland build it can crash the Fusion client installer in winebth.sys
