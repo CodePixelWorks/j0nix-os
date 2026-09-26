@@ -45,6 +45,7 @@ let
     mesa-demos
     vulkan-tools
     xrandr
+    steam-run
     desktop-file-utils
     xdg-utils
     xkeyboard_config
@@ -567,7 +568,6 @@ EOF
     name = "autodesk-fusion";
     runtimeInputs = runtimePackages;
     text = ''
-      saved_ld_library_path="''${LD_LIBRARY_PATH-}"
       saved_wayland_display="''${WAYLAND_DISPLAY-}"
       set -eu
       ${commonShell}
@@ -667,7 +667,7 @@ EOF
             export __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json
           fi
 
-          export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.vulkan-loader ]}''${saved_ld_library_path:+:$saved_ld_library_path}"
+          unset LD_LIBRARY_PATH
           steam_dir=""
           for candidate in \
             "$HOME/.local/share/Steam" \
@@ -692,11 +692,12 @@ EOF
           fi
 
           echo "Starting Fusion with CachyOS WineWayland Proton runner $runner_mode..."
-          PROTON_LOG=0 \
-          PROTON_ENABLE_WAYLAND=1 \
-          STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" \
-          STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" \
-          "$proton_dir/proton" run "$fusion_exe" "$@" &
+          steam-run env \
+            PROTON_LOG=0 \
+            PROTON_ENABLE_WAYLAND=1 \
+            STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" \
+            STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" \
+            "$proton_dir/proton" run "$fusion_exe" "$@" &
           runner_pid=$!
           if wait "$runner_pid"; then status=0; else status=$?; fi
           WINEPREFIX="$wine_pfx" "$proton_dir/files/bin/wineserver" -k || true
@@ -766,7 +767,8 @@ EOF
         if [ -f /run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json ]; then
           export __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json
         fi
-        exec env \
+        unset LD_LIBRARY_PATH
+        exec steam-run env \
           PROTON_ENABLE_WAYLAND=1 \
           STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" \
           STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" \
