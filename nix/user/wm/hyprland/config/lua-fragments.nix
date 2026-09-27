@@ -248,7 +248,9 @@ let
       inactive_opacity = 0.94;
       fullscreen_opacity = 1.0;
       blur = {
-        enabled = true;
+        # Transparent WineWayland popups such as Fusion marking menus must not
+        # blur the entire scene behind their full-screen input surface.
+        enabled = false;
         size = 8;
         passes = 2;
       };
