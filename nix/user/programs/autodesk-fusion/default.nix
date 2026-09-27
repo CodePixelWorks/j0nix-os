@@ -22,6 +22,10 @@ let
   autoSetupOnLogin = cfg.autoSetupOnLogin or false;
   runnerName = cfg.runner or "wineWow64Packages.stagingFull";
   setAsDefaultLoginHandler = cfg.setAsDefaultLoginHandler or true;
+  # Keep Fusion-owned Windows menus inside one WineWayland host window.
+  # This is launcher-local; it does not persist a winecfg change in the prefix.
+  virtualDesktop = cfg.virtualDesktop or false;
+  virtualDesktopResolution = cfg.virtualDesktopResolution or "2880x1280";
 
   runner =
     if runnerName == "wineWow64Packages.stagingFull" then
@@ -701,7 +705,7 @@ EOF
 
           echo "Starting Autodesk Identity Manager before Fusion..."
           # shellcheck disable=SC2016 # variables intentionally expand inside bash -c
-          steam-run env PROTON_LOG=0 PROTON_ENABLE_WAYLAND=1 STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" J0NIX_FUSION_PROTON="$proton_dir/proton" J0NIX_FUSION_WINESERVER="$proton_dir/files/bin/wineserver" J0NIX_FUSION_IDENTITY="$identity_exe" J0NIX_FUSION_EXE="$fusion_exe" bash -c '
+          steam-run env PROTON_LOG=0 PROTON_ENABLE_WAYLAND=1 STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_dir" STEAM_COMPAT_DATA_PATH="''${wine_pfx%/pfx}" J0NIX_FUSION_PROTON="$proton_dir/proton" J0NIX_FUSION_WINESERVER="$proton_dir/files/bin/wineserver" J0NIX_FUSION_IDENTITY="$identity_exe" J0NIX_FUSION_EXE="$fusion_exe" J0NIX_FUSION_VIRTUAL_DESKTOP="${if virtualDesktop then "1" else "0"}" J0NIX_FUSION_VIRTUAL_DESKTOP_RESOLUTION="${virtualDesktopResolution}" bash -c '
             set -u
             "$J0NIX_FUSION_PROTON" run "$J0NIX_FUSION_IDENTITY" --process_name Autodesk.IDSDK.DefaultProcess-v2 --server_name Autodesk.IDSDK.DefaultServer-v2 >/dev/null 2>&1 &
             identity_pid=$!
@@ -747,7 +751,12 @@ EOF
               exit 1
             fi
             echo "Autodesk Identity Manager SSO server is ready; starting Fusion."
-            "$J0NIX_FUSION_PROTON" run "$J0NIX_FUSION_EXE" "$@"
+            if [ "$J0NIX_FUSION_VIRTUAL_DESKTOP" = "1" ]; then
+              echo "Starting Fusion in a $J0NIX_FUSION_VIRTUAL_DESKTOP_RESOLUTION virtual Wine desktop (native Wayland host)."
+              "$J0NIX_FUSION_PROTON" run explorer.exe "/desktop=Fusion,$J0NIX_FUSION_VIRTUAL_DESKTOP_RESOLUTION" "$J0NIX_FUSION_EXE" "$@"
+            else
+              "$J0NIX_FUSION_PROTON" run "$J0NIX_FUSION_EXE" "$@"
+            fi
             status=$?
             exit "$status"
           ' fusion-wayland "$@" &
@@ -1154,6 +1163,14 @@ lib.mkIf enabled {
     {
       assertion = runnerName == "wineWow64Packages.stagingFull";
       message = "settings.programs.autodeskFusion.runner currently supports only wineWow64Packages.stagingFull";
+    }
+    {
+      assertion = builtins.isBool virtualDesktop;
+      message = "settings.programs.autodeskFusion.virtualDesktop must be a boolean";
+    }
+    {
+      assertion = builtins.isString virtualDesktopResolution && builtins.match "^[1-9][0-9]*x[1-9][0-9]*$" virtualDesktopResolution != null;
+      message = "settings.programs.autodeskFusion.virtualDesktopResolution must use WIDTHxHEIGHT, for example 2880x1280";
     }
     {
       assertion = builtins.isBool setAsDefaultLoginHandler;
