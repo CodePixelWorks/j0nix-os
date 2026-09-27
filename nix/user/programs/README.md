@@ -61,31 +61,16 @@ Note: Bottles component downloads are runtime/user-state operations and are not 
 `winexe-run` uses `bottles-cli run` with an absolute executable path and the configured default bottle/runner.
 New j0nix-managed bottles are seeded from a Nix-generated template after creation. Existing unmanaged default bottles are migrated once by merging a curated set of safe runtime fields while preserving installed programs, dependencies and other bottle state.
 
-`Autodesk Fusion` is configured via `settings.programs.autodeskFusion.*` and uses the maintained Lolig4 installer flow. The current configuration selects `installerMode = "fusion-wine"`, the tested path for Hyprland through XWayland. CachyOS WineWayland Proton remains experimental because its quiet FusionClient bootstrap hangs before downloading Fusion.
+`Autodesk Fusion` is configured via `settings.programs.autodeskFusion.*` and uses the managed Lolig4 installer flow with native CachyOS WineWayland Proton (`installerMode = "proton"`). Installation bootstraps under X11 because FusionClient setup is not reliable as a native Wayland process; the managed runtime itself starts with `PROTON_ENABLE_WAYLAND=1`.
 
-- `autodesk-fusion-install` creates a new Fusion prefix with the selected Lolig4 runner and its corresponding component overrides.
-- `autodesk-fusion-repair` creates another clean, parallel prefix rather than mutating a potentially broken installation.
-- `autodesk-fusion` is a j0nix-owned launcher. It reads Lolig4's active-prefix contract but does not execute the mutable installer launcher. For Proton prefixes it restores the Hyprland Wayland socket, keeps Proton's library stack unmodified, and sets `PROTON_ENABLE_WAYLAND=1`.
-- `autodesk-fusion-adskidmgr` delegates `adskidmgr:` callbacks to Lolig4's opener.
-- `autodesk-fusion-renderer` is retained only for legacy-prefix diagnosis; the maintained flow selects its renderer during prefix creation.
+- `autodesk-fusion-install` creates a fresh parallel Proton prefix from the checksum-verified Lolig4 installer snapshot.
+- `autodesk-fusion-repair` creates another clean parallel prefix and updates the active-prefix contract.
+- `autodesk-fusion` is the sole j0nix-owned launcher. It starts Identity Manager, waits for the SSO service, then starts Fusion in `steam-run` with native Wayland enabled.
+- `autodesk-fusion-adskidmgr` bridges the browser callback to Fusion's existing Wine SSO socket; do not use upstream launchers or duplicate desktop files.
+- `autodesk-fusion-kill` stops only Fusion, Identity Manager and ADP service processes.
+- `autodesk-fusion-doctor` validates the active prefix, selected Proton runner, WebView2, Vulkan and the `adskidmgr` handler.
 
-The patched `fusion-wine` runner remains available as a fallback for modern Wine canvas regressions; it includes canvas and owned-tool-window fixes. Its Wine-DX9 override for `AdCefWebBrowser.exe` is the corresponding sidebar/navigation fix.
-
-For legacy Wine prefixes, the managed launcher preserves Lolig4's split renderer policy: DXVK/D3D11 renders the 3D canvas, while OpenGL renders Fusion's Qt/Chromium shell. Fusion can overwrite the shell setting with D3D11 in its roaming profile; the launcher restores the upstream OpenGL value before each start to avoid black panels. This normalization is intentionally not applied to the Proton Wayland prefix.
-
-The Autodesk payload, runner archive, WebView2 runtime, and license/session data are mutable user state. They are fetched only when the install or repair command is explicitly run, never during Nix evaluation.
-
-### Fusion sign-in on Hyprland
-
-Current Fusion builds authenticate through a top-level Wine/Xwayland window backed by Microsoft Edge WebView2. They do not reliably launch the system browser. The `adskidmgr` XDG handler remains necessary for a callback when Fusion does use an external flow, but it must not be treated as the primary sign-in launcher.
-
-The managed Hyprland rule matches `fusion360.exe` with the title `Anmelden - Autodesk Fusion`, then floats and centers it. This keeps the login visible on the workspace where Fusion was started. Do not add `FUSION_IDSDK=false`: that was an old workaround for the retired login path and current Fusion versions ignore it while still starting the Identity Manager.
-
-If sign-in appears stuck:
-
-- Run `autodesk-fusion-doctor` and confirm WebView2 and the `adskidmgr` handler are present.
-- Check `hyprctl -j clients` for `fusion360.exe` or `adskidentitymanager.exe`; the login dialog may be on the launch workspace.
-- Close all Fusion, Identity Manager, WebView2, and Wine processes for this prefix before retrying, so an old instance cannot retain the login session.
+The runner and Autodesk payload are runtime user state. They are downloaded only by install or repair, never while Nix evaluates. The configured installer SHA-256 fails closed if the upstream script changes; update it only after review. See [Fusion Wayland status](../../docs/fusion-wayland-status.md) for the reinstallation runbook and WineWayland menu limitations.
 
 `Windows app packages` are configured via `settings.userSettings.<name>.programs.windowsApps.packages = [ ... ];`.
 The infrastructure separates:
