@@ -280,6 +280,7 @@ let
       no_blur = true;
       fullscreen_state = "0 0";
       suppress_event = "fullscreen maximize fullscreenoutput";
+      no_border = true;
     }
 
 
