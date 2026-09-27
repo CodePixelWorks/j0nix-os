@@ -276,7 +276,6 @@ let
         class = "^steam_proton$";
         title = "^Marking Menu$";
       };
-      float = true;
       no_blur = true;
       fullscreen_state = "0 0";
       suppress_event = "fullscreen maximize fullscreenoutput";
