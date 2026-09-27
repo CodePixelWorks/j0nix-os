@@ -38,6 +38,9 @@ let
   installerUrl =
     cfg.installerUrl or
       "https://codeberg.org/Lolig4/Autodesk-Fusion-360-on-Linux/raw/branch/main/files/setup/autodesk_fusion_installer_x86-64.sh";
+  # Upstream installer snapshot dated 2026-08-27. A changed upstream payload
+  # fails closed until this value is intentionally reviewed and updated.
+  installerSha256 = cfg.installerSha256 or "885f8c3e9b0365c04ef13a7b55f9395b617e5b3e63fe352b25a1e52fd7153be4";
 
   runtimePackages = with pkgs; [
     runner
@@ -532,6 +535,12 @@ EOF
       # stack. Its fusion-wine runner carries the canvas and owned-window fixes.
       args=( --install fusion ${lib.escapeShellArg installCommand} )
       if [ "$extensions_enabled" = "1" ]; then
+      expected_installer_sha256=${lib.escapeShellArg installerSha256}
+      actual_installer_sha256="$(sha256sum "$installer" | cut -d ' ' -f1)"
+      if [ "$actual_installer_sha256" != "$expected_installer_sha256" ]; then
+        echo "error: downloaded Fusion installer checksum differs from the reviewed snapshot." >&2
+        exit 1
+      fi
         args+=(--full)
       fi
       if [ "$viewport_refresh_forcer" = "1" ]; then
@@ -559,6 +568,12 @@ EOF
       echo "Fetching Autodesk Fusion Linux installer..."
       curl -L --fail ${lib.escapeShellArg installerUrl} -o "$installer"
       chmod +x "$installer"
+      expected_installer_sha256=${lib.escapeShellArg installerSha256}
+      actual_installer_sha256="$(sha256sum "$installer" | cut -d ' ' -f1)"
+      if [ "$actual_installer_sha256" != "$expected_installer_sha256" ]; then
+        echo "error: downloaded Fusion installer checksum differs from the reviewed snapshot." >&2
+        exit 1
+      fi
       ${protonInstallerRuntime}
 
       echo "Deploying a fresh, parallel Fusion prefix in: $install_dir"
@@ -986,24 +1001,37 @@ EOF
       esac
 
       active_prefix_name="$(cat "$install_dir/logs/active_fusion.log" 2>/dev/null || true)"
-      active_prefix="$install_dir/wineprefixes/$active_prefix_name"
-      if [ -n "$active_prefix_name" ] && [ -d "$active_prefix" ]; then
-        ok "Active Lolig4 Fusion prefix: $active_prefix"
+      active_prefix=""
+      active_runner=""
+      prefix_config="$install_dir/logs/$active_prefix_name/prefix.config"
+      if [ -n "$active_prefix_name" ] && [ -r "$prefix_config" ]; then
+        active_prefix="$(sed -n '2p' "$prefix_config")"
+        active_runner="$(sed -n '3p' "$prefix_config")"
+      fi
+      if [ -n "$active_prefix" ] && [ -d "$active_prefix" ]; then
+        ok "Active Fusion prefix: $active_prefix"
       else
-        warn "No active Lolig4 Fusion prefix exists under $install_dir; run autodesk-fusion-install"
+        warn "No complete active Fusion prefix exists; run autodesk-fusion-install"
       fi
 
-      if [ -x "$install_dir/bin/autodesk_fusion_launcher.sh" ]; then
-        ok "Lolig4 launcher exists"
-      else
-        warn "Lolig4 launcher missing; run autodesk-fusion-install"
-      fi
-
-      if [ -x "$install_dir/fusion-wine-build/bin/wine" ]; then
-        ok "Patched fusion-wine runner exists"
-      else
-        warn "Patched fusion-wine runner is missing"
-      fi
+      case "$active_runner" in
+        "") warn "Active Fusion runner is not recorded" ;;
+        --*) ok "Active managed Wine runner: $active_runner" ;;
+        *)
+          proton_found=0
+          for steam_dir in "$HOME/.local/share/Steam" "$HOME/.steam/steam" "$HOME/.steam/root" "$HOME/.steam/debian-installation"; do
+            if [ -x "$steam_dir/compatibilitytools.d/$active_runner/proton" ]; then
+              proton_found=1
+              break
+            fi
+          done
+          if [ "$proton_found" -eq 1 ]; then
+            ok "Active Proton runner exists: $active_runner"
+          else
+            fail "Active Proton runner is missing: $active_runner"
+          fi
+          ;;
+      esac
 
       search_roots=()
       [ -d "$active_prefix" ] && search_roots+=("$active_prefix")
@@ -1125,6 +1153,10 @@ lib.mkIf enabled {
     {
       assertion = builtins.isBool enabled;
       message = "settings.programs.autodeskFusion.enable must be a boolean";
+    }
+    {
+      assertion = builtins.isString installerSha256 && builtins.match "^[0-9a-f]{64}$" installerSha256 != null;
+      message = "settings.programs.autodeskFusion.installerSha256 must be a lowercase SHA-256 digest";
     }
     {
       assertion = builtins.isString installDir && installDir != "";
