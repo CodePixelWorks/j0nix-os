@@ -39,3 +39,4 @@ secrets/.backups/
 settings.local.nix
 profiles/desktop/details.local.nix
 profiles/desktop/hardware-configuration.local.nix
+.aidex/
