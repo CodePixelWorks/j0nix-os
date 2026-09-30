@@ -260,6 +260,15 @@ let
     ((inputs.hermes.packages or { }).${hermesSystem} or { }).${name} or null;
   hermesOpnsensePackageFromHermes = hermesMcpPackageFromHermes "opnsense-mcp";
   hermesGiteaPackageFromHermes = hermesMcpPackageFromHermes "gitea-mcp";
+  # AiDex — persistent code index MCP (33 tools, tree-sitter, 14
+  # languages). Shipped in the curated hermes-package since PR #196
+  # (pkgs/aidex-mcp.nix); opt-in per consumer, NOT bundled in the
+  # default hermes closure.
+  hermesAidexCfg = hermesMcpCfg.aidex or { };
+  hermesAidexEnabled = hermesEnabled && (hermesAidexCfg.enable or false);
+  hermesAidexPackageFromHermes = hermesMcpPackageFromHermes "aidex-mcp";
+  hermesAidexPackageAvailable = hermesAidexPackageFromHermes != null;
+  hermesAidexStateDir = hermesAidexCfg.stateDir or "/var/lib/aidex";
   hermesOpnsensePackageAvailable = hermesOpnsensePackageFromHermes != null;
   # Plugin-module eval runs whenever the private hermes input exists
   # (its nixos/module.nix + nixos/modules/mcp are imported from there).
@@ -393,6 +402,13 @@ let
                   enableWrites = hermesDroneEnableWrites;
                 };
               })
+              // (lib'.optionalAttrs (hermesAidexEnabled && hermesAidexPackageAvailable) {
+                aidex = {
+                  enable = true;
+                  package = hermesAidexPackageFromHermes;
+                  stateDir = hermesAidexStateDir;
+                };
+              })
               // (lib'.optionalAttrs hermesImageEnabled {
                 comfy = {
                   enable = true;
@@ -482,7 +498,7 @@ let
       # Remove managed servers that are no longer desired so disabling a
       # hermesMcp block in settings actually removes the config entry.
       for name in list(servers.keys()):
-          if name in ("gitea", "donsetch", "opnsense", "comfy", "drone-ci") and name not in desired_servers:
+          if name in ("gitea", "donsetch", "opnsense", "comfy", "drone-ci", "aidex") and name not in desired_servers:
               del servers[name]
               changed = True
 
@@ -629,6 +645,7 @@ lib.mkIf enabled {
     || hermesDroneEnabled
     || hermesOpnsenseEnabled
     || hermesImageEnabled
+    || hermesAidexEnabled
   ) (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       $DRY_RUN_CMD ${hermesMcpSync}/bin/hermes-mcp-sync
