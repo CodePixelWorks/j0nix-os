@@ -720,11 +720,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790282419,
-        "narHash": "sha256-pkQ/0xTFrHBpwv5k3AP5+qx4xygikvFWMt4fh0SKIYE=",
+        "lastModified": 1790803690,
+        "narHash": "sha256-cFFnwJWLMtQ6/Ipz+kfQV1maR2EI5cMzVwD+UUIOEbY=",
         "ref": "refs/heads/main",
-        "rev": "a0b757c91023ca8dd921dc093a997ab46761bb81",
-        "revCount": 306,
+        "rev": "2acbb481c4c986088fb9779bb6bc1f4ba64dc433",
+        "revCount": 489,
         "type": "git",
         "url": "ssh://git@git.j0lab.xyz/NixOS/hermes.git"
       },
@@ -744,17 +744,17 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1790270617,
-        "narHash": "sha256-RiK5Ex+c0Q67nbhinD+x017NSuBZgqicixfgYhZremk=",
+        "lastModified": 1790700304,
+        "narHash": "sha256-a/CkxrxQhg0hnSZM3YPpZPdSWXbH2ecI+5DdnWEchmU=",
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "130b8f2c5dbca93a81aa396dd2ba44420d78f6f0",
+        "rev": "73688014f787044e439947f8de18d62c0f9edec3",
         "type": "github"
       },
       "original": {
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "130b8f2c5dbca93a81aa396dd2ba44420d78f6f0",
+        "rev": "73688014f787044e439947f8de18d62c0f9edec3",
         "type": "github"
       }
     },
