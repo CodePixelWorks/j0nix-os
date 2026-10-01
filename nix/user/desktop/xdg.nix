@@ -254,6 +254,28 @@ in
         "application/vnd.flatpak.repo"
       ];
     };
+  } // {
+    # NVIDIA regression (610.57.04): the CEF GPU process of Chromium-embedded
+    # apps dies with SIGTRAP (SI_KERNEL) right after start — Steam keeps
+    # running headless with no window (2026-10-01: plain `steam` → 19
+    # processes, zero windows; `steam -cef-disable-gpu` → window maps;
+    # Discord with `--disable-gpu` likewise). This entry shadows the
+    # steam-unwrapped copy so launcher clicks get the flag. Remove once the
+    # driver/CEF regression is fixed upstream.
+    steam = lib.mkForce {
+      type = "Application";
+      name = "Steam";
+      comment = "Application for managing and playing games on Steam";
+      exec = "steam -cef-disable-gpu %U";
+      icon = "steam";
+      terminal = false;
+      categories = [ "Game" ];
+      mimeType = [
+        "x-scheme-handler/steam"
+        "x-scheme-handler/steamlink"
+        "x-scheme-handler/steamid"
+      ];
+    };
   };
 
   assertions = [
