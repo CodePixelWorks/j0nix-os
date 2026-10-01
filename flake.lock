@@ -1545,16 +1545,16 @@
       "locked": {
         "lastModified": 1784884440,
         "narHash": "sha256-zeHRcwRf68CCrFMumyn6sx8md4nN7MdKfLbHV6xvsSI=",
-        "owner": "nexu-io",
-        "repo": "open-design",
+        "ref": "refs/heads/main",
         "rev": "99c13e083e070f44aaa0009b2fc96589118c2a9a",
-        "type": "github"
+        "revCount": 2989,
+        "type": "git",
+        "url": "https://github.com/nexu-io/open-design"
       },
       "original": {
-        "owner": "nexu-io",
-        "ref": "main",
-        "repo": "open-design",
-        "type": "github"
+        "rev": "99c13e083e070f44aaa0009b2fc96589118c2a9a",
+        "type": "git",
+        "url": "https://github.com/nexu-io/open-design"
       }
     },
     "plasma-manager": {

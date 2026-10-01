@@ -35,7 +35,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     open-design = {
-      url = "github:nexu-io/open-design/main";
+      # Pinned to the last rev with a flake.nix: upstream deleted the flake
+      # from main, which breaks any `nix flake lock` of this repo (and with
+      # it Renovate's lockFileMaintenance — the whole lock refresh dies on
+      # this single input). rev-pin form is Renovate-addressable (git-refs
+      # datasource) and keeps the lock stable. Un-pin once upstream restores
+      # a flake.nix.
+      url = "git+https://github.com/nexu-io/open-design?rev=99c13e083e070f44aaa0009b2fc96589118c2a9a";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
     };
