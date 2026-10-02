@@ -423,8 +423,29 @@ lib.mkIf enabled {
 
   hardware.nvidia-container-toolkit.enable = lib.mkIf useNvidia true;
 
-  systemd.services = {
-    ai-image-stack-prepare = {
+  # The CDI generator runs against the userspace driver libs of the new
+  # generation. After a switch that bumps the NVIDIA driver, the still-loaded
+  # kernel module is older than the userland NVML — nvsandboxutils init then
+  # fails (ERROR_NVML_LIB_CALL) and the oneshot lingers as "failed" until the
+  # next reboot loads the matching module. Retry a few times so a reboot into
+  # the new driver self-heals, and don't let the transient mismatch pollute
+  # the switch result.
+  systemd.services =
+    {
+      "nvidia-container-toolkit-cdi-generator" = {
+        serviceConfig = {
+          Restart = "on-failure";
+          RestartSec = "30s";
+          RestartSteps = 10;
+          RestartMaxDelaySec = "5min";
+        };
+        unitConfig = {
+          # A failed CDI generation must not fail the whole switch/boot.
+          # GPU-in-container users see the real error in the journal instead.
+          OnFailureJobMode = "ignore-dependencies";
+        };
+      };
+      ai-image-stack-prepare = {
       description = "Prepare shared AI image stack directories";
       after = lib.optional (parentMountUnit != null) parentMountUnit;
       requires = lib.optional (parentMountUnit != null) parentMountUnit;
