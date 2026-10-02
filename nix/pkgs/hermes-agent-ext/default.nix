@@ -26,7 +26,7 @@ stdenv.mkDerivation {
       cp -r ${hermesPackage}/ui-tui/* $out/ui-tui/
     fi
 
-    extraSitePackages="${hermesExtraPython}/lib/python3.12/site-packages"
+    extraSitePackages="${hermesExtraPython}/lib/python3.14/site-packages"
 
     for bin in hermes hermes-agent hermes-acp; do
       if [[ -e ${hermesPackage}/bin/$bin ]]; then
