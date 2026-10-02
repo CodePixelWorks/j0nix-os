@@ -679,7 +679,11 @@ lib.mkIf enabled {
       (pkgs.writeShellScriptBin "game-session-mangohud" ''
         exec mangohud gamemoderun "$@"
       '')
-      pkgs.goverlay
+      # goverlay (MangoHud config GUI) temporarily disabled: lazarus-qt6 in
+      # nixpkgs c59305b fails to build (cc-wrapper rejects empty NIX_LDFLAGS
+      # segment, #error at <stdin>:61) and goverlay needs lazbuild from it.
+      # Re-add once upstream nixpkgs fixes the fpc/cc-wrapper interaction.
+      # pkgs.goverlay
     ]
     ++ [
       # Steam launch options examples (Cyberpunk 2077 appid 1091500):

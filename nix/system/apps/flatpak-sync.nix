@@ -24,6 +24,24 @@ let
   installScript = pkgs.writeShellScript "j0nix-flatpak-install" ''
     set -eu
 
+    # Flatpak remote-add and install hit the network (flathub.org). During a
+    # switch/boot the network may be momentarily unavailable or the remote
+    # fetch may flake — without a retry the whole oneshot unit fails with
+    # "Can't load uri https://flathub.org/repo/flathub.flatpakrepo". Retry a
+    # few times with a short backoff before giving up.
+    retry() {
+      local n=0 max=5 delay=10
+      until "$@"; do
+        n=$((n + 1))
+        if [ "$n" -ge "$max" ]; then
+          echo "j0nix-flatpak-install: command failed after $max attempts: $*" >&2
+          return 1
+        fi
+        echo "j0nix-flatpak-install: attempt $n failed, retrying in ''${delay}s: $*" >&2
+        sleep "$delay"
+      done
+    }
+
     mkdir -p ${stateDir}
     : > ${desiredFile}
 
@@ -31,18 +49,18 @@ let
       exit 0
     fi
 
-    ${pkgs.flatpak}/bin/flatpak remote-add --if-not-exists --system \
+    retry ${pkgs.flatpak}/bin/flatpak remote-add --if-not-exists --system \
       flathub https://flathub.org/repo/flathub.flatpakrepo
 
     ${pkgs.jq}/bin/jq -r '.[] | [.remote, .appId, .branch, (.remoteUrl // "")] | @tsv' ${entriesJson} | \
     while IFS=$'\t' read -r remote appId branch remoteUrl; do
       [ -n "$appId" ] || continue
       if [ -n "$remoteUrl" ]; then
-        ${pkgs.flatpak}/bin/flatpak remote-add --if-not-exists --system "$remote" "$remoteUrl"
+        retry ${pkgs.flatpak}/bin/flatpak remote-add --if-not-exists --system "$remote" "$remoteUrl"
       fi
       ref="app/$appId/$(uname -m)/$branch"
       if ! ${pkgs.flatpak}/bin/flatpak info --system "$ref" >/dev/null 2>&1; then
-        ${pkgs.flatpak}/bin/flatpak install --system --noninteractive "$remote" "$ref"
+        retry ${pkgs.flatpak}/bin/flatpak install --system --noninteractive "$remote" "$ref"
       fi
       printf '%s\n' "$ref" >> ${desiredFile}
     done
@@ -132,6 +150,12 @@ in
       serviceConfig = {
         Type = "oneshot";
         ExecStart = installScript;
+        # Transient network failures (flathub fetch) must not leave the unit
+        # in a failed state on switch/boot — retry the whole oneshot.
+        Restart = "on-failure";
+        RestartSec = "30s";
+        RestartMaxDelaySec = "5min";
+        RestartSteps = 5;
       };
     };
 
