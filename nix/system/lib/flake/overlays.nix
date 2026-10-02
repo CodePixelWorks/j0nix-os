@@ -59,7 +59,7 @@ let
     };
     bambu-studio-appimage = final.callPackage (baseDir + "/nix/system/software/pkgs/printing/bambu-studio-appimage.nix") { };
     hermes-extra-python = final.callPackage (baseDir + "/nix/pkgs/hermes-extra-python") {
-      inherit (final.python312Packages) ollama;
+      inherit (final.python314Packages) ollama;
     };
     # Workstation hermes: curated package from NixOS/hermes (private
     # Gitea, see flake.nix) with the mem0 dependency group — required
