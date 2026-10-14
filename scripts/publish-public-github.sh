@@ -445,33 +445,35 @@ rm -rf secrets/identity
 # flake). Both overlays / settings.nix.legacy-default behavior degrade
 # gracefully when the input is absent, so the mirror stays evaluable.
 if [ -f flake.nix ]; then
-    # Remove the resolve-patch and j0nix-identity-secrets input blocks
+    # Remove ALL private input blocks (git+ssh://git@git.j0lab.xyz)
     # from flake.nix. We use python3 for multiline-aware removal; sed
     # would only match the first line and leave dangling braces behind.
+    # Comment lines directly attached above a stripped input go with it
+    # (they describe the removed input and can mention internal
+    # hostnames). Every consumer degrades via `(inputs.<name> or { })`.
     python3 - <<'PYEOF' 2>/dev/null || true
 import re
 with open('flake.nix', 'r') as f:
     src = f.read()
-# Strip the named input attrset entries (single-line or multi-line).
-for name in ('resolve-patch', 'j0nix-identity-secrets'):
-    pattern = re.compile(
-        r'\n\s*' + re.escape(name) + r'\s*=\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}\s*;\s*\n',
-        re.MULTILINE,
-    )
-    src = pattern.sub('\n', src, count=1)
+NAMES = ('resolve-patch', 'j0nix-identity-secrets', 'hermes', 'drone-ci-mcp')
+BLOCK = r'\s*=\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}\s*;\s*\n'
+for name in NAMES:
+    esc = re.escape(name)
+    src = re.compile(r'\n(?:\s*#[^\n]*\n)+\s*' + esc + BLOCK).sub('\n', src, count=1)
+    src = re.compile(r'\n\s*' + esc + BLOCK).sub('\n', src, count=1)
 with open('flake.nix', 'w') as f:
     f.write(src)
 PYEOF
 fi
 if [ -f flake.lock ]; then
-    # Remove resolve-patch and j0nix-identity-secrets nodes and references
-    # from flake.lock. json manipulation is more reliable than jq inside
-    # a tree-filter subshell where minimal PATHs may lack jq.
+    # Remove ALL private input nodes and references from flake.lock.
+    # json manipulation is more reliable than jq inside a tree-filter
+    # subshell where minimal PATHs may lack jq.
     python3 - <<'PYEOF' 2>/dev/null || true
 import json
 with open('flake.lock') as f:
     d = json.load(f)
-for name in ('resolve-patch', 'j0nix-identity-secrets'):
+for name in ('resolve-patch', 'j0nix-identity-secrets', 'hermes', 'drone-ci-mcp'):
     d['nodes'].pop(name, None)
     for node in d['nodes'].values():
         if isinstance(node, dict) and 'inputs' in node:
