@@ -28,7 +28,7 @@ let
     drone-ci-mcp =
       let
         system = final.stdenv.hostPlatform.system;
-        pkg = (inputs.drone-ci-mcp.packages or { }).${system} or null;
+        pkg = ((inputs.drone-ci-mcp or { }).packages or { }).${system} or null;
       in
       if pkg != null then pkg.drone-ci-mcp or null else null;
     # ComfyUI MCP server from the curated hermes-package input (bundles
@@ -38,7 +38,7 @@ let
     comfy-mcp =
       let
         system = final.stdenv.hostPlatform.system;
-        pkg = (inputs.hermes.packages or { }).${system} or null;
+        pkg = ((inputs.hermes or { }).packages or { }).${system} or null;
       in
       if pkg != null then pkg.comfy-mcp or null else null;
     nexus-collection-dl = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/nexus-collection-dl.nix") { };
