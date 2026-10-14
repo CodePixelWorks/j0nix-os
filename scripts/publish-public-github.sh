@@ -407,7 +407,9 @@ tree_filter_path="$(mktemp -t tree_filter.XXXXXX)"
 if command -v python3 >/dev/null 2>&1; then
     PYTHON3_BIN="$(command -v python3)"
 else
-    PYTHON3_BIN="$(nix --extra-experimental-features 'nix-command flakes' run nixpkgs#python3 -- command -v python3)"
+    # nix build + explicit bin path — `nix run -- command` would try
+    # to exec the argument as a script file.
+    PYTHON3_BIN="$(nix --extra-experimental-features 'nix-command flakes' build nixpkgs#python3 --no-link --print-out-paths | tail -1)/bin/python3"
 fi
 export PYTHON3_BIN
 
