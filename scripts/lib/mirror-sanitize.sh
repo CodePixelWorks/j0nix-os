@@ -197,22 +197,37 @@ ms_apply_tree_filter() {
         rm -rf secrets/identity
 
         # --- strip private flake inputs ---
-        # j0nix-identity-secrets points to the private Gitea-hosted
-        # identity flake. Its URL and lockfile node must never leak into
-        # the public mirror. settings.nix defaults to
-        # `secrets.identity.mode = "legacy"`, so removing the input does
-        # not break evaluation.
+        # All git+ssh://git@git.j0lab.xyz inputs must never leak into
+        # the public mirror (flake.nix declaration + flake.lock node).
+        # Every consumer degrades gracefully when the input is absent:
+        #   - j0nix-identity-secrets: settings.nix defaults to
+        #     `secrets.identity.mode = "legacy"` (input referenced with
+        #     `or null`; the shared-flake assertion only fires when the
+        #     mode is explicitly selected).
+        #   - resolve-patch: overlay is `if inputs ? resolve-patch`.
+        #   - hermes: ai-cli.nix gates the plugin eval on
+        #     `inputs ? hermes` (uvx/npx fallbacks stay active) and the
+        #     overlays check `inputs.hermes.packages or { }`.
+        #   - drone-ci-mcp: overlay falls back to null when the input's
+        #     package set has no drone-ci-mcp.
         if [ -f flake.nix ]; then
             python3 - <<'PYEOF' 2>/dev/null || true
 import re
 with open('flake.nix', 'r') as f:
     src = f.read()
-for name in ('resolve-patch', 'j0nix-identity-secrets'):
-    pattern = re.compile(
-        r'\n\s*' + re.escape(name) + r'\s*=\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}\s*;\s*\n',
-        re.MULTILINE,
-    )
-    src = pattern.sub('\n', src, count=1)
+NAMES = ('resolve-patch', 'j0nix-identity-secrets', 'hermes', 'drone-ci-mcp')
+BLOCK = r'\s*=\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}\s*;\s*\n'
+for name in NAMES:
+    esc = re.escape(name)
+    # 1) comment lines directly attached above the input go with it (a
+    #    left-behind comment would confuse public readers and can still
+    #    mention internal hostnames). Leading whitespace before '#' is
+    #    part of the comment line.
+    src = re.compile(
+        r'\n(?:\s*#[^\n]*\n)+\s*' + esc + BLOCK,
+    ).sub('\n', src, count=1)
+    # 2) bare input (no comments above) - only if step 1 did not match.
+    src = re.compile(r'\n\s*' + esc + BLOCK).sub('\n', src, count=1)
 with open('flake.nix', 'w') as f:
     f.write(src)
 PYEOF
@@ -222,7 +237,7 @@ PYEOF
 import json
 with open('flake.lock') as f:
     d = json.load(f)
-for name in ('resolve-patch', 'j0nix-identity-secrets'):
+for name in ('resolve-patch', 'j0nix-identity-secrets', 'hermes', 'drone-ci-mcp'):
     d['nodes'].pop(name, None)
     for node in d['nodes'].values():
         if isinstance(node, dict) and 'inputs' in node:
