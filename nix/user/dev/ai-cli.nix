@@ -257,7 +257,7 @@ let
   # old npx wrapper path is gone with the hand-written wiring).
   hermesSystem = pkgs.stdenv.hostPlatform.system;
   hermesMcpPackageFromHermes = name:
-    ((inputs.hermes.packages or { }).${hermesSystem} or { }).${name} or null;
+    (((inputs.hermes or { }).packages or { }).${hermesSystem} or { }).${name} or null;
   hermesOpnsensePackageFromHermes = hermesMcpPackageFromHermes "opnsense-mcp";
   hermesGiteaPackageFromHermes = hermesMcpPackageFromHermes "gitea-mcp";
   # AiDex — persistent code index MCP (33 tools, tree-sitter, 14
