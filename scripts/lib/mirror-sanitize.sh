@@ -90,6 +90,21 @@ ms_init() {
     local repo_root="${1:?ms_init: repo_root required}"
     SANITIZE_REPO_ROOT="$repo_root"
 
+    # python3 is NOT in the nixos/nix CI image. Resolve it ONCE here
+    # (with the nix-run fallback), not per commit in the tree filter —
+    # a bare `python3` call inside the filter otherwise makes the
+    # flake-strip heredocs fail silently (stderr is dev-null'd) and
+    # private git+ssh URLs leak into the public mirror.
+    if command -v python3 >/dev/null 2>&1; then
+        PYTHON3_BIN="$(command -v python3)"
+    elif command -v nix >/dev/null 2>&1; then
+        PYTHON3_BIN="$(nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#python3 --command sh -c 'command -v python3')"
+    else
+        PYTHON3_BIN=""
+        printf '%s\n' "ERROR: python3 not found and nix not available — flake strip will be skipped" >&2
+    fi
+    export PYTHON3_BIN
+
     if [ ! -f "$repo_root/.mirror-blacklist" ]; then
         printf '%s\n' "WARN: .mirror-blacklist not found at $repo_root" >&2
     fi
@@ -211,7 +226,7 @@ ms_apply_tree_filter() {
         #   - drone-ci-mcp: overlay falls back to null when the input's
         #     package set has no drone-ci-mcp.
         if [ -f flake.nix ]; then
-            python3 - <<'PYEOF' 2>/dev/null || true
+            "${PYTHON3_BIN:-python3}" - <<'PYEOF' 2>/dev/null || true
 import re
 with open('flake.nix', 'r') as f:
     src = f.read()
@@ -233,7 +248,7 @@ with open('flake.nix', 'w') as f:
 PYEOF
         fi
         if [ -f flake.lock ]; then
-            python3 - <<'PYEOF' 2>/dev/null || true
+            "${PYTHON3_BIN:-python3}" - <<'PYEOF' 2>/dev/null || true
 import json
 with open('flake.lock') as f:
     d = json.load(f)
