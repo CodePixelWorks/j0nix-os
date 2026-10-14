@@ -400,6 +400,17 @@ fi
 ENVFILTER
 
 tree_filter_path="$(mktemp -t tree_filter.XXXXXX)"
+# python3 is NOT in the nixos/nix CI image; resolve it once (with the
+# nix-run fallback) and interpolate the absolute path into the
+# tree-filter. The heredocs below previously called bare `python3`
+# with stderr silenced — the strip silently did nothing in CI.
+if command -v python3 >/dev/null 2>&1; then
+    PYTHON3_BIN="$(command -v python3)"
+else
+    PYTHON3_BIN="$(nix --extra-experimental-features 'nix-command flakes' run nixpkgs#python3 -- command -v python3)"
+fi
+export PYTHON3_BIN
+
 cat > "$tree_filter_path" <<TREEFILTER
 blacklist_path='${repo_root}/.mirror-blacklist'
 if [ -f "\$blacklist_path" ]; then
@@ -451,7 +462,7 @@ if [ -f flake.nix ]; then
     # Comment lines directly attached above a stripped input go with it
     # (they describe the removed input and can mention internal
     # hostnames). Every consumer degrades via `(inputs.<name> or { })`.
-    python3 - <<'PYEOF' 2>/dev/null || true
+    "${PYTHON3_BIN}" - <<'PYEOF' 2>/dev/null || true
 import re
 with open('flake.nix', 'r') as f:
     src = f.read()
@@ -469,7 +480,7 @@ if [ -f flake.lock ]; then
     # Remove ALL private input nodes and references from flake.lock.
     # json manipulation is more reliable than jq inside a tree-filter
     # subshell where minimal PATHs may lack jq.
-    python3 - <<'PYEOF' 2>/dev/null || true
+    "${PYTHON3_BIN}" - <<'PYEOF' 2>/dev/null || true
 import json
 with open('flake.lock') as f:
     d = json.load(f)
