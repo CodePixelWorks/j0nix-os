@@ -759,16 +759,16 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1788508268,
-        "narHash": "sha256-v+7e4T412K3Hi/qb+v7sZh2/2k1jFB9AY4AusVXr58I=",
+        "lastModified": 1791235474,
+        "narHash": "sha256-PSt/SRtemvsoGYNFJ7YLiXGxT8EJe3AhmGwt5Vt79aA=",
         "ref": "refs/heads/main",
-        "rev": "b9739b1db4a48616d66af29239ab0fe2756d28f6",
-        "revCount": 146,
+        "rev": "2a8d0b735328d874a78ca93b2f201649f712a74a",
+        "revCount": 147,
         "type": "git",
         "url": "https://github.com/VirtCode/hypr-dynamic-cursors"
       },
       "original": {
-        "rev": "b9739b1db4a48616d66af29239ab0fe2756d28f6",
+        "rev": "2a8d0b735328d874a78ca93b2f201649f712a74a",
         "type": "git",
         "url": "https://github.com/VirtCode/hypr-dynamic-cursors"
       }
@@ -967,16 +967,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1790695209,
-        "narHash": "sha256-ADtI9jpCP5QzcJsU4FmgeiM43cT+1/9R/kawd9E4rnU=",
+        "lastModified": 1791378645,
+        "narHash": "sha256-9Eix+ZUcI9IUklrtJAD9l/nTcS/Byz7fi94Y3InxS2Y=",
         "ref": "refs/heads/main",
-        "rev": "bca761c5363df8ff73e2040b527c75cb682e9120",
-        "revCount": 433,
+        "rev": "428bfcd1c9ee34965400bb359349f518140c9920",
+        "revCount": 437,
         "type": "git",
         "url": "https://github.com/hyprwm/hyprland-plugins"
       },
       "original": {
-        "rev": "bca761c5363df8ff73e2040b527c75cb682e9120",
+        "rev": "428bfcd1c9ee34965400bb359349f518140c9920",
         "type": "git",
         "url": "https://github.com/hyprwm/hyprland-plugins"
       }
