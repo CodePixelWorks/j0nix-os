@@ -45,7 +45,7 @@
       flake = false;
     };
     sops-nix = {
-      url = "git+https://github.com/Mic92/sops-nix?rev=5efb5a6f4f5ab192817d28557dd4d650fa14d866";
+      url = "git+https://github.com/Mic92/sops-nix?rev=44931708c62937c2b1bf7953902989fa5bb9ee1b";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     stylix = {
