@@ -59,10 +59,15 @@ in
       substituters = lib.mkDefault [
         "https://attic.xuyh0120.win/lantian"
         "https://hyprland.cachix.org"
+        # Fleet attic (cache.j0lab.xyz) — CI-pushed packages and local
+        # builds shared with the servers.
+        "https://cache.j0lab.xyz"
       ];
       trustedPublicKeys = lib.mkDefault [
         "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
         "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
+        # fleet attic signing key (attic cache 'default')
+        "default:5H4f5V5KItu2HsoWWFVZv7gl6gW8F7hmp2vbjSvzQKA="
       ];
       gc = {
         automatic = lib.mkDefault true;
