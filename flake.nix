@@ -99,11 +99,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     hyprland-plugins = {
-      url = "git+https://github.com/hyprwm/hyprland-plugins?rev=bca761c5363df8ff73e2040b527c75cb682e9120";
+      url = "git+https://github.com/hyprwm/hyprland-plugins?rev=428bfcd1c9ee34965400bb359349f518140c9920";
       inputs.hyprland.follows = "hyprland";
     };
     hypr-dynamic-cursors = {
-      url = "git+https://github.com/VirtCode/hypr-dynamic-cursors?rev=b9739b1db4a48616d66af29239ab0fe2756d28f6";
+      url = "git+https://github.com/VirtCode/hypr-dynamic-cursors?rev=2a8d0b735328d874a78ca93b2f201649f712a74a";
       inputs.hyprland.follows = "hyprland";
     };
     hyprkcs = {
