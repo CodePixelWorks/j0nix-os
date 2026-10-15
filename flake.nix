@@ -57,7 +57,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     dank-material-shell = {
-      url = "git+https://github.com/AvengeMedia/DankMaterialShell?rev=0b9d931ea3db44866f4fd29394d140674ae474c6";
+      url = "git+https://github.com/AvengeMedia/DankMaterialShell?rev=c4aea85296a3a20e34be7e467170265c0c29dc38";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     quickshell-overview = {
@@ -65,7 +65,7 @@
       flake = false;
     };
     noctalia = {
-      url = "git+https://github.com/noctalia-dev/noctalia-shell?rev=30415127e6c864212c61804a531a018980718b1f";
+      url = "git+https://github.com/noctalia-dev/noctalia-shell?rev=0d234d64e7e568ffdd9470292a68b8d0f40ea79a";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     hyprmcp-src = {
@@ -81,7 +81,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     caelestia-shell = {
-      url = "git+https://github.com/caelestia-dots/shell?rev=454f46da16ae75cc57f34adf48dea74db0fa5175";
+      url = "git+https://github.com/caelestia-dots/shell?rev=a3a8fe59aba2c0048ab02dc817748678f96076ff";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.quickshell.follows = "quickshell-stable";
     };
