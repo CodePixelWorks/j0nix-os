@@ -275,16 +275,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1790810102,
-        "narHash": "sha256-3yzoUUAuFPx/mJaRwDklzvIiaflJ3Clu1vSH7jWxlKE=",
+        "lastModified": 1791736270,
+        "narHash": "sha256-iug4fsFt3MX8jMAxNStEmcjc1ZPjxjRSB4svXmk7kE8=",
         "ref": "refs/heads/main",
-        "rev": "65edd6ed0a1ef40e384c27d6da661a999b098f45",
-        "revCount": 188,
+        "rev": "0ba1b93ea032580f9cf19ab26fb8a1b5d0f97f99",
+        "revCount": 196,
         "type": "git",
         "url": "https://github.com/sadjow/codex-cli-nix"
       },
       "original": {
-        "rev": "65edd6ed0a1ef40e384c27d6da661a999b098f45",
+        "rev": "0ba1b93ea032580f9cf19ab26fb8a1b5d0f97f99",
         "type": "git",
         "url": "https://github.com/sadjow/codex-cli-nix"
       }
@@ -1272,16 +1272,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1790831594,
-        "narHash": "sha256-X+uowytIH8SVW1m3GVZKJrZ0A+rAJb8gkMSToExik0s=",
+        "lastModified": 1792037196,
+        "narHash": "sha256-GlCdevUA7r1VXzAoPiuWq/4BdJpGWMZ8gW1FmPkK93U=",
         "ref": "refs/heads/master",
-        "rev": "9cfe29321e0ba1d2b5d53a76332669ae72c421f6",
-        "revCount": 2302,
+        "rev": "69a9ce1fa6fec39b405660df82fd25994e67730a",
+        "revCount": 2323,
         "type": "git",
         "url": "https://github.com/nix-community/nix-vscode-extensions"
       },
       "original": {
-        "rev": "9cfe29321e0ba1d2b5d53a76332669ae72c421f6",
+        "rev": "69a9ce1fa6fec39b405660df82fd25994e67730a",
         "type": "git",
         "url": "https://github.com/nix-community/nix-vscode-extensions"
       }
