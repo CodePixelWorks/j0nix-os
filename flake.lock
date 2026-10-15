@@ -178,11 +178,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790397057,
-        "narHash": "sha256-vlub2V4edRngqU8yO44o7gi92j3jQXCcK+FtV7JROAg=",
+        "lastModified": 1791609844,
+        "narHash": "sha256-SHgkXo3bVca+AjacDdyfy9uCpG9SiVWCOyKCsejryA8=",
         "owner": "caelestia-dots",
         "repo": "cli",
-        "rev": "bf37620d8ff4d99bbb244e592206d27d7bbe2d1f",
+        "rev": "b9a223a2cb7d98e67dd1219e16d67dda9ac4d052",
         "type": "github"
       },
       "original": {
@@ -227,16 +227,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1790479591,
-        "narHash": "sha256-rYgmGwVz14bV7aK+nawtAj2mGkLRBmVYyLCIrWsU7fc=",
+        "lastModified": 1791805117,
+        "narHash": "sha256-3znKolqcI99Wdka+Ysg39Y/oWqjBqp8QGCXo6zd54b0=",
         "ref": "refs/heads/main",
-        "rev": "454f46da16ae75cc57f34adf48dea74db0fa5175",
-        "revCount": 2668,
+        "rev": "a3a8fe59aba2c0048ab02dc817748678f96076ff",
+        "revCount": 2684,
         "type": "git",
         "url": "https://github.com/caelestia-dots/shell"
       },
       "original": {
-        "rev": "454f46da16ae75cc57f34adf48dea74db0fa5175",
+        "rev": "a3a8fe59aba2c0048ab02dc817748678f96076ff",
         "type": "git",
         "url": "https://github.com/caelestia-dots/shell"
       }
@@ -298,16 +298,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1790860583,
-        "narHash": "sha256-ZrcqFfG5fGwPtpUnuwgv6One9xTk152yXbVTDP16ii0=",
+        "lastModified": 1792044062,
+        "narHash": "sha256-NvSZlmeBIjlQMCxOuLQEpotKToATvRGAuHnj91Dfxmc=",
         "ref": "refs/heads/master",
-        "rev": "0b9d931ea3db44866f4fd29394d140674ae474c6",
-        "revCount": 4974,
+        "rev": "c4aea85296a3a20e34be7e467170265c0c29dc38",
+        "revCount": 5207,
         "type": "git",
         "url": "https://github.com/AvengeMedia/DankMaterialShell"
       },
       "original": {
-        "rev": "0b9d931ea3db44866f4fd29394d140674ae474c6",
+        "rev": "c4aea85296a3a20e34be7e467170265c0c29dc38",
         "type": "git",
         "url": "https://github.com/AvengeMedia/DankMaterialShell"
       }
@@ -315,11 +315,11 @@
     "dank-qml-common": {
       "flake": false,
       "locked": {
-        "lastModified": 1790818052,
-        "narHash": "sha256-B4QALG/6pkJuxKOOSs7wU+qJdOXHWYUt2YK6E3Y5M84=",
+        "lastModified": 1791861042,
+        "narHash": "sha256-Wop1FPbCObjcDAHjo2fWTVBJGKPihhcohN8YTM3Jw5Y=",
         "owner": "AvengeMedia",
         "repo": "dank-qml-common",
-        "rev": "fdd2dfe3f3444585bc1f44180837724abbdfe7f1",
+        "rev": "5a0a6b1e6049bee316e5055d7fa6d9bb255e102e",
         "type": "github"
       },
       "original": {
@@ -738,11 +738,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789430117,
-        "narHash": "sha256-t+U1mijItLJ64xZOifpfQ17kpAL73nU7pDI48ScacVc=",
+        "lastModified": 1790819692,
+        "narHash": "sha256-rvubAPbh3QCliic3sAK+CXTrPCGgJstY52OTs/5H1J4=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "cda90fd8838825c689fde9d3f3b4e937937790df",
+        "rev": "c8ecc29e5175452bee4a2aa1ba2383856d795338",
         "type": "github"
       },
       "original": {
@@ -1411,16 +1411,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1790857470,
-        "narHash": "sha256-EalyF5nWDS6xui58LC131oez7gZWcaO6P5bClDCVD6U=",
+        "lastModified": 1792061269,
+        "narHash": "sha256-rWiRKUb/BByKLdy2uGwC6XRFF4vJstk/9YlNrYDrAVE=",
         "ref": "refs/heads/main",
-        "rev": "30415127e6c864212c61804a531a018980718b1f",
-        "revCount": 5684,
+        "rev": "0d234d64e7e568ffdd9470292a68b8d0f40ea79a",
+        "revCount": 5835,
         "type": "git",
         "url": "https://github.com/noctalia-dev/noctalia-shell"
       },
       "original": {
-        "rev": "30415127e6c864212c61804a531a018980718b1f",
+        "rev": "0d234d64e7e568ffdd9470292a68b8d0f40ea79a",
         "type": "git",
         "url": "https://github.com/noctalia-dev/noctalia-shell"
       }
@@ -1786,16 +1786,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1790498116,
-        "narHash": "sha256-rs9meAYxW3zzrh43yaW7htrqCD+X9+pupDPHN86fumI=",
+        "lastModified": 1792056300,
+        "narHash": "sha256-YU1LjDe1o2Ymg5zEiCHbmMXLkDCtxHQRiVqZ3nC5GGk=",
         "ref": "refs/heads/master",
-        "rev": "5efb5a6f4f5ab192817d28557dd4d650fa14d866",
-        "revCount": 1248,
+        "rev": "44931708c62937c2b1bf7953902989fa5bb9ee1b",
+        "revCount": 1254,
         "type": "git",
         "url": "https://github.com/Mic92/sops-nix"
       },
       "original": {
-        "rev": "5efb5a6f4f5ab192817d28557dd4d650fa14d866",
+        "rev": "44931708c62937c2b1bf7953902989fa5bb9ee1b",
         "type": "git",
         "url": "https://github.com/Mic92/sops-nix"
       }
@@ -2052,16 +2052,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1790843055,
-        "narHash": "sha256-rTDYMyiKgVNiL7sAc2LMr7zw3n3eC5YR+IGblzDdQQk=",
+        "lastModified": 1792047775,
+        "narHash": "sha256-Ks46+ZukSOvdgmextucbLykzpAmygNZ2I+HWxCe03ok=",
         "ref": "refs/heads/main",
-        "rev": "a2cb59515204ebe895f73cce387b811a78b3c032",
-        "revCount": 1319,
+        "rev": "9342d127aa8c585e82f3f57ddb25800fd546029f",
+        "revCount": 1335,
         "type": "git",
         "url": "https://github.com/0xc000022070/zen-browser-flake"
       },
       "original": {
-        "rev": "a2cb59515204ebe895f73cce387b811a78b3c032",
+        "rev": "9342d127aa8c585e82f3f57ddb25800fd546029f",
         "type": "git",
         "url": "https://github.com/0xc000022070/zen-browser-flake"
       }
