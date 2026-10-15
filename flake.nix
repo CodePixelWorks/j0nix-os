@@ -22,11 +22,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-vscode-extensions = {
-      url = "git+https://github.com/nix-community/nix-vscode-extensions?rev=9cfe29321e0ba1d2b5d53a76332669ae72c421f6";
+      url = "git+https://github.com/nix-community/nix-vscode-extensions?rev=69a9ce1fa6fec39b405660df82fd25994e67730a";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     codex-cli-nix = {
-      url = "git+https://github.com/sadjow/codex-cli-nix?rev=65edd6ed0a1ef40e384c27d6da661a999b098f45";
+      url = "git+https://github.com/sadjow/codex-cli-nix?rev=0ba1b93ea032580f9cf19ab26fb8a1b5d0f97f99";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     open-design = {
