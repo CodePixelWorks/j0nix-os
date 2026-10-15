@@ -11,15 +11,16 @@
       "locked": {
         "lastModified": 1789138122,
         "narHash": "sha256-mh+ZiGCtHAo0xIi1yaNjHsftfnlWz9JiYwHCyT16yIE=",
-        "owner": "ezKEa",
-        "repo": "aagl-gtk-on-nix",
+        "ref": "refs/heads/main",
         "rev": "d82d6d6f66caf4b63fb154e62fad83c627874127",
-        "type": "github"
+        "revCount": 640,
+        "type": "git",
+        "url": "https://github.com/ezKEa/aagl-gtk-on-nix"
       },
       "original": {
-        "owner": "ezKEa",
-        "repo": "aagl-gtk-on-nix",
-        "type": "github"
+        "rev": "d82d6d6f66caf4b63fb154e62fad83c627874127",
+        "type": "git",
+        "url": "https://github.com/ezKEa/aagl-gtk-on-nix"
       }
     },
     "ags": {
@@ -228,15 +229,16 @@
       "locked": {
         "lastModified": 1790479591,
         "narHash": "sha256-rYgmGwVz14bV7aK+nawtAj2mGkLRBmVYyLCIrWsU7fc=",
-        "owner": "caelestia-dots",
-        "repo": "shell",
+        "ref": "refs/heads/main",
         "rev": "454f46da16ae75cc57f34adf48dea74db0fa5175",
-        "type": "github"
+        "revCount": 2668,
+        "type": "git",
+        "url": "https://github.com/caelestia-dots/shell"
       },
       "original": {
-        "owner": "caelestia-dots",
-        "repo": "shell",
-        "type": "github"
+        "rev": "454f46da16ae75cc57f34adf48dea74db0fa5175",
+        "type": "git",
+        "url": "https://github.com/caelestia-dots/shell"
       }
     },
     "caelestia-shell-dev": {
@@ -275,15 +277,16 @@
       "locked": {
         "lastModified": 1790810102,
         "narHash": "sha256-3yzoUUAuFPx/mJaRwDklzvIiaflJ3Clu1vSH7jWxlKE=",
-        "owner": "sadjow",
-        "repo": "codex-cli-nix",
+        "ref": "refs/heads/main",
         "rev": "65edd6ed0a1ef40e384c27d6da661a999b098f45",
-        "type": "github"
+        "revCount": 188,
+        "type": "git",
+        "url": "https://github.com/sadjow/codex-cli-nix"
       },
       "original": {
-        "owner": "sadjow",
-        "repo": "codex-cli-nix",
-        "type": "github"
+        "rev": "65edd6ed0a1ef40e384c27d6da661a999b098f45",
+        "type": "git",
+        "url": "https://github.com/sadjow/codex-cli-nix"
       }
     },
     "dank-material-shell": {
@@ -297,15 +300,16 @@
       "locked": {
         "lastModified": 1790860583,
         "narHash": "sha256-ZrcqFfG5fGwPtpUnuwgv6One9xTk152yXbVTDP16ii0=",
-        "owner": "AvengeMedia",
-        "repo": "DankMaterialShell",
+        "ref": "refs/heads/master",
         "rev": "0b9d931ea3db44866f4fd29394d140674ae474c6",
-        "type": "github"
+        "revCount": 4974,
+        "type": "git",
+        "url": "https://github.com/AvengeMedia/DankMaterialShell"
       },
       "original": {
-        "owner": "AvengeMedia",
-        "repo": "DankMaterialShell",
-        "type": "github"
+        "rev": "0b9d931ea3db44866f4fd29394d140674ae474c6",
+        "type": "git",
+        "url": "https://github.com/AvengeMedia/DankMaterialShell"
       }
     },
     "dank-qml-common": {
@@ -757,15 +761,16 @@
       "locked": {
         "lastModified": 1788508268,
         "narHash": "sha256-v+7e4T412K3Hi/qb+v7sZh2/2k1jFB9AY4AusVXr58I=",
-        "owner": "VirtCode",
-        "repo": "hypr-dynamic-cursors",
+        "ref": "refs/heads/main",
         "rev": "b9739b1db4a48616d66af29239ab0fe2756d28f6",
-        "type": "github"
+        "revCount": 146,
+        "type": "git",
+        "url": "https://github.com/VirtCode/hypr-dynamic-cursors"
       },
       "original": {
-        "owner": "VirtCode",
-        "repo": "hypr-dynamic-cursors",
-        "type": "github"
+        "rev": "b9739b1db4a48616d66af29239ab0fe2756d28f6",
+        "type": "git",
+        "url": "https://github.com/VirtCode/hypr-dynamic-cursors"
       }
     },
     "hyprcursor": {
@@ -835,15 +840,16 @@
       "locked": {
         "lastModified": 1778336797,
         "narHash": "sha256-PVqOgIx3MxBV1digU3nZzM8FFfIebpml4UqWpNj9jEo=",
-        "owner": "kosa12",
-        "repo": "hyprKCS",
+        "ref": "refs/heads/master",
         "rev": "6319243ebf8da4b8456f49d36f07b5c24e032548",
-        "type": "github"
+        "revCount": 198,
+        "type": "git",
+        "url": "https://github.com/kosa12/hyprKCS"
       },
       "original": {
-        "owner": "kosa12",
-        "repo": "hyprKCS",
-        "type": "github"
+        "rev": "6319243ebf8da4b8456f49d36f07b5c24e032548",
+        "type": "git",
+        "url": "https://github.com/kosa12/hyprKCS"
       }
     },
     "hyprland": {
@@ -932,15 +938,16 @@
       "locked": {
         "lastModified": 1769602117,
         "narHash": "sha256-/C5t+84EWZPEgW46PBIuy7MprBzxXHCZTxPf6LyE89A=",
-        "owner": "0rteip",
-        "repo": "hyprland_minimizer",
+        "ref": "refs/heads/master",
         "rev": "3859257bab455e09742e7aec5bd5f70e8880ebf1",
-        "type": "github"
+        "revCount": 6,
+        "type": "git",
+        "url": "https://github.com/0rteip/hyprland_minimizer"
       },
       "original": {
-        "owner": "0rteip",
-        "repo": "hyprland_minimizer",
-        "type": "github"
+        "rev": "3859257bab455e09742e7aec5bd5f70e8880ebf1",
+        "type": "git",
+        "url": "https://github.com/0rteip/hyprland_minimizer"
       }
     },
     "hyprland-plugins": {
@@ -962,15 +969,16 @@
       "locked": {
         "lastModified": 1790695209,
         "narHash": "sha256-ADtI9jpCP5QzcJsU4FmgeiM43cT+1/9R/kawd9E4rnU=",
-        "owner": "hyprwm",
-        "repo": "hyprland-plugins",
+        "ref": "refs/heads/main",
         "rev": "bca761c5363df8ff73e2040b527c75cb682e9120",
-        "type": "github"
+        "revCount": 433,
+        "type": "git",
+        "url": "https://github.com/hyprwm/hyprland-plugins"
       },
       "original": {
-        "owner": "hyprwm",
-        "repo": "hyprland-plugins",
-        "type": "github"
+        "rev": "bca761c5363df8ff73e2040b527c75cb682e9120",
+        "type": "git",
+        "url": "https://github.com/hyprwm/hyprland-plugins"
       }
     },
     "hyprland-protocols": {
@@ -1032,15 +1040,16 @@
       "locked": {
         "lastModified": 1745782233,
         "narHash": "sha256-B6YwMm8yGLqahYDxgDEWk0Te2QmQPdCsIQ4+lqu6s44=",
-        "owner": "stefanoamorelli",
-        "repo": "hyprmcp",
+        "ref": "refs/heads/master",
         "rev": "13d5195e6a474078183cb031771be7a71b330bb6",
-        "type": "github"
+        "revCount": 4,
+        "type": "git",
+        "url": "https://github.com/stefanoamorelli/hyprmcp"
       },
       "original": {
-        "owner": "stefanoamorelli",
-        "repo": "hyprmcp",
-        "type": "github"
+        "rev": "13d5195e6a474078183cb031771be7a71b330bb6",
+        "type": "git",
+        "url": "https://github.com/stefanoamorelli/hyprmcp"
       }
     },
     "hyprtoolkit": {
@@ -1223,15 +1232,16 @@
       "locked": {
         "lastModified": 1748975355,
         "narHash": "sha256-INyzT/8UyJfg1PW5+PqZkIy/MZrDYykql0rD2Sl97Gg=",
-        "owner": "isaacphi",
-        "repo": "mcp-language-server",
+        "ref": "refs/heads/main",
         "rev": "e4395849a52e18555361abab60a060802c06bf50",
-        "type": "github"
+        "revCount": 104,
+        "type": "git",
+        "url": "https://github.com/isaacphi/mcp-language-server"
       },
       "original": {
-        "owner": "isaacphi",
-        "repo": "mcp-language-server",
-        "type": "github"
+        "rev": "e4395849a52e18555361abab60a060802c06bf50",
+        "type": "git",
+        "url": "https://github.com/isaacphi/mcp-language-server"
       }
     },
     "nix-cachyos-kernel": {
@@ -1264,15 +1274,16 @@
       "locked": {
         "lastModified": 1790831594,
         "narHash": "sha256-X+uowytIH8SVW1m3GVZKJrZ0A+rAJb8gkMSToExik0s=",
-        "owner": "nix-community",
-        "repo": "nix-vscode-extensions",
+        "ref": "refs/heads/master",
         "rev": "9cfe29321e0ba1d2b5d53a76332669ae72c421f6",
-        "type": "github"
+        "revCount": 2302,
+        "type": "git",
+        "url": "https://github.com/nix-community/nix-vscode-extensions"
       },
       "original": {
-        "owner": "nix-community",
-        "repo": "nix-vscode-extensions",
-        "type": "github"
+        "rev": "9cfe29321e0ba1d2b5d53a76332669ae72c421f6",
+        "type": "git",
+        "url": "https://github.com/nix-community/nix-vscode-extensions"
       }
     },
     "nixpkgs": {
@@ -1381,15 +1392,16 @@
       "locked": {
         "lastModified": 1790541651,
         "narHash": "sha256-/496IQz8qNWHHLnc3Zvr0l4uxJ34igNhJhn7ZKAefFk=",
-        "owner": "nix-community",
-        "repo": "nixvim",
+        "ref": "refs/heads/main",
         "rev": "5980a626794486abad69fca7667f9c11dfbc3bd7",
-        "type": "github"
+        "revCount": 4757,
+        "type": "git",
+        "url": "https://github.com/nix-community/nixvim"
       },
       "original": {
-        "owner": "nix-community",
-        "repo": "nixvim",
-        "type": "github"
+        "rev": "5980a626794486abad69fca7667f9c11dfbc3bd7",
+        "type": "git",
+        "url": "https://github.com/nix-community/nixvim"
       }
     },
     "noctalia": {
@@ -1401,15 +1413,16 @@
       "locked": {
         "lastModified": 1790857470,
         "narHash": "sha256-EalyF5nWDS6xui58LC131oez7gZWcaO6P5bClDCVD6U=",
-        "owner": "noctalia-dev",
-        "repo": "noctalia-shell",
+        "ref": "refs/heads/main",
         "rev": "30415127e6c864212c61804a531a018980718b1f",
-        "type": "github"
+        "revCount": 5684,
+        "type": "git",
+        "url": "https://github.com/noctalia-dev/noctalia-shell"
       },
       "original": {
-        "owner": "noctalia-dev",
-        "repo": "noctalia-shell",
-        "type": "github"
+        "rev": "30415127e6c864212c61804a531a018980718b1f",
+        "type": "git",
+        "url": "https://github.com/noctalia-dev/noctalia-shell"
       }
     },
     "npm-lockfile-fix": {
@@ -1497,15 +1510,16 @@
       "locked": {
         "lastModified": 1785762349,
         "narHash": "sha256-jZhZkzAwc7f3exzcTDJWP2WCAchCv0iNC3UF/QsahdQ=",
-        "owner": "nix-community",
-        "repo": "plasma-manager",
+        "ref": "refs/heads/trunk",
         "rev": "a19a2a029fa180911bd89c554dca1616e10f4c1d",
-        "type": "github"
+        "revCount": 327,
+        "type": "git",
+        "url": "https://github.com/nix-community/plasma-manager"
       },
       "original": {
-        "owner": "nix-community",
-        "repo": "plasma-manager",
-        "type": "github"
+        "rev": "a19a2a029fa180911bd89c554dca1616e10f4c1d",
+        "type": "git",
+        "url": "https://github.com/nix-community/plasma-manager"
       }
     },
     "pre-commit-hooks": {
@@ -1657,15 +1671,16 @@
       "locked": {
         "lastModified": 1786726681,
         "narHash": "sha256-s1HyEuMQQHVIZeDTwJetOdT467M/mzZl4ymTlENgDuE=",
-        "owner": "Shanu-Kumawat",
-        "repo": "quickshell-overview",
+        "ref": "refs/heads/main",
         "rev": "47f0d402822b26805ed0ecea4a770c38c537b728",
-        "type": "github"
+        "revCount": 42,
+        "type": "git",
+        "url": "https://github.com/Shanu-Kumawat/quickshell-overview"
       },
       "original": {
-        "owner": "Shanu-Kumawat",
-        "repo": "quickshell-overview",
-        "type": "github"
+        "rev": "47f0d402822b26805ed0ecea4a770c38c537b728",
+        "type": "git",
+        "url": "https://github.com/Shanu-Kumawat/quickshell-overview"
       }
     },
     "quickshell-stable": {
@@ -1773,15 +1788,16 @@
       "locked": {
         "lastModified": 1790498116,
         "narHash": "sha256-rs9meAYxW3zzrh43yaW7htrqCD+X9+pupDPHN86fumI=",
-        "owner": "Mic92",
-        "repo": "sops-nix",
+        "ref": "refs/heads/master",
         "rev": "5efb5a6f4f5ab192817d28557dd4d650fa14d866",
-        "type": "github"
+        "revCount": 1248,
+        "type": "git",
+        "url": "https://github.com/Mic92/sops-nix"
       },
       "original": {
-        "owner": "Mic92",
-        "repo": "sops-nix",
-        "type": "github"
+        "rev": "5efb5a6f4f5ab192817d28557dd4d650fa14d866",
+        "type": "git",
+        "url": "https://github.com/Mic92/sops-nix"
       }
     },
     "stylix": {
@@ -1806,15 +1822,16 @@
       "locked": {
         "lastModified": 1790451534,
         "narHash": "sha256-5J4zQ0mmCsd2SS+sOKdzXrngofQdtube3VoHSENz4zE=",
-        "owner": "danth",
-        "repo": "stylix",
+        "ref": "refs/heads/master",
         "rev": "fb28acd59e2ac1984ec84fa496599d6b4bf3e690",
-        "type": "github"
+        "revCount": 1485,
+        "type": "git",
+        "url": "https://github.com/danth/stylix"
       },
       "original": {
-        "owner": "danth",
-        "repo": "stylix",
-        "type": "github"
+        "rev": "fb28acd59e2ac1984ec84fa496599d6b4bf3e690",
+        "type": "git",
+        "url": "https://github.com/danth/stylix"
       }
     },
     "systems": {
@@ -2037,15 +2054,16 @@
       "locked": {
         "lastModified": 1790843055,
         "narHash": "sha256-rTDYMyiKgVNiL7sAc2LMr7zw3n3eC5YR+IGblzDdQQk=",
-        "owner": "0xc000022070",
-        "repo": "zen-browser-flake",
+        "ref": "refs/heads/main",
         "rev": "a2cb59515204ebe895f73cce387b811a78b3c032",
-        "type": "github"
+        "revCount": 1319,
+        "type": "git",
+        "url": "https://github.com/0xc000022070/zen-browser-flake"
       },
       "original": {
-        "owner": "0xc000022070",
-        "repo": "zen-browser-flake",
-        "type": "github"
+        "rev": "a2cb59515204ebe895f73cce387b811a78b3c032",
+        "type": "git",
+        "url": "https://github.com/0xc000022070/zen-browser-flake"
       }
     }
   },
