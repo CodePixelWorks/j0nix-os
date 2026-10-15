@@ -22,11 +22,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-vscode-extensions = {
-      url = "git+https://github.com/nix-community/nix-vscode-extensions?rev=9cfe29321e0ba1d2b5d53a76332669ae72c421f6";
+      url = "git+https://github.com/nix-community/nix-vscode-extensions?rev=69a9ce1fa6fec39b405660df82fd25994e67730a";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     codex-cli-nix = {
-      url = "git+https://github.com/sadjow/codex-cli-nix?rev=65edd6ed0a1ef40e384c27d6da661a999b098f45";
+      url = "git+https://github.com/sadjow/codex-cli-nix?rev=0ba1b93ea032580f9cf19ab26fb8a1b5d0f97f99";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     open-design = {
@@ -45,7 +45,7 @@
       flake = false;
     };
     sops-nix = {
-      url = "git+https://github.com/Mic92/sops-nix?rev=5efb5a6f4f5ab192817d28557dd4d650fa14d866";
+      url = "git+https://github.com/Mic92/sops-nix?rev=44931708c62937c2b1bf7953902989fa5bb9ee1b";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     stylix = {
@@ -57,7 +57,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     dank-material-shell = {
-      url = "git+https://github.com/AvengeMedia/DankMaterialShell?rev=0b9d931ea3db44866f4fd29394d140674ae474c6";
+      url = "git+https://github.com/AvengeMedia/DankMaterialShell?rev=c4aea85296a3a20e34be7e467170265c0c29dc38";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     quickshell-overview = {
@@ -65,7 +65,7 @@
       flake = false;
     };
     noctalia = {
-      url = "git+https://github.com/noctalia-dev/noctalia-shell?rev=30415127e6c864212c61804a531a018980718b1f";
+      url = "git+https://github.com/noctalia-dev/noctalia-shell?rev=0d234d64e7e568ffdd9470292a68b8d0f40ea79a";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     hyprmcp-src = {
@@ -81,7 +81,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     caelestia-shell = {
-      url = "git+https://github.com/caelestia-dots/shell?rev=454f46da16ae75cc57f34adf48dea74db0fa5175";
+      url = "git+https://github.com/caelestia-dots/shell?rev=a3a8fe59aba2c0048ab02dc817748678f96076ff";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.quickshell.follows = "quickshell-stable";
     };
@@ -120,7 +120,7 @@
       inputs.home-manager.follows = "home-manager";
     };
     zen-browser = {
-      url = "git+https://github.com/0xc000022070/zen-browser-flake?rev=a2cb59515204ebe895f73cce387b811a78b3c032";
+      url = "git+https://github.com/0xc000022070/zen-browser-flake?rev=9342d127aa8c585e82f3f57ddb25800fd546029f";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     aagl = {
