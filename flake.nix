@@ -11,8 +11,11 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
     nix-cachyos-kernel = {
-      url = "github:xddxdd/nix-cachyos-kernel";
-      inputs.nixpkgs.follows = "nixpkgs";
+      # `release` branch = the Hydra-built kernels that are guaranteed
+      # present in the upstream binary cache. Do NOT follow our
+      # nixpkgs: the pinned overlay uses the flake's own nixpkgs
+      # revision, and cache hits require exactly that revision.
+      url = "github:xddxdd/nix-cachyos-kernel/release";
     };
     home-manager = {
       url = "github:nix-community/home-manager/master";
