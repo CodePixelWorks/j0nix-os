@@ -45,7 +45,7 @@
       flake = false;
     };
     sops-nix = {
-      url = "git+https://github.com/Mic92/sops-nix?rev=5efb5a6f4f5ab192817d28557dd4d650fa14d866";
+      url = "git+https://github.com/Mic92/sops-nix?rev=44931708c62937c2b1bf7953902989fa5bb9ee1b";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     stylix = {
@@ -120,7 +120,7 @@
       inputs.home-manager.follows = "home-manager";
     };
     zen-browser = {
-      url = "git+https://github.com/0xc000022070/zen-browser-flake?rev=a2cb59515204ebe895f73cce387b811a78b3c032";
+      url = "git+https://github.com/0xc000022070/zen-browser-flake?rev=9342d127aa8c585e82f3f57ddb25800fd546029f";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     aagl = {
