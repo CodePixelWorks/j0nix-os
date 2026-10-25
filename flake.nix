@@ -36,15 +36,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     open-design = {
-      # Pinned to the last rev with a flake.nix: upstream deleted the flake
-      # from main, which breaks any `nix flake lock` of this repo (and with
-      # it Renovate's lockFileMaintenance — the whole lock refresh dies on
-      # this single input). rev-pin form is Renovate-addressable (git-refs
-      # datasource) and keeps the lock stable. Un-pin once upstream restores
-      # a flake.nix.
-      url = "git+https://github.com/nexu-io/open-design?rev=99c13e083e070f44aaa0009b2fc96589118c2a9a";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.home-manager.follows = "home-manager";
+      # Community flake packaging Open Design from source (upstream
+      # retired their own Nix distribution 2026-08-31, #7644 — the
+      # nexu-io repo has no flake.nix anymore, which also killed
+      # Renovate's lockFileMaintenance on this input). Keep its OWN
+      # nixpkgs pin — it needs the current pnpm fetcher (v4) and
+      # electron_44 from nixpkgs-unstable.
+      url = "github:lasse-herzog/opendesign-flake";
     };
     mcp-language-server-src = {
       url = "git+https://github.com/isaacphi/mcp-language-server?rev=e4395849a52e18555361abab60a060802c06bf50";
