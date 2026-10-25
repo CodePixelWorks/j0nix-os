@@ -25,6 +25,12 @@
       url = "git+https://github.com/nix-community/nix-vscode-extensions?rev=69a9ce1fa6fec39b405660df82fd25994e67730a";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # ArtCraft apps (pdfcraft etc. — AppImage-packaged, verified mirrors,
+    # github:ipeglin/artcraft-nix). Only the pdfcraft package is consumed.
+    artcraft = {
+      url = "github:ipeglin/artcraft-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     codex-cli-nix = {
       url = "git+https://github.com/sadjow/codex-cli-nix?rev=0ba1b93ea032580f9cf19ab26fb8a1b5d0f97f99";
       inputs.nixpkgs.follows = "nixpkgs";

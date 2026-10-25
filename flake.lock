@@ -78,6 +78,26 @@
         "type": "github"
       }
     },
+    "artcraft": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792832595,
+        "narHash": "sha256-P/PYJxBtOLanIqgEQ8nqVT7WMko6LsMNoCQLArx5580=",
+        "owner": "ipeglin",
+        "repo": "artcraft-nix",
+        "rev": "1b2c6a138781401f109a5a8dd38ca212b62a2f66",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ipeglin",
+        "repo": "artcraft-nix",
+        "type": "github"
+      }
+    },
     "astal": {
       "inputs": {
         "nixpkgs": [
@@ -1708,6 +1728,7 @@
       "inputs": {
         "aagl": "aagl",
         "ags": "ags",
+        "artcraft": "artcraft",
         "caelestia-shell": "caelestia-shell",
         "caelestia-shell-dev": "caelestia-shell-dev",
         "codex-cli-nix": "codex-cli-nix",
