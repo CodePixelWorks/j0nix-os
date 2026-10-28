@@ -1238,13 +1238,13 @@
         "lastModified": 1792037196,
         "narHash": "sha256-GlCdevUA7r1VXzAoPiuWq/4BdJpGWMZ8gW1FmPkK93U=",
         "ref": "refs/heads/master",
-        "rev": "69a9ce1fa6fec39b405660df82fd25994e67730a",
+        "rev": "ebe44d4e774a7fd85ba8084b6ab8fb489ab367e7",
         "revCount": 2323,
         "type": "git",
         "url": "https://github.com/nix-community/nix-vscode-extensions"
       },
       "original": {
-        "rev": "69a9ce1fa6fec39b405660df82fd25994e67730a",
+        "rev": "ebe44d4e774a7fd85ba8084b6ab8fb489ab367e7",
         "type": "git",
         "url": "https://github.com/nix-community/nix-vscode-extensions"
       }
