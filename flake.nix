@@ -22,7 +22,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-vscode-extensions = {
-      url = "git+https://github.com/nix-community/nix-vscode-extensions?rev=ebe44d4e774a7fd85ba8084b6ab8fb489ab367e7";
+      url = "git+https://github.com/nix-community/nix-vscode-extensions?rev=69a9ce1fa6fec39b405660df82fd25994e67730a";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # ArtCraft apps (pdfcraft etc. — AppImage-packaged, verified mirrors,
