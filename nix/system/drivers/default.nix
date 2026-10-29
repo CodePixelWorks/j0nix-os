@@ -16,6 +16,7 @@ in {
     };
 
     amdgpu.enable = lib.mkOption { type = lib.types.bool; default = false; };
+    gpuUnlock.enable = lib.mkOption { type = lib.types.bool; default = false; };
     intel.enable = lib.mkOption { type = lib.types.bool; default = false; };
     nvidia = {
       enable = lib.mkOption { type = lib.types.bool; default = false; };
@@ -52,6 +53,7 @@ in {
     ./intel-drivers.nix
     ./nvidia-drivers.nix
     ./nvidia-prime-drivers.nix
+    ./gpu-unlock.nix
     ./local-hardware-clock.nix
   ];
 
