@@ -66,6 +66,11 @@ let
     '';
     installPhase = ''
       runHook preInstall
+      # Guard: the extractors must yield all 16 firmware blobs. A silent
+      # empty copy would otherwise produce a bootable system whose
+      # gpu_unlock module cannot load its firmware.
+      test "$(ls assets/*.bin | wc -l)" -eq 16
+      test -s assets/NVIDIA-LICENSE
       mkdir -p $out/lib/firmware/gpu-unlock/${nvVersion}
       cp assets/*.bin $out/lib/firmware/gpu-unlock/${nvVersion}/
       cp assets/NVIDIA-LICENSE $out/lib/firmware/gpu-unlock/${nvVersion}/NVIDIA-LICENSE
