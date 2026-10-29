@@ -35,6 +35,15 @@
       url = "git+https://github.com/sadjow/codex-cli-nix?rev=0ba1b93ea032580f9cf19ab26fb8a1b5d0f97f99";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    open-design = {
+      # Community flake packaging Open Design from source (upstream
+      # retired their own Nix distribution 2026-08-31, #7644 — the
+      # nexu-io repo has no flake.nix anymore, which also killed
+      # Renovate's lockFileMaintenance on this input). Keep its OWN
+      # nixpkgs pin — it needs the current pnpm fetcher (v4) and
+      # electron_44 from nixpkgs-unstable.
+      url = "github:lasse-herzog/opendesign-flake";
+    };
     mcp-language-server-src = {
       url = "git+https://github.com/isaacphi/mcp-language-server?rev=e4395849a52e18555361abab60a060802c06bf50";
       flake = false;
