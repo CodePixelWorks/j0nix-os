@@ -1344,6 +1344,22 @@
         "type": "github"
       }
     },
+    "nixpkgs_6": {
+      "locked": {
+        "lastModified": 1792773339,
+        "narHash": "sha256-rZLrzrC6i+jnTAlvPZHogKDulY7WWDEv9hJeHieO7Zw=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "3ec636362e1816bc2f0888fa0fa2c69f1bc9e504",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixvim": {
       "inputs": {
         "flake-parts": "flake-parts_4",
@@ -1432,6 +1448,24 @@
       "original": {
         "owner": "nix-community",
         "repo": "NUR",
+        "type": "github"
+      }
+    },
+    "open-design": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_6"
+      },
+      "locked": {
+        "lastModified": 1792929017,
+        "narHash": "sha256-071qInWCKF3G+DyJYIr27lCXKuZ9Ga2FT5Gm/ZcCifk=",
+        "owner": "lasse-herzog",
+        "repo": "opendesign-flake",
+        "rev": "8011f2496a1e4f9bc4fd0a3ceb3fcc651e0cd437",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lasse-herzog",
+        "repo": "opendesign-flake",
         "type": "github"
       }
     },
@@ -1617,6 +1651,7 @@
         "nixpkgs": "nixpkgs_5",
         "nixvim": "nixvim",
         "noctalia": "noctalia",
+        "open-design": "open-design",
         "plasma-manager": "plasma-manager",
         "quickshell-dev": "quickshell-dev",
         "quickshell-overview": "quickshell-overview",
