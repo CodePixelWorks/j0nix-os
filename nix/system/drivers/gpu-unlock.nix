@@ -17,7 +17,7 @@ let
       owner = "Zagitta";
       repo = "gpu-unlock";
       rev = "1fc6d628c49c7fba34ef3a2e7f758700d35ce890";
-      sha256 = "sha256-012654ihf0sxw5fycfimd53mcb1j32xm3ljac9jwm8ydy0bailwi";
+      sha256 = "sha256-08xsnv39mwgig51lvjqs5yh805la91c0azp2hc4sv7irqz2fcrqk";
     };
     nativeBuildInputs = [ kernelPackages.kernel.dev ];
     buildPhase = ''
@@ -36,7 +36,7 @@ let
       owner = "Zagitta";
       repo = "gpu-unlock";
       rev = "1fc6d628c49c7fba34ef3a2e7f758700d35ce890";
-      sha256 = "sha256-012654ihf0sxw5fycfimd53mcb1j32xm3ljac9jwm8ydy0bailwi";
+      sha256 = "sha256-08xsnv39mwgig51lvjqs5yh805la91c0azp2hc4sv7irqz2fcrqk";
     };
     buildPhase = ":";
     installPhase = ''
