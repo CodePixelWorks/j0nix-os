@@ -37,11 +37,11 @@ let
     nativeBuildInputs = [ kernelPackages.kernel.dev ];
     buildPhase = ''
       make -C kernel/gpu_unlock \
-        KDIR=${kernelPackages.kernel.dev}/lib/modules/${kernelPackages.kernel.version}/build
+        KDIR=${kernelPackages.kernel.dev}/lib/modules/${kernelPackages.kernel.modDirVersion}/build
     '';
     installPhase = ''
-      mkdir -p $out/lib/modules/${kernelPackages.kernel.version}/updates
-      cp kernel/gpu_unlock/*.ko $out/lib/modules/${kernelPackages.kernel.version}/updates/
+      mkdir -p $out/lib/modules/${kernelPackages.kernel.modDirVersion}/updates
+      cp kernel/gpu_unlock/*.ko $out/lib/modules/${kernelPackages.kernel.modDirVersion}/updates/
     '';
   };
 
