@@ -26,6 +26,7 @@ in
     ./modules/binfmt.nix
     ./modules/custom.nix
     ./modules/fonts.nix
+    ./modules/ipv6-client.nix
     ./modules/printing.nix
     ./modules/kernel.nix
     ./modules/gaming.nix
