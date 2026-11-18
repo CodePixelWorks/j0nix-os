@@ -50,6 +50,29 @@ let
     };
   };
 
+  # Persistent tunnel: local loopback listener bridged through the
+  # instance's SOCKS5 proxy to host:remotePort. systemd keeps it alive
+  # (restart on failure), so games/app clients just use localhost.
+  mkTunnelService = net: c: preset: t: {
+    name = "ts-tunnel-${net}-${preset}";
+    value = {
+      description =
+        "ts-tunnel '${net}/${preset}': 127.0.0.1:${toString t.localPort} -> ${t.host}:${toString t.remotePort}";
+      after = [ "tailscaled-mux-${net}.service" "tailscaled-mux-${net}-operator.service" ];
+      requires = [ "tailscaled-mux-${net}.service" ];
+      wantedBy = lib.optionals t.autoStart [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${tunnelRelay} ${toString c.socksPort} ${toString t.localPort} ${t.host} ${toString t.remotePort}";
+        Restart = "on-failure";
+        RestartSec = 3;
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        PrivateTmp = true;
+      };
+    };
+  };
+
   mkInstance = name: c: {
     name = "tailscaled-mux-${name}";
     value = {
@@ -122,6 +145,22 @@ let
         *) echo "unknown network: $name" >&2; exit 1 ;;
       esac
       case "$1" in
+        tunnels)
+          # List configured presets and their service state. Read live
+          # from systemd (no nix-side interpolation traps): the unit
+          # description carries the mapping.
+          for u in $(systemctl list-units --all "ts-tunnel-$name-*" --no-legend 2>/dev/null | awk '{print $1}'); do
+            state=$(systemctl is-active "$u" 2>/dev/null || echo inactive)
+            desc=$(systemctl show -p Description --value "$u" 2>/dev/null)
+            printf '%-46s %-10s %s\n' "$u" "$state" "$desc"
+          done
+          ;;
+        start|stop|restart)
+          # systemd service for a configured preset: ts-mux <net> start <preset>
+          preset="$2"
+          svc="ts-tunnel-$name-$preset.service"
+          exec systemctl "$1" "$svc"
+          ;;
         tunnel)
           # ts-mux <name> tunnel <localPort> <host> <remotePort>
           # Local TCP listener -> the instance's SOCKS5 proxy ->
@@ -194,6 +233,9 @@ let
         ) cfg
       )}
 
+      tunnel presets: listed live by 'ts-mux <name> tunnels' (read from
+      systemd; each preset = service ts-tunnel-<name>-<preset>)
+
       usage:
         ts-mux <name> up              # login (interactive auth URL)
         ts-mux <name> status          # tailnet status
@@ -233,6 +275,42 @@ in
             default = false;
             description = "Accept routes advertised by subnet routers in this network.";
           };
+          tunnels = lib.mkOption {
+            type = lib.types.attrsOf (
+              lib.types.submodule {
+                options = {
+                  localPort = lib.mkOption {
+                    type = lib.types.port;
+                    description = "Loopback port the app connects to.";
+                  };
+                  host = lib.mkOption {
+                    type = lib.types.str;
+                    description = "Target node (MagicDNS name or tailnet IP).";
+                  };
+                  remotePort = lib.mkOption {
+                    type = lib.types.port;
+                    description = "TCP port on the target node.";
+                  };
+                  autoStart = lib.mkOption {
+                    type = lib.types.bool;
+                    default = false;
+                    description = "Start this tunnel on boot.";
+                  };
+                  description = lib.mkOption {
+                    type = lib.types.str;
+                    default = "";
+                    description = "Human label shown by ts-mux-info.";
+                  };
+                };
+              }
+            );
+            default = { };
+            description = ''
+              Persistent TCP tunnels through this network's SOCKS proxy,
+              for apps without proxy support (Minecraft etc.). Each preset
+              becomes a systemd service `ts-tunnel-<net>-<preset>`.
+            '';
+          };
         };
       }
     );
@@ -246,7 +324,12 @@ in
   };
 
   config = lib.mkIf enabled {
-    systemd.services = (lib.mapAttrs' mkInstance cfg) // (lib.mapAttrs' mkOperatorOneshot cfg);
+    systemd.services =
+      (lib.mapAttrs' mkInstance cfg)
+      // (lib.mapAttrs' mkOperatorOneshot cfg)
+      // (lib.concatMapAttrs (
+        net: c: lib.mapAttrs' (preset: t: mkTunnelService net c preset t) c.tunnels or { }
+      ) cfg);
     environment.systemPackages = [
       tsMuxCli
       tsMuxInfo
