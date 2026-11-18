@@ -80,6 +80,14 @@ let
     };
   };
 
+  # TCP relay: local listener -> the instance's SOCKS5 -> host:port.
+  # Pure stdlib asyncio (no dependencies) — for apps without proxy
+  # support, e.g. `ts-mux official tunnel 25565 <node> 25565` and then
+  # pointing the Minecraft client at localhost:25565.
+  tunnelRelay = pkgs.writers.writePython3 "ts-tunnel-relay" { } ''
+    ${builtins.readFile ./ts-tunnel-relay.py}
+  '';
+
   # CLI wrapper: ts-mux <name> <up|status|down|...> [args...]
   # Auto-completes the per-instance socket + login-server.
   tsMuxCli = pkgs.writeShellApplication {
@@ -114,8 +122,25 @@ let
         *) echo "unknown network: $name" >&2; exit 1 ;;
       esac
       case "$1" in
-        up|login)
+        tunnel)
+          # ts-mux <name> tunnel <localPort> <host> <remotePort>
+          # Local TCP listener -> the instance's SOCKS5 proxy ->
+          # host:port. For apps without proxy support (Minecraft etc.).
           shift
+          if [ $# -ne 3 ]; then
+            echo "usage: ts-mux $name tunnel <localPort> <host> <remotePort>" >&2
+            exit 1
+          fi
+          case "$name" in
+            ${lib.concatStringsSep "
+            " (
+              lib.mapAttrsToList (
+                n: c: ''${n}) socks=${toString c.socksPort} ;;''
+              ) cfg
+            )}
+          esac
+          exec ${tunnelRelay} "$socks" "$1" "$2" "$3"
+          ;;
           sock="/run/tailscale-mux-$name/tailscaled.sock"
           # `tailscale status` exits non-zero when logged out (NeedsLogin) —
           # the JSON form exits 0 and still proves the daemon is reachable.
