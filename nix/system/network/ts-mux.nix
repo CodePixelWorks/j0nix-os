@@ -70,7 +70,7 @@ let
     text = ''
       set -eu
       if [ $# -lt 2 ]; then
-        echo "usage: ts-mux <network> <up|status|down|logout|ping|ssh ...>" >&2
+        echo "usage: ts-mux <network> <up|login|status|down|logout|ping|ssh ...>" >&2
         echo "networks: j0lab (primary, system daemon) ${lib.concatStringsSep " " (lib.attrNames cfg)}" >&2
         exit 1
       fi
@@ -96,13 +96,29 @@ let
         *) echo "unknown network: $name" >&2; exit 1 ;;
       esac
       case "$1" in
-        up)
+        up|login)
           shift
           sock="/run/tailscale-mux-$name/tailscaled.sock"
           if ! tailscale --socket="$sock" status --peers=false >/dev/null 2>&1; then
             echo "daemon tailscaled-mux-$name not running" >&2
             exit 1
           fi
+          # First CLI use on a root daemon fails with "profiles access
+          # denied" unless an operator is set. Idempotent, needs no root:
+          ${
+            lib.concatStringsSep "
+          " (
+              lib.mapAttrsToList (
+                n: c:
+                lib.optionalString (c.operator != null) ''
+                  if [ "$name" = "${n}" ]; then
+                    tailscale --socket="$sock" set --operator='${c.operator}' >/dev/null 2>&1 || true
+                  fi
+                ''
+              ) cfg
+            )
+          }
+          backend=$(tailscale --socket="$sock" status --json --peers=false | ${pkgs.jq}/bin/jq -r .BackendState)
           backend=$(tailscale --socket="$sock" status --json --peers=false | ${pkgs.jq}/bin/jq -r .BackendState)
           if [ "$backend" = "NeedsLogin" ] || [ "$backend" = "Stopped" ]; then
             ${
@@ -178,6 +194,10 @@ in
           httpPort = lib.mkOption {
             type = lib.types.port;
             description = "Loopback HTTP proxy port for reaching this network's nodes.";
+          };
+          operator = lib.mkOption {
+            type = lib.types.str;
+            description = "User allowed to operate this instance's CLI without root.";
           };
         };
       }
