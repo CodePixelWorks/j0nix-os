@@ -42,6 +42,22 @@ let
       in
       if pkg != null then pkg.comfy-mcp or null else null;
     nexus-collection-dl = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/nexus-collection-dl.nix") { };
+    # GDLauncher Carbon on the current upstream release: nixpkgs still
+    # ships 2.0.24 (Feb 2025, no bump since); the official CDN carries
+    # 2.0.40 (Jul 2026, last-modified verified). Re-extract the AppImage
+    # with the bumped version and keep nixpkgs' whole packaging
+    # (wrapper, bundled Javas, desktop items) via overrideAttrs.
+    gdlauncher-carbon = prev.gdlauncher-carbon.overrideAttrs (old: {
+      version = "2.0.40";
+      src = final.appimageTools.extract {
+        pname = "gdlauncher-carbon";
+        version = "2.0.40";
+        src = final.fetchurl {
+          url = "https://cdn-raw.gdl.gg/launcher/GDLauncher__2.0.40__linux__x64.AppImage";
+          hash = "sha256-3XwB8zPOX83zxpPiRtLoKb+CBJF6ax7y3WfQyEXbAzY=";
+        };
+      };
+    });
     nms-amumss = final.callPackage (baseDir + "/nix/system/software/pkgs/gaming/nms-amumss.nix") { };
     openldap = prev.openldap.overrideAttrs (_: {
       doCheck = false;
