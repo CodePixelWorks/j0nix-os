@@ -44,7 +44,7 @@ let
       wantedBy = [ "tailscaled-mux-${name}.service" ];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${config.services.tailscale.package}/bin/tailscale --socket=/run/tailscale-mux-${name}/tailscaled.sock set --operator=${c.operator}";
+        ExecStart = "${config.services.tailscale.package}/bin/tailscale --socket=/run/tailscale-mux-${name}/tailscaled.sock set --operator=${c.operator} ${lib.optionalString c.acceptRoutes "--accept-routes"}";
         RemainAfterExit = true;
       };
     };
@@ -202,6 +202,11 @@ in
           operator = lib.mkOption {
             type = lib.types.str;
             description = "User allowed to operate this instance's CLI without root.";
+          };
+          acceptRoutes = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Accept routes advertised by subnet routers in this network.";
           };
         };
       }
