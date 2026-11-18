@@ -71,12 +71,28 @@ let
       set -eu
       if [ $# -lt 2 ]; then
         echo "usage: ts-mux <network> <up|status|down|logout|ping|ssh ...>" >&2
-        echo "networks: ${lib.concatStringsSep " " (lib.attrNames cfg)}" >&2
+        echo "networks: j0lab (primary, system daemon) ${lib.concatStringsSep " " (lib.attrNames cfg)}" >&2
         exit 1
       fi
       name="$1"; shift
       case "$name" in
         ${lib.concatStringsSep "|" (lib.attrNames cfg)}) ;;
+        # The primary tailnet (system tailscaled, kernel TUN) is reachable
+        # through ts-mux as a read-mostly alias: status/ping/netcheck use
+        # the system socket. up/down are rejected — the primary's lifecycle
+        # belongs to the declarative services.tailscale config.
+        j0lab)
+          # Primary tailnet: the system daemon owns the TUN. Everything
+          # except its lifecycle is proxied to the system CLI.
+          case "$1" in
+            up|down|logout)
+              echo "j0lab is managed by services.tailscale — use systemctl/systemctl-rebuild" >&2
+              exit 1
+              ;;
+          esac
+          shift
+          exec tailscale "$@"
+          ;;
         *) echo "unknown network: $name" >&2; exit 1 ;;
       esac
       case "$1" in
@@ -118,7 +134,10 @@ let
     runtimeInputs = [ pkgs.coreutils pkgs.jq ];
     text = ''
       cat <<EOF
-      ts-mux networks (userspace tailscaled, SOCKS5 app access):
+      ts-mux networks:
+
+      j0lab:  primary tailnet (system daemon, kernel TUN — all apps
+              reach it directly, no SOCKS needed); control: ts.j0lab.xyz
 
       ${lib.concatStringsSep "\n      " (
         lib.mapAttrsToList (
