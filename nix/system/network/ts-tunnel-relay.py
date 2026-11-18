@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """ts-tunnel - local TCP listener bridged through a Tailscale userspace
 instance's SOCKS5 proxy. For apps without proxy support (Minecraft etc.).
 
@@ -50,7 +49,9 @@ async def socks5_connect(s_host, s_port, t_host, t_port):
     return reader, writer
 
 
-async def handle_client(client_reader, client_writer, s_host, s_port, t_host, t_port):
+async def handle_client(
+    client_reader, client_writer, s_host, s_port, t_host, t_port
+):
     try:
         remote_reader, remote_writer = await socks5_connect(
             s_host, s_port, t_host, t_port

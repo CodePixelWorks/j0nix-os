@@ -180,6 +180,8 @@ let
           esac
           exec ${tunnelRelay} "$socks" "$1" "$2" "$3"
           ;;
+        up|login)
+          shift
           sock="/run/tailscale-mux-$name/tailscaled.sock"
           # `tailscale status` exits non-zero when logged out (NeedsLogin) —
           # the JSON form exits 0 and still proves the daemon is reachable.
