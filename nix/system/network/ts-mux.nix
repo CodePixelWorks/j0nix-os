@@ -32,6 +32,24 @@ let
   cfg = config.j0nix.desktop.network.tailscaleMux;
   enabled = cfg != { };
 
+  # Root-side one-shot: sets --operator so the user's CLI can talk to the
+  # daemon without sudo (chicken-and-egg: 'tailscale set --operator'
+  # itself requires root when no operator exists yet).
+  mkOperatorOneshot = name: c: {
+    name = "tailscaled-mux-${name}-operator";
+    value = {
+      description = "Set operator for tailscaled mux instance '${name}'";
+      after = [ "tailscaled-mux-${name}.service" ];
+      requires = [ "tailscaled-mux-${name}.service" ];
+      wantedBy = [ "tailscaled-mux-${name}.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${config.services.tailscale.package}/bin/tailscale --socket=/run/tailscale-mux-${name}/tailscaled.sock set --operator=${c.operator}";
+        RemainAfterExit = true;
+      };
+    };
+  };
+
   mkInstance = name: c: {
     name = "tailscaled-mux-${name}";
     value = {
@@ -99,26 +117,12 @@ let
         up|login)
           shift
           sock="/run/tailscale-mux-$name/tailscaled.sock"
-          if ! tailscale --socket="$sock" status --peers=false >/dev/null 2>&1; then
+          # `tailscale status` exits non-zero when logged out (NeedsLogin) —
+          # the JSON form exits 0 and still proves the daemon is reachable.
+          if ! tailscale --socket="$sock" status --json --peers=false >/dev/null 2>&1; then
             echo "daemon tailscaled-mux-$name not running" >&2
             exit 1
           fi
-          # First CLI use on a root daemon fails with "profiles access
-          # denied" unless an operator is set. Idempotent, needs no root:
-          ${
-            lib.concatStringsSep "
-          " (
-              lib.mapAttrsToList (
-                n: c:
-                lib.optionalString (c.operator != null) ''
-                  if [ "$name" = "${n}" ]; then
-                    tailscale --socket="$sock" set --operator='${c.operator}' >/dev/null 2>&1 || true
-                  fi
-                ''
-              ) cfg
-            )
-          }
-          backend=$(tailscale --socket="$sock" status --json --peers=false | ${pkgs.jq}/bin/jq -r .BackendState)
           backend=$(tailscale --socket="$sock" status --json --peers=false | ${pkgs.jq}/bin/jq -r .BackendState)
           if [ "$backend" = "NeedsLogin" ] || [ "$backend" = "Stopped" ]; then
             ${
@@ -212,7 +216,7 @@ in
   };
 
   config = lib.mkIf enabled {
-    systemd.services = lib.mapAttrs' mkInstance cfg;
+    systemd.services = (lib.mapAttrs' mkInstance cfg) // (lib.mapAttrs' mkOperatorOneshot cfg);
     environment.systemPackages = [
       tsMuxCli
       tsMuxInfo
