@@ -124,7 +124,9 @@ let
         lib.mapAttrsToList (
           n: c: "${n}:  SOCKS5 127.0.0.1:${toString c.socksPort}  HTTP 127.0.0.1:${
             toString c.httpPort
-          }  control=${c.loginServer or "default (login.tailscale.com)"}"
+          }  control=${
+            if c.loginServer != null then c.loginServer else "default (login.tailscale.com)"
+          }"
         ) cfg
       )}
 

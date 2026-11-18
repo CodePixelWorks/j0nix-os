@@ -93,6 +93,8 @@ let
   };
 in
 {
+  imports = [ ./ts-mux.nix ];
+
   options.j0nix.desktop.network = {
     hostName = lib.mkOption {
       type = lib.types.str;
