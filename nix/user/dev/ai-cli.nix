@@ -281,6 +281,11 @@ let
   hermesNextDevtoolsPackage = hermesMcpPackageFromHermes "next-devtools-mcp";
   hermesNextDevtoolsCfg = hermesMcpCfg.next-devtools or { };
   hermesNextDevtoolsEnabled = hermesEnabled && (hermesNextDevtoolsCfg.enable or false) && hermesNextDevtoolsPackage != null;
+  # Hindsight memory MCP — url-only plugin (no package needed): the
+  # j0lab tailnet Hindsight API (document/interaction recall, second
+  # memory bank next to mem0).
+  hermesHindsightCfg = hermesMcpCfg.hindsight or { };
+  hermesHindsightEnabled = hermesEnabled && (hermesHindsightCfg.enable or false);
   hermesOpnsensePackageFromHermes = hermesMcpPackageFromHermes "opnsense-mcp";
   hermesGiteaPackageFromHermes = hermesMcpPackageFromHermes "gitea-mcp";
   # AiDex — persistent code index MCP (33 tools, tree-sitter, 14
@@ -457,6 +462,12 @@ let
                 next-devtools = {
                   enable = true;
                   package = hermesNextDevtoolsPackage;
+                };
+              })
+              // (lib'.optionalAttrs hermesHindsightEnabled {
+                hindsight = {
+                  enable = true;
+                  url = hermesHindsightCfg.url or "https://hindsight-api.tn.j0lab.xyz/mcp/";
                 };
               })
               // (lib'.optionalAttrs hermesImageEnabled {
