@@ -1862,16 +1862,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1794257216,
-        "narHash": "sha256-qOwJYGsSpA3ykhfTGPvA0KwLdvB7Byqj8gVMvS/PLfI=",
+        "lastModified": 1794794955,
+        "narHash": "sha256-mvyC0FvXYY+NbuH2ZP7z84O/NE5qnhNcm+Eg0LGHV5Y=",
         "ref": "refs/heads/main",
-        "rev": "f26716ee74b9920d968e208e49640692856d6a71",
-        "revCount": 86,
+        "rev": "b00bf3fe69fe9c0a5c5912fc45ca053828e72c6c",
+        "revCount": 92,
         "type": "git",
         "url": "ssh://git@git.j0lab.xyz/Rust/rust-analyzer-mcp.git"
       },
       "original": {
-        "rev": "f26716ee74b9920d968e208e49640692856d6a71",
+        "rev": "b00bf3fe69fe9c0a5c5912fc45ca053828e72c6c",
         "type": "git",
         "url": "ssh://git@git.j0lab.xyz/Rust/rust-analyzer-mcp.git"
       }
