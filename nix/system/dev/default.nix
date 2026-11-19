@@ -197,6 +197,7 @@ let
 in
 {
   imports = [
+    ./bwai.nix
     ./nix-ld.nix
     ./qdrant.nix
     ./crw.nix
