@@ -69,7 +69,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     stylix = {
-      url = "git+https://github.com/danth/stylix?rev=fb28acd59e2ac1984ec84fa496599d6b4bf3e690";
+      url = "git+https://github.com/danth/stylix?rev=44aafe27b8b3427201dd53c6a464c196b6a956dd";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     ags = {
@@ -93,7 +93,7 @@
       flake = false;
     };
     quickshell-stable = {
-      url = "github:quickshell-mirror/quickshell?ref=v0.2.1";
+      url = "github:quickshell-mirror/quickshell?ref=v0.3.2";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     quickshell-dev = {
