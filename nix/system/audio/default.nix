@@ -172,10 +172,14 @@ in
     # repairs devices paired before the flag existed. Runs as root on
     # the system bus — bluetoothctl works without a user session.
     system.activationScripts.bluetoothAutoTrust = lib.stringAfter [ "users" ] ''
-      if [ -x "${pkgs.bluez}/bin/bluetoothctl" ]; then
-        for dev in $(${pkgs.bluez}/bin/bluetoothctl devices Paired 2>/dev/null | awk '{print $2}'); do
-          ${pkgs.bluez}/bin/bluetoothctl trust "$dev" >/dev/null 2>&1 || true
-        done
+      # No coreutils/awk on the activation PATH — call tools by store path.
+      btctl=${pkgs.bluez}/bin/bluetoothctl
+      if [ -x "$btctl" ]; then
+        $btctl devices Paired 2>/dev/null | while read -r _ mac _; do
+          if [ -n "''${mac:-}" ]; then
+            $btctl trust "$mac" >/dev/null 2>&1 || true
+          fi
+        done || true
       fi
     '';
 

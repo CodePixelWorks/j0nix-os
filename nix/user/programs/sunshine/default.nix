@@ -98,17 +98,31 @@ lib.mkIf enabled {
         # gdlauncher — SIGTRAP in the DRM/display path). Hash username +
         # secret into a state file; restart only on hash mismatch.
         ''
+          # HM activation runs with `set -euo pipefail`, so every step here
+          # must be individually safe: an unreadable secret must not abort
+          # the whole activation (it did — the first version cat-ed the
+          # username as a file and pipefail killed the rebuild).
+          cu=${pkgs.coreutils}/bin
           state_dir="$HOME/.cache/j0nix"
           state_file="$state_dir/sunshine-creds.sha256"
-          mkdir -p "$state_dir"
-          current_hash="$(cat "${lib.escapeShellArg (if username != null then username else "")}" "${lib.escapeShellArg (if passwordSecretPath != null then passwordSecretPath else "")}" 2>/dev/null | ${pkgs.coreutils}/bin/sha256sum | ${pkgs.coreutils}/bin/cut -d' ' -f1)"
-          if [ ! -f "$state_file" ] || [ "$(cat "$state_file" 2>/dev/null)" != "$current_hash" ]; then
-            if ${lib.getExe resetScript} >/dev/null 2>&1; then
-              echo "$current_hash" > "$state_file"
-              ${pkgs.systemd}/bin/systemctl --user try-restart sunshine.service >/dev/null 2>&1 || true
-            else
-              echo "warning: failed to apply Sunshine Web UI credentials from secret '${passwordSecretName}'" >&2
+          secret_file=${lib.escapeShellArg (if passwordSecretPath != null then passwordSecretPath else "")}
+          $cu/mkdir -p "$state_dir"
+          if $cu/test -r "$secret_file"; then
+            creds_tmp="$state_dir/.creds-input"
+            { printf '%s\n' ${lib.escapeShellArg (if username != null then username else "")}; $cu/cat "$secret_file"; } > "$creds_tmp" 2>/dev/null || true
+            $cu/sha256sum "$creds_tmp" > "$state_dir/.creds-raw" 2>/dev/null || true
+            current_hash="$($cu/cut -d' ' -f1 < "$state_dir/.creds-raw" 2>/dev/null || true)"
+            $cu/rm -f "$creds_tmp" "$state_dir/.creds-raw"
+            if [ -n "$current_hash" ] && { [ ! -f "$state_file" ] || [ "$($cu/cat "$state_file" 2>/dev/null || true)" != "$current_hash" ]; }; then
+              if ${lib.getExe resetScript} >/dev/null 2>&1; then
+                printf '%s\n' "$current_hash" > "$state_file"
+                ${pkgs.systemd}/bin/systemctl --user try-restart sunshine.service >/dev/null 2>&1 || true
+              else
+                echo "warning: failed to apply Sunshine Web UI credentials from secret '${passwordSecretName}'" >&2
+              fi
             fi
+          else
+            echo "warning: sunshine web secret '$secret_file' not readable; skipping credential sync" >&2
           fi
         ''
       else
