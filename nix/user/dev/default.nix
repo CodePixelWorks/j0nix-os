@@ -377,6 +377,7 @@ in
 {
   imports = [
     ./ai-cli.nix
+    ../ai/hermes-policy.nix
     ./gpg.nix
     ./skills.nix
   ];
