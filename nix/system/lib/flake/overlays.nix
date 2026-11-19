@@ -75,20 +75,18 @@ let
       nixpkgsSrc = nixpkgs.outPath;
     };
     bambu-studio-appimage = final.callPackage (baseDir + "/nix/system/software/pkgs/printing/bambu-studio-appimage.nix") { };
-    hermes-extra-python = final.callPackage (baseDir + "/nix/pkgs/hermes-extra-python") {
-      inherit (final.python312Packages) ollama;
-    };
-    # Workstation hermes: curated package from NixOS/hermes (private
-    # Gitea, see flake.nix) with the mem0 dependency group — required
-    # for `memory.provider: mem0` (OSS mode backed by the local Qdrant).
+    # Workstation hermes: the curated hermes-mem0 variant from the
+    # NixOS/hermes input (private Gitea, see flake.nix) — consumed
+    # DIRECTLY, no extra wrapper. History: this was hermes-agent-ext, a
+    # wrapper that injected an extra ollama-client PYTHONPATH env; the
+    # hermes-mem0 package variant carries the whole mem0 dependency
+    # group (ollama client included) in its own sealed venv, so the
+    # wrapper only duplicated dependency maintenance and broke on a
+    # Python ABI mismatch (pydantic_core 3.12 vs 3.14). Single source
+    # of truth: the package itself.
     hermes-agent-ext =
       let
         system = final.stdenv.hostPlatform.system;
-        # Curated hermes package from the NixOS/hermes input (NOT the
-        # public upstream repo — see flake.nix). Falls back to null when
-        # the input or the package is unavailable for this system. The
-        # mem0 variant is consumed unconditionally: same curated layer,
-        # the bigger venv closure is the price for local memory.
         hermesPkg =
           if (inputs ? hermes)
              && (inputs.hermes ? packages)
@@ -97,13 +95,7 @@ let
           then inputs.hermes.packages.${system}.hermes-mem0
           else null;
       in
-      if hermesPkg != null then
-        final.callPackage (baseDir + "/nix/pkgs/hermes-agent-ext") {
-          hermesPackage = hermesPkg;
-          hermesExtraPython = final.hermes-extra-python;
-        }
-      else
-        null;
+      hermesPkg;
     hyprland-minimizer-orteip = prev.rustPlatform.buildRustPackage {
       pname = "hyprland_minimizer";
       version = "unstable";
