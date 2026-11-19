@@ -210,6 +210,13 @@ let
     || lib.hasPrefix "fd" hermesOpnsenseUrlHost;
   hermesGiteaHost = hermesGiteaCfg.host or "https://gitea.com";
   hermesGiteaTokenSecretName = hermesGiteaCfg.tokenSecretName or "gitea-mcp-token";
+  # Workstation fallback: the fleet tokens live as user-readable sops
+  # files in ~/.config/sops-nix/secrets/ (same files the token wrappers
+  # read). The NixOS sops.secrets scope only exists on server hosts —
+  # without this fallback the rendered entry pointed at /missing/… and
+  # the hermes-mcp-sync REMOVED the gitea server from the config.
+  hermesGiteaTokenFileFallback =
+    "/home/jonas/.config/sops-nix/secrets/${hermesGiteaTokenSecretName}";
   hermesGiteaTokenAvailable = lib.hasAttrByPath [ hermesGiteaTokenSecretName ] (
     config.sops.secrets or { }
   );
@@ -217,7 +224,7 @@ let
     if hermesGiteaTokenAvailable then
       config.sops.secrets.${hermesGiteaTokenSecretName}.path
     else
-      "/missing/${hermesGiteaTokenSecretName}";
+      hermesGiteaTokenFileFallback;
   # Drone CI MCP — fleet's Drone instance exposed as MCP tools; the
   # plugin module's token wrapper reads the sops-provisioned file at
   # runtime (no native *_FILE support in the binary).
@@ -271,6 +278,9 @@ let
   hermesRustAnalyzerEnabled = hermesEnabled && (hermesRustAnalyzerCfg.enable or false) && hermesRustAnalyzerMcpPackage != null;
   hermesFileToolboxCfg = hermesMcpCfg.file-toolbox or { };
   hermesFileToolboxEnabled = hermesEnabled && (hermesFileToolboxCfg.enable or false) && hermesFileToolboxMcpPackage != null;
+  hermesNextDevtoolsPackage = hermesMcpPackageFromHermes "next-devtools-mcp";
+  hermesNextDevtoolsCfg = hermesMcpCfg.next-devtools or { };
+  hermesNextDevtoolsEnabled = hermesEnabled && (hermesNextDevtoolsCfg.enable or false) && hermesNextDevtoolsPackage != null;
   hermesOpnsensePackageFromHermes = hermesMcpPackageFromHermes "opnsense-mcp";
   hermesGiteaPackageFromHermes = hermesMcpPackageFromHermes "gitea-mcp";
   # AiDex — persistent code index MCP (33 tools, tree-sitter, 14
@@ -443,6 +453,12 @@ let
                   root = hermesFileToolboxCfg.root or "/home/jonas/projects";
                 };
               })
+              // (lib'.optionalAttrs hermesNextDevtoolsEnabled {
+                next-devtools = {
+                  enable = true;
+                  package = hermesNextDevtoolsPackage;
+                };
+              })
               // (lib'.optionalAttrs hermesImageEnabled {
                 comfy = {
                   enable = true;
@@ -532,7 +548,7 @@ let
       # Remove managed servers that are no longer desired so disabling a
       # hermesMcp block in settings actually removes the config entry.
       for name in list(servers.keys()):
-          if name in ("gitea", "donsetch", "opnsense", "comfy", "drone-ci", "aidex", "nil", "rust-analyzer", "file-toolbox") and name not in desired_servers:
+          if name in ("gitea", "donsetch", "opnsense", "comfy", "drone-ci", "aidex", "nil", "rust-analyzer", "file-toolbox", "next-devtools", "hindsight") and name not in desired_servers:
               del servers[name]
               changed = True
 
