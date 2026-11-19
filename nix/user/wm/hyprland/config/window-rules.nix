@@ -384,6 +384,16 @@ let
       size = [ "80%" "85%" ];
       center = true;
     }
+    {
+      # GDLauncher Carbon (wayland, class "gdlauncher") floats already
+      # via user preference — pin it centered and sized so it opens
+      # predictably next to the games it launches.
+      name = "float-gdlauncher";
+      match.class = "^(gdlauncher)$";
+      float = true;
+      size = [ "70%" "75%" ];
+      center = true;
+    }
   ];
 in
 {
