@@ -67,6 +67,28 @@ async def handle_client(
     )
 
 
+async def start_listeners(cb, port):
+    """Listen on loopback IPv4 and IPv6.
+
+    Java resolves "localhost" to ::1 first, so an IPv4-only listener is
+    invisible to the Minecraft client even when the port is right.
+    """
+    servers = []
+    for host in ("127.0.0.1", "::1"):
+        try:
+            server = await asyncio.start_server(cb, host, port)
+        except OSError as exc:
+            print(
+                f"ts-tunnel: listener {host}:{port} unavailable: {exc}",
+                file=sys.stderr,
+            )
+            continue
+        servers.append(server)
+    if not servers:
+        raise SystemExit(f"ts-tunnel: cannot bind port {port}")
+    return servers
+
+
 async def main():
     if len(sys.argv) != 5:
         print(__doc__, file=sys.stderr)
@@ -81,11 +103,17 @@ async def main():
             r, w, "127.0.0.1", socks_port, target_host, target_port
         )
 
-    server = await asyncio.start_server(cb, "127.0.0.1", local_port)
+    servers = await start_listeners(cb, local_port)
     dest = f"socks5:{socks_port} -> {target_host}:{target_port}"
-    print(f"ts-tunnel: 127.0.0.1:{local_port} -> {dest}", flush=True)
-    async with server:
-        await server.serve_forever()
+    print(
+        f"ts-tunnel: localhost:{local_port} (IPv4+IPv6) -> {dest}",
+        flush=True,
+    )
+    try:
+        await asyncio.Event().wait()
+    finally:
+        for server in servers:
+            server.close()
 
 
 if __name__ == "__main__":
