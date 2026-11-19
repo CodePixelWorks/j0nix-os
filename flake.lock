@@ -187,6 +187,26 @@
         "type": "github"
       }
     },
+    "bouncer": {
+      "inputs": {
+        "flake-utils": "flake-utils_3",
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1791998421,
+        "narHash": "sha256-qbflWMTxit4xt2Aqf8Qf9VI1xRLXi2Cf/7bMLC2p0k4=",
+        "ref": "refs/heads/main",
+        "rev": "dc022e26417460d623842675b1ee0b05360a813d",
+        "revCount": 54,
+        "type": "git",
+        "url": "https://git.j0lab.xyz/Rust/bouncer.git"
+      },
+      "original": {
+        "rev": "dc022e26417460d623842675b1ee0b05360a813d",
+        "type": "git",
+        "url": "https://git.j0lab.xyz/Rust/bouncer.git"
+      }
+    },
     "caelestia-cli": {
       "inputs": {
         "caelestia-shell": [
@@ -346,6 +366,50 @@
         "owner": "AvengeMedia",
         "repo": "dank-qml-common",
         "type": "github"
+      }
+    },
+    "drone-ci-mcp_2": {
+      "inputs": {
+        "nixpkgs": [
+          "hermes",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1794246947,
+        "narHash": "sha256-SvZmRsccm2rolF1AMXHKf8S9DFRdqgmhh0wz0Q5dyDE=",
+        "ref": "refs/heads/main",
+        "rev": "e423b15658087e97b86a62af21118e48d611eb75",
+        "revCount": 140,
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/Rust/drone-ci-mcp.git"
+      },
+      "original": {
+        "rev": "e423b15658087e97b86a62af21118e48d611eb75",
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/Rust/drone-ci-mcp.git"
+      }
+    },
+    "file-toolbox-mcp": {
+      "inputs": {
+        "flake-utils": "flake-utils_2",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1794255666,
+        "narHash": "sha256-p6WZnbVcLvxFP9M+ZCA63HDw7GELhkVmDhMrJNB4cFo=",
+        "ref": "refs/heads/main",
+        "rev": "beea6fd023b510e3bfe2c3f52f3bcc65b11dcecc",
+        "revCount": 67,
+        "type": "git",
+        "url": "https://git.j0lab.xyz/Rust/file-toolbox-mcp.git"
+      },
+      "original": {
+        "rev": "beea6fd023b510e3bfe2c3f52f3bcc65b11dcecc",
+        "type": "git",
+        "url": "https://git.j0lab.xyz/Rust/file-toolbox-mcp.git"
       }
     },
     "firefox-gnome-theme": {
@@ -549,6 +613,60 @@
         "type": "github"
       }
     },
+    "flake-utils_2": {
+      "inputs": {
+        "systems": "systems_2"
+      },
+      "locked": {
+        "lastModified": 1791914995,
+        "narHash": "sha256-Zf/xfQEAasnwnmEfHqW/4hjDE/s44yn2hD4RuVIZRjA=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "b7a79d3fea1e214f6d668d521cecec0c01e26544",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "flake-utils_3": {
+      "inputs": {
+        "systems": "systems_3"
+      },
+      "locked": {
+        "lastModified": 1791914995,
+        "narHash": "sha256-Zf/xfQEAasnwnmEfHqW/4hjDE/s44yn2hD4RuVIZRjA=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "b7a79d3fea1e214f6d668d521cecec0c01e26544",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "flake-utils_4": {
+      "inputs": {
+        "systems": "systems_6"
+      },
+      "locked": {
+        "lastModified": 1791914995,
+        "narHash": "sha256-Zf/xfQEAasnwnmEfHqW/4hjDE/s44yn2hD4RuVIZRjA=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "b7a79d3fea1e214f6d668d521cecec0c01e26544",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "fromYaml": {
       "flake": false,
       "locked": {
@@ -563,6 +681,25 @@
         "owner": "SenchoPens",
         "repo": "fromYaml",
         "type": "github"
+      }
+    },
+    "gitea-mcp": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1794246927,
+        "narHash": "sha256-ABPtYYeeCc7P5W18kcVaMJ7weTRx5NF92iglc9FZHxk=",
+        "ref": "refs/heads/main",
+        "rev": "292578e404aff3f51871e410e7939aaa6238f3a5",
+        "revCount": 50,
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/Rust/gitea-mcp.git"
+      },
+      "original": {
+        "rev": "292578e404aff3f51871e410e7939aaa6238f3a5",
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/Rust/gitea-mcp.git"
       }
     },
     "gitignore": {
@@ -589,7 +726,7 @@
     },
     "gitlab-mcp": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs_3"
       },
       "locked": {
         "lastModified": 1788973054,
@@ -629,24 +766,24 @@
       "inputs": {
         "flake-parts": "flake-parts_2",
         "home-manager": "home-manager",
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs_4",
         "npm-lockfile-fix": "npm-lockfile-fix",
         "pyproject-build-systems": "pyproject-build-systems",
         "pyproject-nix": "pyproject-nix",
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1790861783,
-        "narHash": "sha256-uUTbQ2VRoptXcdee6Uh0MbbbRZhqG3Hr3ewLd+tzdro=",
+        "lastModified": 1790269458,
+        "narHash": "sha256-DnP9DHHQm6d6gosz1nGRuoddJmNzHHGoCyhKo6U9OUM=",
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "666b9f04c4229341c9188b096eb64d2a5e807347",
+        "rev": "32385a905bc46c60678a874d844d78af7d04f74c",
         "type": "github"
       },
       "original": {
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "666b9f04c4229341c9188b096eb64d2a5e807347",
+        "rev": "32385a905bc46c60678a874d844d78af7d04f74c",
         "type": "github"
       }
     },
@@ -719,7 +856,7 @@
         "hyprland": [
           "hyprland"
         ],
-        "nixpkgs": "nixpkgs_3"
+        "nixpkgs": "nixpkgs_5"
       },
       "locked": {
         "lastModified": 1791235474,
@@ -830,7 +967,7 @@
           "nixpkgs"
         ],
         "pre-commit-hooks": "pre-commit-hooks",
-        "systems": "systems_2",
+        "systems": "systems_4",
         "xdph": "xdph"
       },
       "locked": {
@@ -1207,11 +1344,32 @@
         "url": "https://github.com/isaacphi/mcp-language-server"
       }
     },
+    "nil-mcp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1794794782,
+        "narHash": "sha256-CfiZwCN18Pg6sU9h60Fzi3V/0Sf7bhnVw3grVyejbfs=",
+        "ref": "refs/heads/main",
+        "rev": "ff38e39f9b65d8c7a9888e05053676efacc69fdc",
+        "revCount": 161,
+        "type": "git",
+        "url": "https://git.j0lab.xyz/Rust/nil-mcp.git"
+      },
+      "original": {
+        "rev": "ff38e39f9b65d8c7a9888e05053676efacc69fdc",
+        "type": "git",
+        "url": "https://git.j0lab.xyz/Rust/nil-mcp.git"
+      }
+    },
     "nix-cachyos-kernel": {
       "inputs": {
         "flake-compat": "flake-compat_4",
         "flake-parts": "flake-parts_3",
-        "nixpkgs": "nixpkgs_4"
+        "nixpkgs": "nixpkgs_6"
       },
       "locked": {
         "lastModified": 1790564970,
@@ -1251,16 +1409,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1788316716,
-        "narHash": "sha256-bc7rSpXIdn9QWGNqfWcPZWOhEVF8NoeAZkWq0XWnf/k=",
+        "lastModified": 1791765022,
+        "narHash": "sha256-ZGq3ptZzA+oO0N/Wi/F+GbuTijLkYExD01LvpNFAvr0=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
+        "rev": "7993f34ee47e28a3d607a525aadc6c94b73be728",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-unstable",
+        "ref": "nixos-26.05",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -1282,6 +1440,38 @@
     },
     "nixpkgs_2": {
       "locked": {
+        "lastModified": 1793540411,
+        "narHash": "sha256-fiPJ88izTVucjeo2EQ3jk4aWmLg03I1D4vxnX2QjEgE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "0bb2eedc20e4739f29e8045034f2828ad7054f8f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_3": {
+      "locked": {
+        "lastModified": 1788316716,
+        "narHash": "sha256-bc7rSpXIdn9QWGNqfWcPZWOhEVF8NoeAZkWq0XWnf/k=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_4": {
+      "locked": {
         "lastModified": 1785318670,
         "narHash": "sha256-dN6Ou5x/+23FZLEpYP3IffO+NyJFzUlGumt1uu3MMaY=",
         "owner": "NixOS",
@@ -1296,7 +1486,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_3": {
+    "nixpkgs_5": {
       "locked": {
         "lastModified": 1768127708,
         "narHash": "sha256-1Sm77VfZh3mU0F5OqKABNLWxOuDeHIlcFjsXeeiPazs=",
@@ -1312,7 +1502,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_4": {
+    "nixpkgs_6": {
       "locked": {
         "lastModified": 1790505892,
         "narHash": "sha256-/pAz2XfqHS//WRn2xRjoqes7Z92qZ0Q1gufZZ3PtuwA=",
@@ -1328,7 +1518,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_5": {
+    "nixpkgs_7": {
       "locked": {
         "lastModified": 1790822859,
         "narHash": "sha256-69xHQhAeMAD2wDXO7T2pcOZIF9Sga2W+JkmY2a11Ops=",
@@ -1344,7 +1534,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_6": {
+    "nixpkgs_8": {
       "locked": {
         "lastModified": 1792773339,
         "narHash": "sha256-rZLrzrC6i+jnTAlvPZHogKDulY7WWDEv9hJeHieO7Zw=",
@@ -1366,7 +1556,7 @@
         "nixpkgs": [
           "nixpkgs"
         ],
-        "systems": "systems_3"
+        "systems": "systems_5"
       },
       "locked": {
         "lastModified": 1790541651,
@@ -1453,7 +1643,7 @@
     },
     "open-design": {
       "inputs": {
-        "nixpkgs": "nixpkgs_6"
+        "nixpkgs": "nixpkgs_8"
       },
       "locked": {
         "lastModified": 1792929017,
@@ -1638,6 +1828,7 @@
         "caelestia-shell-dev": "caelestia-shell-dev",
         "codex-cli-nix": "codex-cli-nix",
         "dank-material-shell": "dank-material-shell",
+        "file-toolbox-mcp": "file-toolbox-mcp",
         "home-manager": "home-manager_2",
         "hypr-dynamic-cursors": "hypr-dynamic-cursors",
         "hyprkcs": "hyprkcs",
@@ -1646,9 +1837,10 @@
         "hyprland-plugins": "hyprland-plugins",
         "hyprmcp-src": "hyprmcp-src",
         "mcp-language-server-src": "mcp-language-server-src",
+        "nil-mcp": "nil-mcp",
         "nix-cachyos-kernel": "nix-cachyos-kernel",
         "nix-vscode-extensions": "nix-vscode-extensions",
-        "nixpkgs": "nixpkgs_5",
+        "nixpkgs": "nixpkgs_7",
         "nixvim": "nixvim",
         "noctalia": "noctalia",
         "open-design": "open-design",
@@ -1656,9 +1848,32 @@
         "quickshell-dev": "quickshell-dev",
         "quickshell-overview": "quickshell-overview",
         "quickshell-stable": "quickshell-stable",
+        "rust-analyzer-mcp": "rust-analyzer-mcp",
         "sops-nix": "sops-nix",
         "stylix": "stylix",
         "zen-browser": "zen-browser"
+      }
+    },
+    "rust-analyzer-mcp": {
+      "inputs": {
+        "flake-utils": "flake-utils_4",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1794257216,
+        "narHash": "sha256-qOwJYGsSpA3ykhfTGPvA0KwLdvB7Byqj8gVMvS/PLfI=",
+        "ref": "refs/heads/main",
+        "rev": "f26716ee74b9920d968e208e49640692856d6a71",
+        "revCount": 86,
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/Rust/rust-analyzer-mcp.git"
+      },
+      "original": {
+        "rev": "f26716ee74b9920d968e208e49640692856d6a71",
+        "type": "git",
+        "url": "ssh://git@git.j0lab.xyz/Rust/rust-analyzer-mcp.git"
       }
     },
     "rust-overlay": {
@@ -1716,7 +1931,7 @@
           "nixpkgs"
         ],
         "nur": "nur",
-        "systems": "systems_4",
+        "systems": "systems_7",
         "tinted-kitty": "tinted-kitty",
         "tinted-schemes": "tinted-schemes",
         "tinted-tmux": "tinted-tmux",
@@ -1754,6 +1969,36 @@
     },
     "systems_2": {
       "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_3": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_4": {
+      "locked": {
         "lastModified": 1689347949,
         "narHash": "sha256-12tWmuL2zgBgZkdoB6qXZsgJEH9LR3oUgpaQq2RbI80=",
         "owner": "nix-systems",
@@ -1767,7 +2012,7 @@
         "type": "github"
       }
     },
-    "systems_3": {
+    "systems_5": {
       "flake": false,
       "locked": {
         "lastModified": 1774449309,
@@ -1784,7 +2029,22 @@
         "type": "github"
       }
     },
-    "systems_4": {
+    "systems_6": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_7": {
       "locked": {
         "lastModified": 1774449309,
         "narHash": "sha256-brhZ8DmuGtzkCYHJg4HEd602amKm89Y9ytsFZ5uWD1w=",

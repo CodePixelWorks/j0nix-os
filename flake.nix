@@ -48,6 +48,22 @@
       url = "git+https://github.com/isaacphi/mcp-language-server?rev=e4395849a52e18555361abab60a060802c06bf50";
       flake = false;
     };
+    # Dev-workspace MCP servers (same pinned releases as server-base):
+    # nil (Nix LSP tools), rust-analyzer (Rust LSP tools), file-toolbox
+    # (fs ops/search/patch/git/code analysis). Consumed by ai-cli.nix as
+    # hermes mcp_servers entries.
+    nil-mcp = {
+      url = "git+https://git.j0lab.xyz/Rust/nil-mcp.git?rev=ff38e39f9b65d8c7a9888e05053676efacc69fdc";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    rust-analyzer-mcp = {
+      url = "git+ssh://git@git.j0lab.xyz/Rust/rust-analyzer-mcp.git?rev=f26716ee74b9920d968e208e49640692856d6a71";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    file-toolbox-mcp = {
+      url = "git+https://git.j0lab.xyz/Rust/file-toolbox-mcp.git?rev=beea6fd023b510e3bfe2c3f52f3bcc65b11dcecc";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     sops-nix = {
       url = "git+https://github.com/Mic92/sops-nix?rev=44931708c62937c2b1bf7953902989fa5bb9ee1b";
       inputs.nixpkgs.follows = "nixpkgs";

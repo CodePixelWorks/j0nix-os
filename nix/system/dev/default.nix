@@ -273,7 +273,10 @@ in
       ++ lib.optionals (
         aiEnabled && aiInstallScope == "system" && hermesEnabled && hermesPackage != null
       ) [ hermesPackage ]
-      ++ lib.optionals (aiEnabled && aiInstallScope == "system") [ pkgs.bubblewrap ];
+      ++ lib.optionals (aiEnabled && aiInstallScope == "system") [ pkgs.bubblewrap ]
+      # Dev/media essentials for the agent surface (rg for search-heavy
+      # agent workflows, ffmpeg for audio/video transcode tasks).
+      ++ [ pkgs.ripgrep pkgs.ffmpeg ];
 
     programs.ssh.startAgent = sshEnabled && sshAgentEnable && sshAgentProvider == "openssh";
 

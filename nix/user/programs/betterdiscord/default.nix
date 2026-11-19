@@ -1,35 +1,25 @@
-{ lib, pkgs, settings, ... }:
+{
+  lib,
+  pkgs,
+  settings,
+  ...
+}:
 let
   cfg = (settings.programs or { }).betterdiscord or { };
   enabled = cfg.enable or false;
   installDiscord = cfg.installDiscord or true;
 
-  # NVIDIA regression (610.57.04): Electron's GPU process dies with SIGTRAP
-  # (SI_KERNEL) right after start — the window never maps (reproduced
-  # 2026-10-01: plain Discord → processes run, zero windows; `--disable-gpu`
-  # → window maps). Flag injection via package override doesn't reach the
-  # bwrap launcher script, so override the desktop entry instead. Discord
-  # lives in a `special:discord` workspace (SUPER+C), same as before.
-  discordDesktopOverride = {
-    discord = {
-      name = "Discord";
-      genericName = "Voice and Text Chat";
-      exec = "Discord --disable-gpu %U";
-      icon = "discord";
-      terminal = false;
-      type = "Application";
-      categories = [
-        "Network"
-        "InstantMessaging"
-      ];
-      mimeType = [ "x-scheme-handler/discord" ];
-    };
+  # Screen-share needs the Electron GPU process (NVENC lives there), so the
+  # historical `--disable-gpu` workaround is gone: the SIGTRAP regression was
+  # NVIDIA 610.57.04; the current driver (615.71.09) starts the GPU process
+  # cleanly (verified 2026-11-14). commandLineArgs reaches the bwrap launcher
+  # (desktop-entry override is no longer needed).
+  discordPkg = pkgs.discord.override {
+    commandLineArgs = lib.strings.optionalString (cfg.commandLineArgs or "" != "") cfg.commandLineArgs;
   };
 in
 lib.mkIf enabled {
   j0nix.user.software.packages =
     [ pkgs.betterdiscordctl ]
-    ++ lib.optionals installDiscord [ pkgs.discord ];
-
-  xdg.desktopEntries = lib.mkIf installDiscord discordDesktopOverride;
+    ++ lib.optionals installDiscord [ discordPkg ];
 }
