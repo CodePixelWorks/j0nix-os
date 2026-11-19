@@ -70,6 +70,7 @@ let
       doCheck = false;
     });
     qmlgreet = final.callPackage (baseDir + "/nix/system/software/pkgs/greetd/qmlgreet.nix") { };
+    bubblewrap-ai = final.callPackage (baseDir + "/nix/system/dev/pkgs/bubblewrap-ai.nix") { };
     vagrant-with-libvirt = final.callPackage (baseDir + "/nix/system/software/pkgs/dev/vagrant-with-libvirt.nix") {
       nixpkgsSrc = nixpkgs.outPath;
     };
