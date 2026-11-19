@@ -1,5 +1,5 @@
 {
-  python314,
+  python312,
   ollama,
 }:
 
@@ -13,8 +13,8 @@
 # MUST track the Python version of the upstream hermes-agent package:
 # the PYTHONPATH prefix shadows the agent's own site-packages, and a
 # C-extension built for a different interpreter ABI breaks the import
-# (pydantic_core._pydantic_core missing after the agent moved to
-# python3.14 — nixpkgs c59305b bump).
-python314.withPackages (_: [
+# (pydantic_core._pydantic_core missing when the agent and injected
+# packages use different Python ABIs).
+python312.withPackages (_: [
   ollama
 ])
