@@ -378,8 +378,11 @@ let
       # ("Minecraft* 1.21.11", xwayland) that changes with updates —
       # prefix-match it. Float + centered so the game window sits
       # predictably in the middle instead of tiling full-height.
+      # NOTE: hyprland's lua window_rule matches `class`/`title` with
+      # std::regex_match (anchored full match), so a bare prefix like
+      # "^Minecraft" never matches — always close prefixes with ".*".
       name = "float-minecraft";
-      match.class = "^Minecraft";
+      match.class = "^Minecraft.*";
       float = true;
       size = [ "80%" "85%" ];
       center = true;
@@ -395,7 +398,20 @@ let
       center = true;
     }
   ];
+  # hyprland's lua window_rule matches class/title with std::regex_match, i.e.
+  # the pattern must cover the WHOLE string. A bare prefix like "^Minecraft"
+  # therefore never matches "Minecraft* 1.21.1" — it has to be closed with
+  # "$" (exact) or ".*" (prefix). Guard the whole rule set so the trap can't
+  # come back silently.
+  badPatterns = lib.concatMap
+    (rule:
+      lib.filter
+        (p: lib.hasPrefix "^" p && !(lib.hasSuffix "$" p) && !(lib.hasSuffix ".*" p))
+        (builtins.filter builtins.isString (builtins.attrValues (rule.match or { }))))
+    baseRules;
 in
+assert lib.assertMsg (badPatterns == [ ])
+  "window-rules: anchored patterns must end with \"$\" or \".*\": ${lib.concatStringsSep ", " badPatterns}";
 {
   structured = baseRules;
   default = map renderRule (lib.take 30 baseRules);
