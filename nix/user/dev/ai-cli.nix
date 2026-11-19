@@ -258,6 +258,19 @@ let
   hermesSystem = pkgs.stdenv.hostPlatform.system;
   hermesMcpPackageFromHermes = name:
     (((inputs.hermes or { }).packages or { }).${hermesSystem} or { }).${name} or null;
+  # Dev-workspace MCP servers (Rust/* flake inputs, same pins as
+  # server-base). Each input exposes packages.<system>.<name>.
+  devMcpPackageFromInput = name: input:
+    (((inputs.${input} or { }).packages or { }).${hermesSystem} or { }).${name} or null;
+  hermesNilMcpPackage = devMcpPackageFromInput "nil-mcp" "nil-mcp";
+  hermesRustAnalyzerMcpPackage = devMcpPackageFromInput "rust-analyzer-mcp" "rust-analyzer-mcp";
+  hermesFileToolboxMcpPackage = devMcpPackageFromInput "file-toolbox-mcp" "file-toolbox-mcp";
+  hermesNilCfg = hermesMcpCfg.nil or { };
+  hermesNilEnabled = hermesEnabled && (hermesNilCfg.enable or false) && hermesNilMcpPackage != null;
+  hermesRustAnalyzerCfg = hermesMcpCfg.rust-analyzer or { };
+  hermesRustAnalyzerEnabled = hermesEnabled && (hermesRustAnalyzerCfg.enable or false) && hermesRustAnalyzerMcpPackage != null;
+  hermesFileToolboxCfg = hermesMcpCfg.file-toolbox or { };
+  hermesFileToolboxEnabled = hermesEnabled && (hermesFileToolboxCfg.enable or false) && hermesFileToolboxMcpPackage != null;
   hermesOpnsensePackageFromHermes = hermesMcpPackageFromHermes "opnsense-mcp";
   hermesGiteaPackageFromHermes = hermesMcpPackageFromHermes "gitea-mcp";
   # AiDex — persistent code index MCP (33 tools, tree-sitter, 14
@@ -409,6 +422,27 @@ let
                   stateDir = hermesAidexStateDir;
                 };
               })
+              // (lib'.optionalAttrs hermesNilEnabled {
+                nil = {
+                  enable = true;
+                  package = hermesNilMcpPackage;
+                  workspaceUri = hermesNilCfg.workspaceUri or "file:///home/jonas";
+                };
+              })
+              // (lib'.optionalAttrs hermesRustAnalyzerEnabled {
+                rust-analyzer = {
+                  enable = true;
+                  package = hermesRustAnalyzerMcpPackage;
+                  workspaceUri = hermesRustAnalyzerCfg.workspaceUri or "file:///home/jonas";
+                };
+              })
+              // (lib'.optionalAttrs hermesFileToolboxEnabled {
+                file-toolbox = {
+                  enable = true;
+                  package = hermesFileToolboxMcpPackage;
+                  root = hermesFileToolboxCfg.root or "/home/jonas/projects";
+                };
+              })
               // (lib'.optionalAttrs hermesImageEnabled {
                 comfy = {
                   enable = true;
@@ -498,7 +532,7 @@ let
       # Remove managed servers that are no longer desired so disabling a
       # hermesMcp block in settings actually removes the config entry.
       for name in list(servers.keys()):
-          if name in ("gitea", "donsetch", "opnsense", "comfy", "drone-ci", "aidex") and name not in desired_servers:
+          if name in ("gitea", "donsetch", "opnsense", "comfy", "drone-ci", "aidex", "nil", "rust-analyzer", "file-toolbox") and name not in desired_servers:
               del servers[name]
               changed = True
 
