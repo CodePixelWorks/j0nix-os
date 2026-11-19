@@ -101,7 +101,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     caelestia-shell = {
-      url = "git+https://github.com/caelestia-dots/shell?rev=a3a8fe59aba2c0048ab02dc817748678f96076ff";
+      url = "git+https://github.com/caelestia-dots/shell?rev=e72df8eb687246aa6c6ec6daa631073b374e5215";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.quickshell.follows = "quickshell-stable";
     };

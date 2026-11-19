@@ -218,11 +218,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791609844,
-        "narHash": "sha256-SHgkXo3bVca+AjacDdyfy9uCpG9SiVWCOyKCsejryA8=",
+        "lastModified": 1794549950,
+        "narHash": "sha256-CwnkJOnUNZB2jQGz5824L0myBtvmc98OyrwJvZgcT5s=",
         "owner": "caelestia-dots",
         "repo": "cli",
-        "rev": "b9a223a2cb7d98e67dd1219e16d67dda9ac4d052",
+        "rev": "9ab901f592917454da396ea012c50dd2c3f37003",
         "type": "github"
       },
       "original": {
@@ -267,16 +267,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1791805117,
-        "narHash": "sha256-3znKolqcI99Wdka+Ysg39Y/oWqjBqp8QGCXo6zd54b0=",
+        "lastModified": 1794717543,
+        "narHash": "sha256-oBo1EfvEKqF6UZh+6hT6YTwu+qrloQeX/a22JUehCV4=",
         "ref": "refs/heads/main",
-        "rev": "a3a8fe59aba2c0048ab02dc817748678f96076ff",
-        "revCount": 2684,
+        "rev": "e72df8eb687246aa6c6ec6daa631073b374e5215",
+        "revCount": 2725,
         "type": "git",
         "url": "https://github.com/caelestia-dots/shell"
       },
       "original": {
-        "rev": "a3a8fe59aba2c0048ab02dc817748678f96076ff",
+        "rev": "e72df8eb687246aa6c6ec6daa631073b374e5215",
         "type": "git",
         "url": "https://github.com/caelestia-dots/shell"
       }
