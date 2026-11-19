@@ -382,12 +382,12 @@
         "rev": "e423b15658087e97b86a62af21118e48d611eb75",
         "revCount": 140,
         "type": "git",
-        "url": "ssh://git@git.j0lab.xyz/Rust/drone-ci-mcp.git"
+        "url": "https://git.j0lab.xyz/Rust/drone-ci-mcp.git"
       },
       "original": {
         "rev": "e423b15658087e97b86a62af21118e48d611eb75",
         "type": "git",
-        "url": "ssh://git@git.j0lab.xyz/Rust/drone-ci-mcp.git"
+        "url": "https://git.j0lab.xyz/Rust/drone-ci-mcp.git"
       }
     },
     "file-toolbox-mcp": {
@@ -694,12 +694,12 @@
         "rev": "292578e404aff3f51871e410e7939aaa6238f3a5",
         "revCount": 50,
         "type": "git",
-        "url": "ssh://git@git.j0lab.xyz/Rust/gitea-mcp.git"
+        "url": "https://git.j0lab.xyz/Rust/gitea-mcp.git"
       },
       "original": {
         "rev": "292578e404aff3f51871e410e7939aaa6238f3a5",
         "type": "git",
-        "url": "ssh://git@git.j0lab.xyz/Rust/gitea-mcp.git"
+        "url": "https://git.j0lab.xyz/Rust/gitea-mcp.git"
       }
     },
     "gitignore": {
