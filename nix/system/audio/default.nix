@@ -164,6 +164,21 @@ in
 
     services.blueman.enable = true;
 
+    # Auto-trust every paired device on activation. Without the trust
+    # flag bluez denies incoming profile connections (HSP/HFP
+    # ext_connect: Permission denied after reconnect), so reconnected
+    # headsets/controllers failed to re-establish audio profiles.
+    # bluetoothctl trust persists in /var/lib/bluetooth; this only
+    # repairs devices paired before the flag existed. Runs as root on
+    # the system bus — bluetoothctl works without a user session.
+    system.activationScripts.bluetoothAutoTrust = lib.stringAfter [ "users" ] ''
+      if [ -x "${pkgs.bluez}/bin/bluetoothctl" ]; then
+        for dev in $(${pkgs.bluez}/bin/bluetoothctl devices Paired 2>/dev/null | awk '{print $2}'); do
+          ${pkgs.bluez}/bin/bluetoothctl trust "$dev" >/dev/null 2>&1 || true
+        done
+      fi
+    '';
+
     j0nix.software.systemPackages =
       lib.optionals (usePulseAudio && hasPulseAudioBtModules && enableHiFiCodecs)
         [
