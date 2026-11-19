@@ -91,11 +91,24 @@ lib.mkIf enabled {
   home.activation.sunshineWebUiCredentials =
     lib.hm.dag.entryAfter [ "writeBoundary" ] (
       if autoApply && passwordSecretPath != null then
+        # Restart ONLY when the credentials actually changed: an
+        # unconditional try-restart here bounced sunshine on every
+        # rebuild, and the wayland grab teardown/reinit of the running
+        # session crashed every electron app mid-activation (vscode,
+        # gdlauncher — SIGTRAP in the DRM/display path). Hash username +
+        # secret into a state file; restart only on hash mismatch.
         ''
-          if ${lib.getExe resetScript} >/dev/null 2>&1; then
-            ${pkgs.systemd}/bin/systemctl --user try-restart sunshine.service >/dev/null 2>&1 || true
-          else
-            echo "warning: failed to apply Sunshine Web UI credentials from secret '${passwordSecretName}'" >&2
+          state_dir="$HOME/.cache/j0nix"
+          state_file="$state_dir/sunshine-creds.sha256"
+          mkdir -p "$state_dir"
+          current_hash="$(cat "${lib.escapeShellArg (if username != null then username else "")}" "${lib.escapeShellArg (if passwordSecretPath != null then passwordSecretPath else "")}" 2>/dev/null | ${pkgs.coreutils}/bin/sha256sum | ${pkgs.coreutils}/bin/cut -d' ' -f1)"
+          if [ ! -f "$state_file" ] || [ "$(cat "$state_file" 2>/dev/null)" != "$current_hash" ]; then
+            if ${lib.getExe resetScript} >/dev/null 2>&1; then
+              echo "$current_hash" > "$state_file"
+              ${pkgs.systemd}/bin/systemctl --user try-restart sunshine.service >/dev/null 2>&1 || true
+            else
+              echo "warning: failed to apply Sunshine Web UI credentials from secret '${passwordSecretName}'" >&2
+            fi
           fi
         ''
       else
