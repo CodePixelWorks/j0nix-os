@@ -16,9 +16,14 @@ in
 
     adminIdentities = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
-      # Workstation default: pin to the primary user (jonas) so password
-      # prompts never name the second wheel account ("xin").
-      default = "unix-user:jonas";
+      # Derive the admin identity from the primary account (first user
+      # in settings.userSettings, always a wheel member via
+      # accounts.baseExtraGroups). Pinning the primary user instead of
+      # the whole wheel group keeps password prompts on the logged-in
+      # account even when a second wheel account exists.
+      default = let
+        primary = config.j0nix.desktop.accounts.primaryUser or null;
+      in if primary != null then "unix-user:${primary}" else null;
       example = "unix-user:jonas";
       description = ''
         Pin security.polkit.adminIdentities (default upstream:
