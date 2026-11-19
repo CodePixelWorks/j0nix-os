@@ -160,6 +160,37 @@ let
     '';
   };
 in
+let
+  # Curated skills from the hermes package (the overlay alias
+  # hermes-agent-ext = the hermes-mem0 variant) via passthru.skills —
+  # the same package the runtime uses, so skills track the package.
+  hermesSkillsSource =
+    if (pkgs.hermes-agent-ext or null) != null
+    && (pkgs.hermes-agent-ext.passthru.skills or null) != null
+    then pkgs.hermes-agent-ext
+    else null;
+
+  # Curated-skills sync — the server-framework pattern (hermes-skills.nix
+  # syncScript semantics): rsync adds/updates the package's curated skill
+  # layer into $HERMES_HOME/skills/, keeps agent-created skills outside
+  # the curated tree, excludes the skill index cache. NO --delete: the
+  # workstation tree also holds agent-owned skills (59 categories
+  # grown since September), so a dropped/renamed package skill lingers
+  # rather than vanishing. Idempotent (rsync -a skips unchanged files).
+  skillsSyncScript = pkgs.writeShellApplication {
+    name = "hermes-skills-sync";
+    runtimeInputs = [ pkgs.rsync ];
+    text = ''
+      src="${hermesSkillsSource}/skills"
+      dst="$HOME/.hermes/skills"
+      [ -d "$src" ] || { echo "hermes-skills-sync: no curated skills in the hermes package" >&2; exit 0; }
+      mkdir -p "$dst"
+      ${pkgs.rsync}/bin/rsync -a \
+        --exclude index-cache/ --exclude __pycache__ \
+        "$src"/ "$dst"/
+    '';
+  };
+in
 {
   config = lib.mkMerge [
     (lib.mkIf enabled {
@@ -173,6 +204,11 @@ in
     (lib.mkIf mem0Enabled {
       home.activation.hermesMem0Config = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         ${lib.getExe mem0ConfigWriter}
+      '';
+    })
+    (lib.mkIf (hermesSkillsSource != null) {
+      home.activation.hermesSkillsSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        ${lib.getExe skillsSyncScript}
       '';
     })
   ];
