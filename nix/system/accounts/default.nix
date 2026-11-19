@@ -92,6 +92,17 @@ in
       type = lib.types.nullOr lib.types.str;
       default = null;
     };
+
+    primaryUser = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = primaryUser;
+      description = ''
+        The first declared user in settings.userSettings — the primary
+        account of this machine. Exposed so modules (e.g. polkit admin
+        identity pinning) can derive the logged-in user instead of
+        hardcoding a name.
+      '';
+    };
   };
 
   config = {
@@ -101,6 +112,7 @@ in
       userShells = lib.mkDefault configuredUserShells;
       dockerUsers = lib.mkDefault configuredDockerUsers;
       autologinUser = lib.mkDefault null;
+      primaryUser = lib.mkDefault primaryUser;
     };
 
     programs.zsh.enable = useZsh;
