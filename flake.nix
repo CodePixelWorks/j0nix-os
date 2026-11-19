@@ -57,7 +57,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     rust-analyzer-mcp = {
-      url = "git+ssh://git@git.j0lab.xyz/Rust/rust-analyzer-mcp.git?rev=f26716ee74b9920d968e208e49640692856d6a71";
+      url = "git+ssh://git@git.j0lab.xyz/Rust/rust-analyzer-mcp.git?rev=b00bf3fe69fe9c0a5c5912fc45ca053828e72c6c";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     file-toolbox-mcp = {
