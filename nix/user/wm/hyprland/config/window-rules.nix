@@ -373,6 +373,17 @@ let
       float = true;
       no_initial_focus = true;
     }
+    {
+      # Minecraft's window class carries a version suffix
+      # ("Minecraft* 1.21.11", xwayland) that changes with updates —
+      # prefix-match it. Float + centered so the game window sits
+      # predictably in the middle instead of tiling full-height.
+      name = "float-minecraft";
+      match.class = "^Minecraft";
+      float = true;
+      size = [ "80%" "85%" ];
+      center = true;
+    }
   ];
 in
 {
