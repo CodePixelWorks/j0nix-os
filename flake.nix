@@ -53,7 +53,7 @@
     # (fs ops/search/patch/git/code analysis). Consumed by ai-cli.nix as
     # hermes mcp_servers entries.
     nil-mcp = {
-      url = "git+https://git.j0lab.xyz/Rust/nil-mcp.git?rev=6a459637bc416e2b7f403c05fc4149995a0a1ece";
+      url = "git+https://git.j0lab.xyz/Rust/nil-mcp.git?rev=ef4b3e4a6f2b2ff7444463834a6f80170e115bae";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     rust-analyzer-mcp = {
