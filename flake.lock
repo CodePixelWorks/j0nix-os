@@ -1351,16 +1351,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1795163620,
-        "narHash": "sha256-iZpfU5tW4ZpsAPX3Q/qR9t/V8zFwpKTknPz6g3ZA4IU=",
+        "lastModified": 1795185033,
+        "narHash": "sha256-0H1MqJ/OkMbfUeigsoo7Cqn3xiqaF6pm9pI7kbZYDXk=",
         "ref": "refs/heads/main",
-        "rev": "6a459637bc416e2b7f403c05fc4149995a0a1ece",
-        "revCount": 164,
+        "rev": "ef4b3e4a6f2b2ff7444463834a6f80170e115bae",
+        "revCount": 168,
         "type": "git",
         "url": "https://git.j0lab.xyz/Rust/nil-mcp.git"
       },
       "original": {
-        "rev": "6a459637bc416e2b7f403c05fc4149995a0a1ece",
+        "rev": "ef4b3e4a6f2b2ff7444463834a6f80170e115bae",
         "type": "git",
         "url": "https://git.j0lab.xyz/Rust/nil-mcp.git"
       }
