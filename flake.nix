@@ -61,7 +61,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     file-toolbox-mcp = {
-      url = "git+https://git.j0lab.xyz/Rust/file-toolbox-mcp.git?rev=beea6fd023b510e3bfe2c3f52f3bcc65b11dcecc";
+      url = "git+https://git.j0lab.xyz/Rust/file-toolbox-mcp.git?rev=aada56d20faa6e35d42c7d1b3a3293c885a1e270";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     sops-nix = {

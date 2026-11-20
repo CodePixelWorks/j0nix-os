@@ -398,16 +398,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1794255666,
-        "narHash": "sha256-p6WZnbVcLvxFP9M+ZCA63HDw7GELhkVmDhMrJNB4cFo=",
+        "lastModified": 1795188410,
+        "narHash": "sha256-2NWkR75uTURo4xsS4CeROV38EsQJiCwSz3CNeWOhXU0=",
         "ref": "refs/heads/main",
-        "rev": "beea6fd023b510e3bfe2c3f52f3bcc65b11dcecc",
-        "revCount": 67,
+        "rev": "aada56d20faa6e35d42c7d1b3a3293c885a1e270",
+        "revCount": 73,
         "type": "git",
         "url": "https://git.j0lab.xyz/Rust/file-toolbox-mcp.git"
       },
       "original": {
-        "rev": "beea6fd023b510e3bfe2c3f52f3bcc65b11dcecc",
+        "rev": "aada56d20faa6e35d42c7d1b3a3293c885a1e270",
         "type": "git",
         "url": "https://git.j0lab.xyz/Rust/file-toolbox-mcp.git"
       }
